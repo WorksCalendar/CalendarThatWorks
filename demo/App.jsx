@@ -116,8 +116,8 @@ function App() {
       </header>
 
       {/* Calendar */}
-      <div style={{ flex: 1, padding: 24, minHeight: 0 }}>
-        <div style={{ height: 'calc(100vh - 160px)', maxWidth: 1400, margin: '0 auto' }}>
+      <div style={{ flex: 1, padding: 'clamp(8px, 3vw, 24px)', minHeight: 0 }}>
+        <div style={{ height: 'max(400px, calc(100vh - 160px))', maxWidth: 1400, margin: '0 auto' }}>
           <WorksCalendar
             events={events}
             calendarId="ihc-fleet-demo"

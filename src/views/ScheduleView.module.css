@@ -144,3 +144,51 @@
   transition: opacity 0.1s;
 }
 .simpleEvent:hover { opacity: 0.85; }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+
+/* Tablet & Mobile: allow horizontal scroll for resource columns */
+@media (max-width: 768px) {
+  .schedule {
+    overflow-x: auto;
+  }
+
+  /* Header and rows get a fixed min-width so columns don't collapse */
+  .header,
+  .row {
+    min-width: max-content;
+  }
+
+  .resourceHead {
+    min-width: 100px;
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  .dateCell {
+    min-width: 100px;
+    padding: 4px 8px;
+  }
+
+  .cell {
+    min-width: 100px;
+    padding: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .resourceHead {
+    min-width: 84px;
+    font-size: 10px;
+  }
+  .dateCell {
+    min-width: 84px;
+  }
+  .cell {
+    min-width: 84px;
+  }
+  .eventPill {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+}

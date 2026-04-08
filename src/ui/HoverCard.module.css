@@ -209,3 +209,23 @@
   margin: 0;
   white-space: pre-wrap;
 }
+
+/* ─── Responsive: bottom sheet on mobile ────────────────────── */
+@media (max-width: 480px) {
+  .card {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--wc-radius) var(--wc-radius) 0 0;
+    animation: slideUp 0.2s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0.8; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+}

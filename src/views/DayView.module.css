@@ -121,3 +121,20 @@
 .evTitle { font-size: 13px; font-weight: 600; }
 .evTime  { font-size: 11px; opacity: 0.85; }
 .evMeta  { font-size: 11px; opacity: 0.75; }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .dayHeader {
+    padding: 8px 10px;
+  }
+  .dayNum {
+    font-size: 14px;
+  }
+  .event {
+    left: 4px;
+    right: 4px;
+    padding: 4px 6px;
+  }
+  .evTitle { font-size: 12px; }
+  .evTime  { font-size: 10px; }
+}

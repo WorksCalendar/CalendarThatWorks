@@ -103,3 +103,48 @@
   border-color: var(--wc-danger);
   color: var(--wc-danger);
 }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .bar {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+
+  .search {
+    width: 140px;
+  }
+  .search:focus {
+    width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bar {
+    padding: 6px 8px;
+  }
+
+  /* Pills wrap and stay small */
+  .pill {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  /* Search goes full-width on its own line */
+  .searchWrap {
+    width: 100%;
+    margin-left: 0;
+  }
+  .search {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .search:focus {
+    width: 100%;
+  }
+
+  .clearAll {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+}

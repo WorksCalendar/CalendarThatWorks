@@ -255,3 +255,40 @@
   border-color: var(--wc-accent);
   color: var(--wc-accent);
 }
+
+/* ─── Responsive: bottom sheet on mobile ────────────────────── */
+@media (max-width: 480px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .panel {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: var(--wc-radius) var(--wc-radius) 0 0;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .tabBar {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabBar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+
+  .fieldRow {
+    flex-direction: column;
+  }
+}

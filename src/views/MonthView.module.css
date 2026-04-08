@@ -156,3 +156,93 @@
   line-height: 1;
   padding: 0 2px;
 }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+
+/* Tablet: reduce padding, tighter cells */
+@media (max-width: 768px) {
+  .week {
+    min-height: 72px;
+  }
+
+  .cell {
+    padding: 2px;
+  }
+
+  .dayNum {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+
+  .eventPill {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+
+  .morePill {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+
+  .dayName {
+    font-size: 10px;
+  }
+}
+
+/* Mobile: dot-only mode — show day number + colored dots, no text pills */
+@media (max-width: 480px) {
+  .week {
+    min-height: 56px;
+  }
+
+  .cell {
+    padding: 2px 1px;
+    align-items: center;
+  }
+
+  .dayName {
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+
+  .dayNum {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    margin-bottom: 1px;
+  }
+
+  /* Replace text pills with tiny dots */
+  .eventPill {
+    width: 6px;
+    height: 6px;
+    min-width: 6px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 0; /* hide text */
+    overflow: hidden;
+  }
+
+  .morePill {
+    font-size: 9px;
+    padding: 0 2px;
+  }
+
+  /* Stack dots horizontally */
+  .events {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
+  }
+
+  /* Popover needs to be bigger on mobile */
+  .popover {
+    left: 0;
+    right: 0;
+    transform: none;
+    min-width: auto;
+    max-width: 100%;
+  }
+}

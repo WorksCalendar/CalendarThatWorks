@@ -183,3 +183,51 @@
   font-size: 10px;
   opacity: 0.85;
 }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+
+/* Tablet: slightly compress */
+@media (max-width: 768px) {
+  .headerRow,
+  .allDayRow,
+  .grid {
+    grid-template-columns: 44px repeat(7, minmax(80px, 1fr));
+  }
+
+  .timeGutter {
+    width: 44px;
+  }
+
+  .dayAbbr {
+    font-size: 10px;
+  }
+}
+
+/* Mobile: horizontal scroll so all 7 days are still reachable,
+   but the scroll wrapper clips inside the calendar container */
+@media (max-width: 480px) {
+  .week {
+    overflow-x: auto;
+    /* keep vertical layout intact */
+  }
+
+  .headerRow,
+  .allDayRow {
+    /* Fix to min column width so user can scroll to see all days */
+    grid-template-columns: 40px repeat(7, 88px);
+    min-width: max-content;
+  }
+
+  .grid {
+    grid-template-columns: 40px repeat(7, 88px);
+    min-width: max-content;
+    /* grid itself scrolls inside .week overflow */
+    overflow-y: visible;
+  }
+
+  /* The outer .week handles the scroll */
+  .week {
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+}

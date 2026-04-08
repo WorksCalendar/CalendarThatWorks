@@ -118,7 +118,7 @@ export function WorksCalendar({
         <div className={styles.actions}>
           {hasAddButton && (
             <button className={styles.addBtn} onClick={() => setFormEvent({})}>
-              <Plus size={14} /> Add Event
+              <Plus size={14} /><span className={styles.addBtnLabel}> Add Event</span>
             </button>
           )}
           <button className={styles.exportBtn} onClick={() => exportToExcel(cal.visibleEvents)} title="Export to Excel">

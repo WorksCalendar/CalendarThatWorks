@@ -253,3 +253,28 @@
   transition: all 0.15s;
 }
 .btnDelete:hover { background: var(--wc-danger); color: #fff; }
+
+/* ─── Responsive: bottom sheet on mobile ────────────────────── */
+@media (max-width: 480px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: var(--wc-radius) var(--wc-radius) 0 0;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  /* Stack the two-column rows on mobile */
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+}

@@ -116,3 +116,42 @@
   border-radius: 4px;
   padding: 0 6px;
 }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .agenda {
+    padding: 10px 8px;
+  }
+
+  .group {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .dateHead {
+    width: 40px;
+  }
+
+  .dayNum {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+
+  .event {
+    padding: 8px 10px;
+  }
+
+  .evTitle {
+    font-size: 13px;
+  }
+
+  .evMeta {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .monthLabel {
+    display: none; /* redundant on mobile — month visible in header */
+  }
+}

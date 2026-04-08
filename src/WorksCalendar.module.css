@@ -191,3 +191,94 @@
   display: flex;
   flex-direction: column;
 }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+
+/* Tablet (≤ 768px): compress toolbar, allow view strip to scroll */
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 8px 10px;
+    gap: 6px;
+    row-gap: 6px;
+  }
+
+  /* Nav + date label take full first row */
+  .navGroup {
+    flex: 1;
+  }
+
+  .dateLabel {
+    font-size: 13px;
+  }
+
+  /* View strip: no longer push to right, scrolls horizontally */
+  .viewGroup {
+    margin-left: 0;
+    overflow-x: auto;
+    /* hide scrollbar but keep scroll */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .viewGroup::-webkit-scrollbar { display: none; }
+
+  .viewBtn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  /* Actions move to end of nav row */
+  .actions {
+    margin-left: auto;
+  }
+
+  /* "Add Event" — hide text label, show only + icon */
+  .addBtnLabel {
+    display: none;
+  }
+  .addBtn {
+    padding: 6px 8px;
+  }
+}
+
+/* Mobile (≤ 480px): two-row toolbar, tighter everything */
+@media (max-width: 480px) {
+  .toolbar {
+    flex-wrap: wrap;
+    padding: 8px;
+    row-gap: 6px;
+  }
+
+  /* Row 1: nav + date + icon actions */
+  .navGroup {
+    order: 1;
+    flex: 1;
+  }
+
+  .actions {
+    order: 2;
+  }
+
+  /* Row 2: view switcher spans full width */
+  .viewGroup {
+    order: 3;
+    width: 100%;
+    border-radius: var(--wc-radius-sm);
+  }
+
+  .viewBtn {
+    flex: 1;
+    text-align: center;
+    padding: 5px 6px;
+    font-size: 11px;
+  }
+
+  .dateLabel {
+    font-size: 12px;
+    padding-left: 4px;
+  }
+
+  .todayBtn {
+    font-size: 12px;
+    padding: 0 8px;
+  }
+}
