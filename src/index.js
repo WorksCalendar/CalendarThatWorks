@@ -1,0 +1,10 @@
+/**
+ * WorksCalendar — public npm exports
+ */
+export { WorksCalendar } from './WorksCalendar.jsx';
+export { normalizeEvent, normalizeEvents } from './core/eventModel.js';
+export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema.js';
+export { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
+export { exportToExcel } from './export/excelExport.js';
+export { useCalendar } from './hooks/useCalendar.js';
+export { useOwnerConfig } from './hooks/useOwnerConfig.js';

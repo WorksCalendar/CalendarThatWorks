@@ -1,0 +1,158 @@
+.month {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  user-select: none;
+}
+
+.header {
+  display: grid;
+  background: var(--wc-surface);
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.weekNumHead,
+.dayName {
+  padding: 8px 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.weekNumHead { font-size: 11px; color: var(--wc-text-faint); }
+
+.grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+  min-height: 100px;
+  border-bottom: 1px solid var(--wc-border);
+}
+.week:last-child { border-bottom: none; }
+
+.weekNum {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6px 2px;
+  font-size: 11px;
+  color: var(--wc-text-faint);
+  border-right: 1px solid var(--wc-border);
+}
+
+.cell {
+  position: relative;
+  padding: 4px;
+  border-right: 1px solid var(--wc-border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.cell:last-child { border-right: none; }
+.cell:hover { background: var(--wc-surface); }
+
+.otherMonth { opacity: 0.4; }
+
+.today .dayNum {
+  background: var(--wc-accent);
+  color: #fff;
+}
+
+.dayNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text);
+  margin-bottom: 2px;
+}
+
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eventPill {
+  display: block;
+  width: 100%;
+  padding: 2px 6px;
+  border-radius: var(--wc-radius-sm);
+  background: var(--ev-color, var(--wc-accent));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.1s;
+}
+.eventPill:hover { opacity: 0.85; }
+
+.morePill {
+  display: block;
+  width: 100%;
+  padding: 2px 6px;
+  border-radius: var(--wc-radius-sm);
+  background: transparent;
+  color: var(--wc-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+}
+.morePill:hover { color: var(--wc-accent); }
+
+/* "+N more" popover */
+.popover {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  min-width: 180px;
+  max-width: 260px;
+  background: var(--wc-bg);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popoverHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  margin-bottom: 4px;
+}
+.popoverHead button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--wc-text-muted);
+  line-height: 1;
+  padding: 0 2px;
+}

@@ -1,0 +1,77 @@
+/**
+ * useOwnerConfig.js — Owner authentication + config state.
+ */
+import { useState, useCallback } from 'react';
+import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../core/configSchema.js';
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave }) {
+  const [config,        setConfig]        = useState(() => loadConfig(calendarId));
+  const [isOwner,       setIsOwner]       = useState(false);
+  const [configOpen,    setConfigOpen]    = useState(false);
+  const [authError,     setAuthError]     = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  const authenticate = useCallback(async (password) => {
+    if (!ownerPassword) {
+      setIsOwner(true);
+      setConfigOpen(true);
+      setAuthError('');
+      return true;
+    }
+    setIsAuthLoading(true);
+    try {
+      const [inputHash, storedHash] = await Promise.all([
+        sha256(password),
+        sha256(ownerPassword),
+      ]);
+      if (inputHash === storedHash) {
+        setIsOwner(true);
+        setConfigOpen(true);
+        setAuthError('');
+        return true;
+      } else {
+        setAuthError('Incorrect password');
+        return false;
+      }
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, [ownerPassword]);
+
+  const updateConfig = useCallback((updater) => {
+    setConfig(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
+      saveConfig(calendarId, next);
+      onConfigSave?.(next);
+      return next;
+    });
+  }, [calendarId, onConfigSave]);
+
+  const closeConfig = useCallback(() => {
+    setConfigOpen(false);
+  }, []);
+
+  const openGear = useCallback(() => {
+    if (isOwner) {
+      setConfigOpen(true);
+    }
+    // else OwnerLock component handles the prompt
+  }, [isOwner]);
+
+  return {
+    config,
+    isOwner,
+    configOpen, setConfigOpen,
+    authError,
+    isAuthLoading,
+    authenticate,
+    updateConfig,
+    closeConfig,
+    openGear,
+  };
+}
