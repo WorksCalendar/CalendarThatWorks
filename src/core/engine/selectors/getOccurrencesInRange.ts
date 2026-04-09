@@ -12,6 +12,8 @@
 import type { EngineEvent } from '../schema/eventSchema.js';
 import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
 import type { FilterState } from '../types.js';
+import type { Assignment } from '../schema/assignmentSchema.js';
+import { resourceIdsForEvent } from '../schema/assignmentSchema.js';
 import { expandOccurrences, type ExpandOptions } from '../recurrence/expandOccurrences.js';
 
 // ─── Options ──────────────────────────────────────────────────────────────────
@@ -21,6 +23,12 @@ export interface GetOccurrencesOptions extends ExpandOptions {
   filter?: FilterState;
   /** Whether to sort results by start time (default: true). */
   sort?: boolean;
+  /**
+   * Assignments map for multi-resource support.
+   * When provided, each occurrence's resourceIds field is populated from
+   * this map rather than the legacy event.resourceId field.
+   */
+  assignments?: ReadonlyMap<string, Assignment>;
 }
 
 // ─── Main selector ────────────────────────────────────────────────────────────
@@ -46,11 +54,20 @@ export function getOccurrencesInRange(
 
   const occurrences = expandOccurrences(filtered, rangeStart, rangeEnd, opts);
 
+  // Join assignments: override each occurrence's resourceIds when the
+  // caller has provided an assignments map.
+  const withAssignments = opts.assignments
+    ? occurrences.map(occ => ({
+        ...occ,
+        resourceIds: resourceIdsForEvent(opts.assignments!, occ.eventId, occ.resourceId),
+      }))
+    : occurrences;
+
   if (opts.sort !== false) {
-    occurrences.sort((a, b) => a.start.getTime() - b.start.getTime());
+    withAssignments.sort((a, b) => a.start.getTime() - b.start.getTime());
   }
 
-  return occurrences;
+  return withAssignments;
 }
 
 // ─── Filter helper ────────────────────────────────────────────────────────────

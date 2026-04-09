@@ -26,6 +26,9 @@ import {
   applyOperation as applyMutationOp,
   type ApplyOptions,
 } from './operations/applyOperation.js';
+import type { Assignment }       from './schema/assignmentSchema.js';
+import type { Dependency }       from './schema/dependencySchema.js';
+import type { ResourceCalendar } from './schema/resourceCalendarSchema.js';
 import {
   getOccurrencesInRange,
   type GetOccurrencesOptions,
@@ -58,9 +61,16 @@ import type { EngineEvent } from './schema/eventSchema.js';
 
 export function createInitialState(init: CalendarEngineInit = {}): CalendarState {
   const eventMap = new Map<string, EngineEvent>();
-  for (const ev of init.events ?? []) {
-    eventMap.set(ev.id, ev);
-  }
+  for (const ev of init.events ?? []) eventMap.set(ev.id, ev);
+
+  const assignMap = new Map<string, Assignment>();
+  for (const a of init.assignments ?? []) assignMap.set(a.id, a);
+
+  const depMap = new Map<string, Dependency>();
+  for (const d of init.dependencies ?? []) depMap.set(d.id, d);
+
+  const calMap = new Map<string, ResourceCalendar>();
+  for (const c of init.resourceCalendars ?? []) calMap.set(c.id, c);
 
   const defaultFilter: FilterState = {
     search: '',
@@ -70,18 +80,21 @@ export function createInitialState(init: CalendarEngineInit = {}): CalendarState
 
   const filter: FilterState = init.filter
     ? {
-        search: init.filter.search ?? '',
+        search:     init.filter.search     ?? '',
         categories: init.filter.categories ?? new Set(),
-        resources: init.filter.resources ?? new Set(),
+        resources:  init.filter.resources  ?? new Set(),
       }
     : defaultFilter;
 
   return {
-    events: eventMap,
-    view: init.view ?? 'month',
-    cursor: init.cursor ?? new Date(),
+    events:            eventMap,
+    assignments:       assignMap,
+    dependencies:      depMap,
+    resourceCalendars: calMap,
+    view:     init.view   ?? 'month',
+    cursor:   init.cursor ?? new Date(),
     filter,
-    config: init.config ?? {},
+    config:   init.config ?? {},
     selection: new Set(),
   };
 }
@@ -136,7 +149,15 @@ export class CalendarEngine {
     ctx: OperationContext = {},
     opts: ApplyOptions = {},
   ): OperationResult {
-    const result = applyMutationOp(op, this._state.events, ctx, opts);
+    // Merge engine-owned structural state into the validation context so rules
+    // like dependency and overlap checking see the full picture.
+    const enrichedCtx: OperationContext = {
+      assignments:       ctx.assignments       ?? this._state.assignments,
+      dependencies:      ctx.dependencies      ?? this._state.dependencies,
+      resourceCalendars: ctx.resourceCalendars ?? this._state.resourceCalendars,
+      ...ctx,
+    };
+    const result = applyMutationOp(op, this._state.events, enrichedCtx, opts);
 
     if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
       // Commit changes to state
@@ -161,7 +182,8 @@ export class CalendarEngine {
     opts: GetOccurrencesOptions = {},
   ): EngineOccurrence[] {
     const filterOpts: GetOccurrencesOptions = {
-      filter: opts.filter ?? this._state.filter,
+      filter:      opts.filter      ?? this._state.filter,
+      assignments: opts.assignments ?? this._state.assignments,
       ...opts,
     };
     return getOccurrencesInRange(this._state.events, rangeStart, rangeEnd, filterOpts);
@@ -199,6 +221,128 @@ export class CalendarEngine {
       ...init,
     });
     this._notify();
+  }
+
+  // ── Assignment CRUD ────────────────────────────────────────────────────────────
+
+  /** Replace all assignments atomically. Notifies subscribers once. */
+  setAssignments(assignments: ReadonlyArray<Assignment>): void {
+    const map = new Map<string, Assignment>(assignments.map(a => [a.id, a]));
+    this._state = { ...this._state, assignments: map };
+    this._notify();
+  }
+
+  /** Add or replace a single assignment. */
+  upsertAssignment(assignment: Assignment): void {
+    const map = new Map(this._state.assignments);
+    map.set(assignment.id, assignment);
+    this._state = { ...this._state, assignments: map };
+    this._notify();
+  }
+
+  /** Remove a single assignment by id. No-op when not found. */
+  removeAssignment(id: string): void {
+    if (!this._state.assignments.has(id)) return;
+    const map = new Map(this._state.assignments);
+    map.delete(id);
+    this._state = { ...this._state, assignments: map };
+    this._notify();
+  }
+
+  /** Return all assignments for a given event. */
+  getAssignmentsForEvent(eventId: string): Assignment[] {
+    const result: Assignment[] = [];
+    for (const a of this._state.assignments.values()) {
+      if (a.eventId === eventId) result.push(a);
+    }
+    return result;
+  }
+
+  /** Return all assignments for a given resource. */
+  getAssignmentsForResource(resourceId: string): Assignment[] {
+    const result: Assignment[] = [];
+    for (const a of this._state.assignments.values()) {
+      if (a.resourceId === resourceId) result.push(a);
+    }
+    return result;
+  }
+
+  // ── Dependency CRUD ────────────────────────────────────────────────────────────
+
+  /** Replace all dependencies atomically. Notifies subscribers once. */
+  setDependencies(dependencies: ReadonlyArray<Dependency>): void {
+    const map = new Map<string, Dependency>(dependencies.map(d => [d.id, d]));
+    this._state = { ...this._state, dependencies: map };
+    this._notify();
+  }
+
+  /** Add or replace a single dependency. */
+  upsertDependency(dep: Dependency): void {
+    const map = new Map(this._state.dependencies);
+    map.set(dep.id, dep);
+    this._state = { ...this._state, dependencies: map };
+    this._notify();
+  }
+
+  /** Remove a dependency by id. No-op when not found. */
+  removeDependency(id: string): void {
+    if (!this._state.dependencies.has(id)) return;
+    const map = new Map(this._state.dependencies);
+    map.delete(id);
+    this._state = { ...this._state, dependencies: map };
+    this._notify();
+  }
+
+  /** Return all dependencies where eventId is the predecessor. */
+  getSuccessorsOf(eventId: string): Dependency[] {
+    const result: Dependency[] = [];
+    for (const d of this._state.dependencies.values()) {
+      if (d.fromEventId === eventId) result.push(d);
+    }
+    return result;
+  }
+
+  /** Return all dependencies where eventId is the successor. */
+  getPredecessorsOf(eventId: string): Dependency[] {
+    const result: Dependency[] = [];
+    for (const d of this._state.dependencies.values()) {
+      if (d.toEventId === eventId) result.push(d);
+    }
+    return result;
+  }
+
+  // ── Resource calendar CRUD ────────────────────────────────────────────────────
+
+  /** Replace all resource calendars atomically. Notifies subscribers once. */
+  setResourceCalendars(calendars: ReadonlyArray<ResourceCalendar>): void {
+    const map = new Map<string, ResourceCalendar>(calendars.map(c => [c.id, c]));
+    this._state = { ...this._state, resourceCalendars: map };
+    this._notify();
+  }
+
+  /** Add or replace a single resource calendar. */
+  upsertResourceCalendar(calendar: ResourceCalendar): void {
+    const map = new Map(this._state.resourceCalendars);
+    map.set(calendar.id, calendar);
+    this._state = { ...this._state, resourceCalendars: map };
+    this._notify();
+  }
+
+  /** Remove a resource calendar by id. No-op when not found. */
+  removeResourceCalendar(id: string): void {
+    if (!this._state.resourceCalendars.has(id)) return;
+    const map = new Map(this._state.resourceCalendars);
+    map.delete(id);
+    this._state = { ...this._state, resourceCalendars: map };
+    this._notify();
+  }
+
+  /** Return the calendar for a given resource, or null if none is registered. */
+  getCalendarForResource(resourceId: string): ResourceCalendar | null {
+    for (const c of this._state.resourceCalendars.values()) {
+      if (c.resourceId === resourceId) return c;
+    }
+    return null;
   }
 
   // ── Transaction helpers ───────────────────────────────────────────────────────

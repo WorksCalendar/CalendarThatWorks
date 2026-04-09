@@ -115,8 +115,12 @@ function makeOccurrence(
     resourceId:      ev.resourceId,
     status:          ev.status,
     color:           ev.color,
+    // Default resourceIds from the legacy single-resource field.
+    // getOccurrencesInRange overrides this when an assignments map is provided.
+    resourceIds:     ev.resourceId ? [ev.resourceId] : [],
     isRecurring:     ev.rrule !== null || ev.seriesId !== null,
     occurrenceIndex: idx,
+    constraints:     ev.constraints ?? [],
     meta:            ev.meta,
   };
 }

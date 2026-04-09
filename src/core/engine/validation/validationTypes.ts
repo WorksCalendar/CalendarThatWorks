@@ -4,6 +4,9 @@
 
 import type { EngineEvent } from '../schema/eventSchema.js';
 import type { EngineRuntimeConfig } from '../engineConfig.js';
+import type { Assignment } from '../schema/assignmentSchema.js';
+import type { Dependency } from '../schema/dependencySchema.js';
+import type { ResourceCalendar } from '../schema/resourceCalendarSchema.js';
 
 // ─── Violation ───────────────────────────────────────────────────────────────
 
@@ -50,7 +53,7 @@ export const VALID_RESULT: ValidationResult = {
  * All fields are optional to make partial context easy to construct in tests.
  */
 export interface OperationContext {
-  /** All current events (used for overlap checks). */
+  /** All current events (used for overlap and dependency checks). */
   readonly events?: readonly EngineEvent[];
   readonly businessHours?: {
     /** Day indices that are working days (0=Sun … 6=Sat). */
@@ -67,6 +70,23 @@ export interface OperationContext {
     readonly reason?: string;
   }[];
   readonly config?: Partial<EngineRuntimeConfig>;
+  /**
+   * Assignments map for multi-resource overlap checking.
+   * When provided, overlap validation checks all resources the event is
+   * assigned to, not just the single event.resourceId field.
+   */
+  readonly assignments?: ReadonlyMap<string, Assignment>;
+  /**
+   * Dependency graph.  When provided, move/resize validation checks
+   * predecessor and successor links against the proposed new times.
+   */
+  readonly dependencies?: ReadonlyMap<string, Dependency>;
+  /**
+   * Per-resource working-time calendars.  When provided, move/resize
+   * validation warns when a proposed time falls in a non-working window
+   * for any of the event's assigned resources.
+   */
+  readonly resourceCalendars?: ReadonlyMap<string, ResourceCalendar>;
 }
 
 // ─── Rule type ────────────────────────────────────────────────────────────────

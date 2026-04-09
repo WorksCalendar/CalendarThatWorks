@@ -6,6 +6,8 @@
  * via expandOccurrences().
  */
 
+import type { EventConstraint } from './constraintSchema.js';
+
 // ─── Status ───────────────────────────────────────────────────────────────────
 
 export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
@@ -71,6 +73,14 @@ export interface EngineEvent {
   /** Dates excluded from the recurrence rule (EXDATE). */
   readonly exdates: readonly Date[];
 
+  // ── Scheduling constraints ──────────────────────────────────────────────
+  /**
+   * Scheduling constraints on this event's start/end times.
+   * Empty array = no constraints (as-soon-as-possible by default).
+   * Evaluated during move/resize validation.
+   */
+  readonly constraints: readonly EventConstraint[];
+
   // ── Arbitrary payload ───────────────────────────────────────────────────
   readonly meta: Readonly<Record<string, unknown>>;
 }
@@ -102,18 +112,22 @@ export function makeEvent(
 ): EngineEvent {
   return {
     id,
-    seriesId: null,
+    seriesId:    null,
     occurrenceId: null,
     detachedFrom: null,
-    timezone: null,
-    allDay: false,
-    category: null,
-    resourceId: null,
-    status: 'confirmed',
-    color: null,
-    rrule: null,
-    exdates: [],
-    meta: {},
+    timezone:    null,
+    allDay:      false,
+    category:    null,
+    resourceId:  null,
+    status:      'confirmed',
+    color:       null,
+    rrule:       null,
+    exdates:     [],
+    constraints: [],
+    meta:        {},
     ...patch,
   };
 }
+
+// Re-export constraint type so callers can import from one place.
+export type { EventConstraint } from './constraintSchema.js';

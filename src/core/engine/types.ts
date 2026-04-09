@@ -60,12 +60,18 @@ export interface EngineConfig {
 // ─── Engine state ─────────────────────────────────────────────────────────────
 
 export interface CalendarState {
-  readonly events: ReadonlyMap<string, EngineEvent>;
-  readonly view: CalendarView;
+  readonly events:           ReadonlyMap<string, EngineEvent>;
+  /** Many-to-many join between events and resources. */
+  readonly assignments:      ReadonlyMap<string, import('./schema/assignmentSchema.js').Assignment>;
+  /** Scheduling dependency links between events. */
+  readonly dependencies:     ReadonlyMap<string, import('./schema/dependencySchema.js').Dependency>;
+  /** Per-resource working-time exception calendars. */
+  readonly resourceCalendars: ReadonlyMap<string, import('./schema/resourceCalendarSchema.js').ResourceCalendar>;
+  readonly view:    CalendarView;
   /** The "anchor" date — used to compute the visible range for the current view. */
-  readonly cursor: Date;
-  readonly filter: FilterState;
-  readonly config: EngineConfig;
+  readonly cursor:  Date;
+  readonly filter:  FilterState;
+  readonly config:  EngineConfig;
   /** Set of event ids currently selected. */
   readonly selection: ReadonlySet<string>;
 }
@@ -128,8 +134,11 @@ export type Unsubscribe = () => void;
 // ─── Engine init ──────────────────────────────────────────────────────────────
 
 export interface CalendarEngineInit {
-  readonly events?: ReadonlyArray<EngineEvent>;
-  readonly view?: CalendarView;
+  readonly events?:            ReadonlyArray<EngineEvent>;
+  readonly assignments?:       ReadonlyArray<import('./schema/assignmentSchema.js').Assignment>;
+  readonly dependencies?:      ReadonlyArray<import('./schema/dependencySchema.js').Dependency>;
+  readonly resourceCalendars?: ReadonlyArray<import('./schema/resourceCalendarSchema.js').ResourceCalendar>;
+  readonly view?:   CalendarView;
   /** Defaults to today. */
   readonly cursor?: Date;
   readonly filter?: Partial<FilterState>;

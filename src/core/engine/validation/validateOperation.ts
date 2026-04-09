@@ -18,16 +18,25 @@ import type {
 } from './validationTypes.js';
 import { VALID_RESULT } from './validationTypes.js';
 import { validateDuration, validateBlockedWindow } from './validateConstraints.js';
-import { validateOverlap }       from './validateOverlap.js';
-import { validateWorkingHours }  from './validateWorkingHours.js';
+import { validateOverlap }          from './validateOverlap.js';
+import { validateWorkingHours }     from './validateWorkingHours.js';
+import { validateDependencies }     from './validateDependencies.js';
+import { validateEventConstraints } from './validateEventConstraints.js';
 
 // ─── Rule registry ────────────────────────────────────────────────────────────
+//
+// Execution order matters:
+//   1. Hard structural rules first (duration, blocked windows, constraints).
+//   2. Dependency link checks (hard for predecessor violations, soft for successor warnings).
+//   3. Soft scheduling rules (overlap, working hours).
 
 const RULES: Array<(change: ChangeShape, ctx: OperationContext) => Violation | null> = [
-  validateDuration,       // hard — always first
-  validateBlockedWindow,  // hard
-  validateOverlap,        // soft (or hard when conflictPolicy='block')
-  validateWorkingHours,   // soft
+  validateDuration,         // hard — always first
+  validateBlockedWindow,    // hard
+  validateEventConstraints, // hard (must-start/end-on) or soft (snet/snlt/enet/enlt)
+  validateDependencies,     // hard (predecessor) or soft (successor warning)
+  validateOverlap,          // soft (or hard when conflictPolicy='block')
+  validateWorkingHours,     // soft
 ];
 
 // ─── Public API ───────────────────────────────────────────────────────────────

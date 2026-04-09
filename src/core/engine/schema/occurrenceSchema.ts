@@ -10,6 +10,7 @@
  */
 
 import type { EventStatus } from './eventSchema.js';
+import type { EventConstraint } from './constraintSchema.js';
 
 export interface EngineOccurrence {
   // ── Identity ────────────────────────────────────────────────────────────
@@ -41,6 +42,15 @@ export interface EngineOccurrence {
   readonly status: EventStatus;
   readonly color: string | null;
 
+  // ── Multi-assignment ─────────────────────────────────────────────────────
+  /**
+   * All resource IDs assigned to this occurrence.
+   * Populated from the assignments map when available; falls back to
+   * [resourceId] when only the legacy single-resource field is set.
+   * Empty array for unassigned events.
+   */
+  readonly resourceIds: readonly string[];
+
   // ── Recurrence metadata ─────────────────────────────────────────────────
   readonly isRecurring: boolean;
   /**
@@ -49,6 +59,10 @@ export interface EngineOccurrence {
    * NOTE: this index is range-relative, not series-global.
    */
   readonly occurrenceIndex: number;
+
+  // ── Scheduling constraints ───────────────────────────────────────────────
+  /** Inherited from the source EngineEvent.constraints. */
+  readonly constraints: readonly EventConstraint[];
 
   // ── Payload ─────────────────────────────────────────────────────────────
   readonly meta: Readonly<Record<string, unknown>>;
