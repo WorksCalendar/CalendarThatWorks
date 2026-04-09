@@ -2,13 +2,14 @@
  * useCalendar.js — Central state hook: current date, view, filters.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { addMonths, addWeeks, addDays, startOfMonth } from 'date-fns';
+import { addMonths, addWeeks, addDays, startOfWeek, endOfWeek } from 'date-fns';
 import { normalizeEvents } from '../core/eventModel.js';
 import { applyFilters, getCategories, getResources } from '../filters/filterEngine.js';
 
 export function useCalendar(rawEvents, initialView = 'month') {
   const [view,        setView]        = useState(initialView);
-  const [currentDate, setCurrentDate] = useState(startOfMonth(new Date()));
+  // Use actual today — views compute their own visible range from currentDate
+  const [currentDate, setCurrentDate] = useState(() => new Date());
   const [filters,     setFilters]     = useState({
     categories: new Set(),
     resources:  new Set(),
@@ -23,23 +24,25 @@ export function useCalendar(rawEvents, initialView = 'month') {
 
   const visibleEvents = useMemo(
     () => applyFilters(events, filters),
-    [events, filters]
+    [events, filters],
   );
 
   const navigate = useCallback((direction) => {
     setCurrentDate(prev => {
-      if (view === 'month' || view === 'agenda' || view === 'schedule') {
-        return addMonths(prev, direction);
+      switch (view) {
+        case 'month':
+        case 'agenda':
+        case 'schedule':
+        case 'timeline': return addMonths(prev, direction);
+        case 'week':     return addWeeks(prev, direction);
+        case 'day':      return addDays(prev, direction);
+        default:         return prev;
       }
-      if (view === 'week') return addWeeks(prev, direction);
-      if (view === 'day')  return addDays(prev, direction);
-      return prev;
     });
   }, [view]);
 
-  const goToToday = useCallback(() => {
-    setCurrentDate(startOfMonth(new Date()));
-  }, []);
+  /** Jump to today in the context of the current view. */
+  const goToToday = useCallback(() => setCurrentDate(new Date()), []);
 
   const toggleCategory = useCallback((cat) => {
     setFilters(f => {
@@ -57,13 +60,8 @@ export function useCalendar(rawEvents, initialView = 'month') {
     });
   }, []);
 
-  const setSearch = useCallback((search) => {
-    setFilters(f => ({ ...f, search }));
-  }, []);
-
-  const setDateRange = useCallback((dateRange) => {
-    setFilters(f => ({ ...f, dateRange }));
-  }, []);
+  const setSearch    = useCallback((search)    => setFilters(f => ({ ...f, search })),    []);
+  const setDateRange = useCallback((dateRange) => setFilters(f => ({ ...f, dateRange })), []);
 
   const clearFilters = useCallback(() => {
     setFilters({ categories: new Set(), resources: new Set(), dateRange: null, search: '' });

@@ -5,6 +5,7 @@
   overflow: hidden;
 }
 
+/* ── Header ── */
 .headerRow {
   display: grid;
   grid-template-columns: 56px repeat(7, 1fr);
@@ -56,41 +57,53 @@
   color: #fff;
 }
 
+/* ── All-day / multi-day row ── */
 .allDayRow {
   display: grid;
-  grid-template-columns: 56px repeat(7, 1fr);
+  grid-template-columns: 56px 1fr;
   border-bottom: 1px solid var(--wc-border);
   flex-shrink: 0;
-  min-height: 32px;
 }
 
-.allDayCell {
-  padding: 2px 4px;
+.allDayGrid {
+  position: relative;
+  overflow: hidden;
+}
+
+.allDaySpan {
+  position: absolute;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-right: 1px solid var(--wc-border);
-}
-.allDayCell:last-child { border-right: none; }
-
-.allDayPill {
-  padding: 2px 6px;
+  align-items: center;
+  padding: 0 7px;
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
   font-size: 11px;
   font-weight: 500;
-  text-align: left;
   border: none;
   cursor: pointer;
-  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-sizing: border-box;
+  transition: filter 0.1s;
+  z-index: 2;
 }
-.allDayPill:hover { opacity: 0.85; }
+.allDaySpan:hover { filter: brightness(1.1); }
+.allDaySpan.continuesBefore { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 3px; left: 0 !important; }
+.allDaySpan.continuesAfter  { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 3px; }
+.allDaySpan.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
+.allDaySpan.cancelled { opacity: 0.45; text-decoration: line-through; }
 
-/* Scrollable grid */
+.allDayMore {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: var(--wc-text-muted);
+}
+
+/* ── Scrollable time grid ── */
 .grid {
   display: grid;
   grid-template-columns: 56px repeat(7, 1fr);
@@ -128,8 +141,14 @@
 .hourLine {
   position: absolute;
   left: 0; right: 0;
-  height: 1px;
-  background: var(--wc-border);
+  border-top: 1px solid var(--wc-border);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+/* Business-hours off-peak shading */
+.offHour {
+  background: color-mix(in srgb, var(--wc-text) 4%, transparent);
 }
 
 .nowLine {
@@ -140,26 +159,23 @@
   z-index: 10;
   pointer-events: none;
 }
-
 .nowDot {
   position: absolute;
-  left: -4px;
-  top: -4px;
-  width: 10px;
-  height: 10px;
+  left: -4px; top: -4px;
+  width: 10px; height: 10px;
   border-radius: 50%;
   background: var(--wc-danger);
 }
 
+/* ── Timed events (with overlap columns) ── */
 .event {
   position: absolute;
-  left: 3px;
-  right: 3px;
+  /* left and width set inline as percentages for overlap layout */
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
   padding: 3px 6px;
-  border: none;
+  border: 2px solid var(--wc-bg); /* gap between side-by-side events */
   cursor: pointer;
   text-align: left;
   overflow: hidden;
@@ -167,15 +183,16 @@
   flex-direction: column;
   gap: 1px;
   z-index: 5;
-  transition: opacity 0.1s, filter 0.1s;
+  transition: filter 0.1s;
+  box-sizing: border-box;
 }
 .event:hover { filter: brightness(1.1); }
-.event.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px); }
+.event.tentative {
+  opacity: 0.65;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px);
+}
 .event.cancelled { opacity: 0.45; }
 .event.cancelled .evTitle { text-decoration: line-through; }
-
-/* Business-hours off shading */
-.offHour { background: color-mix(in srgb, var(--wc-text) 4%, transparent); }
 
 .evTitle {
   font-size: 11px;
@@ -185,55 +202,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.evTime {
-  font-size: 10px;
-  opacity: 0.85;
-}
+.evTime { font-size: 10px; opacity: 0.85; }
 
 /* ─── Responsive ─────────────────────────────────────────────── */
-
-/* Tablet: slightly compress */
 @media (max-width: 768px) {
-  .headerRow,
-  .allDayRow,
-  .grid {
-    grid-template-columns: 44px repeat(7, minmax(80px, 1fr));
-  }
-
-  .timeGutter {
-    width: 44px;
-  }
-
-  .dayAbbr {
-    font-size: 10px;
-  }
+  .headerRow, .grid { grid-template-columns: 44px repeat(7, minmax(80px, 1fr)); }
+  .allDayRow { grid-template-columns: 44px 1fr; }
+  .dayAbbr { font-size: 10px; }
 }
 
-/* Mobile: horizontal scroll so all 7 days are still reachable,
-   but the scroll wrapper clips inside the calendar container */
 @media (max-width: 480px) {
-  .week {
-    overflow-x: auto;
-    /* keep vertical layout intact */
-  }
-
-  .headerRow,
-  .allDayRow {
-    /* Fix to min column width so user can scroll to see all days */
-    grid-template-columns: 40px repeat(7, 88px);
-    min-width: max-content;
-  }
-
-  .grid {
-    grid-template-columns: 40px repeat(7, 88px);
-    min-width: max-content;
-    /* grid itself scrolls inside .week overflow */
-    overflow-y: visible;
-  }
-
-  /* The outer .week handles the scroll */
-  .week {
-    overflow-x: auto;
-    overflow-y: auto;
-  }
+  .week { overflow-x: auto; overflow-y: auto; }
+  .headerRow { grid-template-columns: 40px repeat(7, 88px); min-width: max-content; }
+  .allDayRow { grid-template-columns: 40px 1fr; }
+  .grid { grid-template-columns: 40px repeat(7, 88px); min-width: max-content; overflow-y: visible; }
 }

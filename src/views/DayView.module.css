@@ -101,12 +101,12 @@
 
 .event {
   position: absolute;
-  left: 8px; right: 8px;
+  /* left and width set inline as percentages for overlap layout */
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
   padding: 6px 10px;
-  border: none;
+  border: 2px solid var(--wc-bg); /* gap between side-by-side events */
   cursor: pointer;
   text-align: left;
   overflow: hidden;
@@ -115,9 +115,13 @@
   gap: 2px;
   z-index: 5;
   transition: filter 0.1s;
+  box-sizing: border-box;
 }
 .event:hover { filter: brightness(1.1); }
-.event.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px); }
+.event.tentative {
+  opacity: 0.65;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px);
+}
 .event.cancelled { opacity: 0.45; }
 .event.cancelled .evTitle { text-decoration: line-through; }
 
@@ -137,8 +141,6 @@
     font-size: 14px;
   }
   .event {
-    left: 4px;
-    right: 4px;
     padding: 4px 6px;
   }
   .evTitle { font-size: 12px; }

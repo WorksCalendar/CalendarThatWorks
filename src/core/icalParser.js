@@ -79,8 +79,10 @@ function dayKey(dt) {
 /**
  * Expand a recurring rule into concrete start dates within [rangeStart, rangeEnd].
  * Returns sorted array of Date objects.
+ *
+ * Exported so useOccurrences can expand native recurring events.
  */
-function expandRRule(dtstart, rruleStr, exdates, rangeStart, rangeEnd) {
+export function expandRRule(dtstart, rruleStr, exdates, rangeStart, rangeEnd) {
   const rule     = parseRRule(rruleStr);
   const freq     = rule.FREQ;
   if (!freq) return [new Date(dtstart)];

@@ -5,13 +5,18 @@ import {
   useState, useCallback, useEffect, useRef,
   useImperativeHandle, forwardRef, useMemo,
 } from 'react';
-import { format } from 'date-fns';
+import {
+  format, startOfMonth, endOfMonth,
+  startOfWeek, endOfWeek, addDays, addMonths,
+} from 'date-fns';
 import { ChevronLeft, ChevronRight, Download, Plus, Upload } from 'lucide-react';
 
 import { useCalendar }        from './hooks/useCalendar.js';
 import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
 import { useProfiles }        from './hooks/useProfiles.js';
 import { useFetchEvents }     from './hooks/useFetchEvents.js';
+import { useFeedEvents }      from './hooks/useFeedEvents.js';
+import { useOccurrences }     from './hooks/useOccurrences.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
@@ -41,6 +46,22 @@ const VIEWS = [
   { id: 'schedule', label: 'Schedule' },
   { id: 'timeline', label: 'Timeline' },
 ];
+
+/** Compute the visible [start, end] range for a given view + date. */
+function viewRange(view, date, weekStartDay = 0) {
+  switch (view) {
+    case 'week':
+      return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
+    case 'day':
+      return { start: date, end: addDays(date, 1) };
+    case 'schedule': {
+      const s = startOfWeek(startOfMonth(date), { weekStartsOn: weekStartDay });
+      return { start: s, end: addDays(s, 7 * 6) };
+    }
+    default: // month, agenda, timeline
+      return { start: startOfMonth(date), end: endOfMonth(date) };
+  }
+}
 
 export const WorksCalendar = forwardRef(function WorksCalendar(
   {
@@ -89,10 +110,20 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   },
   ref,
 ) {
-  // ── View / date / filter state (only; events derived below) ─────────────
+  // ── View / date / filter state ───────────────────────────────────────────
   const cal      = useCalendar([]);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave });
   const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
+
+  // Honor defaultView from owner config (applied once after config loads)
+  const defaultViewApplied = useRef(false);
+  useEffect(() => {
+    const defaultView = ownerCfg.config?.display?.defaultView;
+    if (defaultView && !defaultViewApplied.current) {
+      defaultViewApplied.current = true;
+      cal.setView(defaultView);
+    }
+  }, [ownerCfg.config?.display?.defaultView]);
 
   const profiles = useProfiles({
     calendarId,
@@ -102,18 +133,27 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     setView:    cal.setView,
   });
 
+  // ── Visible date range (drives fetch + occurrence expansion) ─────────────
+  const range = useMemo(
+    () => viewRange(cal.view, cal.currentDate, weekStartDay),
+    [cal.view, cal.currentDate, weekStartDay],
+  );
+
   // ── Async fetch ──────────────────────────────────────────────────────────
   const { fetchedEvents, loading: fetchLoading } = useFetchEvents(
     fetchEvents, cal.view, cal.currentDate, weekStartDay,
   );
 
-  // ── Supabase client (dynamic import so it's truly optional) ─────────────
+  // ── iCal feed polling ────────────────────────────────────────────────────
+  const { feedEvents } = useFeedEvents(icalFeeds);
+
+  // ── Supabase Realtime ────────────────────────────────────────────────────
   const [supabaseClient, setSupabaseClient] = useState(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
     import('@supabase/supabase-js')
       .then(({ createClient }) => setSupabaseClient(createClient(supabaseUrl, supabaseKey)))
-      .catch(() => console.warn('[WorksCalendar] @supabase/supabase-js not installed — realtime disabled.'));
+      .catch(() => console.warn('[WorksCalendar] @supabase/supabase-js not installed.'));
   }, [supabaseUrl, supabaseKey]);
 
   const { events: realtimeEvents } = useRealtimeEvents({
@@ -122,39 +162,42 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     filter: supabaseFilter,
   });
 
-  // ── Merge all event sources → normalize → filter ─────────────────────────
+  // ── Merge all sources → normalize ────────────────────────────────────────
   const allNormalized = useMemo(() => {
     const map = new Map();
-    [...rawEvents, ...fetchedEvents, ...realtimeEvents].forEach(ev => {
+    [...rawEvents, ...fetchedEvents, ...feedEvents, ...realtimeEvents].forEach(ev => {
       const key = ev.id ?? `${ev.title}||${String(ev.start)}`;
       map.set(key, ev);
     });
     return normalizeEvents([...map.values()]);
-  }, [rawEvents, fetchedEvents, realtimeEvents]);
+  }, [rawEvents, fetchedEvents, feedEvents, realtimeEvents]);
 
-  const categories    = useMemo(() => getCategories(allNormalized), [allNormalized]);
-  const resources     = useMemo(() => getResources(allNormalized),  [allNormalized]);
-  const visibleEvents = useMemo(() => applyFilters(allNormalized, cal.filters), [allNormalized, cal.filters]);
+  // ── Expand recurring events within the visible range ─────────────────────
+  const expandedEvents = useOccurrences(allNormalized, range.start, range.end);
+
+  // ── Derive categories / resources / filtered events ──────────────────────
+  const categories    = useMemo(() => getCategories(expandedEvents), [expandedEvents]);
+  const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
+  const visibleEvents = useMemo(() => applyFilters(expandedEvents, cal.filters), [expandedEvents, cal.filters]);
 
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [formEvent,     setFormEvent]     = useState(null);
   const [importOpen,    setImportOpen]    = useState(false);
 
-  // ── Imperative handle (CalendarApi) ─────────────────────────────────────
-  const apiRef = useRef(null);
+  // ── CalendarApi / imperative handle ─────────────────────────────────────
   const api = useMemo(() => ({
     navigateTo:       (date) => cal.setCurrentDate(date),
     setView:          (view) => cal.setView(view),
     goToToday:        ()     => cal.goToToday(),
     openEvent:        (id)   => {
-      const ev = allNormalized.find(e => e.id === id);
+      const ev = expandedEvents.find(e => e.id === id);
       if (ev) setSelectedEvent(ev);
     },
     getVisibleEvents: ()     => visibleEvents,
     clearFilters:     ()     => cal.clearFilters(),
     addEvent:         (d={}) => setFormEvent(d),
-  }), [cal, allNormalized, visibleEvents]);
+  }), [cal, expandedEvents, visibleEvents]);
 
   useImperativeHandle(ref, () => api, [api]);
 
@@ -186,18 +229,32 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Context value ────────────────────────────────────────────────────────
   const ctxValue = useMemo(() => ({
-    renderEvent,
-    renderHoverCard,
-    colorRules,
-    businessHours,
-    emptyState,
+    renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
   }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Toolbar date label ───────────────────────────────────────────────────
   function getDateLabel() {
-    if (cal.view === 'day')  return format(cal.currentDate, 'EEEE, MMMM d, yyyy');
-    if (cal.view === 'week') return format(cal.currentDate, "MMM d, yyyy 'week'");
-    return format(cal.currentDate, 'MMMM yyyy');
+    const d = cal.currentDate;
+    switch (cal.view) {
+      case 'day':
+        return format(d, 'EEEE, MMMM d, yyyy');
+      case 'week': {
+        const ws = startOfWeek(d, { weekStartsOn: weekStartDay });
+        const we = endOfWeek(d,   { weekStartsOn: weekStartDay });
+        const sameMo = ws.getMonth() === we.getMonth();
+        const sameYr = ws.getFullYear() === we.getFullYear();
+        if (sameMo)  return `${format(ws, 'MMM d')} – ${format(we, 'd, yyyy')}`;
+        if (sameYr)  return `${format(ws, 'MMM d')} – ${format(we, 'MMM d, yyyy')}`;
+        return `${format(ws, 'MMM d, yyyy')} – ${format(we, 'MMM d, yyyy')}`;
+      }
+      case 'schedule': {
+        const ws = startOfWeek(startOfMonth(d), { weekStartsOn: weekStartDay });
+        const we = addDays(ws, 7 * 6 - 1);
+        return `${format(ws, 'MMM d')} – ${format(we, 'MMM d, yyyy')}`;
+      }
+      default:
+        return format(d, 'MMMM yyyy');
+    }
   }
 
   const hasAddButton = showAddButton || ownerCfg.isOwner;
@@ -212,7 +269,6 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     weekStartDay,
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <CalendarContext.Provider value={ctxValue}>
       <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar">
@@ -351,10 +407,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
         {/* ── Import zone ── */}
         {importOpen && (
-          <ImportZone
-            onImport={handleImport}
-            onClose={() => setImportOpen(false)}
-          />
+          <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
         )}
 
         {/* ── Owner config panel ── */}

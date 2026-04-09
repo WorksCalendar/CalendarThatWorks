@@ -48,6 +48,10 @@ export function normalizeEvent(raw) {
     resource: raw.resource ?? null,
     /** 'confirmed' (default) | 'tentative' (striped) | 'cancelled' (strikethrough) */
     status:   raw.status   ?? 'confirmed',
+    /** iCal RRULE string, e.g. "FREQ=WEEKLY;BYDAY=MO,WE,FR" */
+    rrule:    raw.rrule    ?? null,
+    /** Dates excluded from the recurrence rule. */
+    exdates:  raw.exdates  ?? [],
     meta:     raw.meta     ?? {},
     _raw:     raw,
   };

@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import {
-  format, isToday, isSameDay, getHours, getMinutes, differenceInMinutes,
+  format, isToday, isSameDay, getHours, getMinutes,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import { layoutOverlaps } from '../core/layout.js';
 import styles from './DayView.module.css';
 
 export default function DayView({ currentDate, events, onEventClick, config }) {
@@ -14,8 +16,11 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
   const hours = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
-  const dayEvents = events.filter(e => isSameDay(e.start, currentDate) && !e.allDay);
-  const allDayEvs = events.filter(e => isSameDay(e.start, currentDate) && e.allDay);
+  const allDayEvs = events.filter(e => isSameDay(e.start, currentDate) &&
+    (e.allDay || !isSameDay(e.start, e.end)));
+  const rawTimed  = events.filter(e => isSameDay(e.start, currentDate) &&
+    !e.allDay && isSameDay(e.start, e.end));
+  const dayEvents = useMemo(() => layoutOverlaps(rawTimed), [rawTimed]);
 
   const now = new Date();
   const nowTop = ((getHours(now) - dayStart) * 60 + getMinutes(now)) / 60 * pxPerHour;
@@ -26,7 +31,7 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
     const endMin   = (getHours(ev.end)   - dayStart) * 60 + getMinutes(ev.end);
     return {
       top:    Math.max(0, startMin) / 60 * pxPerHour,
-      height: Math.max(20, endMin - startMin) / 60 * pxPerHour,
+      height: Math.max(22, endMin - startMin) / 60 * pxPerHour,
     };
   }
 
@@ -40,6 +45,10 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
     const color   = resolveColor(ev, ctx?.colorRules);
     const onClick = () => onEventClick?.(ev);
     const { top, height } = eventPosition(ev);
+    const numCols  = ev._numCols ?? 1;
+    const col      = ev._col     ?? 0;
+    const pctLeft  = (col / numCols) * 100;
+    const pctWidth = (1 / numCols) * 100;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
 
@@ -48,7 +57,7 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
       if (custom != null) {
         return (
           <div key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-            style={{ top, height, '--ev-color': color }}>
+            style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}>
             {custom}
           </div>
         );
@@ -57,11 +66,11 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
 
     return (
       <button key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-        style={{ top, height, '--ev-color': color }}
+        style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
         onClick={onClick}>
         <span className={styles.evTitle}>{ev.title}</span>
         <span className={styles.evTime}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
-        {ev.resource && <span className={styles.evMeta}>{ev.resource}</span>}
+        {ev.resource && numCols === 1 && <span className={styles.evMeta}>{ev.resource}</span>}
       </button>
     );
   }
@@ -99,22 +108,16 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
         </div>
         <div className={styles.eventCol} style={{ height: (dayEnd - dayStart) * pxPerHour }}>
           {hours.map(h => (
-            <div
-              key={h}
-              className={[
-                styles.hourLine,
-                bizHours && !isBizHour(h) && styles.offHour,
-              ].filter(Boolean).join(' ')}
+            <div key={h}
+              className={[styles.hourLine, bizHours && !isBizHour(h) && styles.offHour].filter(Boolean).join(' ')}
               style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
             />
           ))}
-
           {showNow && (
             <div className={styles.nowLine} style={{ top: nowTop }}>
               <div className={styles.nowDot} />
             </div>
           )}
-
           {dayEvents.map(ev => renderEvent(ev))}
         </div>
       </div>

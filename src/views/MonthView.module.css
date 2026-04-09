@@ -9,6 +9,7 @@
   display: grid;
   background: var(--wc-surface);
   border-bottom: 1px solid var(--wc-border);
+  flex-shrink: 0;
 }
 
 .weekNumHead,
@@ -30,14 +31,14 @@
   overflow: auto;
 }
 
-.week {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
+/* ── Week row ── */
+.weekRow {
+  display: flex;
   flex: 1;
   min-height: 100px;
   border-bottom: 1px solid var(--wc-border);
 }
-.week:last-child { border-bottom: none; }
+.weekRow:last-child { border-bottom: none; }
 
 .weekNum {
   display: flex;
@@ -47,11 +48,83 @@
   font-size: 11px;
   color: var(--wc-text-faint);
   border-right: 1px solid var(--wc-border);
+  flex-shrink: 0;
+  width: 32px;
+}
+
+/* Area containing the span layer + 7 cells */
+.daysArea {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ── Spanning event bars ── */
+.spansLayer {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.spanBar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  padding: 0 7px;
+  background: var(--ev-color, var(--wc-accent));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--wc-radius-sm);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  z-index: 2;
+  transition: filter 0.1s;
+  /* Inset 2px from left/right so adjacent spans have a gap at boundaries */
+  margin-left: 2px;
+  width: calc(100% - 4px) !important; /* overridden by inline width */
+}
+/* Use CSS custom property width trick to respect margin */
+.spanBar { margin-left: 0; }
+.spanBar:hover { filter: brightness(1.1); }
+.spanBar.continuesBefore {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding-left: 4px;
+  /* Extend to the very left edge */
+  left: 0 !important;
+}
+.spanBar.continuesAfter {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-right: 4px;
+}
+
+.spanBar.tentative {
+  opacity: 0.65;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px);
+}
+.spanBar.cancelled { opacity: 0.45; text-decoration: line-through; }
+
+/* ── 7 day cells ── */
+.weekCells {
+  display: flex;
+  flex: 1;
+  /* padding-top set inline to reserve space for span bars */
 }
 
 .cell {
+  flex: 1;
+  min-width: 0;
   position: relative;
-  padding: 4px;
+  padding: 4px 4px 2px;
   border-right: 1px solid var(--wc-border);
   cursor: pointer;
   transition: background 0.1s;
@@ -121,7 +194,7 @@
 }
 .morePill:hover { color: var(--wc-accent); }
 
-/* "+N more" popover */
+/* ── Popover ── */
 .popover {
   position: absolute;
   top: 0;
@@ -161,90 +234,32 @@
 
 /* ─── Responsive ─────────────────────────────────────────────── */
 
-/* Tablet: reduce padding, tighter cells */
 @media (max-width: 768px) {
-  .week {
-    min-height: 72px;
-  }
-
-  .cell {
-    padding: 2px;
-  }
-
-  .dayNum {
-    width: 22px;
-    height: 22px;
-    font-size: 11px;
-  }
-
-  .eventPill {
-    font-size: 10px;
-    padding: 1px 4px;
-  }
-
-  .morePill {
-    font-size: 10px;
-    padding: 1px 4px;
-  }
-
-  .dayName {
-    font-size: 10px;
-  }
+  .weekRow { min-height: 72px; }
+  .cell { padding: 2px; }
+  .dayNum { width: 22px; height: 22px; font-size: 11px; }
+  .eventPill { font-size: 10px; padding: 1px 4px; }
+  .morePill  { font-size: 10px; padding: 1px 4px; }
+  .dayName   { font-size: 10px; }
+  .spanBar   { font-size: 10px; padding: 0 4px; }
 }
 
-/* Mobile: dot-only mode — show day number + colored dots, no text pills */
 @media (max-width: 480px) {
-  .week {
-    min-height: 56px;
-  }
+  .weekRow { min-height: 56px; }
+  .cell { padding: 2px 1px; }
+  .dayName { font-size: 9px; letter-spacing: 0; }
+  .dayNum  { width: 20px; height: 20px; font-size: 10px; margin-bottom: 1px; }
 
-  .cell {
-    padding: 2px 1px;
-    align-items: center;
-  }
-
-  .dayName {
-    font-size: 9px;
-    letter-spacing: 0;
-  }
-
-  .dayNum {
-    width: 20px;
-    height: 20px;
-    font-size: 10px;
-    margin-bottom: 1px;
-  }
-
-  /* Replace text pills with tiny dots */
+  /* Dot-only mode for single-day pills */
   .eventPill {
-    width: 6px;
-    height: 6px;
-    min-width: 6px;
+    width: 6px; height: 6px; min-width: 6px;
     border-radius: 50%;
-    padding: 0;
-    font-size: 0; /* hide text */
+    padding: 0; font-size: 0;
     overflow: hidden;
   }
+  .morePill { font-size: 9px; padding: 0 2px; }
+  .events { flex-direction: row; flex-wrap: wrap; gap: 2px; justify-content: center; }
 
-  .morePill {
-    font-size: 9px;
-    padding: 0 2px;
-  }
-
-  /* Stack dots horizontally */
-  .events {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 2px;
-    justify-content: center;
-  }
-
-  /* Popover needs to be bigger on mobile */
-  .popover {
-    left: 0;
-    right: 0;
-    transform: none;
-    min-width: auto;
-    max-width: 100%;
-  }
+  .spanBar { font-size: 0; } /* hide text on tiny screens, keep color bar */
+  .popover { left: 0; right: 0; transform: none; min-width: auto; max-width: 100%; }
 }
