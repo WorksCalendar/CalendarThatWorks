@@ -7,11 +7,14 @@ import {
   startOfWeek, addDays, eachDayOfInterval, format,
   isSameDay, isToday,
 } from 'date-fns';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './ScheduleView.module.css';
 
 const WEEKS = 6;
 
 export default function ScheduleView({ currentDate, events, onEventClick, weekStartDay = 0 }) {
+  const ctx = useCalendarContext();
+
   const resources = useMemo(() => {
     const set = new Set();
     events.forEach(e => { if (e.resource) set.add(e.resource); });
@@ -24,19 +27,21 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
     return eachDayOfInterval({ start, end });
   }, [currentDate, weekStartDay]);
 
-  // If no resources, fall back to a simple date list
   if (resources.length === 0) {
     return (
       <div className={styles.fallback}>
         <p className={styles.hint}>Schedule view groups events by resource. Add a <code>resource</code> field to your events.</p>
         <div className={styles.simpleList}>
-          {events.slice(0, 40).map(ev => (
-            <button key={ev.id} className={styles.simpleEvent} onClick={() => onEventClick?.(ev)}
-              style={{ '--ev-color': ev.color }}>
-              <span>{format(ev.start, 'MMM d')}</span>
-              <span>{ev.title}</span>
-            </button>
-          ))}
+          {events.slice(0, 40).map(ev => {
+            const color = resolveColor(ev, ctx?.colorRules);
+            return (
+              <button key={ev.id} className={styles.simpleEvent} onClick={() => onEventClick?.(ev)}
+                style={{ '--ev-color': color }}>
+                <span>{format(ev.start, 'MMM d')}</span>
+                <span>{ev.title}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -56,9 +61,7 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
       <div className={styles.body}>
         {days.map(day => {
           const key = format(day, 'yyyy-MM-dd');
-          // Show week separator
-          const dayOfWeek = day.getDay();
-          const isWeekStart = dayOfWeek === weekStartDay;
+          const isWeekStart = day.getDay() === weekStartDay;
 
           return (
             <div key={key}
@@ -73,15 +76,38 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                 const cellEvents = events.filter(e => e.resource === res && isSameDay(e.start, day));
                 return (
                   <div key={res} className={styles.cell}>
-                    {cellEvents.map(ev => (
-                      <button key={ev.id} className={styles.eventPill}
-                        style={{ '--ev-color': ev.color }}
-                        onClick={() => onEventClick?.(ev)}
-                        title={ev.title}
-                      >
-                        {ev.title}
-                      </button>
-                    ))}
+                    {cellEvents.map(ev => {
+                      const color = resolveColor(ev, ctx?.colorRules);
+                      const statusClass = ev.status === 'cancelled' ? styles.cancelled
+                        : ev.status === 'tentative' ? styles.tentative : '';
+
+                      if (ctx?.renderEvent) {
+                        const custom = ctx.renderEvent(ev, {
+                          view: 'schedule', isCompact: true,
+                          onClick: () => onEventClick?.(ev), color,
+                        });
+                        if (custom != null) {
+                          return (
+                            <div key={ev.id} className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
+                              style={{ '--ev-color': color }}
+                              onClick={() => onEventClick?.(ev)}>
+                              {custom}
+                            </div>
+                          );
+                        }
+                      }
+
+                      return (
+                        <button key={ev.id}
+                          className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
+                          style={{ '--ev-color': color }}
+                          onClick={() => onEventClick?.(ev)}
+                          title={ev.title}
+                        >
+                          {ev.title}
+                        </button>
+                      );
+                    })}
                   </div>
                 );
               })}

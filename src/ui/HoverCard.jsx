@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
-import { X, Clock, Tag, Anchor, FileText, StickyNote } from 'lucide-react';
+import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-react';
 import styles from './HoverCard.module.css';
 
-export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, anchor }) {
+export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor }) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
   const cardRef = useRef(null);
@@ -31,10 +31,20 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
       <div className={styles.body}>
         <div className={styles.titleRow}>
           <h3 className={styles.title}>{event.title}</h3>
+          {onEdit && (
+            <button className={styles.editBtn} onClick={() => onEdit(event)} aria-label="Edit event" title="Edit">
+              <Pencil size={13} />
+            </button>
+          )}
           <button className={styles.close} onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>
+        {event.status && event.status !== 'confirmed' && (
+          <div className={styles.statusBadge} data-status={event.status}>
+            {event.status === 'tentative' ? 'Tentative' : 'Cancelled'}
+          </div>
+        )}
 
         {hc.showTime !== false && (
           <div className={styles.field}>

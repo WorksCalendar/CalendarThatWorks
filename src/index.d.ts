@@ -1,0 +1,381 @@
+/**
+ * WorksCalendar — TypeScript Declarations
+ * Add "types": "./src/index.d.ts" in package.json or use vite-plugin-dts to generate.
+ */
+import type * as React from 'react';
+
+// ─── Core types ────────────────────────────────────────────────────────────────
+
+export type ViewType = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'timeline';
+
+export type ThemeId =
+  | 'light' | 'dark'
+  | 'aviation' | 'soft' | 'minimal'
+  | 'corporate' | 'forest' | 'ocean';
+
+export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
+
+export type FieldType = 'text' | 'number' | 'select' | 'date' | 'checkbox' | 'textarea';
+
+// ─── Event ─────────────────────────────────────────────────────────────────────
+
+/** Raw event shape accepted by WorksCalendar (any extra fields pass through). */
+export interface WorksCalendarEvent {
+  id?: string;
+  title: string;
+  start: Date | string | number;
+  end?: Date | string | number;
+  allDay?: boolean;
+  category?: string;
+  /** Hex color override. If omitted, derived from category. */
+  color?: string;
+  /** Tail number, person, room, etc. Used for resource grouping. */
+  resource?: string;
+  /** 'confirmed' (default) | 'tentative' (striped) | 'cancelled' (strikethrough) */
+  status?: EventStatus;
+  /** Any extra fields — shown in hover card and available to renderEvent. */
+  meta?: Record<string, unknown>;
+  /** iCal RRULE string, e.g. "FREQ=MONTHLY;INTERVAL=3;COUNT=8" */
+  rrule?: string;
+  /** Dates excluded from recurring rule (ISO strings or Date objects). */
+  exdates?: Array<Date | string>;
+}
+
+/** Normalized internal event shape — all fields guaranteed, dates are Date objects. */
+export interface NormalizedEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  category: string | null;
+  color: string;
+  resource: string | null;
+  status: EventStatus;
+  meta: Record<string, unknown>;
+  /** Original raw event passed in. */
+  _raw: WorksCalendarEvent;
+}
+
+// ─── Notes ─────────────────────────────────────────────────────────────────────
+
+export interface Note {
+  id: string;
+  eventId: string;
+  body: string;
+  author?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ─── Config ────────────────────────────────────────────────────────────────────
+
+export interface FieldDefinition {
+  name: string;
+  type: FieldType;
+  required?: boolean;
+  /** Comma-separated option list for type='select'. */
+  options?: string;
+}
+
+export interface HoverCardConfig {
+  showTime?: boolean;
+  showCategory?: boolean;
+  showResource?: boolean;
+  showMeta?: boolean;
+  showNotes?: boolean;
+}
+
+export interface DisplayConfig {
+  defaultView?: ViewType;
+  weekStartDay?: 0 | 1;
+  /** First visible hour in week/day views (0–23). Default 6. */
+  dayStart?: number;
+  /** Last visible hour in week/day views (1–24). Default 22. */
+  dayEnd?: number;
+  showWeekNumbers?: boolean;
+}
+
+export interface CalendarConfig {
+  hoverCard?: HoverCardConfig;
+  /** Map of category name → custom field definitions. */
+  eventFields?: Record<string, FieldDefinition[]>;
+  display?: DisplayConfig;
+  access?: { viewerPassword?: string };
+}
+
+// ─── Profiles ──────────────────────────────────────────────────────────────────
+
+export interface Profile {
+  id: string;
+  name: string;
+  color: string | null;
+  filters: {
+    categories: string[];
+    resources: string[];
+    search: string;
+  };
+  view: ViewType | null;
+}
+
+// ─── Filters ───────────────────────────────────────────────────────────────────
+
+export interface FilterState {
+  categories: Set<string>;
+  resources: Set<string>;
+  dateRange: { start: Date; end: Date } | null;
+  search: string;
+}
+
+// ─── Rendering ─────────────────────────────────────────────────────────────────
+
+export interface RenderEventContext {
+  /** Which view is rendering this event. */
+  view: ViewType;
+  /** True in compact views (month cell, schedule cell). */
+  isCompact: boolean;
+  /** Call this to fire the default onEventClick handler. */
+  onClick: () => void;
+  /** Effective resolved color after colorRules applied. */
+  color: string;
+}
+
+export interface ColorRule {
+  /** Return true to apply this rule's color. Rules are checked in order. */
+  when: (event: NormalizedEvent) => boolean;
+  color: string;
+}
+
+// ─── iCal ──────────────────────────────────────────────────────────────────────
+
+export interface ICalFeed {
+  /** Full URL to an .ics feed (https:// or webcal://). */
+  url: string;
+  label?: string;
+  /** Re-fetch interval in milliseconds. Default: 300_000 (5 min). */
+  refreshInterval?: number;
+}
+
+export interface ParseICSOptions {
+  /** Range to expand recurring events into. Defaults to ±1 year from today. */
+  rangeStart?: Date;
+  rangeEnd?: Date;
+}
+
+// ─── Async data ────────────────────────────────────────────────────────────────
+
+export interface FetchEventsParams {
+  start: Date;
+  end: Date;
+  signal?: AbortSignal;
+}
+
+// ─── Imperative API ────────────────────────────────────────────────────────────
+
+export interface CalendarApi {
+  /** Navigate to any date. */
+  navigateTo: (date: Date) => void;
+  /** Switch views programmatically. */
+  setView: (view: ViewType) => void;
+  /** Jump to today. */
+  goToToday: () => void;
+  /** Open the hover card for a specific event by id. */
+  openEvent: (eventId: string) => void;
+  /** Return the currently visible (filtered) events. */
+  getVisibleEvents: () => NormalizedEvent[];
+  /** Clear all active filters. */
+  clearFilters: () => void;
+  /** Trigger the "Add Event" form. */
+  addEvent: (defaults?: Partial<WorksCalendarEvent>) => void;
+}
+
+// ─── Business hours ────────────────────────────────────────────────────────────
+
+export interface BusinessHours {
+  /** Start hour (0–23). Default: 9. */
+  start: number;
+  /** End hour (1–24). Default: 17. */
+  end: number;
+  /** Day-of-week numbers that are business days (0=Sun, 6=Sat). Default: [1,2,3,4,5]. */
+  days?: number[];
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
+export interface WorksCalendarProps {
+  // ── Data ──
+  /** Static event array. If fetchEvents is also provided, both sources are merged. */
+  events?: WorksCalendarEvent[];
+  /**
+   * Async function to load events for a date range.
+   * Called whenever the visible range changes (navigation).
+   * Return an array of WorksCalendarEvent.
+   */
+  fetchEvents?: (params: FetchEventsParams) => Promise<WorksCalendarEvent[]>;
+  /** Live iCal feed URLs to subscribe to. */
+  icalFeeds?: ICalFeed[];
+
+  // ── Identity ──
+  /** Namespaces localStorage (config, profiles). Default: 'default'. */
+  calendarId?: string;
+
+  // ── Owner config ──
+  ownerPassword?: string;
+  onConfigSave?: (config: CalendarConfig) => void;
+
+  // ── Notes ──
+  notes?: Record<string, Note>;
+  onNoteSave?: (note: Partial<Note>) => void;
+  onNoteDelete?: (noteId: string) => void;
+
+  // ── Event callbacks ──
+  onEventClick?: (event: NormalizedEvent) => void;
+  onEventSave?: (event: WorksCalendarEvent) => void;
+  onEventDelete?: (eventId: string) => void;
+  /** Called when events are imported via drag-drop or feed. */
+  onImport?: (events: WorksCalendarEvent[]) => void;
+
+  // ── Supabase realtime ──
+  supabaseUrl?: string;
+  supabaseKey?: string;
+  /** Table to subscribe to for realtime event updates. */
+  supabaseTable?: string;
+  /** Supabase PostgREST filter, e.g. "calendar_id=eq.my-cal". */
+  supabaseFilter?: string;
+
+  // ── Appearance ──
+  theme?: ThemeId;
+  /**
+   * Conditional color overrides. Checked in order — first match wins.
+   * @example [{ when: e => e.category === 'AOG', color: '#ef4444' }]
+   */
+  colorRules?: ColorRule[];
+  /** Shade non-business hours in week/day views. */
+  businessHours?: BusinessHours;
+
+  // ── Custom rendering ──
+  /**
+   * Replace the default event pill/bar with your own component.
+   * The positioning wrapper is always rendered by the view;
+   * you control the inner content and styling.
+   */
+  renderEvent?: (event: NormalizedEvent, context: RenderEventContext) => React.ReactNode;
+  /**
+   * Replace the default hover card with a custom component.
+   * Call onClose() to dismiss it.
+   */
+  renderHoverCard?: (event: NormalizedEvent, onClose: () => void) => React.ReactNode;
+  /**
+   * Replace the entire toolbar. Receives the imperative CalendarApi.
+   */
+  renderToolbar?: (api: CalendarApi) => React.ReactNode;
+  /**
+   * Custom empty state shown when no events match current filters.
+   */
+  emptyState?: React.ReactNode;
+
+  // ── UI toggles ──
+  /** Show the "Add Event" button. Always shown when owner is authenticated. */
+  showAddButton?: boolean;
+
+  // ── Imperative handle ──
+  ref?: React.Ref<CalendarApi>;
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────────
+
+export declare const WorksCalendar: React.ForwardRefExoticComponent<
+  WorksCalendarProps & React.RefAttributes<CalendarApi>
+>;
+
+// ─── Hooks ─────────────────────────────────────────────────────────────────────
+
+export declare function useCalendar(
+  rawEvents: WorksCalendarEvent[],
+  initialView?: ViewType
+): {
+  view: ViewType;
+  setView: (v: ViewType) => void;
+  currentDate: Date;
+  setCurrentDate: (d: Date) => void;
+  events: NormalizedEvent[];
+  visibleEvents: NormalizedEvent[];
+  categories: string[];
+  resources: string[];
+  filters: FilterState;
+  navigate: (direction: -1 | 1) => void;
+  goToToday: () => void;
+  toggleCategory: (cat: string) => void;
+  toggleResource: (res: string) => void;
+  setSearch: (q: string) => void;
+  setDateRange: (range: FilterState['dateRange']) => void;
+  clearFilters: () => void;
+  replaceFilters: (filters: FilterState) => void;
+};
+
+export declare function useProfiles(opts: {
+  calendarId: string;
+  filters: FilterState;
+  view: ViewType;
+  setFilters: (f: FilterState) => void;
+  setView: (v: ViewType) => void;
+}): {
+  profiles: Profile[];
+  activeProfile: Profile | null;
+  activeId: string | null;
+  isDirty: boolean;
+  applyProfile: (p: Profile) => void;
+  addProfile: (opts: { name: string; color?: string; pinView?: boolean }) => Profile;
+  updateProfile: (id: string, patch: Partial<Profile>) => void;
+  resaveProfile: (id: string) => void;
+  deleteProfile: (id: string) => void;
+  clearActive: () => void;
+};
+
+export declare function useRealtimeEvents(opts: {
+  supabaseClient: unknown;
+  table?: string;
+  filter?: string;
+}): {
+  events: WorksCalendarEvent[];
+  status: 'connecting' | 'live' | 'error' | 'disabled';
+};
+
+// ─── Utilities ─────────────────────────────────────────────────────────────────
+
+export declare function parseICS(
+  text: string,
+  options?: ParseICSOptions
+): WorksCalendarEvent[];
+
+export declare function fetchAndParseICS(
+  url: string,
+  options?: ParseICSOptions
+): Promise<WorksCalendarEvent[]>;
+
+export declare function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent;
+export declare function normalizeEvents(raw: WorksCalendarEvent[]): NormalizedEvent[];
+export declare function exportToExcel(events: NormalizedEvent[], filename?: string): Promise<void>;
+
+// ─── Theme metadata ────────────────────────────────────────────────────────────
+
+export interface ThemeDefinition {
+  id: ThemeId;
+  label: string;
+  description: string;
+  dark: boolean;
+  preview: {
+    bg: string;
+    surface: string;
+    accent: string;
+    text: string;
+    border: string;
+  };
+}
+
+export declare const THEMES: ThemeDefinition[];
+export declare const THEMES_BY_ID: Record<ThemeId, ThemeDefinition>;
+export declare const THEME_IDS: ThemeId[];
+
+export declare const PROFILE_COLORS: string[];
+export declare const FIELD_TYPES: Array<{ value: FieldType; label: string }>;

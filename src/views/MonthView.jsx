@@ -4,12 +4,14 @@ import {
   eachDayOfInterval, isSameMonth, isSameDay, isToday,
   format, getISOWeek,
 } from 'date-fns';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './MonthView.module.css';
 
 const MAX_VISIBLE = 3;
 
 export default function MonthView({ currentDate, events, onEventClick, onDayClick, config, weekStartDay = 0 }) {
   const [popoverDay, setPopoverDay] = useState(null);
+  const ctx = useCalendarContext();
 
   const { weeks, dayNames } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -20,11 +22,8 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
 
     const wks = [];
     for (let i = 0; i < days.length; i += 7) wks.push(days.slice(i, i + 7));
-
     const names = [];
-    for (let i = 0; i < 7; i++) {
-      names.push(format(days[i], 'EEE'));
-    }
+    for (let i = 0; i < 7; i++) names.push(format(days[i], 'EEE'));
     return { weeks: wks, dayNames: names };
   }, [currentDate, weekStartDay]);
 
@@ -39,6 +38,44 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
   }, [events]);
 
   const showWeekNumbers = config?.display?.showWeekNumbers;
+
+  function renderPill(ev, inPopover = false) {
+    const color   = resolveColor(ev, ctx?.colorRules);
+    const onClick = () => { onEventClick?.(ev); if (inPopover) setPopoverDay(null); };
+
+    const statusClass = ev.status === 'cancelled'
+      ? styles.cancelled
+      : ev.status === 'tentative'
+      ? styles.tentative
+      : '';
+
+    if (ctx?.renderEvent) {
+      const custom = ctx.renderEvent(ev, { view: 'month', isCompact: true, onClick, color });
+      if (custom != null) {
+        return (
+          <div
+            key={ev.id}
+            className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
+            onClick={e => { e.stopPropagation(); onClick(); }}
+          >
+            {custom}
+          </div>
+        );
+      }
+    }
+
+    return (
+      <button
+        key={ev.id}
+        className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
+        style={{ '--ev-color': color }}
+        onClick={e => { e.stopPropagation(); onClick(); }}
+        title={ev.title}
+      >
+        {ev.title}
+      </button>
+    );
+  }
 
   return (
     <div className={styles.month}>
@@ -57,7 +94,7 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
               const key = format(day, 'yyyy-MM-dd');
               const dayEvents = eventsByDay.get(key) || [];
               const isCurrentMonth = isSameMonth(day, currentDate);
-              const isPopoverOpen = popoverDay && isSameDay(popoverDay, day);
+              const isPopoverOpen  = popoverDay && isSameDay(popoverDay, day);
 
               return (
                 <div
@@ -72,17 +109,7 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                   <span className={styles.dayNum}>{format(day, 'd')}</span>
 
                   <div className={styles.events}>
-                    {dayEvents.slice(0, MAX_VISIBLE).map(ev => (
-                      <button
-                        key={ev.id}
-                        className={styles.eventPill}
-                        style={{ '--ev-color': ev.color }}
-                        onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
-                        title={ev.title}
-                      >
-                        {ev.title}
-                      </button>
-                    ))}
+                    {dayEvents.slice(0, MAX_VISIBLE).map(ev => renderPill(ev))}
                     {dayEvents.length > MAX_VISIBLE && (
                       <button
                         className={styles.morePill}
@@ -99,16 +126,7 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                         <span>{format(day, 'MMMM d')}</span>
                         <button onClick={() => setPopoverDay(null)}>×</button>
                       </div>
-                      {dayEvents.map(ev => (
-                        <button
-                          key={ev.id}
-                          className={styles.eventPill}
-                          style={{ '--ev-color': ev.color }}
-                          onClick={() => { onEventClick?.(ev); setPopoverDay(null); }}
-                        >
-                          {ev.title}
-                        </button>
-                      ))}
+                      {dayEvents.map(ev => renderPill(ev, true))}
                     </div>
                   )}
                 </div>

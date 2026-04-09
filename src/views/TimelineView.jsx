@@ -9,22 +9,18 @@
 import { useMemo } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
-  format, isToday, isWeekend, isSameMonth,
+  format, isToday, isWeekend,
   differenceInCalendarDays, startOfDay, min, max,
-  getDaysInMonth,
 } from 'date-fns';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './TimelineView.module.css';
 
-const NAME_W  = 150; // px — left name column
-const DAY_W   = 52;  // px — per day column
-const LANE_H  = 26;  // px — each event lane
-const LANE_GAP = 3;  // px — gap between lanes
-const ROW_PAD = 6;   // px — top/bottom row padding
+const NAME_W  = 150;
+const DAY_W   = 52;
+const LANE_H  = 26;
+const LANE_GAP = 3;
+const ROW_PAD = 6;
 
-/**
- * Assign non-overlapping vertical lanes to events (day-granularity).
- * Mutates each event with a `_lane` and `_startDay` / `_span` field.
- */
 function assignLanes(events, monthStart, monthEnd) {
   const clipped = events
     .filter(e => startOfDay(e.start) <= monthEnd && startOfDay(e.end) >= monthStart)
@@ -41,7 +37,7 @@ function assignLanes(events, monthStart, monthEnd) {
     }))
     .sort((a, b) => a._dayStart - b._dayStart || a._dayEnd - b._dayEnd);
 
-  const laneEnd = []; // laneEnd[i] = last _dayEnd in lane i
+  const laneEnd = [];
 
   for (const ev of clipped) {
     let placed = false;
@@ -63,12 +59,12 @@ function assignLanes(events, monthStart, monthEnd) {
 }
 
 export default function TimelineView({ currentDate, events, onEventClick }) {
+  const ctx = useCalendarContext();
   const monthStart = startOfMonth(currentDate);
   const monthEnd   = endOfMonth(currentDate);
   const days = useMemo(() => eachDayOfInterval({ start: monthStart, end: monthEnd }), [monthStart]);
   const totalDays = days.length;
 
-  // Collect all resources; events without a resource go to "(Unassigned)"
   const resources = useMemo(() => {
     const set = new Set();
     events.forEach(e => set.add(e.resource ?? '(Unassigned)'));
@@ -79,7 +75,6 @@ export default function TimelineView({ currentDate, events, onEventClick }) {
     });
   }, [events]);
 
-  // Group + lane-assign events per resource
   const rows = useMemo(() => {
     return resources.map(resource => {
       const resEvents = events.filter(
@@ -92,6 +87,7 @@ export default function TimelineView({ currentDate, events, onEventClick }) {
   }, [resources, events, monthStart, monthEnd]);
 
   if (resources.length === 0) {
+    if (ctx?.emptyState) return <>{ctx.emptyState}</>;
     return (
       <div className={styles.empty}>
         <p>No events to display in {format(currentDate, 'MMMM yyyy')}.</p>
@@ -105,20 +101,17 @@ export default function TimelineView({ currentDate, events, onEventClick }) {
 
         {/* ── Sticky header row ── */}
         <div className={styles.headerRow}>
-          {/* Corner cell */}
           <div className={styles.cornerCell} style={{ width: NAME_W, minWidth: NAME_W }}>
             {format(currentDate, 'MMMM yyyy')}
           </div>
-
-          {/* Day columns */}
           <div className={styles.dayHeads}>
             {days.map(day => (
               <div
                 key={format(day, 'yyyy-MM-dd')}
                 className={[
                   styles.dayHead,
-                  isToday(day)    && styles.todayHead,
-                  isWeekend(day)  && styles.weekendHead,
+                  isToday(day)   && styles.todayHead,
+                  isWeekend(day) && styles.weekendHead,
                 ].filter(Boolean).join(' ')}
                 style={{ width: DAY_W, minWidth: DAY_W }}
               >
@@ -150,7 +143,7 @@ export default function TimelineView({ currentDate, events, onEventClick }) {
                 className={styles.eventZone}
                 style={{ width: totalDays * DAY_W, height: rowH, position: 'relative' }}
               >
-                {/* Day column background lines */}
+                {/* Day column backgrounds */}
                 {days.map((day, di) => (
                   <div
                     key={di}
@@ -165,22 +158,37 @@ export default function TimelineView({ currentDate, events, onEventClick }) {
 
                 {/* Event bars */}
                 {rowEvents.map(ev => {
+                  const color  = resolveColor(ev, ctx?.colorRules);
                   const left   = ev._dayStart * DAY_W + 2;
                   const width  = Math.max(DAY_W - 4, (ev._dayEnd - ev._dayStart + 1) * DAY_W - 4);
                   const top    = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
+                  const onClick = () => onEventClick?.(ev);
+                  const statusClass = ev.status === 'cancelled' ? styles.cancelled
+                    : ev.status === 'tentative' ? styles.tentative : '';
+
+                  if (ctx?.renderEvent) {
+                    const custom = ctx.renderEvent(ev, {
+                      view: 'timeline', isCompact: true, onClick, color,
+                    });
+                    if (custom != null) {
+                      return (
+                        <div
+                          key={ev.id}
+                          className={[styles.event, statusClass].filter(Boolean).join(' ')}
+                          style={{ left, top, width, height: LANE_H, '--ev-color': color }}
+                        >
+                          {custom}
+                        </div>
+                      );
+                    }
+                  }
 
                   return (
                     <button
                       key={ev.id}
-                      className={styles.event}
-                      style={{
-                        left,
-                        top,
-                        width,
-                        height: LANE_H,
-                        '--ev-color': ev.color,
-                      }}
-                      onClick={() => onEventClick?.(ev)}
+                      className={[styles.event, statusClass].filter(Boolean).join(' ')}
+                      style={{ left, top, width, height: LANE_H, '--ev-color': color }}
+                      onClick={onClick}
                       title={`${ev.title}${ev.category ? ` · ${ev.category}` : ''}`}
                     >
                       <span className={styles.evDot} />

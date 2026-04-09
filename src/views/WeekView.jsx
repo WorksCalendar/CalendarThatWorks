@@ -2,15 +2,18 @@ import { useMemo } from 'react';
 import {
   startOfWeek, endOfWeek, eachDayOfInterval,
   format, isSameDay, isToday, getHours, getMinutes, differenceInMinutes,
-  startOfDay, max, min,
 } from 'date-fns';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './WeekView.module.css';
 
 export default function WeekView({ currentDate, events, onEventClick, config, weekStartDay = 0 }) {
-  const dayStart = config?.display?.dayStart ?? 6;
-  const dayEnd   = config?.display?.dayEnd   ?? 22;
+  const ctx = useCalendarContext();
+  const dayStart   = config?.display?.dayStart ?? 6;
+  const dayEnd     = config?.display?.dayEnd   ?? 22;
   const totalHours = dayEnd - dayStart;
-  const pxPerHour = 64;
+  const pxPerHour  = 64;
+
+  const bizHours = ctx?.businessHours ?? null;
 
   const days = useMemo(() => {
     const start = startOfWeek(currentDate, { weekStartsOn: weekStartDay });
@@ -31,6 +34,12 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
   const hours = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
+  function isBizHour(h, day) {
+    if (!bizHours) return true;
+    const bizDays = bizHours.days ?? [1, 2, 3, 4, 5];
+    return bizDays.includes(day.getDay()) && h >= bizHours.start && h < bizHours.end;
+  }
+
   function eventPosition(ev) {
     const startMin = (getHours(ev.start) - dayStart) * 60 + getMinutes(ev.start);
     const endMin   = (getHours(ev.end)   - dayStart) * 60 + getMinutes(ev.end);
@@ -42,6 +51,42 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
   const now = new Date();
   const nowTop = ((getHours(now) - dayStart) * 60 + getMinutes(now)) / 60 * pxPerHour;
   const showNowLine = getHours(now) >= dayStart && getHours(now) < dayEnd;
+
+  function renderEvent(ev) {
+    const color   = resolveColor(ev, ctx?.colorRules);
+    const onClick = () => onEventClick?.(ev);
+    const { top, height } = eventPosition(ev);
+
+    const statusClass = ev.status === 'cancelled' ? styles.cancelled
+      : ev.status === 'tentative' ? styles.tentative : '';
+
+    if (ctx?.renderEvent) {
+      const custom = ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color });
+      if (custom != null) {
+        return (
+          <div
+            key={ev.id}
+            className={[styles.event, statusClass].filter(Boolean).join(' ')}
+            style={{ top, height, '--ev-color': color }}
+          >
+            {custom}
+          </div>
+        );
+      }
+    }
+
+    return (
+      <button
+        key={ev.id}
+        className={[styles.event, statusClass].filter(Boolean).join(' ')}
+        style={{ top, height, '--ev-color': color }}
+        onClick={onClick}
+      >
+        <span className={styles.evTitle}>{ev.title}</span>
+        <span className={styles.evTime}>{format(ev.start, 'h:mm a')}</span>
+      </button>
+    );
+  }
 
   return (
     <div className={styles.week}>
@@ -67,10 +112,16 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
             const dayAD = allDayEvents.filter(e => isSameDay(e.start, day));
             return (
               <div key={key} className={styles.allDayCell}>
-                {dayAD.map(ev => (
-                  <button key={ev.id} className={styles.allDayPill} style={{ '--ev-color': ev.color }}
-                    onClick={() => onEventClick?.(ev)}>{ev.title}</button>
-                ))}
+                {dayAD.map(ev => {
+                  const color = resolveColor(ev, ctx?.colorRules);
+                  return (
+                    <button key={ev.id} className={styles.allDayPill}
+                      style={{ '--ev-color': color }}
+                      onClick={() => onEventClick?.(ev)}>
+                      {ev.title}
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
@@ -93,36 +144,30 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
           const isNowDay  = isToday(day);
 
           return (
-            <div key={key} className={[styles.dayCol, isToday(day) && styles.todayCol].filter(Boolean).join(' ')}
-              style={{ height: totalHours * pxPerHour }}>
-
-              {/* Hour lines */}
+            <div key={key}
+              className={[styles.dayCol, isToday(day) && styles.todayCol].filter(Boolean).join(' ')}
+              style={{ height: totalHours * pxPerHour }}
+            >
+              {/* Hour lines + business-hours shading */}
               {hours.map(h => (
-                <div key={h} className={styles.hourLine} style={{ top: (h - dayStart) * pxPerHour }} />
+                <div
+                  key={h}
+                  className={[
+                    styles.hourLine,
+                    bizHours && !isBizHour(h, day) && styles.offHour,
+                  ].filter(Boolean).join(' ')}
+                  style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
+                />
               ))}
 
-              {/* Current time indicator */}
+              {/* Now line */}
               {isNowDay && showNowLine && (
                 <div className={styles.nowLine} style={{ top: nowTop }}>
                   <div className={styles.nowDot} />
                 </div>
               )}
 
-              {/* Events */}
-              {dayEvents.map(ev => {
-                const { top, height } = eventPosition(ev);
-                return (
-                  <button
-                    key={ev.id}
-                    className={styles.event}
-                    style={{ top, height, '--ev-color': ev.color }}
-                    onClick={() => onEventClick?.(ev)}
-                  >
-                    <span className={styles.evTitle}>{ev.title}</span>
-                    <span className={styles.evTime}>{format(ev.start, 'h:mm a')}</span>
-                  </button>
-                );
-              })}
+              {dayEvents.map(ev => renderEvent(ev))}
             </div>
           );
         })}

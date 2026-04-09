@@ -46,6 +46,8 @@ export function normalizeEvent(raw) {
     category: raw.category ?? null,
     color:    raw.color    ?? categoryColor(raw.category),
     resource: raw.resource ?? null,
+    /** 'confirmed' (default) | 'tentative' (striped) | 'cancelled' (strikethrough) */
+    status:   raw.status   ?? 'confirmed',
     meta:     raw.meta     ?? {},
     _raw:     raw,
   };

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Drop-in embeddable React calendar with filter pills, hover cards, Excel export, and owner config panel",
   "type": "module",
+  "types": "./src/index.d.ts",
   "main": "./dist/works-calendar.umd.js",
   "module": "./dist/works-calendar.es.js",
   "exports": {

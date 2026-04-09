@@ -170,6 +170,12 @@
   transition: opacity 0.1s, filter 0.1s;
 }
 .event:hover { filter: brightness(1.1); }
+.event.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px); }
+.event.cancelled { opacity: 0.45; }
+.event.cancelled .evTitle { text-decoration: line-through; }
+
+/* Business-hours off shading */
+.offHour { background: color-mix(in srgb, var(--wc-text) 4%, transparent); }
 
 .evTitle {
   font-size: 11px;

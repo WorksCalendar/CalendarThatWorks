@@ -59,6 +59,33 @@
 }
 .close:hover { color: var(--wc-text); background: var(--wc-surface); }
 
+.editBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-muted);
+  padding: 4px 5px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+.editBtn:hover { color: var(--wc-accent); background: var(--wc-surface); }
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  align-self: flex-start;
+}
+.statusBadge[data-status="tentative"] { background: #fef3c7; color: #92400e; }
+.statusBadge[data-status="cancelled"] { background: #fee2e2; color: #991b1b; }
+
 .field {
   display: flex;
   align-items: center;
