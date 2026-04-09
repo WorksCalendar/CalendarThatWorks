@@ -2,7 +2,7 @@
  * WorksCalendar — main component.
  */
 import {
-  useState, useCallback, useEffect, useRef,
+  useState, useCallback, useEffect, useRef, useReducer,
   useImperativeHandle, forwardRef, useMemo,
 } from 'react';
 import {
@@ -16,11 +16,12 @@ import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
 import { useProfiles }        from './hooks/useProfiles.js';
 import { useFetchEvents }     from './hooks/useFetchEvents.js';
 import { useFeedEvents }      from './hooks/useFeedEvents.js';
-import { useOccurrences }     from './hooks/useOccurrences.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
-import { validateChange }     from './core/validator.js';
+import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
+import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
+import { occurrenceToLegacy } from './core/engine/adapters/toLegacyEvents.ts';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
@@ -182,35 +183,62 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     return normalizeEvents([...map.values(), ...noId]);
   }, [rawEvents, fetchedEvents, feedEvents, realtimeEvents]);
 
-  // ── Expand recurring events within the visible range ─────────────────────
-  const expandedEvents = useOccurrences(allNormalized, range.start, range.end);
+  // ── CalendarEngine — single source of truth for mutations & expansions ───
+  const engineRef = useRef(null);
+  if (engineRef.current === null) engineRef.current = new CalendarEngine();
+
+  // Version counter: increments whenever the engine emits a state change.
+  const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
+  useEffect(() => engineRef.current.subscribe(() => tickEngine()), []);
+
+  // Keep engine in sync with the merged+normalized event list from all sources.
+  useEffect(() => {
+    engineRef.current.setEvents(fromLegacyEvents(allNormalized));
+  }, [allNormalized]);
+
+  // ── Expand recurring events within the visible range (via engine) ────────
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const expandedEvents = useMemo(
+    () => engineRef.current.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
+    [engineVer, range],
+  );
 
   // ── Derive categories / resources / filtered events ──────────────────────
   const categories    = useMemo(() => getCategories(expandedEvents), [expandedEvents]);
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
   const visibleEvents = useMemo(() => applyFilters(expandedEvents, cal.filters), [expandedEvents, cal.filters]);
 
-  // ── Validation pipeline ──────────────────────────────────────────────────
-  // Keep a ref so runAndCommit is stable but always reads the latest context.
-  const validationCtxRef = useRef(null);
-  validationCtxRef.current = {
-    events:         expandedEvents,
-    businessHours:  ownerCfg.config?.businessHours ?? businessHours,
+  // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
+  // Stable ref so applyEngineOp closure never goes stale.
+  const opCtxRef = useRef(null);
+  opCtxRef.current = {
+    businessHours:  ownerCfg.config?.businessHours ?? businessHours ?? null,
     blockedWindows: blockedWindows ?? [],
   };
 
   const [pendingAlert, setPendingAlert] = useState(null); // { violations, isHard, onConfirm }
 
-  const runAndCommit = useCallback((change, commit) => {
-    const result = validateChange(change, validationCtxRef.current);
-    if (result.severity === 'none') {
-      commit();
-    } else if (result.severity === 'soft') {
-      setPendingAlert({ violations: result.violations, isHard: false, onConfirm: commit });
+  const applyEngineOp = useCallback((op, onAccepted) => {
+    const engine = engineRef.current;
+    const ctx    = opCtxRef.current;
+    const result = engine.applyMutation(op, ctx);
+    if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
+      onAccepted();
+    } else if (result.status === 'pending-confirmation') {
+      setPendingAlert({
+        violations: result.validation.violations,
+        isHard: false,
+        onConfirm: () => {
+          const confirmed = engine.applyMutation(op, ctx, { overrideSoftViolations: true });
+          if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
+            onAccepted();
+          }
+        },
+      });
     } else {
-      setPendingAlert({ violations: result.violations, isHard: true,  onConfirm: null });
+      setPendingAlert({ violations: result.validation.violations, isHard: true, onConfirm: null });
     }
-  }, []); // stable — reads from ref
+  }, []); // stable — reads from refs
 
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -239,41 +267,50 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
 
-  // All three handlers funnel through runAndCommit before touching host state.
+  // All three handlers run through applyEngineOp before touching host state.
 
   const handleEventSave = useCallback((rawEv) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
     const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
-    const existing = rawEv.id
-      ? expandedEvents.find(e => e.id === String(rawEv.id)) ?? null
-      : null;
-    runAndCommit(
-      { type: existing ? 'move' : 'create', event: existing, newStart, newEnd, resource: rawEv.resource ?? null },
-      () => { onEventSave?.(rawEv); setFormEvent(null); },
-    );
-  }, [runAndCommit, expandedEvents, onEventSave]);
+    // _eventId is present on occurrences from the engine; fall back to id for
+    // legacy shapes passed directly (e.g. from the EventForm).
+    const eventId  = rawEv._eventId ?? (rawEv.id ? String(rawEv.id) : null);
+    const op = eventId
+      ? { type: 'move',   id: eventId, newStart, newEnd, source: 'form' }
+      : { type: 'create', event: {
+            title:      rawEv.title ?? '(untitled)',
+            start:      newStart,
+            end:        newEnd,
+            allDay:     rawEv.allDay     ?? false,
+            resourceId: rawEv.resource   ?? null,
+            category:   rawEv.category   ?? null,
+            color:      rawEv.color      ?? null,
+            status:     rawEv.status     ?? 'confirmed',
+          }, source: 'form' };
+    applyEngineOp(op, () => { onEventSave?.(rawEv); setFormEvent(null); });
+  }, [applyEngineOp, onEventSave]);
 
   const handleEventMove = useCallback((ev, newStart, newEnd) => {
     const raw = ev._raw ?? ev;
-    runAndCommit(
-      { type: 'move', event: ev, newStart, newEnd },
+    applyEngineOp(
+      { type: 'move', id: ev._eventId ?? String(ev.id), newStart, newEnd, source: 'drag' },
       () => {
         if (onEventMove) onEventMove(ev, newStart, newEnd);
         else onEventSave?.({ ...raw, start: newStart, end: newEnd });
       },
     );
-  }, [runAndCommit, onEventMove, onEventSave]);
+  }, [applyEngineOp, onEventMove, onEventSave]);
 
   const handleEventResize = useCallback((ev, newStart, newEnd) => {
     const raw = ev._raw ?? ev;
-    runAndCommit(
-      { type: 'resize', event: ev, newStart, newEnd },
+    applyEngineOp(
+      { type: 'resize', id: ev._eventId ?? String(ev.id), newStart, newEnd, source: 'resize' },
       () => {
         if (onEventResize) onEventResize(ev, newStart, newEnd);
         else onEventSave?.({ ...raw, start: newStart, end: newEnd });
       },
     );
-  }, [runAndCommit, onEventResize, onEventSave]);
+  }, [applyEngineOp, onEventResize, onEventSave]);
 
   const handleEventDelete = useCallback((id) => {
     onEventDelete?.(id);
