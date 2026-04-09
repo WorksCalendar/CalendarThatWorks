@@ -11,7 +11,7 @@ import styles from './DayView.module.css';
 const GUTTER_W = 56;
 
 export default function DayView({
-  currentDate, events, onEventClick, onEventSave, onEventMove, onEventResize, onSlotClick, config,
+  currentDate, events, onEventClick, onEventSave, onEventMove, onEventResize, onDateSelect, config,
 }) {
   const ctx = useCalendarContext();
   const dayStart  = config?.display?.dayStart ?? 6;
@@ -72,7 +72,7 @@ export default function DayView({
     const result = drag.onPointerUp();
     if (!result) return;
     if (result.type === 'create') {
-      onSlotClick?.(result.newStart, result.newStart, result.newEnd);
+      onDateSelect?.(result.newStart, result.newEnd);
       return;
     }
     const raw     = result.ev._raw ?? result.ev;
@@ -84,7 +84,7 @@ export default function DayView({
     } else {
       onEventSave?.(updated);
     }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave, onSlotClick]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave, onDateSelect]);
 
   // ── Renderers ─────────────────────────────────────────────────────────
   function renderEvent(ev) {

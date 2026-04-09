@@ -17,7 +17,7 @@ function isMultiDay(ev) {
 }
 
 export default function MonthView({
-  currentDate, events, onEventClick, onEventSave, onDayClick,
+  currentDate, events, onEventClick, onEventMove, onEventSave, onDateSelect,
   config, weekStartDay = 0,
 }) {
   const [popoverDay, setPopoverDay] = useState(null);
@@ -56,7 +56,8 @@ export default function MonthView({
     }
     const newEnd = new Date(newStart.getTime() + durationMs);
     const raw    = d.ev._raw ?? d.ev;
-    onEventSave?.({ ...raw, start: newStart, end: newEnd, allDay: d.ev.allDay });
+    if (onEventMove) onEventMove(d.ev, newStart, newEnd);
+    else onEventSave?.({ ...raw, start: newStart, end: newEnd, allDay: d.ev.allDay });
   }
 
   function cancelDrag() {
@@ -239,7 +240,12 @@ export default function MonthView({
                           isToday(day) && styles.today,
                           isDropTarget && styles.dropTarget,
                         ].filter(Boolean).join(' ')}
-                        onClick={() => onDayClick?.(day)}
+                        onClick={() => {
+                          if (!onDateSelect) return;
+                          const s = new Date(day); s.setHours(9, 0, 0, 0);
+                          const e = new Date(day); e.setHours(10, 0, 0, 0);
+                          onDateSelect(s, e);
+                        }}
                         onPointerEnter={() => handleCellPointerEnter(day)}
                       >
                         <span className={styles.dayNum}>{format(day, 'd')}</span>

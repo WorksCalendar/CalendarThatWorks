@@ -89,6 +89,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEventMove,
     onEventResize,
     onEventDelete,
+    onDateSelect,
 
     // ── Supabase realtime ──
     supabaseUrl,
@@ -281,11 +282,12 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
 
-  // Slot click (empty area) → open form seeded with the clicked time
-  const handleSlotClick = useCallback((day, startD, endD) => {
+  // Date-select (drag-to-create or day click) → open form seeded with the range
+  const handleDateSelect = useCallback((start, end) => {
     if (!hasAddButton) return;
-    setFormEvent({ start: startD, end: endD });
-  }, [hasAddButton]);
+    onDateSelect?.(start, end);
+    setFormEvent({ start, end });
+  }, [hasAddButton, onDateSelect]);
 
   const sharedViewProps = {
     currentDate:    cal.currentDate,
@@ -294,7 +296,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEventSave:    handleEventSave,
     onEventMove:    handleEventMove,
     onEventResize:  handleEventResize,
-    onSlotClick:    handleSlotClick,
+    onDateSelect:   handleDateSelect,
     config:         ownerCfg.config,
     weekStartDay,
   };
@@ -391,12 +393,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             <div className={styles.emptyStateWrap}>{emptyState}</div>
           ) : (
             <>
-              {cal.view === 'month'    && (
-                <MonthView
-                  {...sharedViewProps}
-                  onDayClick={day => hasAddButton && setFormEvent({ start: day, end: day })}
-                />
-              )}
+              {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
               {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} />}

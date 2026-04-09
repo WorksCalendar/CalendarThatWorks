@@ -22,7 +22,7 @@ function isMultiDay(ev) {
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 export default function WeekView({
-  currentDate, events, onEventClick, onEventSave, onEventMove, onEventResize, onSlotClick,
+  currentDate, events, onEventClick, onEventSave, onEventMove, onEventResize, onDateSelect,
   config, weekStartDay = 0,
 }) {
   const ctx = useCalendarContext();
@@ -107,7 +107,7 @@ export default function WeekView({
     const result = drag.onPointerUp();
     if (!result) return;
     if (result.type === 'create') {
-      onSlotClick?.(result.newStart, result.newStart, result.newEnd);
+      onDateSelect?.(result.newStart, result.newEnd);
       return;
     }
     const raw     = result.ev._raw ?? result.ev;
@@ -119,7 +119,7 @@ export default function WeekView({
     } else {
       onEventSave?.(updated);
     }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave, onSlotClick]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave, onDateSelect]);
 
   // ── All-day bar drag ──────────────────────────────────────────────────────
   const allDayDragRef  = useRef(null);

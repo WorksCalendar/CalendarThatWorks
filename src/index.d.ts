@@ -258,6 +258,13 @@ export interface WorksCalendarProps {
    */
   onEventResize?: (event: NormalizedEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
+  /**
+   * Called when the user selects an empty time range — either by dragging
+   * on the time grid (week/day) or clicking a day cell (month).
+   * Receives the selected start and end as Date objects.
+   * Only fires when the calendar has an add button (showAddButton or owner mode).
+   */
+  onDateSelect?: (start: Date, end: Date) => void;
   /** Called when events are imported via drag-drop or feed. */
   onImport?: (events: WorksCalendarEvent[]) => void;
 
