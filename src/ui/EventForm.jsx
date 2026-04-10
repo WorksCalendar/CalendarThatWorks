@@ -2,9 +2,9 @@
  * EventForm.jsx — Modal for adding / editing events.
  * Uses the owner-configured custom fields per category.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './EventForm.module.css';
 
@@ -25,9 +25,23 @@ function fromDatetimeLocal(str) {
   return isValid(d) ? d : null;
 }
 
-export default function EventForm({ event, config, categories, onSave, onDelete, onClose }) {
+export default function EventForm({ event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory }) {
   const isNew    = !event?.id || event.id.startsWith('wc-');
   const trapRef  = useFocusTrap(onClose);
+
+  const [addCatOpen, setAddCatOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const newCatRef = useRef(null);
+
+  useEffect(() => { if (addCatOpen) newCatRef.current?.focus(); }, [addCatOpen]);
+
+  function submitNewCat() {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return;
+    onAddCategory?.(trimmed);
+    setNewCatName('');
+    setAddCatOpen(false);
+  }
 
   const [values, setValues] = useState(() => ({
     title:    event?.title    ?? '',
@@ -151,7 +165,27 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
           {/* Category */}
           <div className={styles.row2}>
             <div className={styles.field}>
-              <label className={styles.label}>Category</label>
+              <label className={styles.label}>
+                Category
+                {onAddCategory && (
+                  <button type="button" className={styles.addCatBtn} onClick={() => setAddCatOpen(v => !v)} title="Add category" aria-label="Add category">
+                    <Plus size={11} />
+                  </button>
+                )}
+              </label>
+              {addCatOpen && (
+                <div className={styles.addCatRow}>
+                  <input
+                    ref={newCatRef}
+                    className={styles.addCatInput}
+                    placeholder="New category name"
+                    value={newCatName}
+                    onChange={e => setNewCatName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitNewCat(); } if (e.key === 'Escape') setAddCatOpen(false); }}
+                  />
+                  <button type="button" className={styles.addCatSave} onClick={submitNewCat}>Add</button>
+                </div>
+              )}
               <select className={styles.select} value={values.category} onChange={e => set('category', e.target.value)}>
                 <option value="">— none —</option>
                 {allCats.map(c => <option key={c} value={c}>{c}</option>)}

@@ -154,8 +154,9 @@ export default function WeekView({
 
   const handleGridPointerDown = useCallback((e) => {
     if (e.button !== 0) return;
+    if (!ctx?.permissions?.canAddEvent) return;
     drag.startCreate(e, gridRef.current, days, GUTTER_W);
-  }, [drag.startCreate, days]);
+  }, [drag.startCreate, days, ctx?.permissions?.canAddEvent]);
 
   const handleGridPointerMove = useCallback((e) => {
     drag.onPointerMove(e);
@@ -259,10 +260,10 @@ export default function WeekView({
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles.resizeHandleTop}
-          onPointerDown={e => { if (e.button !== 0) return; drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
         {inner ?? (
           <>
@@ -271,7 +272,7 @@ export default function WeekView({
           </>
         )}
         <div className={styles.resizeHandle}
-          onPointerDown={e => { if (e.button !== 0) return; drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
       </div>
     );

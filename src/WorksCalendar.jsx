@@ -18,6 +18,8 @@ import { useSourceStore }      from './hooks/useSourceStore.js';
 import { useSourceAggregator } from './hooks/useSourceAggregator.js';
 import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
+import { usePermissions }     from './hooks/usePermissions.js';
+import { useEventOptions }    from './hooks/useEventOptions.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
 import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
@@ -114,6 +116,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     supabaseTable,
     supabaseFilter,
 
+    // ── Access control ──
+    role        = 'admin',   // 'admin' | 'user' | 'readonly'
+
     // ── Employees (for schedule/timeline view) ──
     employees   = [],
     onEmployeeAdd,
@@ -161,6 +166,12 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
       cal.setView(defaultView);
     }
   }, [ownerCfg.config?.display?.defaultView]);
+
+  // ── Permissions ──────────────────────────────────────────────────────────
+  const perms = usePermissions(role);
+
+  // ── Admin-managed event options (categories) ─────────────────────────────
+  const eventOptions = useEventOptions(calendarId);
 
   // ── Saved view active state ──────────────────────────────────────────────
   const [savedViewActiveId, setSavedViewActiveId] = useState(null);
@@ -523,7 +534,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   // ── Context value ────────────────────────────────────────────────────────
   const ctxValue = useMemo(() => ({
     renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
-  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState]);
+    permissions: perms,
+  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms]);
 
   // ── Toolbar date label ───────────────────────────────────────────────────
   function getDateLabel() {
@@ -545,7 +557,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     }
   }
 
-  const hasAddButton = showAddButton || ownerCfg.isOwner;
+  const hasAddButton = (showAddButton || ownerCfg.isOwner) && perms.canAddEvent;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
 
@@ -700,8 +712,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   onEventClick={handleEventClick}
                   onDateSelect={handleDateSelect}
                   employees={employees}
-                  onEmployeeAdd={onEmployeeAdd}
-                  onEmployeeDelete={onEmployeeDelete}
+                  onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
+                  onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
                 />
               )}
             </>
@@ -720,20 +732,22 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                 onClose={() => setSelectedEvent(null)}
                 onNoteSave={onNoteSave}
                 onNoteDelete={onNoteDelete}
-                onEdit={ownerCfg.isOwner ? handleEditFromHoverCard : null}
+                onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
               />
             )
         )}
 
         {/* ── Event form ── */}
-        {formEvent !== null && (
+        {formEvent !== null && perms.canAddEvent && (
           <EventForm
             event={formEvent.id ? formEvent : null}
             config={ownerCfg.config}
-            categories={categories}
+            categories={[...categories, ...eventOptions.categories]}
             onSave={handleEventSave}
-            onDelete={onEventDelete ? handleEventDelete : null}
+            onDelete={(onEventDelete && perms.canDeleteEvent) ? handleEventDelete : null}
             onClose={() => setFormEvent(null)}
+            permissions={perms}
+            onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
           />
         )}
 

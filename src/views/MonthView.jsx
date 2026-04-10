@@ -76,7 +76,7 @@ export default function MonthView({
   const [dragTarget, setDragTarget] = useState(null); // Date | null
 
   function startPillDrag(ev, e) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !ctx?.permissions?.canDrag) return;
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = { ev, moved: false, targetDay: null };
