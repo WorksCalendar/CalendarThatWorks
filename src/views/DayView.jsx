@@ -170,7 +170,7 @@ export default function DayView({
         role="button" tabIndex={0}
         aria-label={ariaLabel}
         onClick={onClick}
-        onKeyDown={e => e.key === 'Enter' && onClick()}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
         onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles.resizeHandleTop}
