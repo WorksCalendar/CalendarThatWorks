@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './EventForm.module.css';
 
 const BUILT_IN_CATEGORIES = [];
@@ -25,7 +26,8 @@ function fromDatetimeLocal(str) {
 }
 
 export default function EventForm({ event, config, categories, onSave, onDelete, onClose }) {
-  const isNew = !event?.id || event.id.startsWith('wc-');
+  const isNew    = !event?.id || event.id.startsWith('wc-');
+  const trapRef  = useFocusTrap(onClose);
 
   const [values, setValues] = useState(() => ({
     title:    event?.title    ?? '',
@@ -96,7 +98,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
 
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={styles.modal} role="dialog" aria-label={isNew ? 'Add event' : 'Edit event'}>
+      <div className={styles.modal} ref={trapRef} role="dialog" aria-modal="true" aria-label={isNew ? 'Add event' : 'Edit event'}>
         <div className={styles.header}>
           <h2 className={styles.title}>{isNew ? 'Add Event' : 'Edit Event'}</h2>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close"><X size={18} /></button>

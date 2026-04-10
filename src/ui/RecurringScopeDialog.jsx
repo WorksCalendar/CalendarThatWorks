@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './RecurringScopeDialog.module.css';
 
 const SCOPE_OPTIONS = [
@@ -33,6 +34,7 @@ const SCOPE_OPTIONS = [
  */
 export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, onCancel }) {
   const [scope, setScope] = useState('single');
+  const trapRef = useFocusTrap(onCancel);
 
   return (
     <div
@@ -40,6 +42,7 @@ export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, 
       onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
+        ref={trapRef}
         className={styles.dialog}
         role="dialog"
         aria-modal="true"

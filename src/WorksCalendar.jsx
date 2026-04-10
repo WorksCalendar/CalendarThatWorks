@@ -32,7 +32,8 @@ import OwnerLock              from './ui/OwnerLock.jsx';
 import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
-import ValidationAlert        from './ui/ValidationAlert.jsx';
+import ValidationAlert          from './ui/ValidationAlert.jsx';
+import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import MonthView              from './views/MonthView.jsx';
 import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
@@ -41,6 +42,20 @@ import TimelineView           from './views/TimelineView.jsx';
 import { exportToExcel }      from './export/excelExport.js';
 
 import styles from './WorksCalendar.module.css';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Human-readable announcement text for a completed engine operation. */
+function opAnnouncement(op) {
+  switch (op.type) {
+    case 'create': return `Event "${op.event?.title ?? 'Untitled'}" created.`;
+    case 'update': return 'Event updated.';
+    case 'delete': return 'Event deleted.';
+    case 'move':   return 'Event moved.';
+    case 'resize': return 'Event resized.';
+    default:       return 'Change applied.';
+  }
+}
 
 const VIEWS = [
   { id: 'month',    label: 'Month'    },
@@ -188,6 +203,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   // ── CalendarEngine — single source of truth for mutations & expansions ───
   const engineRef      = useRef(null);
   const undoManagerRef = useRef(null);
+  const announcerRef   = useRef(null);
   if (engineRef.current === null) {
     engineRef.current = new CalendarEngine();
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
@@ -243,6 +259,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
       // State has changed — record the pre-mutation snapshot.
       undoMgr.record(preSnap, op.type);
+      announcerRef.current?.announce(opAnnouncement(op));
       onAccepted();
 
     } else if (result.status === 'pending-confirmation') {
@@ -255,6 +272,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           const confirmed = engine.applyMutation(op, ctx, { overrideSoftViolations: true });
           if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
             undoMgr.record(preSnap, op.type);
+            announcerRef.current?.announce(opAnnouncement(op));
             onAccepted();
           }
         },
@@ -280,13 +298,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
       // Undo: Ctrl+Z / Cmd+Z
       if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        undoManagerRef.current.undo();
+        const did = undoManagerRef.current.undo();
+        if (did) announcerRef.current?.announce('Undo.');
         return;
       }
       // Redo: Ctrl+Y / Cmd+Y  or  Ctrl+Shift+Z / Cmd+Shift+Z
       if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
         e.preventDefault();
-        undoManagerRef.current.redo();
+        const did = undoManagerRef.current.redo();
+        if (did) announcerRef.current?.announce('Redo.');
         return;
       }
     };
@@ -503,25 +523,26 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         {renderToolbar ? (
           <div className={styles.customToolbar}>{renderToolbar(api)}</div>
         ) : (
-          <div className={styles.toolbar}>
+          <div className={styles.toolbar} role="toolbar" aria-label="Calendar navigation">
             <div className={styles.navGroup}>
-              <button className={styles.navBtn} onClick={() => cal.navigate(-1)} aria-label="Previous">
-                <ChevronLeft size={18} />
+              <button className={styles.navBtn} onClick={() => cal.navigate(-1)} aria-label={`Previous ${cal.view}`}>
+                <ChevronLeft size={18} aria-hidden="true" />
               </button>
               <button className={styles.todayBtn} onClick={cal.goToToday}>Today</button>
-              <button className={styles.navBtn} onClick={() => cal.navigate(1)} aria-label="Next">
-                <ChevronRight size={18} />
+              <button className={styles.navBtn} onClick={() => cal.navigate(1)} aria-label={`Next ${cal.view}`}>
+                <ChevronRight size={18} aria-hidden="true" />
               </button>
-              <span className={styles.dateLabel}>{getDateLabel()}</span>
-              {fetchLoading && <span className={styles.loadingDot} title="Loading…" aria-label="Loading" />}
+              <span className={styles.dateLabel} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+              {fetchLoading && <span className={styles.loadingDot} title="Loading…" aria-label="Loading events" role="status" />}
             </div>
 
-            <div className={styles.viewGroup}>
+            <div className={styles.viewGroup} role="group" aria-label="Calendar view">
               {VIEWS.map(v => (
                 <button
                   key={v.id}
                   className={[styles.viewBtn, cal.view === v.id && styles.activeView].filter(Boolean).join(' ')}
                   onClick={() => cal.setView(v.id)}
+                  aria-pressed={cal.view === v.id}
                 >
                   {v.label}
                 </button>
@@ -530,17 +551,17 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
             <div className={styles.actions}>
               {hasAddButton && (
-                <button className={styles.addBtn} onClick={() => setFormEvent({})}>
-                  <Plus size={14} /><span className={styles.addBtnLabel}> Add Event</span>
+                <button className={styles.addBtn} onClick={() => setFormEvent({})} aria-label="Add new event">
+                  <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Event</span>
                 </button>
               )}
               {hasImport && (
-                <button className={styles.exportBtn} onClick={() => setImportOpen(true)} title="Import .ics calendar">
-                  <Upload size={15} />
+                <button className={styles.exportBtn} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
+                  <Upload size={15} aria-hidden="true" />
                 </button>
               )}
-              <button className={styles.exportBtn} onClick={() => exportToExcel(visibleEvents)} title="Export to Excel">
-                <Download size={15} />
+              <button className={styles.exportBtn} onClick={() => exportToExcel(visibleEvents)} aria-label="Export to Excel">
+                <Download size={15} aria-hidden="true" />
               </button>
               {ownerPassword && (
                 <OwnerLock
@@ -669,6 +690,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             onClose={ownerCfg.closeConfig}
           />
         )}
+
+        {/* ── Screen reader live region ── */}
+        <ScreenReaderAnnouncer ref={announcerRef} />
       </div>
     </CalendarContext.Provider>
   );

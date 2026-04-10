@@ -1,3 +1,4 @@
+import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './ValidationAlert.module.css';
 
 /**
@@ -7,12 +8,14 @@ import styles from './ValidationAlert.module.css';
  * Soft  → "Cancel" + "Save anyway" (user can override the warning).
  */
 export default function ValidationAlert({ violations, isHard, onConfirm, onCancel }) {
+  const trapRef = useFocusTrap(onCancel);
   return (
     <div
       className={styles.overlay}
       onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
+        ref={trapRef}
         className={[styles.dialog, isHard ? styles.hard : styles.soft].join(' ')}
         role="alertdialog" aria-modal="true"
       >

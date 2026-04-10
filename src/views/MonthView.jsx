@@ -1,8 +1,8 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, isToday,
-  format, getISOWeek, startOfDay,
+  format, getISOWeek, startOfDay, addDays, subDays,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutSpans } from '../core/layout.js';
@@ -20,8 +20,56 @@ export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0,
 }) {
-  const [popoverDay, setPopoverDay] = useState(null);
+  const [popoverDay,  setPopoverDay]  = useState(null);
+  // Keyboard-focused day cell (roving tabindex pattern).
+  const [focusedDay,  setFocusedDay]  = useState(() => startOfDay(currentDate));
+  const gridRef = useRef(null);
   const ctx = useCalendarContext();
+
+  // Sync focusedDay when the parent navigates to a new month.
+  useEffect(() => {
+    setFocusedDay(startOfDay(currentDate));
+  }, [currentDate]);
+
+  // After focusedDay changes, move DOM focus to the newly-active cell.
+  // Skip if the focus change was initiated by a mouse click (pointer
+  // interaction already sets focus natively).
+  const lastKeyNav = useRef(false);
+  useEffect(() => {
+    if (!lastKeyNav.current || !gridRef.current) return;
+    lastKeyNav.current = false;
+    const key = format(focusedDay, 'yyyy-MM-dd');
+    const cell = gridRef.current.querySelector(`[data-date="${key}"]`);
+    cell?.focus({ preventScroll: false });
+  }, [focusedDay]);
+
+  // Arrow-key navigation handler attached to each gridcell.
+  const handleCellKeyDown = useCallback((e, day) => {
+    let next = null;
+    switch (e.key) {
+      case 'ArrowLeft':  next = subDays(day, 1);  break;
+      case 'ArrowRight': next = addDays(day, 1);  break;
+      case 'ArrowUp':    next = subDays(day, 7);  break;
+      case 'ArrowDown':  next = addDays(day, 7);  break;
+      case 'Home':       next = startOfWeek(day, { weekStartsOn: weekStartDay }); break;
+      case 'End':        next = endOfWeek(day,   { weekStartsOn: weekStartDay }); break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (onDateSelect) {
+          const s = new Date(day); s.setHours(9, 0, 0, 0);
+          const en = new Date(day); en.setHours(10, 0, 0, 0);
+          onDateSelect(s, en);
+        }
+        return;
+      default: return;
+    }
+    if (next) {
+      e.preventDefault();
+      lastKeyNav.current = true;
+      setFocusedDay(startOfDay(next));
+    }
+  }, [weekStartDay, onDateSelect]);
 
   // ── Drag state ───────────────────────────────────────────────────────────
   const dragRef    = useRef(null); // { ev, moved, targetDay }
@@ -119,13 +167,18 @@ export default function MonthView({
       }
     }
 
+    const timeLabel = ev.allDay
+      ? 'all day'
+      : `${format(ev.start, 'h:mm a')}`;
+    const ariaLabel = `${ev.title}, ${timeLabel}${ev.category ? `, ${ev.category}` : ''}`;
+
     return (
       <button key={ev.id}
         className={[styles.eventPill, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
         style={{ '--ev-color': color }}
         onClick={e => { e.stopPropagation(); onClick(); }}
         onPointerDown={e => startPillDrag(ev, e)}
-        title={ev.title}
+        aria-label={ariaLabel}
       >
         {ev.title}
       </button>
@@ -148,15 +201,25 @@ export default function MonthView({
   }
 
   return (
-    <div className={styles.month}
+    <div
+      className={styles.month}
       onPointerUp={commitDrag}
       onPointerLeave={cancelDrag}
+      role="grid"
+      aria-label={format(currentDate, 'MMMM yyyy')}
+      ref={gridRef}
     >
       {/* Day name header */}
-      <div className={styles.header}
-        style={{ gridTemplateColumns: showWeekNumbers ? `32px repeat(7, 1fr)` : `repeat(7, 1fr)` }}>
-        {showWeekNumbers && <div className={styles.weekNumHead} />}
-        {dayNames.map(n => <div key={n} className={styles.dayName}>{n}</div>)}
+      <div
+        className={styles.header}
+        role="row"
+        aria-rowindex={1}
+        style={{ gridTemplateColumns: showWeekNumbers ? `32px repeat(7, 1fr)` : `repeat(7, 1fr)` }}
+      >
+        {showWeekNumbers && <div className={styles.weekNumHead} role="presentation" />}
+        {dayNames.map(n => (
+          <div key={n} className={styles.dayName} role="columnheader" aria-label={n}>{n}</div>
+        ))}
       </div>
 
       <div className={styles.grid}>
@@ -206,7 +269,7 @@ export default function MonthView({
                             }}
                             onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
                             onPointerDown={e => startPillDrag(ev, e)}
-                            title={ev.title}
+                            aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
                           >
                             {!continuesBefore && ev.title}
                           </button>
@@ -216,11 +279,12 @@ export default function MonthView({
                 )}
 
                 {/* ── Day cells ── */}
-                <div className={styles.weekCells} style={{ paddingTop: spansHeight }}>
+                <div className={styles.weekCells} role="row" aria-rowindex={wi + 2} style={{ paddingTop: spansHeight }}>
                   {week.map((day, di) => {
                     const dayKey     = format(day, 'yyyy-MM-dd');
                     const daySingles = singleByDay.get(dayKey) || [];
                     const isDropTarget = dragTarget && isSameDay(dragTarget, day);
+                    const isFocused  = isSameDay(day, focusedDay);
 
                     const spansOnDay    = spans.filter(s => s.startCol <= di && s.endCol >= di);
                     const hiddenSpans   = spansOnDay.filter(s => s.lane >= MAX_SPANS_VISIBLE).length;
@@ -228,10 +292,17 @@ export default function MonthView({
                     const MAX_PILLS     = Math.max(0, 3 - visibleSpLanes);
                     const overflowCount = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
                     const isPopoverOpen = popoverDay && isSameDay(popoverDay, day);
+                    const totalEvents   = daySingles.length + spansOnDay.length;
+                    const cellLabel     = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
 
                     return (
                       <div
                         key={dayKey}
+                        role="gridcell"
+                        tabIndex={isFocused ? 0 : -1}
+                        data-date={dayKey}
+                        aria-label={cellLabel}
+                        aria-selected={isFocused}
                         className={[
                           styles.cell,
                           !isSameMonth(day, currentDate) && styles.otherMonth,
@@ -239,11 +310,13 @@ export default function MonthView({
                           isDropTarget && styles.dropTarget,
                         ].filter(Boolean).join(' ')}
                         onClick={() => {
+                          setFocusedDay(startOfDay(day));
                           if (!onDateSelect) return;
                           const s = new Date(day); s.setHours(9, 0, 0, 0);
                           const e = new Date(day); e.setHours(10, 0, 0, 0);
                           onDateSelect(s, e);
                         }}
+                        onKeyDown={e => handleCellKeyDown(e, day)}
                         onPointerEnter={() => handleCellPointerEnter(day)}
                       >
                         <span className={styles.dayNum}>{format(day, 'd')}</span>
@@ -254,6 +327,8 @@ export default function MonthView({
                           {overflowCount > 0 && (
                             <button
                               className={styles.morePill}
+                              aria-label={`${overflowCount} more event${overflowCount === 1 ? '' : 's'} on ${format(day, 'MMMM d')}`}
+                              aria-expanded={isPopoverOpen}
                               onClick={e => {
                                 e.stopPropagation();
                                 setPopoverDay(isPopoverOpen ? null : day);

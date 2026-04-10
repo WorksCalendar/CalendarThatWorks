@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './HoverCard.module.css';
 
 export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor }) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
   const cardRef = useRef(null);
+  const trapRef = useFocusTrap(onClose);
   const hc = config?.hoverCard ?? {};
 
   // Close on click outside
@@ -24,7 +26,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
   }
 
   return (
-    <div ref={cardRef} className={styles.card} role="dialog" aria-label="Event details">
+    <div ref={(node) => { cardRef.current = node; trapRef.current = node; }} className={styles.card} role="dialog" aria-modal="true" aria-label={`Event details: ${event.title}`}>
       {/* Color accent bar */}
       <div className={styles.accent} style={{ background: event.color }} />
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
+import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './ConfigPanel.module.css';
 
 const TABS = [
@@ -12,10 +13,11 @@ const TABS = [
 
 export default function ConfigPanel({ config, categories, onUpdate, onClose }) {
   const [tab, setTab] = useState('hoverCard');
+  const trapRef = useFocusTrap(onClose);
 
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={styles.panel} role="dialog" aria-label="Settings">
+      <div ref={trapRef} className={styles.panel} role="dialog" aria-modal="true" aria-label="Calendar settings">
         <div className={styles.panelHead}>
           <h2 className={styles.panelTitle}>Calendar Settings</h2>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close settings">
