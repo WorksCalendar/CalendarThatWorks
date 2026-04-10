@@ -13,6 +13,9 @@ import { GettingStarted }    from './01-GettingStarted.jsx';
 import { BasicCalendar }     from './02-BasicCalendar.jsx';
 import { WithFilters }       from './03-WithFilters.jsx';
 import { TimelineScheduler } from './04-TimelineScheduler.jsx';
+import { CustomFilters }     from './05-CustomFilters.jsx';
+import { TeamCalendar }      from './06-TeamCalendar.jsx';
+import { MultiSource }       from './07-MultiSource.jsx';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [
@@ -43,6 +46,27 @@ const EXAMPLES = [
     tag:   'Resource rows',
     desc:  'One row per team member. Drag bars to reassign resources and reschedule.',
     component: TimelineScheduler,
+  },
+  {
+    id:    'custom-filters',
+    label: 'Custom Filter Schema',
+    tag:   'priority · owner · tags',
+    desc:  'Extend the default schema with priorityField, ownerField, and tagsField. Active filters appear as removable pills.',
+    component: CustomFilters,
+  },
+  {
+    id:    'team-calendar',
+    label: 'Team Calendar',
+    tag:   'Multi-source',
+    desc:  'Three team calendars merged into one. Tag events with _sourceId and source filter pills appear automatically.',
+    component: TeamCalendar,
+  },
+  {
+    id:    'multi-source',
+    label: 'Multi-Source Timeline',
+    tag:   'Sources + timeline',
+    desc:  'Timeline view with four simulated calendar feeds. Filter by source, resource, or combine both.',
+    component: MultiSource,
   },
 ];
 
@@ -125,6 +149,9 @@ function SourceHint({ id }) {
     'basic-calendar':  '02-BasicCalendar.jsx',
     'with-filters':    '03-WithFilters.jsx',
     'timeline':        '04-TimelineScheduler.jsx',
+    'custom-filters':  '05-CustomFilters.jsx',
+    'team-calendar':   '06-TeamCalendar.jsx',
+    'multi-source':    '07-MultiSource.jsx',
   }[id];
 
   return (
