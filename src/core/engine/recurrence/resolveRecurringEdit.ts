@@ -147,7 +147,55 @@ function resolveFollowingEdit(
   ];
 }
 
-// ─── Series-wide edit ────────────────────────────────────────────────────────
+// ─── Recurring delete ─────────────────────────────────────────────────────────
+
+/**
+ * Resolve a recurring DELETE into a set of EventChanges.
+ *
+ * Unlike edit resolution, delete never creates new events — it only
+ * trims the series:
+ *
+ *   single    — add the occurrence to master's EXDATE list (excludes it
+ *               from expansion).  No detached event is created.
+ *   following — set UNTIL on master to the ms before this occurrence
+ *               (terminates the series at that point).  No new series
+ *               is created.
+ *
+ * For scope='series' the caller should delete the master directly.
+ */
+export function resolveRecurringDelete(
+  master: EngineEvent,
+  occurrenceStart: Date,
+  scope: 'single' | 'following',
+): EventChange[] {
+  switch (scope) {
+    case 'single':    return resolveSingleDelete(master, occurrenceStart);
+    case 'following': return resolveFollowingDelete(master, occurrenceStart);
+  }
+}
+
+function resolveSingleDelete(
+  master: EngineEvent,
+  occurrenceStart: Date,
+): EventChange[] {
+  // Exclude this occurrence via EXDATE — no detached event.
+  const updated: EngineEvent = {
+    ...master,
+    exdates: addExdate(master.exdates, occurrenceStart),
+  };
+  return [{ type: 'updated', id: master.id, before: master, after: updated }];
+}
+
+function resolveFollowingDelete(
+  master: EngineEvent,
+  occurrenceStart: Date,
+): EventChange[] {
+  // Terminate the series 1 ms before this occurrence — no new series.
+  const untilDate = new Date(occurrenceStart.getTime() - 1);
+  const newRrule  = setRRuleUntil(master.rrule!, untilDate);
+  const updated: EngineEvent = { ...master, rrule: newRrule };
+  return [{ type: 'updated', id: master.id, before: master, after: updated }];
+}
 
 /**
  * Update the series master in-place.

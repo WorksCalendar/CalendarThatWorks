@@ -28,6 +28,7 @@ import {
 } from './operationResult.js';
 import { validateOperation } from '../validation/validateOperation.js';
 import { resolveOperationScope } from './resolveOperationScope.js';
+import { resolveRecurringDelete } from '../recurrence/resolveRecurringEdit.js';
 import { nextEngineId } from '../adapters/normalizeInputEvent.js';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -137,10 +138,26 @@ function applyUpdate(
   const existing = events.get(op.id);
   if (!existing) return [];
 
-  // Handle recurring scope
+  // Handle single/following recurring scope via resolveOperationScope.
   if (op.scope && op.scope !== 'series' && op.occurrenceDate) {
     const resolved = resolveOperationScope(op, existing, eventList);
     if (resolved.needsRecurringResolution) return resolved.changes ?? [];
+  }
+
+  // For series-scope updates that originated from an occurrence (occurrenceDate
+  // is set), strip start/end from the patch before applying to the master.
+  //
+  // Why: the EventForm always sends the occurrence's current start/end in the
+  // patch even when the user didn't change them.  Spreading these onto the
+  // master would anchor the series to the occurrence date, shifting all future
+  // occurrences.  Non-time fields (title, color, category, etc.) are safe to
+  // copy as-is.  Explicit time changes to the whole series must come from a
+  // move/resize op (which uses newStart/newEnd), not from a form update.
+  if (op.scope === 'series' && op.occurrenceDate && existing.rrule) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { start: _s, end: _e, ...safePatch } = op.patch as Record<string, unknown>;
+    const after: EngineEvent = { ...existing, ...safePatch, id: op.id };
+    return [{ type: 'updated', id: op.id, before: existing, after }];
   }
 
   const after: EngineEvent = { ...existing, ...op.patch, id: op.id };
@@ -152,15 +169,18 @@ function applyUpdate(
 function applyDelete(
   op: Extract<EngineOperation, { type: 'delete' }>,
   events: ReadonlyMap<string, EngineEvent>,
-  eventList: EngineEvent[],
+  _eventList: EngineEvent[],
 ): EventChange[] {
   const existing = events.get(op.id);
   if (!existing) return [];
 
-  // Handle recurring scope
-  if (op.scope && op.scope !== 'series' && op.occurrenceDate) {
-    const resolved = resolveOperationScope(op as any, existing, eventList);
-    if (resolved.needsRecurringResolution) return resolved.changes ?? [];
+  // Recurring scoped delete: never use edit resolution (which would recreate
+  // the occurrence as a detached event).  Instead use delete-specific logic:
+  //   single    → add EXDATE to master (excludes this occurrence, nothing created)
+  //   following → set UNTIL on master (terminates series, nothing created)
+  //   series    → fall through to delete the whole master below
+  if (op.scope && op.scope !== 'series' && op.occurrenceDate && existing.rrule) {
+    return resolveRecurringDelete(existing, op.occurrenceDate, op.scope);
   }
 
   return [{ type: 'deleted', id: op.id, event: existing }];
