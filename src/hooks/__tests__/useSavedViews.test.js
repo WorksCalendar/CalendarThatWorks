@@ -230,4 +230,79 @@ describe('useSavedViews', () => {
     rerender({ id: 'cal-b' });
     expect(result.current.views[0].name).toBe('View B');
   });
+
+  it('saveView stores color and view when provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Colored', {
+        categories: new Set(),
+        resources:  new Set(),
+        sources:    new Set(),
+        search:     '',
+        dateRange:  null,
+      }, { color: '#ef4444', view: 'week' });
+    });
+    expect(result.current.views).toHaveLength(1);
+    expect(result.current.views[0].color).toBe('#ef4444');
+    expect(result.current.views[0].view).toBe('week');
+  });
+
+  it('updateView renames a view', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Original', {
+        categories: new Set(), resources: new Set(), sources: new Set(), search: '', dateRange: null,
+      });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.updateView(id, { name: 'Renamed' });
+    });
+    expect(result.current.views[0].name).toBe('Renamed');
+  });
+
+  it('updateView changes a view color', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('My View', {
+        categories: new Set(), resources: new Set(), sources: new Set(), search: '', dateRange: null,
+      }, { color: '#3b82f6' });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.updateView(id, { color: '#10b981' });
+    });
+    expect(result.current.views[0].color).toBe('#10b981');
+  });
+
+  it('resaveView replaces the filters of an existing view', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Work View', {
+        categories: new Set(['Work']), resources: new Set(), sources: new Set(), search: '', dateRange: null,
+      });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, {
+        categories: new Set(['PTO']), resources: new Set(), sources: new Set(), search: '', dateRange: null,
+      }, 'month');
+    });
+    expect(result.current.views[0].filters.categories).toContain('PTO');
+    expect(result.current.views[0].filters.categories).not.toContain('Work');
+    expect(result.current.views[0].view).toBe('month');
+  });
+
+  it('migrates legacy wc-profiles-* data on first load', () => {
+    const legacyProfiles = [{
+      id: 'p1', name: 'Old Profile', color: '#3b82f6', view: 'week',
+      filters: { categories: ['Work'], resources: [], search: '' },
+    }];
+    localStorage.setItem('wc-profiles-test-cal', JSON.stringify(legacyProfiles));
+    const { result } = renderHook(() => useSavedViews('test-cal'));
+    expect(result.current.views).toHaveLength(1);
+    expect(result.current.views[0].name).toBe('Old Profile');
+    expect(result.current.views[0].color).toBe('#3b82f6');
+    expect(result.current.views[0].view).toBe('week');
+  });
 });

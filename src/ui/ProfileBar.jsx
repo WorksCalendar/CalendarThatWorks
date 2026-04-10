@@ -3,16 +3,17 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X } from 'lucide-react';
-import { PROFILE_COLORS } from '../core/profileStore.js';
 import styles from './ProfileBar.module.css';
 
+const PROFILE_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+  '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
+];
+
 export default function ProfileBar({
-  profiles,
-  activeProfile,
+  views,
   activeId,
   isDirty,
-  categories,
-  resources,
   onApply,
   onAdd,
   onResave,
@@ -20,10 +21,10 @@ export default function ProfileBar({
   onDelete,
 }) {
   const [saveOpen,    setSaveOpen]    = useState(false);
-  const [manageId,    setManageId]    = useState(null); // which profile is being managed
+  const [manageId,    setManageId]    = useState(null); // which view is being managed
   const scrollRef = useRef(null);
 
-  if (profiles.length === 0 && !saveOpen) {
+  if (views.length === 0 && !saveOpen) {
     // Collapsed state — just a small "Save view" prompt
     return (
       <div className={styles.collapsed}>
@@ -37,27 +38,25 @@ export default function ProfileBar({
 
   return (
     <div className={styles.bar}>
-      {/* Profile chip strip */}
+      {/* View chip strip */}
       <div className={styles.strip} ref={scrollRef}>
-        {profiles.map(p => (
-          <ProfileChip
-            key={p.id}
-            profile={p}
-            isActive={p.id === activeId}
-            isDirty={isDirty && p.id === activeId}
-            isManaging={manageId === p.id}
-            onApply={() => { onApply(p); setManageId(null); setSaveOpen(false); }}
-            onManageToggle={() => setManageId(manageId === p.id ? null : p.id)}
-            onResave={() => { onResave(p.id); setManageId(null); }}
-            onDelete={() => { onDelete(p.id); setManageId(null); }}
-            onRename={(name) => { onUpdate(p.id, { name }); setManageId(null); }}
-            onColorChange={(color) => onUpdate(p.id, { color })}
-            categories={categories}
-            resources={resources}
+        {views.map(savedView => (
+          <ViewChip
+            key={savedView.id}
+            savedView={savedView}
+            isActive={savedView.id === activeId}
+            isDirty={isDirty && savedView.id === activeId}
+            isManaging={manageId === savedView.id}
+            onApply={() => { onApply(savedView); setManageId(null); setSaveOpen(false); }}
+            onManageToggle={() => setManageId(manageId === savedView.id ? null : savedView.id)}
+            onResave={() => { onResave(savedView.id); setManageId(null); }}
+            onDelete={() => { onDelete(savedView.id); setManageId(null); }}
+            onRename={(name) => { onUpdate(savedView.id, { name }); setManageId(null); }}
+            onColorChange={(color) => onUpdate(savedView.id, { color })}
           />
         ))}
 
-        {/* Add button (inline in strip when profiles exist) */}
+        {/* Add button (inline in strip when views exist) */}
         {!saveOpen && (
           <button className={styles.addChip} onClick={() => { setSaveOpen(true); setManageId(null); }}
             title="Save current filters as a new saved view">
@@ -78,12 +77,12 @@ export default function ProfileBar({
   );
 }
 
-/* ─── Profile Chip ─────────────────────────────────────────────── */
-function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManageToggle,
-  onResave, onDelete, onRename, onColorChange, categories, resources }) {
+/* ─── View Chip ─────────────────────────────────────────────── */
+function ViewChip({ savedView, isActive, isDirty, isManaging, onApply, onManageToggle,
+  onResave, onDelete, onRename, onColorChange }) {
 
   const [renaming, setRenaming] = useState(false);
-  const [nameVal, setNameVal]   = useState(profile.name);
+  const [nameVal, setNameVal]   = useState(savedView.name);
   const chipRef = useRef(null);
 
   // Close manage panel on outside click
@@ -98,10 +97,10 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
     return () => document.removeEventListener('mousedown', handler);
   }, [isManaging, onManageToggle]);
 
-  const color = profile.color ?? '#64748b';
+  const color = savedView.color ?? '#64748b';
 
   // Build a summary string for the tooltip
-  const summary = buildSummary(profile);
+  const summary = buildSummary(savedView);
 
   return (
     <div ref={chipRef} className={styles.chipWrap}>
@@ -119,10 +118,10 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
           ? <BookmarkCheck size={12} className={styles.chipIcon} />
           : <Bookmark size={12} className={styles.chipIcon} />
         }
-        <span className={styles.chipName}>{profile.name}</span>
+        <span className={styles.chipName}>{savedView.name}</span>
         {isDirty && <span className={styles.dirtyDot} title="Filters changed since saved" />}
-        {profile.view && (
-          <span className={styles.viewTag}>{profile.view.slice(0,3)}</span>
+        {savedView.view && (
+          <span className={styles.viewTag}>{savedView.view.slice(0,3)}</span>
         )}
 
         {/* Manage toggle (pencil) */}
@@ -143,7 +142,7 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
         <div className={styles.managePanel}>
           {/* Filter summary */}
           <div className={styles.summaryBlock}>
-            <FilterSummary profile={profile} categories={categories} resources={resources} />
+            <FilterSummary savedView={savedView} />
           </div>
 
           {/* Rename */}
@@ -155,14 +154,14 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
                 onChange={e => setNameVal(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') { onRename(nameVal); setRenaming(false); }
-                  if (e.key === 'Escape') { setNameVal(profile.name); setRenaming(false); }
+                  if (e.key === 'Escape') { setNameVal(savedView.name); setRenaming(false); }
                 }}
                 autoFocus
               />
               <button className={styles.iconBtn} onClick={() => { onRename(nameVal); setRenaming(false); }}>
                 <Check size={13} />
               </button>
-              <button className={styles.iconBtn} onClick={() => { setNameVal(profile.name); setRenaming(false); }}>
+              <button className={styles.iconBtn} onClick={() => { setNameVal(savedView.name); setRenaming(false); }}>
                 <X size={13} />
               </button>
             </div>
@@ -177,7 +176,7 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
             {PROFILE_COLORS.map(c => (
               <button
                 key={c}
-                className={[styles.colorDot, profile.color === c && styles.colorDotActive].filter(Boolean).join(' ')}
+                className={[styles.colorDot, savedView.color === c && styles.colorDotActive].filter(Boolean).join(' ')}
                 style={{ background: c }}
                 onClick={() => onColorChange(c)}
                 aria-label={`Set color ${c}`}
@@ -201,11 +200,18 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
 }
 
 /* ─── Filter Summary (inside manage panel) ─────────────────────── */
-function FilterSummary({ profile }) {
-  const { categories = [], resources = [], search = '' } = profile.filters ?? {};
-  const hasFilters = categories.length || resources.length || search;
+function FilterSummary({ savedView }) {
+  const filters = savedView.filters ?? {};
+  const { categories = [], resources = [], search = '' } = filters;
 
-  if (!hasFilters) {
+  // Check for known fields
+  const hasKnown = categories.length || resources.length || search;
+
+  // Check for any other non-empty keys beyond the known ones
+  const knownKeys = new Set(['categories', 'resources', 'search']);
+  const unknownKeys = Object.keys(filters).filter(k => !knownKeys.has(k) && filters[k] != null && filters[k] !== '' && !(Array.isArray(filters[k]) && filters[k].length === 0));
+
+  if (!hasKnown && unknownKeys.length === 0 && !savedView.view) {
     return <p className={styles.summaryNone}>No filters — matches all events</p>;
   }
 
@@ -235,11 +241,19 @@ function FilterSummary({ profile }) {
           </span>
         </div>
       )}
-      {profile.view && (
+      {unknownKeys.length > 0 && (
+        <div className={styles.summaryRow}>
+          <span className={styles.summaryLabel}>Active filters</span>
+          <span className={styles.summaryTags}>
+            {unknownKeys.map(k => <span key={k} className={styles.tag}>{k}</span>)}
+          </span>
+        </div>
+      )}
+      {savedView.view && (
         <div className={styles.summaryRow}>
           <span className={styles.summaryLabel}>Pinned view</span>
           <span className={styles.summaryTags}>
-            <span className={styles.tag}>{profile.view}</span>
+            <span className={styles.tag}>{savedView.view}</span>
           </span>
         </div>
       )}
@@ -302,12 +316,12 @@ function SaveForm({ onSave, onCancel }) {
 }
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
-function buildSummary(profile) {
-  const { categories = [], resources = [], search = '' } = profile.filters ?? {};
+function buildSummary(savedView) {
+  const { categories = [], resources = [], search = '' } = savedView.filters ?? {};
   const parts = [];
   if (categories.length) parts.push(`Categories: ${categories.join(', ')}`);
   if (resources.length)  parts.push(`Resources: ${resources.join(', ')}`);
   if (search)            parts.push(`Search: "${search}"`);
-  if (profile.view)      parts.push(`View: ${profile.view}`);
+  if (savedView.view)    parts.push(`View: ${savedView.view}`);
   return parts.length ? parts.join(' · ') : 'No filters applied';
 }

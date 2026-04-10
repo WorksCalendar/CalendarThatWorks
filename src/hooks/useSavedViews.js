@@ -4,7 +4,9 @@
  * Storage key: `wc-saved-views-${calendarId}`
  *
  * Each saved view:
- *   { id: string, name: string, createdAt: string, filters: SerializedFilters }
+ *   { id: string, name: string, createdAt: string,
+ *     color?: string | null, view?: string | null,
+ *     filters: SerializedFilters }
  *
  * SerializedFilters (Sets stored as arrays for JSON):
  *   { categories: string[], resources: string[], sources: string[],
@@ -14,10 +16,31 @@ import { useState, useEffect, useCallback } from 'react';
 
 function viewsKey(calendarId) { return `wc-saved-views-${calendarId}`; }
 
+function migrateProfiles(calendarId) {
+  try {
+    const legacyKey = `wc-profiles-${calendarId}`;
+    const raw = localStorage.getItem(legacyKey);
+    if (!raw) return [];
+    const profiles = JSON.parse(raw);
+    // Convert profile shape to saved view shape
+    return profiles.map(p => ({
+      id:        p.id,
+      name:      p.name,
+      createdAt: p.createdAt ?? new Date().toISOString(),
+      color:     p.color ?? null,
+      view:      p.view ?? null,
+      filters:   p.filters, // already serialized (arrays, not Sets)
+    }));
+  } catch { return []; }
+}
+
 function loadViews(calendarId) {
   try {
     const raw = localStorage.getItem(viewsKey(calendarId));
     if (raw) return JSON.parse(raw);
+    // One-time migration from legacy wc-profiles-* key
+    const migrated = migrateProfiles(calendarId);
+    if (migrated.length > 0) return migrated;
   } catch {}
   return [];
 }
@@ -87,7 +110,7 @@ export function deserializeFilters(saved, schema) {
 /**
  * Hook for managing saved filter views per calendar.
  * @param {string} calendarId
- * @returns {{ views, saveView, deleteView }}
+ * @returns {{ views, saveView, updateView, resaveView, deleteView }}
  */
 export function useSavedViews(calendarId) {
   const [views, setViews] = useState(() => loadViews(calendarId));
@@ -102,20 +125,34 @@ export function useSavedViews(calendarId) {
     persistViews(calendarId, views);
   }, [calendarId, views]);
 
-  const saveView = useCallback((name, filters) => {
-    const view = {
+  const saveView = useCallback((name, filters, { color, view } = {}) => {
+    const savedView = {
       id:        `view-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name,
       createdAt: new Date().toISOString(),
+      color:     color ?? null,
+      view:      view ?? null,
       filters:   serializeFilters(filters),
     };
-    setViews(prev => [...prev, view]);
-    return view;
+    setViews(prev => [...prev, savedView]);
+    return savedView;
+  }, []);
+
+  const updateView = useCallback((id, patch) => {
+    setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
+  }, []);
+
+  const resaveView = useCallback((id, filters, viewName) => {
+    setViews(prev => prev.map(v =>
+      v.id === id
+        ? { ...v, filters: serializeFilters(filters), view: viewName ?? v.view }
+        : v
+    ));
   }, []);
 
   const deleteView = useCallback((id) => {
     setViews(prev => prev.filter(v => v.id !== id));
   }, []);
 
-  return { views, saveView, deleteView };
+  return { views, saveView, updateView, resaveView, deleteView };
 }
