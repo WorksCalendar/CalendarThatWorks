@@ -71,6 +71,137 @@ export type FilterField = {
 /** Generic filter state — one key per FilterField, value shape depends on type. */
 export type FilterState = Record<string, unknown>
 
+// ── Common-field factories ────────────────────────────────────────────────────
+// Ready-made FilterField configs for fields that appear on many calendars.
+// Each factory accepts an optional overrides object so callers can tweak
+// key / label / options / predicate without rewriting the whole definition.
+//
+// Usage:
+//   import { DEFAULT_FILTER_SCHEMA, statusField, priorityField } from 'works-calendar';
+//   const mySchema = [...DEFAULT_FILTER_SCHEMA, statusField(), priorityField()];
+
+/**
+ * Filter by event status (confirmed / tentative / cancelled).
+ * Reads item.status, falling back to 'confirmed' when absent.
+ */
+export function statusField(overrides: Partial<FilterField> = {}): FilterField {
+  return {
+    key:   'status',
+    label: 'Status',
+    type:  'select',
+    options: [
+      { label: 'Confirmed', value: 'confirmed' },
+      { label: 'Tentative', value: 'tentative' },
+      { label: 'Cancelled', value: 'cancelled' },
+    ],
+    predicate: (item: any, value: any) =>
+      (item.status ?? 'confirmed') === value,
+    ...overrides,
+  }
+}
+
+/**
+ * Filter by priority level.
+ * Reads item.priority or item.meta.priority.
+ * Default options: low / medium / high / critical (colour-coded).
+ */
+export function priorityField(overrides: Partial<FilterField> = {}): FilterField {
+  return {
+    key:   'priority',
+    label: 'Priority',
+    type:  'select',
+    options: [
+      { label: 'Low',      value: 'low',      color: '#10b981' },
+      { label: 'Medium',   value: 'medium',   color: '#f59e0b' },
+      { label: 'High',     value: 'high',     color: '#ef4444' },
+      { label: 'Critical', value: 'critical', color: '#7c3aed' },
+    ],
+    predicate: (item: any, value: any) =>
+      ((item as any).priority ?? (item as any).meta?.priority) === value,
+    ...overrides,
+  }
+}
+
+/**
+ * Filter by owner / assignee (multi-select, options derived from events).
+ * Reads item.owner → item.meta.owner → item.meta.assignee in that order.
+ */
+export function ownerField(overrides: Partial<FilterField> = {}): FilterField {
+  return {
+    key:   'owner',
+    label: 'Owner',
+    type:  'multi-select',
+    predicate: (item: any, value: any) => {
+      const owner = item.owner ?? item.meta?.owner ?? item.meta?.assignee
+      return value instanceof Set
+        ? value.has(owner)
+        : (value as string[]).includes(owner)
+    },
+    getOptions: (items: any[]) => {
+      const seen = new Set<string>()
+      items.forEach(e => {
+        const o = e.owner ?? e.meta?.owner ?? e.meta?.assignee
+        if (o) seen.add(String(o))
+      })
+      return [...seen].sort().map(o => ({ label: o, value: o }))
+    },
+    ...overrides,
+  }
+}
+
+/**
+ * Filter by tags (multi-select, options derived from events).
+ * An event matches if any of its tags is in the active filter set.
+ * Reads item.tags or item.meta.tags — expected to be string[].
+ */
+export function tagsField(overrides: Partial<FilterField> = {}): FilterField {
+  return {
+    key:   'tags',
+    label: 'Tag',
+    type:  'multi-select',
+    predicate: (item: any, value: any) => {
+      const itemTags: string[] = item.tags ?? item.meta?.tags ?? []
+      const active = value instanceof Set ? value : new Set(value as string[])
+      return itemTags.some((t: string) => active.has(t))
+    },
+    getOptions: (items: any[]) => {
+      const seen = new Set<string>()
+      items.forEach(e => {
+        const tags: string[] = e.tags ?? e.meta?.tags ?? []
+        tags.forEach((t: string) => { if (t) seen.add(t) })
+      })
+      return [...seen].sort().map(t => ({ label: t, value: t }))
+    },
+    ...overrides,
+  }
+}
+
+/**
+ * Filter by any single-value meta field (select).
+ * Pass the meta key name as the first argument — e.g. metaSelectField('department').
+ */
+export function metaSelectField(
+  metaKey: string,
+  overrides: Partial<FilterField> = {},
+): FilterField {
+  return {
+    key:   metaKey,
+    label: metaKey.charAt(0).toUpperCase() + metaKey.slice(1),
+    type:  'select',
+    predicate: (item: any, value: any) =>
+      (item.meta?.[metaKey] ?? item[metaKey]) === value,
+    getOptions: (items: any[]) => {
+      const seen = new Set<string>()
+      items.forEach(e => {
+        const v = e.meta?.[metaKey] ?? e[metaKey]
+        if (v != null) seen.add(String(v))
+      })
+      return [...seen].sort().map(v => ({ label: v, value: v }))
+    },
+    ...overrides,
+  }
+}
+
 // ── Default schema ────────────────────────────────────────────────────────────
 // Mirrors the previously hardcoded filter pipeline so legacy behaviour is
 // preserved automatically. Predicates bridge the plural filter keys

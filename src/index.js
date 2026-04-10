@@ -15,7 +15,10 @@ export { useCalendar }                    from './hooks/useCalendar.js';
 export { useOwnerConfig }                 from './hooks/useOwnerConfig.js';
 export { useRealtimeEvents }              from './hooks/useRealtimeEvents.js';
 export { useSavedViews, serializeFilters, deserializeFilters } from './hooks/useSavedViews.js';
-export { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
+export {
+  DEFAULT_FILTER_SCHEMA,
+  statusField, priorityField, ownerField, tagsField, metaSelectField,
+} from './filters/filterSchema.js';
 export { createInitialFilters, buildActiveFilterPills, isEmptyFilterValue } from './filters/filterState.js';
 export { THEMES, THEMES_BY_ID, THEME_IDS } from './styles/themes.js';
 export { parseICS, fetchAndParseICS }     from './core/icalParser.js';

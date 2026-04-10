@@ -138,6 +138,52 @@ export declare function useSavedViews(calendarId: string): {
   deleteView: (id: string) => void;
 };
 
+// ─── Filter schema ─────────────────────────────────────────────────────────────
+
+export type FilterFieldType = 'select' | 'multi-select' | 'date-range' | 'text' | 'boolean' | 'custom';
+
+export interface FilterOption {
+  label: string;
+  value: string | number | boolean;
+  color?: string;
+  icon?: string;
+}
+
+export interface FilterField {
+  key: string;
+  label: string;
+  type: FilterFieldType;
+  options?: FilterOption[];
+  placeholder?: string;
+  searchable?: boolean;
+  clearable?: boolean;
+  defaultValue?: unknown;
+  pillLabel?: (value: unknown) => string;
+  predicate?: (item: unknown, value: unknown) => boolean;
+  getOptions?: (items: unknown[]) => FilterOption[];
+  hidden?: boolean | ((ctx: { items: unknown[]; filters: Record<string, unknown> }) => boolean);
+}
+
+export declare const DEFAULT_FILTER_SCHEMA: FilterField[];
+
+/**
+ * Pre-built field factories for common filter dimensions.
+ * Each accepts an optional overrides object to customise key/label/options/predicate.
+ *
+ * @example
+ * import { DEFAULT_FILTER_SCHEMA, statusField, priorityField } from 'works-calendar';
+ * const schema = [...DEFAULT_FILTER_SCHEMA, statusField(), priorityField()];
+ */
+export declare function statusField(overrides?: Partial<FilterField>): FilterField;
+export declare function priorityField(overrides?: Partial<FilterField>): FilterField;
+export declare function ownerField(overrides?: Partial<FilterField>): FilterField;
+export declare function tagsField(overrides?: Partial<FilterField>): FilterField;
+/**
+ * Generic single-value meta field (select).
+ * @param metaKey — the meta property name, e.g. 'department'
+ */
+export declare function metaSelectField(metaKey: string, overrides?: Partial<FilterField>): FilterField;
+
 // ─── Filters ───────────────────────────────────────────────────────────────────
 
 export interface FilterState {
