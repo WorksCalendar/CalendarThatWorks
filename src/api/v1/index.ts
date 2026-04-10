@@ -89,3 +89,17 @@ export type { ICSAdapterOptions }  from './adapters/ICSAdapter.js';
 
 export { WebSocketAdapter } from './adapters/WebSocketAdapter.js';
 export type { WebSocketAdapterOptions } from './adapters/WebSocketAdapter.js';
+
+// ── Sync infrastructure ───────────────────────────────────────────────────────
+// Full primitives are also available from 'works-calendar/api/v1/sync'.
+export { SyncQueue, SyncManager, clientWins, serverWins, latestWins, manualResolve, resolverFor, ConflictError } from './sync/index.js';
+export type {
+  SyncStatus,
+  QueuedOperation,
+  ConflictStrategy,
+  ConflictResolver,
+  SyncManagerOptions,
+  SyncState,
+  SyncStateListener,
+  SyncUnsubscribe,
+} from './sync/index.js';
