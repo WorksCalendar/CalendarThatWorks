@@ -1,36 +1,47 @@
 /**
- * ImportZone — drag-and-drop + file-picker for .ics imports.
- * Parses the file and shows ImportPreview for confirmation.
+ * ImportZone — drag-and-drop + file-picker for .ics and .csv imports.
+ *
+ * .ics files → parsed and shown in ImportPreview for confirmation.
+ * .csv files → routed to CSVImportDialog for column mapping + preview.
  */
 import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { parseICS } from '../core/icalParser.js';
 import ImportPreview from './ImportPreview.jsx';
+import CSVImportDialog from './CSVImportDialog.jsx';
 import styles from './ImportZone.module.css';
 
 export default function ImportZone({ onImport, onClose }) {
   const [dragging,  setDragging]  = useState(false);
-  const [parsed,    setParsed]    = useState(null);
+  const [parsed,    setParsed]    = useState(null); // ICS parsed events
+  const [csvMode,   setCsvMode]   = useState(false); // switch to CSV dialog
   const [error,     setError]     = useState(null);
   const inputRef = useRef(null);
 
   function processFile(file) {
     if (!file) return;
-    const isICS = file.name?.toLowerCase().endsWith('.ics')
-               || file.type?.includes('calendar');
-    if (!isICS) {
-      setError('Please choose a .ics calendar file.');
+    setError(null);
+
+    const name = file.name?.toLowerCase() ?? '';
+    const isCSV = name.endsWith('.csv') || file.type === 'text/csv';
+    const isICS = name.endsWith('.ics') || file.type?.includes('calendar');
+
+    if (isCSV) {
+      setCsvMode(true);
       return;
     }
-    setError(null);
+
+    if (!isICS) {
+      setError('Please choose a .ics or .csv file.');
+      return;
+    }
+
+    // ICS path (original behaviour)
     const reader = new FileReader();
     reader.onload = e => {
       try {
         const events = parseICS(e.target.result);
-        if (!events.length) {
-          setError('No events found in this file.');
-          return;
-        }
+        if (!events.length) { setError('No events found in this file.'); return; }
         setParsed(events);
       } catch (err) {
         setError(`Could not parse file: ${err.message}`);
@@ -40,20 +51,14 @@ export default function ImportZone({ onImport, onClose }) {
     reader.readAsText(file);
   }
 
-  function handleDrop(e) {
-    e.preventDefault();
-    setDragging(false);
-    processFile(e.dataTransfer.files[0]);
+  // ICS preview
+  if (parsed) {
+    return <ImportPreview events={parsed} onImport={onImport} onClose={onClose} />;
   }
 
-  if (parsed) {
-    return (
-      <ImportPreview
-        events={parsed}
-        onImport={onImport}
-        onClose={onClose}
-      />
-    );
+  // CSV multi-step dialog — mounts fresh with its own file picker
+  if (csvMode) {
+    return <CSVImportDialog onImport={onImport} onClose={onClose} />;
   }
 
   return (
@@ -61,7 +66,7 @@ export default function ImportZone({ onImport, onClose }) {
       <div
         className={[styles.zone, dragging && styles.dragging].filter(Boolean).join(' ')}
         onClick={e => e.stopPropagation()}
-        onDrop={handleDrop}
+        onDrop={e => { e.preventDefault(); setDragging(false); processFile(e.dataTransfer.files[0]); }}
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDragEnter={e => { e.preventDefault(); setDragging(true); }}
@@ -69,24 +74,44 @@ export default function ImportZone({ onImport, onClose }) {
         <div className={styles.iconWrap}>
           <Upload size={32} />
         </div>
-        <h2 className={styles.heading}>Import iCal / ICS</h2>
+        <h2 className={styles.heading}>Import Events</h2>
         <p className={styles.hint}>
-          Drag &amp; drop a <code>.ics</code> file here, or click to browse
+          Drag &amp; drop a <code>.ics</code> or <code>.csv</code> file here,
+          or choose the format below.
         </p>
 
         {error && <p className={styles.error}>{error}</p>}
 
-        <button
-          className={styles.browseBtn}
-          onClick={() => inputRef.current?.click()}
-        >
-          Choose File
-        </button>
+        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+          <button
+            className={styles.browseBtn}
+            onClick={() => {
+              if (inputRef.current) {
+                inputRef.current.accept = '.ics,text/calendar';
+                inputRef.current.click();
+              }
+            }}
+          >
+            iCal / ICS
+          </button>
+          <button
+            className={styles.browseBtn}
+            style={{ background: 'var(--wc-text-muted, #64748b)' }}
+            onClick={() => {
+              if (inputRef.current) {
+                inputRef.current.accept = '.csv,text/csv';
+                inputRef.current.click();
+              }
+            }}
+          >
+            CSV Spreadsheet
+          </button>
+        </div>
 
         <input
           ref={inputRef}
           type="file"
-          accept=".ics,text/calendar"
+          accept=".ics,.csv,text/calendar,text/csv"
           className={styles.hiddenInput}
           onChange={e => processFile(e.target.files[0])}
         />
