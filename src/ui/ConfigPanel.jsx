@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
-import ICSFeedPanel from './ICSFeedPanel.jsx';
+import SourcePanel from './SourcePanel.jsx';
 import styles from './ConfigPanel.module.css';
 
 const TABS = [
@@ -15,8 +15,8 @@ const TABS = [
 
 export default function ConfigPanel({
   config, categories, onUpdate, onClose,
-  // ICS feed props (optional — omitted when owner has no feed store)
-  feeds, feedErrors, onAddFeed, onRemoveFeed, onToggleFeed, onUpdateFeed,
+  // Source store props (optional — omitted when owner has no source store)
+  sources, feedErrors, onAddSource, onRemoveSource, onToggleSource, onUpdateSource,
 }) {
   const [tab, setTab] = useState('hoverCard');
   const trapRef = useFocusTrap(onClose);
@@ -46,13 +46,13 @@ export default function ConfigPanel({
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'display'     && <DisplayTab     config={config} onUpdate={onUpdate} />}
           {tab === 'feeds'       && (
-            <ICSFeedPanel
-              feeds={feeds ?? []}
+            <SourcePanel
+              sources={sources ?? []}
               feedErrors={feedErrors ?? []}
-              onAdd={onAddFeed}
-              onRemove={onRemoveFeed}
-              onToggle={onToggleFeed}
-              onUpdate={onUpdateFeed}
+              onAdd={onAddSource}
+              onRemove={onRemoveSource}
+              onToggle={onToggleSource}
+              onUpdate={onUpdateSource}
             />
           )}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}

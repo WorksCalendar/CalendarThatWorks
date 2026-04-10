@@ -15,8 +15,8 @@ import { useCalendar }        from './hooks/useCalendar.js';
 import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
 import { useProfiles }        from './hooks/useProfiles.js';
 import { useFetchEvents }     from './hooks/useFetchEvents.js';
-import { useFeedEvents }      from './hooks/useFeedEvents.js';
-import { useFeedStore }      from './hooks/useFeedStore.js';
+import { useSourceStore }      from './hooks/useSourceStore.js';
+import { useSourceAggregator } from './hooks/useSourceAggregator.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
@@ -171,15 +171,14 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     fetchEvents, cal.view, cal.currentDate, weekStartDay,
   );
 
-  // ── iCal feed store (persisted in localStorage per calendarId) ──────────
-  const feedStore = useFeedStore(calendarId);
+  // ── Source store (ICS feeds + CSV datasets, persisted per calendarId) ───
+  const sourceStore = useSourceStore(calendarId);
 
-  // ── iCal feed polling (external icalFeeds prop + stored feeds merged) ───
-  const allIcalFeeds = useMemo(
-    () => [...(icalFeeds ?? []), ...feedStore.activeFeeds],
-    [icalFeeds, feedStore.activeFeeds],
-  );
-  const { feedEvents, feedErrors } = useFeedEvents(allIcalFeeds);
+  // ── Aggregator: merges prop feeds + stored ICS + stored CSV ─────────────
+  const { events: sourceEvents, feedErrors } = useSourceAggregator({
+    icalFeedsProp: icalFeeds,
+    sourceStore,
+  });
 
   // ── Supabase Realtime ────────────────────────────────────────────────────
   const [supabaseClient, setSupabaseClient] = useState(null);
@@ -204,12 +203,12 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     // drop events that happen to share the same title and start time.
     const map = new Map();
     const noId = [];
-    [...rawEvents, ...fetchedEvents, ...feedEvents, ...realtimeEvents].forEach(ev => {
+    [...rawEvents, ...fetchedEvents, ...sourceEvents, ...realtimeEvents].forEach(ev => {
       if (ev.id != null) map.set(String(ev.id), ev);
       else noId.push(ev);
     });
     return normalizeEvents([...map.values(), ...noId]);
-  }, [rawEvents, fetchedEvents, feedEvents, realtimeEvents]);
+  }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
 
   // ── CalendarEngine — single source of truth for mutations & expansions ───
   const engineRef      = useRef(null);
@@ -469,10 +468,18 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     );
   }, [applyWithRecurringCheck, expandedEvents, onEventDelete]);
 
-  const handleImport = useCallback((imported) => {
+  const handleImport = useCallback((imported, meta) => {
     onImport?.(imported);
+    // Persist as a toggleable CSV source so events survive across sessions
+    sourceStore.addSource({
+      type:       'csv',
+      label:      meta?.label ?? 'CSV Import',
+      color:      '#8b5cf6',
+      events:     imported,
+      importedAt: new Date().toISOString(),
+    });
     setImportOpen(false);
-  }, [onImport]);
+  }, [onImport, sourceStore]);
 
   const handleEditFromHoverCard = useCallback((ev) => {
     setSelectedEvent(null);
@@ -699,12 +706,12 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             categories={categories}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
-            feeds={feedStore.feeds}
+            sources={sourceStore.sources}
             feedErrors={feedErrors}
-            onAddFeed={feedStore.addFeed}
-            onRemoveFeed={feedStore.removeFeed}
-            onToggleFeed={feedStore.toggleFeed}
-            onUpdateFeed={feedStore.updateFeed}
+            onAddSource={sourceStore.addSource}
+            onRemoveSource={sourceStore.removeSource}
+            onToggleSource={sourceStore.toggleSource}
+            onUpdateSource={sourceStore.updateSource}
           />
         )}
 

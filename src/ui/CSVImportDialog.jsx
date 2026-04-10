@@ -490,7 +490,7 @@ export default function CSVImportDialog({ onImport, onClose }) {
     <PreviewStep
       {...mappedData}
       onBack={() => setStep('map')}
-      onImport={onImport}
+      onImport={(events) => onImport(events, { label: fileData?.filename })}
       onClose={onClose}
     />
   );
