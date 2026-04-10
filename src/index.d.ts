@@ -535,3 +535,9 @@ export declare const THEME_IDS: ThemeId[];
 
 export declare const PROFILE_COLORS: string[];
 export declare const FIELD_TYPES: Array<{ value: FieldType; label: string }>;
+
+// ─── API v1: versioned public schema ──────────────────────────────────────────
+
+// Re-exports everything from the versioned public schema layer.
+// Consumers can also import directly from 'works-calendar/api/v1'.
+export * from './api/v1/index';

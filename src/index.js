@@ -1,6 +1,10 @@
 /**
  * WorksCalendar — public npm exports
  */
+
+// ── Versioned public schema (engine types + serialization helpers) ───────────
+export * from './api/v1/index.js';
+
 export { WorksCalendar }                  from './WorksCalendar.jsx';
 export { default as TimelineView }        from './views/TimelineView.jsx';
 export { normalizeEvent, normalizeEvents } from './core/eventModel.js';
