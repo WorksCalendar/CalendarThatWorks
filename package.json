@@ -27,8 +27,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "vite --config vite.demo.config.js",
+    "examples": "vite --config vite.examples.config.js",
     "build": "vite build",
     "build:demo": "vite build --config vite.demo.config.js",
+    "build:examples": "vite build --config vite.examples.config.js",
     "preview": "vite preview --config vite.demo.config.js"
   },
   "peerDependencies": {

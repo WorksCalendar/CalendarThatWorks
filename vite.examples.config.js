@@ -23,13 +23,13 @@ function tsExtensionFallback() {
 
 export default defineConfig({
   plugins: [react(), tsExtensionFallback()],
-  root: 'demo',
+  root: 'examples',
   build: {
-    outDir: '../dist-demo',
+    outDir: '../dist-examples',
     emptyOutDir: true,
   },
   server: {
-    port: 3000,
+    port: 3001,
     open: true,
   },
 });

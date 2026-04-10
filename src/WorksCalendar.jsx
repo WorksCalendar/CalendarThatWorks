@@ -130,11 +130,14 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
     // ── UI toggles ──
     showAddButton           = false,
+
+    // ── Initial view (overrides saved config on first render) ──
+    initialView,
   },
   ref,
 ) {
   // ── View / date / filter state ───────────────────────────────────────────
-  const cal      = useCalendar([]);
+  const cal      = useCalendar([], initialView ?? 'month');
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave });
   const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
 
