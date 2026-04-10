@@ -205,17 +205,25 @@
   background: color-mix(in srgb, var(--wc-accent) 6%, transparent);
 }
 
-/* ── Keyboard-interactive day cells (transparent to mouse) ─────── */
+/* ── Keyboard/mouse-interactive day cells ──────────────────────── */
+/* pointer-events: auto (default) so clicks on empty space reach the
+   kbCell for creation.  Event bars sit at z-index 5 and intercept
+   clicks on their own pixels; the kbCell only receives clicks in the
+   areas not covered by event bars. */
 .kbCell {
   position: absolute;
   top: 0;
-  pointer-events: none;
   z-index: 2; /* above day backgrounds, below event bars (z-index 5) */
+  cursor: pointer;
 }
 .kbCell:focus {
   outline: 2px solid var(--wc-accent, #0066cc);
   outline-offset: -2px;
   z-index: 4;
+}
+/* Subtle creation affordance on hover (only visible in event-free areas) */
+.kbCell:hover {
+  background: color-mix(in srgb, var(--wc-accent, #0066cc) 5%, transparent);
 }
 
 /* ── Event bars ─────────────────────────────────────────────────── */

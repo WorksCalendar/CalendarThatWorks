@@ -23,7 +23,7 @@ import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isToday, isWeekend,
-  differenceInCalendarDays, startOfDay, min, max,
+  differenceInCalendarDays, startOfDay, addDays, min, max,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './TimelineView.module.css';
@@ -95,6 +95,7 @@ export default function TimelineView({
   currentDate,
   events,
   onEventClick,
+  onDateSelect,
   employees = [],
   onCallCategory = 'on-call',
 }) {
@@ -250,7 +251,7 @@ export default function TimelineView({
     }
   }, [focusedCell, rowOffsets]);
 
-  const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents) => {
+  const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents, resourceId) => {
     const maxRi = rows.length - 1;
     const maxDi = totalDays - 1;
     let nextRi = ri, nextDi = di;
@@ -267,7 +268,13 @@ export default function TimelineView({
         e.preventDefault();
         // Activate the first event whose day range includes di
         const hit = cellRowEvents.find(ev => ev._dayStart <= di && ev._dayEnd >= di);
-        if (hit) onEventClick?.(hit);
+        if (hit) {
+          onEventClick?.(hit);
+        } else {
+          // Empty cell — trigger creation for this resource + day
+          const dayDate = days[di];
+          onDateSelect?.(startOfDay(dayDate), addDays(startOfDay(dayDate), 1), resourceId);
+        }
         return;
       }
       default: return;
@@ -277,7 +284,7 @@ export default function TimelineView({
       lastKeyNavCell.current = true;
       setFocusedCell({ rowIdx: nextRi, dayIdx: nextDi });
     }
-  }, [rows.length, totalDays, onEventClick]);
+  }, [rows.length, totalDays, onEventClick, onDateSelect, days]);
 
   // ── Empty state ────────────────────────────────────────────────────────────
 
@@ -412,21 +419,29 @@ export default function TimelineView({
                     />
                   ))}
 
-                  {/* Per-day keyboard cells (transparent to mouse, keyboard-navigable) */}
+                  {/* Per-day keyboard cells — keyboard-navigable and mouse-clickable for creation */}
                   {days.map((day, di) => {
-                    const isFocused = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
+                    const isFocused    = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
+                    const resourceId   = emp ? emp.id : resource;
+                    const cellHasEvent = rowEvents.some(ev => ev._dayStart <= di && ev._dayEnd >= di);
                     return (
                       <div
                         key={`kbcell-${di}`}
                         role="gridcell"
                         tabIndex={isFocused ? 0 : -1}
                         data-cell={`${rowIdx}-${di}`}
-                        aria-label={`${label}, ${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}`}
+                        aria-label={`${label}, ${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}${cellHasEvent ? '' : ', empty — click to create'}`}
                         aria-rowindex={rowIdx + 2}
                         aria-colindex={di + 2}
                         className={styles.kbCell}
                         style={{ left: di * DAY_W, width: DAY_W, top: 0, height: rowH }}
-                        onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents)}
+                        onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents, resourceId)}
+                        onClick={() => {
+                          setFocusedCell({ rowIdx, dayIdx: di });
+                          if (!cellHasEvent) {
+                            onDateSelect?.(startOfDay(day), addDays(startOfDay(day), 1), resourceId);
+                          }
+                        }}
                       />
                     );
                   })}
