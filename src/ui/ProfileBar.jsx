@@ -1,5 +1,5 @@
 /**
- * ProfileBar.jsx — Saved-view profile chips with add/rename/delete/resave.
+ * ProfileBar.jsx — Saved-view chips with add/rename/delete/resave.
  */
 import { useState, useRef, useEffect } from 'react';
 import { Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X } from 'lucide-react';
@@ -29,7 +29,7 @@ export default function ProfileBar({
       <div className={styles.collapsed}>
         <button className={styles.saveHint} onClick={() => setSaveOpen(true)}>
           <Bookmark size={13} />
-          Save current view as a profile…
+          Save current view…
         </button>
       </div>
     );
@@ -60,7 +60,7 @@ export default function ProfileBar({
         {/* Add button (inline in strip when profiles exist) */}
         {!saveOpen && (
           <button className={styles.addChip} onClick={() => { setSaveOpen(true); setManageId(null); }}
-            title="Save current filters as a new profile">
+            title="Save current filters as a new saved view">
             <Plus size={13} />
             Save view
           </button>
@@ -131,7 +131,7 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
           onClick={e => { e.stopPropagation(); onManageToggle(); }}
           role="button"
           tabIndex={0}
-          aria-label="Manage profile"
+          aria-label="Manage saved view"
           onKeyDown={e => e.key === 'Enter' && (e.stopPropagation(), onManageToggle())}
         >
           <Pencil size={10} />
@@ -192,7 +192,7 @@ function ProfileChip({ profile, isActive, isDirty, isManaging, onApply, onManage
 
           {/* Delete */}
           <button className={[styles.manageLine, styles.danger].join(' ')} onClick={onDelete}>
-            <Trash2 size={12} /> Delete profile
+            <Trash2 size={12} /> Delete saved view
           </button>
         </div>
       )}
@@ -270,7 +270,7 @@ function SaveForm({ onSave, onCancel }) {
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onCancel(); }}
-        placeholder="Profile name, e.g. Agusta Inspections…"
+        placeholder="View name, e.g. Agusta Inspections…"
       />
 
       {/* Color row */}
@@ -293,7 +293,7 @@ function SaveForm({ onSave, onCancel }) {
 
       <div className={styles.saveActions}>
         <button className={styles.btnSave} onClick={handleSave} disabled={!name.trim()}>
-          Save profile
+          Save view
         </button>
         <button className={styles.btnCancel} onClick={onCancel}>Cancel</button>
       </div>
