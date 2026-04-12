@@ -50,7 +50,7 @@ test.describe('WorksCalendar targeted regressions', () => {
 
     const crossDay = page.getByRole('button', { name: /^Cross-Day Hover Range, Incident$/i }).first();
     await expect(crossDay).toBeVisible();
-    await crossDay.click({ force: true });
+    await crossDay.evaluate((el) => el.click());
 
     const dialog = page.getByRole('dialog', { name: /Event details: Cross-Day Hover Range/i });
     await expect(dialog).toBeVisible();
