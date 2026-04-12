@@ -4,3 +4,6 @@ dist-demo/
 dist-examples/
 .DS_Store
 *.local
+qa-output/
+test-results/
+playwright-report/
