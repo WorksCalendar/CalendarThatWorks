@@ -26,6 +26,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:browser": "playwright test",
+    "qa:review": "node scripts/ai-qa-review.mjs",
+    "ai:qa": "playwright test && node scripts/ai-qa-review.mjs",
     "dev": "vite --config vite.demo.config.js",
     "examples": "vite --config vite.examples.config.js",
     "build": "vite build",
@@ -39,13 +42,15 @@
   },
   "dependencies": {
     "date-fns": "^3.6.0",
-    "lucide-react": "^0.378.0"
+    "lucide-react": "^0.378.0",
+    "openai": "^4.104.0"
   },
   "optionalDependencies": {
     "@supabase/supabase-js": "^2.43.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.53.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
