@@ -42,8 +42,7 @@
   },
   "dependencies": {
     "date-fns": "^3.6.0",
-    "lucide-react": "^0.378.0",
-    "openai": "^4.104.0"
+    "lucide-react": "^0.378.0"
   },
   "optionalDependencies": {
     "@supabase/supabase-js": "^2.43.4",
@@ -56,6 +55,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.2.1",
     "happy-dom": "^20.8.9",
+    "openai": "^4.104.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^5.2.11",
