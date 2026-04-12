@@ -46,10 +46,14 @@ for (const vp of viewports) {
 
     test('all views can be selected', async ({ page }) => {
       await page.goto('/');
+
       const views = ['Month', 'Week', 'Day', 'Agenda', 'Schedule'];
+
       for (const view of views) {
-        await page.getByRole('button', { name: view }).click();
-        await expect(page.getByRole('button', { name: view })).toHaveAttribute('aria-pressed', 'true');
+        const viewBtn = page.getByRole('button', { name: new RegExp(`^${view}$`, 'i') });
+
+        await viewBtn.click();
+        await expect(viewBtn).toHaveAttribute('aria-pressed', 'true');
       }
     });
 
