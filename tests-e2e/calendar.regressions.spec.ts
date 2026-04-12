@@ -44,8 +44,7 @@ test.describe('WorksCalendar targeted regressions', () => {
     expect(consoleErrors).toEqual([]);
   });
 
-  test('hover card shows the full cross-day range for a timed multi-day event', async ({ page }) => {
-    test.fail(true, 'Known bug: hover card time range drops the ending date for cross-day events.');
+  test('mobile month pills keep visible title text', async ({ page }) => {
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
