@@ -5,7 +5,7 @@ const REPORT_PATH = 'qa-output/playwright-report.json';
 const OUTPUT_PATH = 'qa-output/ai-qa-notes.md';
 
 const client = new OpenAI({
-  baseURL: 'http://localhost:1234/v1',
+  baseURL: 'http://192.168.68.61:1234/v1',
   apiKey: 'lm-studio',
 });
 
