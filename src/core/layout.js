@@ -4,7 +4,7 @@
  *   layoutOverlaps  — column-pack timed events that share the same time slot
  *   layoutSpans     — lane-pack multi-day events for month/all-day row rendering
  */
-import { startOfDay, differenceInCalendarDays, addDays } from 'date-fns';
+import { startOfDay, differenceInCalendarDays, addDays, isSameDay } from 'date-fns';
 
 // ─── Timed event overlap layout (week / day view) ──────────────────────────
 
@@ -44,16 +44,17 @@ export function layoutOverlaps(events) {
 export function displayEndDay(ev) {
   const end = ev.end;
   const day = startOfDay(end);
+  const atMidnight = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
   if (ev.allDay) {
     // All-day events use iCal's exclusive DTEND convention:
     // DTEND=Jan4 means the event covers Jan1–Jan3, not Jan4.
-    const atMidnight = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
     return atMidnight ? addDays(day, -1) : day;
   }
-  // Timed events: the end timestamp is exact, not an exclusive boundary.
-  // A cross-midnight event ending at 00:00 Jan4 includes the Jan4 slot
-  // so it renders correctly in span layouts rather than silently dropping
-  // from the day it overlaps.
+  // Timed events that end exactly at midnight and started on an earlier date
+  // should not "occupy" the boundary day in month-span lane packing.
+  // This prevents adjacent back-to-back rotations from double-stacking.
+  if (atMidnight && !isSameDay(ev.start, end)) return addDays(day, -1);
+  // Otherwise, timed events use their real end day.
   return day;
 }
 
