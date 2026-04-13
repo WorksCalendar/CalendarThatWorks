@@ -12,6 +12,7 @@ const SPAN_H   = 22;
 const SPAN_GAP = 3;
 const MAX_SPANS_VISIBLE = 3;
 const DAY_NUM_TRACK_H = 32;
+const OVERFLOW_TRACK_H = SPAN_H + 4;
 
 function isMultiDay(ev) {
   return ev.allDay || !isSameDay(ev.start, ev.end);
@@ -270,7 +271,7 @@ export default function MonthView({
           const isHovered = enlargeMonthRowOnHover && hoveredWeekIdx === wi;
           const rowMinH   = Math.max(
             isHovered ? 150 : 120,
-            DAY_NUM_TRACK_H + spansHeight + SPAN_H + 6,
+            DAY_NUM_TRACK_H + spansHeight + SPAN_H + OVERFLOW_TRACK_H + 6,
           );
 
           return (
