@@ -16,6 +16,11 @@ import { TimelineScheduler } from './04-TimelineScheduler.jsx';
 import { CustomFilters }     from './05-CustomFilters.jsx';
 import { TeamCalendar }      from './06-TeamCalendar.jsx';
 import { MultiSource }       from './07-MultiSource.jsx';
+import { BasicUsageExample }    from './basic-usage.jsx';
+import { SetupWizardExample }  from './setup-wizard.jsx';
+import { AdvancedFiltersExample } from './advanced-filters.jsx';
+import { LocalDataAdapterExample } from './data-adapter-local.jsx';
+import { ExternalFormExample } from './external-form.jsx';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [
@@ -60,6 +65,41 @@ const EXAMPLES = [
     tag:   'Multi-source',
     desc:  'Three team calendars merged into one. Tag events with _sourceId and source filter pills appear automatically.',
     component: TeamCalendar,
+  },
+  {
+    id:    'basic-usage-modern',
+    label: 'Basic Usage (New)',
+    tag:   'Docs refresh',
+    desc:  'Minimal modern example used by README/docs updates.',
+    component: BasicUsageExample,
+  },
+  {
+    id:    'setup-wizard',
+    label: 'Setup Wizard',
+    tag:   'Owner onboarding',
+    desc:  'Demonstrates owner-first setup flow and persisted onboarding state.',
+    component: SetupWizardExample,
+  },
+  {
+    id:    'advanced-filters-new',
+    label: 'Advanced Filters',
+    tag:   'Smart views',
+    desc:  'Schema extensions with priority/owner/tags fields.',
+    component: AdvancedFiltersExample,
+  },
+  {
+    id:    'data-adapter-local',
+    label: 'Data Adapter (Local)',
+    tag:   'External form',
+    desc:  'CalendarExternalForm with localStorage adapter.',
+    component: LocalDataAdapterExample,
+  },
+  {
+    id:    'external-form',
+    label: 'External Form',
+    tag:   'Standalone intake',
+    desc:  'Standalone external event request form with async adapter.',
+    component: ExternalFormExample,
   },
   {
     id:    'multi-source',
@@ -152,6 +192,11 @@ function SourceHint({ id }) {
     'custom-filters':  '05-CustomFilters.jsx',
     'team-calendar':   '06-TeamCalendar.jsx',
     'multi-source':    '07-MultiSource.jsx',
+    'basic-usage-modern': 'basic-usage.jsx',
+    'setup-wizard':    'setup-wizard.jsx',
+    'advanced-filters-new': 'advanced-filters.jsx',
+    'data-adapter-local': 'data-adapter-local.jsx',
+    'external-form':   'external-form.jsx',
   }[id];
 
   return (
