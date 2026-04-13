@@ -936,6 +936,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
               onClear={cal.clearFilter}
               onClearAll={cal.clearFilters}
               sources={sourceStore.sources}
+              groupLabels={ownerCfg.config?.filterUi?.groupLabels}
               pillHoverTitle={pillHoverTitle}
               onPillHoverTitleToggle={() => setPillHoverTitle(v => !v)}
             />

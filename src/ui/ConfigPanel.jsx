@@ -275,16 +275,33 @@ function EventFieldsTab({ config, categories, onUpdate }) {
 /* ----- Display tab ----- */
 function DisplayTab({ config, onUpdate }) {
   const d = config.display;
+  const labels = config.filterUi?.groupLabels ?? {};
   const set = (key, val) => onUpdate(c => ({ ...c, display: { ...c.display, [key]: val } }));
+  const setGroupLabel = (key, val) =>
+    onUpdate(c => ({
+      ...c,
+      filterUi: {
+        ...c.filterUi,
+        groupLabels: {
+          ...(c.filterUi?.groupLabels ?? {}),
+          [key]: val,
+        },
+      },
+    }));
 
   return (
     <div className={styles.section}>
       <label className={styles.formRow}>
         <span>Default view</span>
         <select className={styles.select} value={d.defaultView} onChange={e => set('defaultView', e.target.value)}>
-          {['month','week','day','agenda','schedule','timeline'].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+          {['month','week','day','agenda','schedule','timeline'].map(v => (
+            <option key={v} value={v}>
+              {v.charAt(0).toUpperCase() + v.slice(1)}
+            </option>
+          ))}
         </select>
       </label>
+
       <label className={styles.formRow}>
         <span>Week starts on</span>
         <select className={styles.select} value={d.weekStartDay} onChange={e => set('weekStartDay', +e.target.value)}>
@@ -292,22 +309,43 @@ function DisplayTab({ config, onUpdate }) {
           <option value={1}>Monday</option>
         </select>
       </label>
+
       <label className={styles.formRow}>
         <span>Day view start (hour)</span>
-        <input type="number" className={styles.input} min={0} max={23} value={d.dayStart}
-          onChange={e => set('dayStart', +e.target.value)} style={{ width: 72 }} />
+        <input
+          type="number"
+          className={styles.input}
+          min={0}
+          max={23}
+          value={d.dayStart}
+          onChange={e => set('dayStart', +e.target.value)}
+          style={{ width: 72 }}
+        />
       </label>
+
       <label className={styles.formRow}>
         <span>Day view end (hour)</span>
-        <input type="number" className={styles.input} min={1} max={24} value={d.dayEnd}
-          onChange={e => set('dayEnd', +e.target.value)} style={{ width: 72 }} />
+        <input
+          type="number"
+          className={styles.input}
+          min={1}
+          max={24}
+          value={d.dayEnd}
+          onChange={e => set('dayEnd', +e.target.value)}
+          style={{ width: 72 }}
+        />
       </label>
+
       <label className={styles.toggle}>
         <span>Show week numbers</span>
-        <input type="checkbox" checked={!!d.showWeekNumbers}
-          onChange={e => set('showWeekNumbers', e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={!!d.showWeekNumbers}
+          onChange={e => set('showWeekNumbers', e.target.checked)}
+        />
         <span className={styles.toggleTrack} />
       </label>
+
       <label className={styles.toggle}>
         <span>Enlarge month row on hover</span>
         <input
@@ -317,6 +355,50 @@ function DisplayTab({ config, onUpdate }) {
         />
         <span className={styles.toggleTrack} />
       </label>
+
+      <div className={styles.section} style={{ paddingTop: 12 }}>
+        <p className={styles.sectionDesc}>Rename the grouped filter dropdown buttons shown to users.</p>
+
+        <label className={styles.formRow}>
+          <span>Categories label</span>
+          <input
+            className={styles.input}
+            value={labels.categories ?? 'Categories'}
+            onChange={e => setGroupLabel('categories', e.target.value)}
+            placeholder="Categories"
+          />
+        </label>
+
+        <label className={styles.formRow}>
+          <span>People label</span>
+          <input
+            className={styles.input}
+            value={labels.resources ?? 'People'}
+            onChange={e => setGroupLabel('resources', e.target.value)}
+            placeholder="People"
+          />
+        </label>
+
+        <label className={styles.formRow}>
+          <span>Sources label</span>
+          <input
+            className={styles.input}
+            value={labels.sources ?? 'Sources'}
+            onChange={e => setGroupLabel('sources', e.target.value)}
+            placeholder="Sources"
+          />
+        </label>
+
+        <label className={styles.formRow}>
+          <span>More label</span>
+          <input
+            className={styles.input}
+            value={labels.more ?? 'More'}
+            onChange={e => setGroupLabel('more', e.target.value)}
+            placeholder="More"
+          />
+        </label>
+      </div>
     </div>
   );
 }
