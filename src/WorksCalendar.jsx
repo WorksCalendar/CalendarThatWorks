@@ -461,6 +461,32 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
 
+  const handleShiftStatusChange = useCallback((ev, status) => {
+    const eventId = ev._eventId ?? String(ev.id);
+    if (!eventId) return;
+    const newMeta = { ...(ev.meta ?? {}) };
+    if (status) {
+      newMeta.shiftStatus = status;
+    } else {
+      delete newMeta.shiftStatus;
+      delete newMeta.coveredBy;
+    }
+    applyEngineOp(
+      { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
+      () => onEventSave?.(ev),
+    );
+  }, [applyEngineOp, onEventSave]);
+
+  const handleCoverageAssign = useCallback((ev, coveringEmployeeId) => {
+    const eventId = ev._eventId ?? String(ev.id);
+    if (!eventId) return;
+    const newMeta = { ...(ev.meta ?? {}), coveredBy: coveringEmployeeId };
+    applyEngineOp(
+      { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
+      () => onEventSave?.(ev),
+    );
+  }, [applyEngineOp, onEventSave]);
+
   // All handlers run through applyEngineOp before touching host state.
 
   /**
@@ -971,6 +997,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   employees={employees}
                   onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
                   onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
+                  onShiftStatusChange={handleShiftStatusChange}
+                  onCoverageAssign={handleCoverageAssign}
                 />
               )}
             </>

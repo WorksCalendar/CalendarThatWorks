@@ -37,7 +37,9 @@ const LANE_GAP = 3;    // px — gap between lanes
 const ROW_PAD  = 8;    // px — top/bottom padding per row
 
 // Virtualization: rows above and below the visible area to keep rendered
-const OVERSCAN_ROWS = 3;
+const OVERSCAN_ROWS    = 3;
+const COVERAGE_PILL_H  = 22;   // px — height of shift-coverage status pills
+const COVERAGE_BAND    = COVERAGE_PILL_H + 6; // pill + gap above next band
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -100,8 +102,27 @@ export default function TimelineView({
   onCallCategory = 'on-call',
   onEmployeeAdd,
   onEmployeeDelete,
+  onShiftStatusChange,
+  onCoverageAssign,
 }) {
   const ctx        = useCalendarContext();
+
+  // ── Shift coverage menu state ─────────────────────────────────────────────
+  const [shiftMenu, setShiftMenu] = useState(null); // { ev, rect } | null
+  const [coverMenu, setCoverMenu] = useState(null); // { ev, rect } | null
+  const shiftMenuRef = useRef(null);
+  const coverMenuRef = useRef(null);
+
+  const anyMenuOpen = !!(shiftMenu || coverMenu);
+  useEffect(() => {
+    if (!anyMenuOpen) return;
+    function handler(e) {
+      if (shiftMenuRef.current && !shiftMenuRef.current.contains(e.target)) setShiftMenu(null);
+      if (coverMenuRef.current && !coverMenuRef.current.contains(e.target)) setCoverMenu(null);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [anyMenuOpen]);
 
   // ── Add-person form state ─────────────────────────────────────────────────
   const [addFormOpen, setAddFormOpen]   = useState(false);
@@ -182,24 +203,51 @@ export default function TimelineView({
 
   // Build row data
   const rows = useMemo(() => {
+    // Pre-compute: which employee is covering which shifts (for covering-for pills)
+    const coveringMap = new Map(); // empId → [{ ev, origEmpName, _dayStart, _dayEnd }]
+    if (useEmployees) {
+      events.forEach(ev => {
+        const isOnCallEv = ev.category === onCallCategory || ev.meta?.onCall === true;
+        if (!isOnCallEv || !ev.meta?.shiftStatus || !ev.meta?.coveredBy) return;
+        const coverId = String(ev.meta.coveredBy);
+        if (!coveringMap.has(coverId)) coveringMap.set(coverId, []);
+        const origEmp = employees.find(e => e.id === (ev.resource ?? ''));
+        const clampedStart = max([startOfDay(ev.start), monthStart]);
+        const clampedEnd   = min([startOfDay(ev.end),   monthEnd]);
+        if (clampedStart > clampedEnd) return;
+        const ds = differenceInCalendarDays(clampedStart, monthStart);
+        const de = differenceInCalendarDays(clampedEnd,   monthStart);
+        coveringMap.get(coverId).push({
+          ev,
+          origEmpName: origEmp?.name ?? 'Someone',
+          _dayStart:   Math.max(0, ds),
+          _dayEnd:     Math.min(totalDays - 1, de),
+        });
+      });
+    }
+
     if (useEmployees) {
       return employees.map((emp, idx) => {
-        const eventsForRow = events.filter(
-          e => (e.resource ?? '') === emp.id,
-        );
+        const eventsForRow = events.filter(e => (e.resource ?? '') === emp.id);
         const { events: laned, laneCount } = assignLanes(eventsForRow, monthStart, monthEnd);
-        const rowH = Math.max(
+
+        const coveringPills  = coveringMap.get(emp.id) ?? [];
+        const hasStatusPills = laned.some(ev =>
+          (ev.category === onCallCategory || ev.meta?.onCall === true) && !!ev.meta?.shiftStatus
+        );
+
+        const baseH = Math.max(
           laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2,
-          // Taller minimum so avatar + role always fit
           ROW_PAD * 2 + LANE_H + 16,
         );
+        const extraH = (hasStatusPills ? COVERAGE_BAND : 0)
+                     + (coveringPills.length > 0 ? COVERAGE_BAND : 0);
+
         return {
-          key:     emp.id,
-          emp,
-          empIdx:  idx,
-          events:  laned,
-          laneCount,
-          rowH,
+          key: emp.id, emp, empIdx: idx,
+          events: laned, laneCount,
+          rowH: baseH + extraH,
+          baseH, coveringPills, hasStatusPills,
         };
       });
     }
@@ -210,9 +258,13 @@ export default function TimelineView({
       );
       const { events: laned, laneCount } = assignLanes(resEvents, monthStart, monthEnd);
       const rowH = laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2;
-      return { key: resource, emp: null, empIdx: 0, resource, events: laned, laneCount, rowH };
+      return {
+        key: resource, emp: null, empIdx: 0, resource,
+        events: laned, laneCount,
+        rowH, baseH: rowH, coveringPills: [], hasStatusPills: false,
+      };
     });
-  }, [useEmployees, employees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString()]);
+  }, [useEmployees, employees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString(), onCallCategory, totalDays]);
 
   // ── Cumulative row offsets (for absolute positioning + scroll math) ────────
   const rowOffsets = useMemo(() => {
@@ -403,7 +455,7 @@ export default function TimelineView({
         >
           {rows.slice(visStart, visEnd + 1).map((rowData, relIdx) => {
             const rowIdx  = visStart + relIdx;
-            const { key, emp, empIdx, resource, events: rowEvents, rowH } = rowData;
+            const { key, emp, empIdx, resource, events: rowEvents, rowH, baseH, coveringPills, hasStatusPills } = rowData;
             const label = emp ? emp.name : resource;
             const color = emp ? employeeColor(emp, empIdx) : null;
             const topOffset = rowOffsets[rowIdx];
@@ -514,9 +566,9 @@ export default function TimelineView({
                       ? (color ?? resolveColor(ev, ctx?.colorRules))
                       : resolveColor(ev, ctx?.colorRules);
 
-                    const left   = ev._dayStart * DAY_W + 2;
-                    const width  = Math.max(DAY_W - 4, (ev._dayEnd - ev._dayStart + 1) * DAY_W - 4);
-                    const top    = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
+                    const left    = ev._dayStart * DAY_W + 2;
+                    const width   = Math.max(DAY_W - 4, (ev._dayEnd - ev._dayStart + 1) * DAY_W - 4);
+                    const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
                     const onClick = () => onEventClick?.(ev);
 
                     const statusClass = ev.status === 'cancelled' ? styles.cancelled
@@ -531,15 +583,9 @@ export default function TimelineView({
                         return (
                           <div
                             key={ev.id}
-                            className={[
-                              styles.event,
-                              isOnCall && styles.onCall,
-                              statusClass,
-                            ].filter(Boolean).join(' ')}
+                            className={[styles.event, isOnCall && styles.onCall, statusClass].filter(Boolean).join(' ')}
                             style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={ariaLabel}
+                            role="button" tabIndex={0} aria-label={ariaLabel}
                             onClick={onClick}
                             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
                           >
@@ -549,14 +595,50 @@ export default function TimelineView({
                       }
                     }
 
+                    // On-call events: wrapper div so we can nest the status-toggle button
+                    if (isOnCall && onShiftStatusChange) {
+                      const hasStatus = !!ev.meta?.shiftStatus;
+                      return (
+                        <div
+                          key={ev.id}
+                          className={[styles.eventWrap, styles.onCall, statusClass].filter(Boolean).join(' ')}
+                          style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
+                        >
+                          <button
+                            className={[styles.event, styles.eventFill, styles.onCall, statusClass].filter(Boolean).join(' ')}
+                            style={{ '--ev-color': evColor }}
+                            onClick={onClick}
+                            aria-label={ariaLabel}
+                          >
+                            <span className={styles.onCallIcon} aria-hidden="true">🌙</span>
+                            <span className={styles.evTitle}>{ev.title}</span>
+                            {hasStatus && (
+                              <span className={styles.shiftStatusBadge}>
+                                {ev.meta.shiftStatus === 'pto' ? 'PTO' : 'Unavail.'}
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            className={[styles.shiftStatusBtn, hasStatus && styles.hasStatus].filter(Boolean).join(' ')}
+                            onClick={e => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setShiftMenu(prev => prev?.ev?.id === ev.id ? null : { ev, rect });
+                            }}
+                            title="Set shift availability"
+                            aria-label="Set shift availability"
+                          >
+                            {hasStatus ? '⚠' : '▾'}
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    // Default (non-on-call or no callback)
                     return (
                       <button
                         key={ev.id}
-                        className={[
-                          styles.event,
-                          isOnCall && styles.onCall,
-                          statusClass,
-                        ].filter(Boolean).join(' ')}
+                        className={[styles.event, isOnCall && styles.onCall, statusClass].filter(Boolean).join(' ')}
                         style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
                         onClick={onClick}
                         aria-label={ariaLabel}
@@ -572,12 +654,132 @@ export default function TimelineView({
                       </button>
                     );
                   })}
+
+                  {/* ── Shift coverage status pills (below event lanes) ── */}
+                  {rowEvents
+                    .filter(ev => (ev.category === onCallCategory || ev.meta?.onCall === true) && ev.meta?.shiftStatus)
+                    .map(ev => {
+                      const left  = ev._dayStart * DAY_W + 2;
+                      const width = Math.max(DAY_W - 4, (ev._dayEnd - ev._dayStart + 1) * DAY_W - 4);
+                      const top   = baseH + 3;
+                      const isCovered = !!ev.meta?.coveredBy;
+                      const coveredByEmp = isCovered
+                        ? employees.find(e => e.id === String(ev.meta.coveredBy))
+                        : null;
+                      const coveredByName = coveredByEmp?.name ?? 'Someone';
+
+                      if (isCovered) {
+                        return (
+                          <div
+                            key={`sp-${ev.id}`}
+                            className={[styles.coveragePill, styles.coveragePillCovered].join(' ')}
+                            style={{ left, top, width, height: COVERAGE_PILL_H }}
+                            title={`Shift covered by ${coveredByName}`}
+                          >
+                            ✓ Shift covered by {coveredByName}
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          key={`sp-${ev.id}`}
+                          className={[styles.coveragePill, styles.coveragePillUncovered].join(' ')}
+                          style={{ left, top, width, height: COVERAGE_PILL_H }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setCoverMenu(prev => prev?.ev?.id === ev.id ? null : { ev, rect });
+                          }}
+                          aria-label="Shift not covered — click to assign coverage"
+                          title="Click to assign coverage"
+                        >
+                          ⚠ Shift not covered / Available
+                        </button>
+                      );
+                    })
+                  }
+
+                  {/* ── Covering-for pills (for the employee covering someone else) ── */}
+                  {coveringPills.map(({ ev: covEv, origEmpName, _dayStart, _dayEnd }) => {
+                    const left  = _dayStart * DAY_W + 2;
+                    const width = Math.max(DAY_W - 4, (_dayEnd - _dayStart + 1) * DAY_W - 4);
+                    const top   = baseH + 3 + (hasStatusPills ? COVERAGE_BAND : 0);
+                    return (
+                      <div
+                        key={`cf-${covEv.id}`}
+                        className={[styles.coveragePill, styles.coveragePillCovering].join(' ')}
+                        style={{ left, top, width, height: COVERAGE_PILL_H }}
+                        title={`On call (covering for ${origEmpName})`}
+                      >
+                        📞 On call (covering for {origEmpName})
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+      {/* ── Shift status dropdown menu ── */}
+      {shiftMenu && (
+        <div
+          ref={shiftMenuRef}
+          className={styles.shiftMenu}
+          style={{ top: shiftMenu.rect.bottom + 4, left: shiftMenu.rect.left }}
+        >
+          <button className={styles.shiftMenuItem} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, 'pto'); setShiftMenu(null); }}>
+            🏖 Mark as PTO
+          </button>
+          <button className={styles.shiftMenuItem} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, 'unavailable'); setShiftMenu(null); }}>
+            🚫 Mark as Unavailable
+          </button>
+          {shiftMenu.ev.meta?.shiftStatus && (
+            <>
+              <div className={styles.shiftMenuDivider} />
+              <button className={[styles.shiftMenuItem, styles.shiftMenuItemClear].join(' ')} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, null); setShiftMenu(null); }}>
+                ✕ Clear Status
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Coverage picker popover ── */}
+      {coverMenu && (
+        <div
+          ref={coverMenuRef}
+          className={styles.coverPopover}
+          style={{ top: coverMenu.rect.bottom + 4, left: coverMenu.rect.left }}
+        >
+          <p className={styles.coverPopoverTitle}>Who will cover this shift?</p>
+          {employees.filter(e => e.id !== (coverMenu.ev.resource ?? '')).length === 0 ? (
+            <p className={styles.coverPopoverEmpty}>No other employees available.</p>
+          ) : (
+            employees
+              .filter(e => e.id !== (coverMenu.ev.resource ?? ''))
+              .map((emp, idx) => (
+                <button
+                  key={emp.id}
+                  className={styles.coverEmpBtn}
+                  onClick={() => { onCoverageAssign?.(coverMenu.ev, emp.id); setCoverMenu(null); }}
+                >
+                  <span
+                    className={styles.coverEmpAvatar}
+                    style={{ background: employeeColor(emp, idx) }}
+                    aria-hidden="true"
+                  >
+                    {emp.avatar
+                      ? <img src={emp.avatar} alt="" className={styles.coverEmpAvatarImg} />
+                      : getInitials(emp.name)
+                    }
+                  </span>
+                  {emp.name}{emp.role ? ` — ${emp.role}` : ''}
+                </button>
+              ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
