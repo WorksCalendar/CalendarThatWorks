@@ -5,17 +5,17 @@ import {
   format, getISOWeek, startOfDay, addDays, subDays,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
-import { layoutSpans } from '../core/layout.js';
+import { displayEndDay, layoutSpans } from '../core/layout.js';
 import styles from './MonthView.module.css';
 
 const SPAN_H   = 22;
 const SPAN_GAP = 3;
 const MAX_SPANS_VISIBLE = 3;
-const DAY_NUM_TRACK_H = 32;
 const OVERFLOW_TRACK_H = SPAN_H + 4;
 
 function isMultiDay(ev) {
-  return ev.allDay || !isSameDay(ev.start, ev.end);
+  if (ev.allDay) return true;
+  return !isSameDay(startOfDay(ev.start), displayEndDay(ev));
 }
 
 export default function MonthView({
@@ -24,6 +24,9 @@ export default function MonthView({
 }) {
   const [popoverDay,  setPopoverDay]  = useState(null);
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
+  const [viewportWidth, setViewportWidth] = useState(
+    () => (typeof window === 'undefined' ? 1024 : window.innerWidth),
+  );
   // Hover projection panel state (positioned above hovered month-view pills).
   const [titleHover, setTitleHover] = useState(null);
   // Keyboard-focused day cell (roving tabindex pattern).
@@ -35,6 +38,14 @@ export default function MonthView({
   useEffect(() => {
     setFocusedDay(startOfDay(currentDate));
   }, [currentDate]);
+
+  // Keep month-row spacing in sync with responsive CSS breakpoints.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // After focusedDay changes, move DOM focus to the newly-active cell.
   // Skip if the focus change was initiated by a mouse click (pointer
@@ -160,6 +171,15 @@ export default function MonthView({
 
   const showWeekNumbers = config?.display?.showWeekNumbers;
   const enlargeMonthRowOnHover = !!config?.display?.enlargeMonthRowOnHover;
+  const layoutMetrics = useMemo(() => {
+    if (viewportWidth <= 480) {
+      return { dayNumTrackH: 24, weekRowMinH: 80, weekRowHoverMinH: 120 };
+    }
+    if (viewportWidth <= 768) {
+      return { dayNumTrackH: 28, weekRowMinH: 72, weekRowHoverMinH: 108 };
+    }
+    return { dayNumTrackH: 32, weekRowMinH: 120, weekRowHoverMinH: 150 };
+  }, [viewportWidth]);
 
   function buildHoverProjection(ev, color, rect) {
     const dates = ev.allDay
@@ -293,8 +313,8 @@ export default function MonthView({
 
           const isHovered = enlargeMonthRowOnHover && hoveredWeekIdx === wi;
           const rowMinH   = Math.max(
-            isHovered ? 150 : 120,
-            DAY_NUM_TRACK_H + spansHeight + SPAN_H + OVERFLOW_TRACK_H + 6,
+            isHovered ? layoutMetrics.weekRowHoverMinH : layoutMetrics.weekRowMinH,
+            layoutMetrics.dayNumTrackH + spansHeight + SPAN_H + OVERFLOW_TRACK_H + 6,
           );
 
           return (
@@ -390,7 +410,7 @@ export default function MonthView({
 
                 {/* ── Spanning event bars (overlaid below date numbers, above pills) ── */}
                 {laneCount > 0 && (
-                  <div className={styles.spansLayer} style={{ top: DAY_NUM_TRACK_H, height: spansHeight }}>
+                  <div className={styles.spansLayer} style={{ top: layoutMetrics.dayNumTrackH, height: spansHeight }}>
                     {spans
                       .filter(s => s.lane < MAX_SPANS_VISIBLE)
                       .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
