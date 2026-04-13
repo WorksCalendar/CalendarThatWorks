@@ -17,13 +17,18 @@
  *   onSaveView    (name, filters, opts) => void  — wired to useSavedViews.saveView
  */
 import { useState } from 'react';
-import { X, ChevronRight, Check, Sparkles } from 'lucide-react';
+import { X, ChevronRight, Check, Sparkles, Camera } from 'lucide-react';
 import { THEMES } from '../styles/themes.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder.jsx';
 import styles from './SetupWizardModal.module.css';
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
+const DEFAULT_TEAM_MEMBERS = [
+  { id: 1, name: 'Priya', color: '#8b5cf6', avatar: null },
+  { id: 2, name: 'Alex',  color: '#ec4899', avatar: null },
+  { id: 3, name: 'Dana',  color: '#14b8a6', avatar: null },
+];
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
@@ -39,6 +44,7 @@ export default function SetupWizardModal({
   const [calendarName,   setCalendarName]   = useState('My WorksCalendar');
   const [selectedTheme,  setSelectedTheme]  = useState('corporate');
   const [createdViews,   setCreatedViews]   = useState([]); // { name, conditions }[]
+  const [teamMembers,    setTeamMembers]    = useState(DEFAULT_TEAM_MEMBERS);
   const trapRef = useFocusTrap(onClose);
 
   if (!isOpen) return null;
@@ -54,9 +60,23 @@ export default function SetupWizardModal({
       wizardData: {
         calendarName:   calendarName.trim() || 'My WorksCalendar',
         preferredTheme: selectedTheme,
+        teamMembers:    teamMembers.map(({ id, name, color, avatar }) => ({ id, name: name.trim() || 'Teammate', color, avatar })),
       },
     });
     onClose?.();
+  };
+
+  const handleProfileUpload = (memberId, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setTeamMembers(prev => prev.map(member =>
+        member.id === memberId ? { ...member, avatar: ev.target.result } : member
+      ));
+    };
+    reader.readAsDataURL(file);
   };
 
   const goBack = () => setStep(s => Math.max(1, s - 1));
@@ -104,6 +124,17 @@ export default function SetupWizardModal({
             />
           )}
           {step === 2 && (
+            <Step2Team
+              teamMembers={teamMembers}
+              onTeamMemberNameChange={(id, name) => {
+                setTeamMembers(prev => prev.map(member =>
+                  member.id === id ? { ...member, name } : member
+                ));
+              }}
+              onUpload={handleProfileUpload}
+            />
+          )}
+          {step === 3 && (
             <Step2
               categories={categories}
               resources={resources}
@@ -111,10 +142,11 @@ export default function SetupWizardModal({
               onSaveView={handleSaveView}
             />
           )}
-          {step === 3 && (
+          {step === 4 && (
             <Step3
               calendarName={calendarName}
               selectedTheme={selectedTheme}
+              teamMembers={teamMembers}
               createdViews={createdViews}
             />
           )}
@@ -130,7 +162,7 @@ export default function SetupWizardModal({
           <div className={styles.footerRight}>
             {step < TOTAL_STEPS ? (
               <button className={styles.nextBtn} onClick={goNext}>
-                {step === 2 ? 'Continue' : 'Next'}
+                {step === 3 ? 'Continue' : 'Next'}
                 <ChevronRight size={15} />
               </button>
             ) : (
@@ -202,7 +234,54 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
   );
 }
 
-// ─── Step 2: Smart Views ──────────────────────────────────────────────────────
+// ─── Step 2: Team members ─────────────────────────────────────────────────────
+
+function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }) {
+  return (
+    <div className={styles.step}>
+      <div className={styles.stepHeader}>
+        <h3 className={styles.stepTitle}>Team Members &amp; Profiles</h3>
+        <p className={styles.stepDesc}>Add names and optional profile images used across setup and handoff views.</p>
+      </div>
+
+      <div className={styles.memberList}>
+        {teamMembers.map((member) => (
+          <div key={member.id} className={styles.memberCard}>
+            <label className={styles.avatarPicker}>
+              <div className={styles.avatarFrame}>
+                {member.avatar ? (
+                  <img src={member.avatar} alt={`${member.name} avatar`} className={styles.avatarImg} />
+                ) : (
+                  <div className={styles.avatarFallback} style={{ backgroundColor: member.color }}>
+                    {(member.name?.trim()?.[0] ?? '?').toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className={styles.fileInput}
+                onChange={(e) => onUpload(member.id, e)}
+              />
+              <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
+            </label>
+
+            <input
+              type="text"
+              className={styles.input}
+              value={member.name}
+              onChange={(e) => onTeamMemberNameChange(member.id, e.target.value)}
+              maxLength={40}
+              placeholder="Team member name"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 3: Smart Views ──────────────────────────────────────────────────────
 
 function Step2({ categories, resources, createdViews, onSaveView }) {
   return (
@@ -237,9 +316,9 @@ function Step2({ categories, resources, createdViews, onSaveView }) {
   );
 }
 
-// ─── Step 3: Done ─────────────────────────────────────────────────────────────
+// ─── Step 4: Done ─────────────────────────────────────────────────────────────
 
-function Step3({ calendarName, selectedTheme, createdViews }) {
+function Step3({ calendarName, selectedTheme, teamMembers, createdViews }) {
   const theme = THEMES.find(t => t.id === selectedTheme);
 
   return (
@@ -272,6 +351,12 @@ function Step3({ calendarName, selectedTheme, createdViews }) {
           <span className={styles.summaryCardLabel}>Smart Views</span>
           <div className={styles.summaryCardValue}>
             {createdViews.length === 0 ? 'None created' : `${createdViews.length} created`}
+          </div>
+        </div>
+        <div className={styles.summaryCard}>
+          <span className={styles.summaryCardLabel}>Team Members</span>
+          <div className={styles.summaryCardValue}>
+            {teamMembers.filter(member => member.name.trim()).length}
           </div>
         </div>
       </div>
