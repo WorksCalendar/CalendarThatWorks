@@ -1,4 +1,6 @@
 .month {
+  --month-pill-h: 22px;
+  --month-pill-gap: 3px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -172,9 +174,12 @@
 }
 
 .eventPill {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: 2px 6px;
+  min-height: var(--month-pill-h);
+  height: var(--month-pill-h);
+  padding: 0 6px;
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
@@ -195,9 +200,12 @@
 .eventPill.ghost { opacity: 0.5; pointer-events: none; border: 1px dashed rgba(255,255,255,0.6); }
 
 .morePill {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: 2px 6px;
+  min-height: var(--month-pill-h);
+  height: var(--month-pill-h);
+  padding: 0 6px;
   border-radius: var(--wc-radius-sm);
   background: transparent;
   color: var(--wc-text-muted);

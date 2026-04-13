@@ -143,6 +143,17 @@ export default function MonthView({
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(ev);
     });
+
+    map.forEach((dayEvents, key) => {
+      dayEvents.sort((a, b) => {
+        if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+        const startDiff = a.start.getTime() - b.start.getTime();
+        if (startDiff !== 0) return startDiff;
+        return a.title.localeCompare(b.title);
+      });
+      map.set(key, dayEvents);
+    });
+
     return map;
   }, [singleDay]);
 
