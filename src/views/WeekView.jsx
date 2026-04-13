@@ -269,7 +269,7 @@ export default function WeekView({
         onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles.resizeHandleTop}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
         {inner ?? (
           <>
@@ -278,7 +278,7 @@ export default function WeekView({
           </>
         )}
         <div className={styles.resizeHandle}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
       </div>
     );

@@ -311,9 +311,10 @@
 .resizeHandle {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  height: 8px;
+  height: 5px;
   cursor: ns-resize;
   border-radius: 0 0 var(--wc-radius-sm) var(--wc-radius-sm);
+  z-index: 2;
 }
 .resizeHandle::after {
   content: '';
@@ -329,7 +330,7 @@
 .resizeHandleTop {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 8px;
+  height: 5px;
   cursor: ns-resize;
   border-radius: var(--wc-radius-sm) var(--wc-radius-sm) 0 0;
   z-index: 2;
@@ -337,7 +338,7 @@
 .resizeHandleTop::after {
   content: '';
   position: absolute;
-  top: 2px;
+  top: 1px;
   left: 50%;
   transform: translateX(-50%);
   width: 20px; height: 2px;
