@@ -62,4 +62,22 @@ describe('ScheduleTemplateDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
     expect(onInstantiate).not.toHaveBeenCalled();
   });
+
+  it('shows preview errors and blocks submit', () => {
+    const onInstantiate = vi.fn();
+
+    render(
+      <ScheduleTemplateDialog
+        templates={templates}
+        onPreview={() => ({ generated: [], conflicts: [], error: 'Preview limit exceeded.' })}
+        onInstantiate={onInstantiate}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Preview limit exceeded.');
+    expect(screen.getByRole('button', { name: 'Create schedule' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
+    expect(onInstantiate).not.toHaveBeenCalled();
+  });
 });

@@ -36,7 +36,13 @@ Deliver a complete "Add Schedule" workflow that uses reusable schedule templates
 2. Owner/admin template CRUD UI.
 3. Tenant-level visibility and governance (`private/team/org`).
 
-## Phase 4 — Operational hardening
-1. Analytics hooks (template usage and failures).
-2. Performance guardrails for large generated sets.
-3. Documentation/examples and migration notes.
+## Phase 4 — Operational hardening (started)
+1. ✅ Analytics hooks (template usage and failures).
+2. ✅ Performance guardrails for large generated sets.
+3. 🚧 Documentation/examples and migration notes.
+
+### Phase 4 kickoff notes (April 13, 2026)
+- Added `onScheduleTemplateAnalytics` callback support in `WorksCalendar` to emit lifecycle events for opening the dialog, preview generation success/failure, and instantiate success/failure.
+- Added schedule generation guardrails with default limits (`previewMax=200`, `createMax=200`) and a configurable `scheduleInstantiationLimits` prop.
+- Preview now fails fast with a user-visible error when template expansion exceeds the configured preview threshold.
+- Added migration guidance for adopters in `docs/schedule-phase4-migration-notes.md`.
