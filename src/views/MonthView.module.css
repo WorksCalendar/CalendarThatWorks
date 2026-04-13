@@ -68,10 +68,12 @@
 
 /* ── Spanning event bars ── */
 .spansLayer {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
   width: 100%;
-  flex-shrink: 0;
   overflow: hidden;
+  z-index: 2;
 }
 
 .spanBar {
@@ -118,7 +120,7 @@
 .weekCells {
   display: flex;
   flex: 1;
-  /* padding-top set inline to reserve space for span bars */
+  position: relative;
 }
 
 .cell {
