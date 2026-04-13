@@ -292,3 +292,139 @@
   border-color: var(--wc-accent);
   color: #fff;
 }
+
+.dropdownWrap {
+  position: relative;
+}
+
+.dropdownBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.dropdownBtn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+.dropdownBtnOpen {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--wc-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--wc-bg);
+  border: 1px solid var(--wc-border);
+  border-radius: 10px;
+  box-shadow: var(--wc-shadow);
+  padding: 8px;
+}
+
+.menuSection + .menuSection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--wc-border);
+}
+
+.menuHead {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--wc-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.menuOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--wc-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.optionRow:hover {
+  background: var(--wc-surface);
+}
+
+.optionRowActive {
+  background: color-mix(in srgb, var(--wc-accent) 12%, var(--wc-surface));
+  border-color: color-mix(in srgb, var(--wc-accent) 30%, var(--wc-border));
+}
+
+.optionCheck {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wc-accent);
+  flex-shrink: 0;
+}
+
+.optionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionMeta {
+  font-size: 10px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .dropdownMenu {
+    min-width: 220px;
+    max-width: min(92vw, 320px);
+  }
+}

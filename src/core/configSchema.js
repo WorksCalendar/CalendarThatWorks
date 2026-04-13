@@ -26,6 +26,16 @@ export const DEFAULT_CONFIG = {
     enlargeMonthRowOnHover: false,
   },
 
+  // Filter UI labels editable by owner/dev
+  filterUi: {
+    groupLabels: {
+      categories: 'Categories',
+      resources: 'People',
+      sources: 'Sources',
+      more: 'More',
+    },
+  },
+
   // Access control
   access: {
     viewerPassword: '',   // empty = no viewer lock
