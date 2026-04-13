@@ -9,6 +9,19 @@ Deliver a complete "Add Schedule" workflow that uses reusable schedule templates
 - API-level schedule template contracts and instantiation utilities exist.
 - Missing piece: first-class UI flow in the main calendar for adding schedules from templates.
 
+## Phase 0 — Recurring engine contract baseline (started)
+1. Document the engine-level recurring behavior we depend on for Add Schedule flows.
+2. Add baseline regression tests for:
+   - deterministic occurrence identity,
+   - `EXDATE` suppression during expansion,
+   - safety caps on occurrence generation.
+3. Keep this phase scoped to test/documentation hardening (no product UI changes).
+
+### Definition of done
+- A dedicated recurring baseline test file exists and passes in CI.
+- Recurring expansion invariants are captured in code comments and test names.
+- Follow-on phases can build UI confidently on top of a locked expansion contract.
+
 ## Phase 1 — Foundation + MVP creation flow (in progress)
 1. Add a dedicated `Add Schedule` dialog in the main toolbar.
 2. Accept schedule templates via component props.
@@ -25,6 +38,11 @@ Deliver a complete "Add Schedule" workflow that uses reusable schedule templates
 - Dialog submits valid requests and creates generated recurring masters.
 - Core callbacks (`onEventSave`) fire for generated events.
 - Tests cover template selection and instantiate callback payload.
+
+### Phase 0 kickoff notes (April 13, 2026)
+- Added a dedicated recurring expansion baseline test suite at `src/core/engine/__tests__/recurringPhase0Baseline.test.ts`.
+- Locked deterministic occurrence ID behavior across repeated expansion calls for the same query window.
+- Added explicit regression coverage for `EXDATE` filtering and `maxPerSeries` generation caps.
 
 ## Phase 2 — Preview + safety
 1. Add pre-submit preview list of generated masters.
