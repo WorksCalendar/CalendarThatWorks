@@ -403,6 +403,225 @@
   padding: 0 4px;
 }
 
+/* ── On-call pill wrapper (enables nested status button) ─────────── */
+/* The wrapper is absolutely positioned; the inner .event fills it. */
+.eventWrap {
+  position: absolute;
+  display: flex;
+  align-items: stretch;
+  border-radius: 5px;
+  z-index: 5;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: filter 0.1s, box-shadow 0.1s;
+}
+.eventWrap:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  z-index: 6;
+}
+/* Inner pill inside wrapper: relative so the wrapper handles positioning */
+.eventFill {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: auto !important;
+  height: 100% !important;
+  flex: 1;
+  min-width: 0;
+  /* Prevent double-hover effect — wrapper handles it */
+  transition: none;
+}
+.eventFill:hover {
+  filter: none;
+  box-shadow: none;
+  z-index: auto;
+}
+
+/* ── Shift availability toggle button (▾ on on-call pills) ───────── */
+.shiftStatusBtn {
+  flex-shrink: 0;
+  width: 20px;
+  background: rgba(0,0,0,0.22);
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.1s, color 0.1s;
+  z-index: 6;
+}
+.shiftStatusBtn:hover {
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+}
+.shiftStatusBtn.hasStatus {
+  color: #fbbf24;   /* amber — signals an active status */
+  background: rgba(0,0,0,0.35);
+}
+
+/* ── "PTO" / "Unavail." badge on the pill itself ─────────────────── */
+.shiftStatusBadge {
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(0,0,0,0.35);
+  border-radius: 3px;
+  padding: 1px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* ── Shift status dropdown menu ───────────────────────────────────── */
+.shiftMenu {
+  position: fixed;
+  z-index: 2000;
+  background: var(--wc-surface, #fff);
+  border: 1px solid var(--wc-border-dark, #ddd);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.18);
+  padding: 4px;
+  min-width: 170px;
+}
+.shiftMenuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  color: var(--wc-text, #111);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+.shiftMenuItem:hover {
+  background: color-mix(in srgb, var(--wc-text, #000) 6%, transparent);
+}
+.shiftMenuItemClear {
+  color: var(--wc-danger, #dc2626);
+}
+.shiftMenuItemClear:hover {
+  background: color-mix(in srgb, #dc2626 8%, transparent);
+}
+.shiftMenuDivider {
+  height: 1px;
+  background: var(--wc-border, #e5e5e5);
+  margin: 3px 0;
+}
+
+/* ── Shift coverage status pills (below event bars in a row) ─────── */
+.coveragePill {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  border: none;
+  text-align: left;
+  z-index: 4;
+  box-sizing: border-box;
+  transition: filter 0.12s;
+  cursor: default;
+}
+/* Uncovered: vivid red + subtle pulse to draw attention */
+.coveragePillUncovered {
+  background: #dc2626;
+  cursor: pointer;
+  animation: coveragePulse 2.4s ease-in-out infinite;
+}
+.coveragePillUncovered:hover {
+  filter: brightness(1.1);
+}
+@keyframes coveragePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+  50%       { box-shadow: 0 0 0 4px rgba(220,38,38,0.22); }
+}
+/* Covered: green */
+.coveragePillCovered {
+  background: #16a34a;
+}
+/* Covering-for pill (in the covering employee's row) */
+.coveragePillCovering {
+  background: #4f46e5;
+}
+
+/* ── Coverage picker popover ──────────────────────────────────────── */
+.coverPopover {
+  position: fixed;
+  z-index: 2000;
+  background: var(--wc-surface, #fff);
+  border: 1px solid var(--wc-border-dark, #ddd);
+  border-radius: 10px;
+  box-shadow: 0 6px 26px rgba(0,0,0,.2);
+  padding: 12px;
+  min-width: 210px;
+  max-width: 270px;
+}
+.coverPopoverTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--wc-text-muted, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+}
+.coverPopoverEmpty {
+  font-size: 13px;
+  color: var(--wc-text-muted, #888);
+  padding: 4px 0;
+}
+.coverEmpBtn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: var(--wc-text, #111);
+  transition: background 0.1s;
+}
+.coverEmpBtn:hover {
+  background: color-mix(in srgb, var(--wc-accent, #0066cc) 9%, transparent);
+}
+.coverEmpAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.coverEmpAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 /* ── Empty state ────────────────────────────────────────────────── */
 .empty {
   display: flex;
