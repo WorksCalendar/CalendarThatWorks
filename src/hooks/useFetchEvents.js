@@ -11,7 +11,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   startOfWeek, endOfWeek,
   startOfMonth, endOfMonth,
-  addDays, addMonths,
+  addDays,
 } from 'date-fns';
 
 /** Compute the visible [start, end] range for a given view + date. */
