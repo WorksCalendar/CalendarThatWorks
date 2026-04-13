@@ -267,13 +267,17 @@ export default function MonthView({
           const laneCount   = spans.length ? Math.max(...spans.map(s => s.lane)) + 1 : 0;
           const spansHeight = Math.min(laneCount, MAX_SPANS_VISIBLE) * (SPAN_H + SPAN_GAP);
 
+          const isHovered = enlargeMonthRowOnHover && hoveredWeekIdx === wi;
+          const rowMinH   = Math.max(
+            isHovered ? 150 : 120,
+            DAY_NUM_TRACK_H + spansHeight + SPAN_H + 6,
+          );
+
           return (
             <div
               key={wi}
-              className={[
-                styles.weekRow,
-                enlargeMonthRowOnHover && hoveredWeekIdx === wi && styles.weekRowHovered,
-              ].filter(Boolean).join(' ')}
+              className={[styles.weekRow, isHovered && styles.weekRowHovered].filter(Boolean).join(' ')}
+              style={{ minHeight: rowMinH }}
             >
               {showWeekNumbers && (
                 <div className={styles.weekNum}>{getISOWeek(week[0])}</div>

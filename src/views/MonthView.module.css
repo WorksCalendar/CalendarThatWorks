@@ -143,6 +143,7 @@
   border-right: 1px solid var(--wc-border);
   cursor: pointer;
   transition: background 0.1s;
+  overflow: hidden;
 }
 .cell:last-child { border-right: none; }
 .cell:hover { background: var(--wc-surface); }
