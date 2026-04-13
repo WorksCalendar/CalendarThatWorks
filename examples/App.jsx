@@ -9,18 +9,19 @@
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { GettingStarted }    from './01-GettingStarted.jsx';
-import { BasicCalendar }     from './02-BasicCalendar.jsx';
-import { WithFilters }       from './03-WithFilters.jsx';
-import { TimelineScheduler } from './04-TimelineScheduler.jsx';
-import { CustomFilters }     from './05-CustomFilters.jsx';
-import { TeamCalendar }      from './06-TeamCalendar.jsx';
-import { MultiSource }       from './07-MultiSource.jsx';
-import { BasicUsageExample }    from './basic-usage.jsx';
-import { SetupWizardExample }  from './setup-wizard.jsx';
-import { AdvancedFiltersExample } from './advanced-filters.jsx';
+import { GettingStarted }          from './01-GettingStarted.jsx';
+import { BasicCalendar }           from './02-BasicCalendar.jsx';
+import { WithFilters }             from './03-WithFilters.jsx';
+import { TimelineScheduler }       from './04-TimelineScheduler.jsx';
+import { CustomFilters }           from './05-CustomFilters.jsx';
+import { TeamCalendar }            from './06-TeamCalendar.jsx';
+import { MultiSource }             from './07-MultiSource.jsx';
+import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking.jsx';
+import { BasicUsageExample }       from './basic-usage.jsx';
+import { SetupWizardExample }      from './setup-wizard.jsx';
+import { AdvancedFiltersExample }  from './advanced-filters.jsx';
 import { LocalDataAdapterExample } from './data-adapter-local.jsx';
-import { ExternalFormExample } from './external-form.jsx';
+import { ExternalFormExample }     from './external-form.jsx';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [
@@ -108,6 +109,13 @@ const EXAMPLES = [
     desc:  'Timeline view with four simulated calendar feeds. Filter by source, resource, or combine both.',
     component: MultiSource,
   },
+  {
+    id:    'shift-coverage',
+    label: 'Shift Coverage Tracking',
+    tag:   'PTO · coverage · on-call',
+    desc:  'Mark on-call shifts as PTO or Unavailable, pick up uncovered shifts, and track who is covering for whom.',
+    component: ShiftCoverageTracking,
+  },
 ];
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -191,12 +199,13 @@ function SourceHint({ id }) {
     'timeline':        '04-TimelineScheduler.jsx',
     'custom-filters':  '05-CustomFilters.jsx',
     'team-calendar':   '06-TeamCalendar.jsx',
-    'multi-source':    '07-MultiSource.jsx',
-    'basic-usage-modern': 'basic-usage.jsx',
-    'setup-wizard':    'setup-wizard.jsx',
+    'multi-source':         '07-MultiSource.jsx',
+    'shift-coverage':       '08-ShiftCoverageTracking.jsx',
+    'basic-usage-modern':   'basic-usage.jsx',
+    'setup-wizard':         'setup-wizard.jsx',
     'advanced-filters-new': 'advanced-filters.jsx',
-    'data-adapter-local': 'data-adapter-local.jsx',
-    'external-form':   'external-form.jsx',
+    'data-adapter-local':   'data-adapter-local.jsx',
+    'external-form':        'external-form.jsx',
   }[id];
 
   return (
