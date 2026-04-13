@@ -180,6 +180,24 @@ export default function WeekView({
     }
   }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect]);
 
+  // Single click on an empty time slot → create a 1-hour event at that time.
+  // Drags are excluded via wasDragRef (set true in handleGridPointerUp for real drags).
+  const handleGridClick = useCallback((e) => {
+    if (wasDragRef.current) return;
+    if (!ctx?.permissions?.canAddEvent) return;
+    if (e.target.closest('[data-event]')) return; // click was on an event, not empty space
+    const rect = gridRef.current.getBoundingClientRect();
+    const colWidth = (rect.width - GUTTER_W) / days.length;
+    const relX = e.clientX - rect.left - GUTTER_W;
+    const relY = e.clientY - rect.top;
+    const dayIdx = clamp(Math.floor(relX / colWidth), 0, days.length - 1);
+    const clickedHour = Math.floor(relY / pxPerHour) + dayStart;
+    const h = clamp(clickedHour, dayStart, dayEnd - 1);
+    const start = new Date(days[dayIdx]); start.setHours(h, 0, 0, 0);
+    const end   = new Date(days[dayIdx]); end.setHours(h + 1, 0, 0, 0);
+    onDateSelect?.(start, end);
+  }, [ctx?.permissions?.canAddEvent, days, dayStart, dayEnd, pxPerHour, onDateSelect]);
+
   // ── All-day bar drag ──────────────────────────────────────────────────────
   const allDayDragRef  = useRef(null);
   const allDayGhostRef = useRef(null);
@@ -461,6 +479,7 @@ export default function WeekView({
         onPointerMove={handleGridPointerMove}
         onPointerUp={handleGridPointerUp}
         onPointerCancel={drag.cancel}
+        onClick={handleGridClick}
       >
         <div className={styles.timeCol} role="presentation">
           {hours.map(h => (

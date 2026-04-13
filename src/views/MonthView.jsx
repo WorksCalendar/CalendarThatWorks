@@ -280,13 +280,8 @@ export default function MonthView({
               )}
 
               <div className={styles.daysArea}>
-                {/* ── Day cells ── */}
-                <div
-                  className={styles.weekCells}
-                  role="row"
-                  aria-rowindex={wi + 2}
-                  style={{ '--week-span-height': `${spansHeight}px` }}
-                >
+                {/* ── Day cells (base layer — fills full daysArea height) ── */}
+                <div className={styles.weekCells} role="row" aria-rowindex={wi + 2}>
                   {week.map((day, di) => {
                     const dayKey     = format(day, 'yyyy-MM-dd');
                     const daySingles = singleByDay.get(dayKey) || [];
@@ -329,7 +324,8 @@ export default function MonthView({
                       >
                         <span className={styles.dayNum}>{format(day, 'd')}</span>
 
-                        <div className={styles.events}>
+                        {/* paddingTop reserves space for the absolutely-positioned spansLayer */}
+                        <div className={styles.events} style={{ paddingTop: spansHeight }}>
                           {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
                           {isDropTarget && renderGhostPill()}
                           {overflowCount > 0 && (
@@ -364,7 +360,7 @@ export default function MonthView({
                   })}
                 </div>
 
-                {/* ── Spanning event bars ── */}
+                {/* ── Spanning event bars (overlaid below date numbers, above pills) ── */}
                 {laneCount > 0 && (
                   <div className={styles.spansLayer} style={{ top: DAY_NUM_TRACK_H, height: spansHeight }}>
                     {spans
