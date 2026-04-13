@@ -43,3 +43,20 @@ This roadmap has clear product value and improves adoption:
   - External form workflows
   - Microsoft 365 example linkage
 - Playwright coverage includes successful submit, validation errors, and adapter/network failures.
+
+
+## Phase 4 (started): Form-focused E2E hardening + failure isolation
+
+### Kickoff completed (April 13, 2026)
+
+- Added Playwright E2E coverage for `CalendarExternalForm` fixture flows:
+  - successful submit through adapter,
+  - required-field validation blocking submission,
+  - adapter/network failure surfacing with recovery path verification.
+- Added a dedicated demo fixture (`demo/external-form-fixture.html`) to isolate external-form behavior from the full calendar UI.
+- Confirmed failure isolation path: adapter errors stay local to form submission UX and do not crash subsequent submissions.
+
+### Remaining in Phase 4
+
+- Add one CI-targeted Playwright shard that always includes the external-form suite.
+- Expand the fixture to include one Microsoft 365-adapter mock path for auth-token failure messaging.
