@@ -73,6 +73,11 @@ const VIEWS = [
   { id: 'schedule', label: 'Schedule' },
 ];
 
+const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
+  previewMax: 200,
+  createMax: 200,
+};
+
 /** Compute the visible [start, end] range for a given view + date. */
 function viewRange(view, date, weekStartDay = 0) {
   switch (view) {
@@ -94,6 +99,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onImport,
     scheduleTemplates = [],
     scheduleTemplateAdapter,
+    scheduleInstantiationLimits = DEFAULT_SCHEDULE_INSTANTIATION_LIMITS,
+    onScheduleTemplateAnalytics,
 
     // ── Identity ──
     calendarId              = 'default',
@@ -356,6 +363,24 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const [remoteTemplates, setRemoteTemplates] = useState([]);
   const [templateError, setTemplateError] = useState('');
 
+  const resolvedScheduleLimits = useMemo(() => {
+    const previewMax = Number.isFinite(scheduleInstantiationLimits?.previewMax)
+      ? Math.max(1, Number(scheduleInstantiationLimits.previewMax))
+      : DEFAULT_SCHEDULE_INSTANTIATION_LIMITS.previewMax;
+    const createMax = Number.isFinite(scheduleInstantiationLimits?.createMax)
+      ? Math.max(1, Number(scheduleInstantiationLimits.createMax))
+      : DEFAULT_SCHEDULE_INSTANTIATION_LIMITS.createMax;
+    return { previewMax, createMax };
+  }, [scheduleInstantiationLimits]);
+
+  const trackScheduleTemplateAnalytics = useCallback((event, payload = {}) => {
+    onScheduleTemplateAnalytics?.({
+      event,
+      at: new Date().toISOString(),
+      ...payload,
+    });
+  }, [onScheduleTemplateAnalytics]);
+
   const reloadRemoteTemplates = useCallback(async () => {
     if (!scheduleTemplateAdapter?.listScheduleTemplates) return;
     try {
@@ -570,11 +595,33 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, [onImport, sourceStore]);
 
   const handleScheduleInstantiate = useCallback((request) => {
+    const startedAt = Date.now();
     const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
-    if (!template || !Array.isArray(template.entries) || template.entries.length === 0) return;
+    if (!template || !Array.isArray(template.entries) || template.entries.length === 0) {
+      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
+        reason: 'template-missing-or-invalid',
+        templateId: request?.templateId ?? null,
+      });
+      return;
+    }
     const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
-    if (Number.isNaN(anchor.getTime())) return;
+    if (Number.isNaN(anchor.getTime())) {
+      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
+        reason: 'invalid-anchor',
+        templateId: template.id,
+      });
+      return;
+    }
     const result = instantiateScheduleTemplate(template, request);
+    if (result.generated.length > resolvedScheduleLimits.createMax) {
+      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
+        reason: 'create-limit-exceeded',
+        templateId: template.id,
+        generatedCount: result.generated.length,
+        createMax: resolvedScheduleLimits.createMax,
+      });
+      return;
+    }
 
     result.generated.forEach((ev) => {
       const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
@@ -597,10 +644,16 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         source: 'template',
       }, () => onEventSave?.(ev));
     });
+    trackScheduleTemplateAnalytics('schedule_instantiate_succeeded', {
+      templateId: template.id,
+      generatedCount: result.generated.length,
+      elapsedMs: Date.now() - startedAt,
+    });
     setScheduleOpen(false);
-  }, [applyEngineOp, onEventSave, visibleScheduleTemplates]);
+  }, [applyEngineOp, onEventSave, resolvedScheduleLimits.createMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
 
   const buildSchedulePreview = useCallback((request) => {
+    const startedAt = Date.now();
     const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template) return { generated: [], conflicts: [], error: 'Selected template was not found.' };
     if (!Array.isArray(template.entries) || template.entries.length === 0) {
@@ -616,7 +669,25 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     try {
       generated = instantiateScheduleTemplate(template, { ...request, anchor }).generated;
     } catch {
+      trackScheduleTemplateAnalytics('schedule_preview_failed', {
+        reason: 'instantiate-throw',
+        templateId: template.id,
+      });
       return { generated: [], conflicts: [], error: 'Unable to build schedule preview.' };
+    }
+
+    if (generated.length > resolvedScheduleLimits.previewMax) {
+      trackScheduleTemplateAnalytics('schedule_preview_failed', {
+        reason: 'preview-limit-exceeded',
+        templateId: template.id,
+        generatedCount: generated.length,
+        previewMax: resolvedScheduleLimits.previewMax,
+      });
+      return {
+        generated: [],
+        conflicts: [],
+        error: `This template would generate ${generated.length} events, which exceeds the preview limit of ${resolvedScheduleLimits.previewMax}.`,
+      };
     }
 
     const ctx = opCtxRef.current;
@@ -652,8 +723,14 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
       seededEvents.push(previewEvent);
     });
 
+    trackScheduleTemplateAnalytics('schedule_preview_built', {
+      templateId: template.id,
+      generatedCount: generated.length,
+      conflictCount: conflicts.length,
+      elapsedMs: Date.now() - startedAt,
+    });
     return { generated, conflicts, error: '' };
-  }, [visibleScheduleTemplates]);
+  }, [resolvedScheduleLimits.previewMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
 
   const handleCreateScheduleTemplate = useCallback(async (template) => {
     if (!scheduleTemplateAdapter?.createScheduleTemplate) return;
@@ -774,7 +851,16 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                 </button>
               )}
               {hasAddButton && hasScheduleTemplates && (
-                <button className={styles.addBtn} onClick={() => setScheduleOpen(true)} aria-label="Add schedule from template">
+                <button
+                  className={styles.addBtn}
+                  onClick={() => {
+                    setScheduleOpen(true);
+                    trackScheduleTemplateAnalytics('schedule_dialog_opened', {
+                      templateCount: visibleScheduleTemplates.length,
+                    });
+                  }}
+                  aria-label="Add schedule from template"
+                >
                   <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Schedule</span>
                 </button>
               )}

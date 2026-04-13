@@ -315,6 +315,31 @@ export interface ScheduleTemplateAdapter {
   deleteScheduleTemplate?: (id: string) => Promise<void>;
 }
 
+export interface ScheduleInstantiationLimits {
+  /** Maximum number of generated events allowed when building a preview. Default: 200. */
+  previewMax?: number;
+  /** Maximum number of generated events allowed when creating schedule masters. Default: 200. */
+  createMax?: number;
+}
+
+export interface ScheduleTemplateAnalyticsEvent {
+  event:
+    | 'schedule_dialog_opened'
+    | 'schedule_preview_built'
+    | 'schedule_preview_failed'
+    | 'schedule_instantiate_succeeded'
+    | 'schedule_instantiate_failed';
+  at: string;
+  templateId?: string | null;
+  templateCount?: number;
+  generatedCount?: number;
+  conflictCount?: number;
+  previewMax?: number;
+  createMax?: number;
+  elapsedMs?: number;
+  reason?: string;
+}
+
 // ─── Imperative API ────────────────────────────────────────────────────────────
 
 export interface CalendarApi {
@@ -363,6 +388,10 @@ export interface WorksCalendarProps {
   scheduleTemplates?: ScheduleTemplate[];
   /** Optional backend adapter for template management and tenant-governed template loading. */
   scheduleTemplateAdapter?: ScheduleTemplateAdapter;
+  /** Operational guardrails for schedule template preview/create flows. */
+  scheduleInstantiationLimits?: ScheduleInstantiationLimits;
+  /** Optional analytics hook fired for Add Schedule workflow lifecycle events. */
+  onScheduleTemplateAnalytics?: (event: ScheduleTemplateAnalyticsEvent) => void;
 
   // ── Identity ──
   /** Namespaces localStorage (config, profiles). Default: 'default'. */
