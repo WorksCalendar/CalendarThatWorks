@@ -72,6 +72,21 @@ describe('ThemeCustomizer', () => {
 
     const latest = setConfig.mock.calls.at(-1)[0];
     expect(latest.customTheme.colors.accent).toBe('#0ea5e9');
+    expect(screen.getByRole('status')).toHaveTextContent('Imported and merged');
+  });
+
+  it('replaces the theme when replace import mode is selected', () => {
+    const { setConfig } = renderWithConfig({ colors: { accent: '#111111' }, borders: { radius: 14 } });
+
+    fireEvent.click(screen.getByLabelText('Replace current theme'));
+    fireEvent.change(screen.getByLabelText('Import theme JSON'), {
+      target: { value: '{"colors":{"accent":"#0ea5e9"}}' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply imported JSON' }));
+
+    const latest = setConfig.mock.calls.at(-1)[0];
+    expect(latest.customTheme).toEqual({ colors: { accent: '#0ea5e9' } });
+    expect(screen.getByRole('status')).toHaveTextContent('Imported and replaced');
   });
 
   it('shows error for invalid JSON import', () => {
@@ -84,5 +99,19 @@ describe('ThemeCustomizer', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Could not parse JSON.');
     expect(setConfig).not.toHaveBeenCalled();
+  });
+
+  it('copies exported JSON to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    renderWithConfig({});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy JSON' }));
+
+    expect(writeText).toHaveBeenCalled();
+    expect(await screen.findByText('Copied JSON to clipboard.')).toBeInTheDocument();
   });
 });
