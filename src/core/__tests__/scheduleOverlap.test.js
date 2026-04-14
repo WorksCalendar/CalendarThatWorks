@@ -205,10 +205,11 @@ describe('buildOpenShiftEvent', () => {
     expect(ev.category).toBe('needs-cover');
   });
 
-  it('generates a unique id each call', () => {
+  it('generates a stable id for the same source shift', () => {
     const a = buildOpenShiftEvent({ shiftEvent, reason: 'pto' });
     const b = buildOpenShiftEvent({ shiftEvent, reason: 'pto' });
-    expect(a.id).not.toBe(b.id);
+    expect(a.id).toBe('open-shift-42');
+    expect(a.id).toBe(b.id);
   });
 
   it('prefers _eventId over id for sourceShiftId', () => {

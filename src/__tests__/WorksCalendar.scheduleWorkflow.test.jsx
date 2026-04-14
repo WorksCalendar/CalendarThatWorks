@@ -25,7 +25,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('gridcell', { name: /^Alex Rivera, April 1, empty/ }));
 
-    expect(await screen.findByRole('dialog', { name: 'Add schedule for Alex Rivera' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Create schedule for Alex Rivera' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Add event' })).not.toBeInTheDocument();
   });
 
