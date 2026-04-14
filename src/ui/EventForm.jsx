@@ -7,6 +7,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { X, Plus } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import { BUILT_IN_EVENT_TEMPLATES, getEventTemplateById } from '../core/engine/recurrence/templates.ts';
+import ConfirmDialog from './ConfirmDialog.jsx';
 import styles from './EventForm.module.css';
 
 const BUILT_IN_CATEGORIES = [];
@@ -61,6 +62,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const newCatRef = useRef(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => { if (addCatOpen) newCatRef.current?.focus(); }, [addCatOpen]);
 
@@ -193,6 +195,15 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
   const allCats = Array.from(new Set([...categories, ...Object.keys(config?.eventFields || {}), ...BUILT_IN_CATEGORIES]));
 
   return (
+    <>
+    {confirmDeleteOpen && (
+      <ConfirmDialog
+        message="Delete this event? This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { onDelete(event.id); onClose(); }}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
+    )}
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal} ref={trapRef} role="dialog" aria-modal="true" aria-label={isNew ? 'Add event' : 'Edit event'}>
         <div className={styles.header}>
@@ -203,15 +214,16 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
           {/* Title */}
           <div className={styles.field}>
-            <label className={styles.label}>Template</label>
-            <select className={styles.select} value={templateId} onChange={e => applyTemplate(e.target.value)}>
+            <label className={styles.label} htmlFor="ef-template">Template</label>
+            <select id="ef-template" className={styles.select} value={templateId} onChange={e => applyTemplate(e.target.value)}>
               {BUILT_IN_EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Title <span className={styles.req}>*</span></label>
+            <label className={styles.label} htmlFor="ef-title">Title <span className={styles.req}>*</span></label>
             <input
+              id="ef-title"
               className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
               value={values.title}
               onChange={e => set('title', e.target.value)}
@@ -230,8 +242,9 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
           {/* Start / End */}
           <div className={styles.row2}>
             <div className={styles.field}>
-              <label className={styles.label}>Start <span className={styles.req}>*</span></label>
+              <label className={styles.label} htmlFor="ef-start">Start <span className={styles.req}>*</span></label>
               <input
+                id="ef-start"
                 type={values.allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
                 value={values.allDay ? values.start.slice(0, 10) : values.start}
@@ -240,8 +253,9 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
               {errors.start && <span className={styles.error}>{errors.start}</span>}
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>End <span className={styles.req}>*</span></label>
+              <label className={styles.label} htmlFor="ef-end">End <span className={styles.req}>*</span></label>
               <input
+                id="ef-end"
                 type={values.allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
                 value={values.allDay ? values.end.slice(0, 10) : values.end}
@@ -253,8 +267,9 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
 
           {/* Recurrence */}
           <div className={styles.field}>
-            <label className={styles.label}>Repeat</label>
+            <label className={styles.label} htmlFor="ef-repeat">Repeat</label>
             <select
+              id="ef-repeat"
               className={styles.select}
               value={recurrencePreset}
               onChange={(e) => {
@@ -267,6 +282,8 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
             </select>
             {recurrencePreset === 'custom' && (
               <input
+                id="ef-repeat-custom"
+                aria-label="Custom RRULE string"
                 className={styles.input}
                 value={customRrule}
                 onChange={(e) => setCustomRrule(e.target.value)}
@@ -279,7 +296,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
           {/* Category */}
           <div className={styles.row2}>
             <div className={styles.field}>
-              <label className={styles.label}>
+              <label className={styles.label} htmlFor="ef-category">
                 Category
                 {onAddCategory && (
                   <button type="button" className={styles.addCatBtn} onClick={() => setAddCatOpen(v => !v)} title="Add category" aria-label="Add category">
@@ -300,25 +317,25 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
                   <button type="button" className={styles.addCatSave} onClick={submitNewCat}>Add</button>
                 </div>
               )}
-              <select className={styles.select} value={values.category} onChange={e => set('category', e.target.value)}>
+              <select id="ef-category" className={styles.select} value={values.category} onChange={e => set('category', e.target.value)}>
                 <option value="">— none —</option>
                 {allCats.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Resource</label>
-              <input className={styles.input} value={values.resource}
+              <label className={styles.label} htmlFor="ef-resource">Resource</label>
+              <input id="ef-resource" className={styles.input} value={values.resource}
                 onChange={e => set('resource', e.target.value)} placeholder="Tail #, room, person…" />
             </div>
           </div>
 
           {/* Color override */}
           <div className={styles.field}>
-            <label className={styles.label}>Color override</label>
+            <label className={styles.label} htmlFor="ef-color-text">Color override</label>
             <div className={styles.colorRow}>
-              <input type="color" className={styles.colorPicker} value={values.color || '#3b82f6'}
+              <input type="color" aria-label="Color picker" className={styles.colorPicker} value={values.color || '#3b82f6'}
                 onChange={e => set('color', e.target.value)} />
-              <input className={styles.input} value={values.color}
+              <input id="ef-color-text" className={styles.input} value={values.color}
                 onChange={e => set('color', e.target.value)} placeholder="#3b82f6 or leave blank" />
               {values.color && (
                 <button type="button" className={styles.clearColor} onClick={() => set('color', '')}>Clear</button>
@@ -348,7 +365,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
           <div className={styles.actions}>
             {!isNew && onDelete && (
               <button type="button" className={styles.btnDelete}
-                onClick={() => { if (confirm('Delete this event?')) { onDelete(event.id); onClose(); } }}>
+                onClick={() => setConfirmDeleteOpen(true)}>
                 Delete
               </button>
             )}
@@ -360,30 +377,33 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
         </form>
       </div>
     </div>
+    </>
   );
 }
 
 /* ----- Individual custom field renderer ----- */
 function CustomField({ field, value, error, onChange }) {
   const opts = field.options ? field.options.split(',').map(s => s.trim()).filter(Boolean) : [];
+  // checkbox uses the wrapping-label pattern; all other types need an explicit id/htmlFor pair
+  const fieldId = field.type === 'checkbox' ? undefined : `ef-cf-${field.name.replace(/[^a-z0-9]/gi, '-')}`;
 
   return (
     <div className={styles.field}>
-      <label className={styles.label}>
+      <label className={styles.label} htmlFor={fieldId}>
         {field.name}
         {field.required && <span className={styles.req}> *</span>}
       </label>
 
       {field.type === 'text' && (
-        <input className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
+        <input id={fieldId} className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
           value={value} onChange={e => onChange(e.target.value)} />
       )}
       {field.type === 'number' && (
-        <input type="number" className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
+        <input id={fieldId} type="number" className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
           value={value} onChange={e => onChange(e.target.value)} />
       )}
       {field.type === 'date' && (
-        <input type="date" className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
+        <input id={fieldId} type="date" className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
           value={value} onChange={e => onChange(e.target.value)} />
       )}
       {field.type === 'checkbox' && (
@@ -393,14 +413,14 @@ function CustomField({ field, value, error, onChange }) {
         </label>
       )}
       {field.type === 'select' && (
-        <select className={[styles.select, error && styles.inputError].filter(Boolean).join(' ')}
+        <select id={fieldId} className={[styles.select, error && styles.inputError].filter(Boolean).join(' ')}
           value={value} onChange={e => onChange(e.target.value)}>
           <option value="">— select —</option>
           {opts.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       )}
       {field.type === 'textarea' && (
-        <textarea className={[styles.textarea, error && styles.inputError].filter(Boolean).join(' ')}
+        <textarea id={fieldId} className={[styles.textarea, error && styles.inputError].filter(Boolean).join(' ')}
           value={value} onChange={e => onChange(e.target.value)} rows={3} />
       )}
       {error && <span className={styles.error}>{error}</span>}

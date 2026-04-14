@@ -189,8 +189,9 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
       </div>
 
       <div className={styles.field}>
-        <label className={styles.fieldLabel}>Calendar name</label>
+        <label className={styles.fieldLabel} htmlFor="swm-cal-name">Calendar name</label>
         <input
+          id="swm-cal-name"
           className={styles.input}
           type="text"
           value={calendarName}
@@ -268,6 +269,8 @@ function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }) {
 
             <input
               type="text"
+              id={`swm-member-${member.id}`}
+              aria-label={`Name for team member ${member.id}`}
               className={styles.input}
               value={member.name}
               onChange={(e) => onTeamMemberNameChange(member.id, e.target.value)}

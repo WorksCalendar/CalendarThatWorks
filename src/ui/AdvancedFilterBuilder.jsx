@@ -236,6 +236,8 @@ export default function AdvancedFilterBuilder({ onSave, categories = [], resourc
       <div className={styles.saveSection}>
         <div className={styles.nameField}>
           <input
+            id="afb-view-name"
+            aria-label="Smart View name"
             className={[styles.input, styles.nameInput, nameError ? styles.inputError : ''].filter(Boolean).join(' ')}
             type="text"
             value={viewName}

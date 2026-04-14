@@ -22,6 +22,25 @@ const FOCUSABLE_SELECTORS = [
 ].join(', ');
 
 /**
+ * Returns true when the element is interactive and reachable by the user.
+ * Filters out elements that are:
+ *  - hidden via the HTML `hidden` attribute
+ *  - inside an `aria-hidden="true"` subtree
+ *  - inside an `inert` subtree
+ *  - made invisible via CSS display:none or visibility:hidden
+ */
+function isVisible(el) {
+  if (el.hidden) return false;
+  if (el.closest('[aria-hidden="true"]')) return false;
+  // Use feature-detect for `inert` with aria-hidden fallback
+  if (typeof el.inert === 'boolean' ? el.closest('[inert]') : el.closest('[aria-hidden="true"]')) return false;
+  const style = getComputedStyle(el);
+  if (style.display === 'none') return false;
+  if (style.visibility === 'hidden') return false;
+  return true;
+}
+
+/**
  * @param {(() => void) | null | undefined} onEscape  Called when Escape is pressed.
  * @param {boolean} [active=true]  Set false to temporarily suspend the trap.
  * @returns {React.RefObject<HTMLElement>}  Attach to the dialog container element.
@@ -40,10 +59,10 @@ export function useFocusTrap(onEscape, active = true) {
     // Remember what had focus so we can restore it on unmount.
     const previouslyFocused = document.activeElement;
 
-    // Auto-focus the first focusable child (skip if something inside is
-    // already focused, e.g. via autoFocus prop on an input).
+    // Auto-focus the first visible focusable child (skip if something inside
+    // is already focused, e.g. via autoFocus prop on an input).
     if (!el.contains(document.activeElement)) {
-      const first = el.querySelector(FOCUSABLE_SELECTORS);
+      const first = [...el.querySelectorAll(FOCUSABLE_SELECTORS)].find(isVisible);
       first?.focus();
     }
 
@@ -59,7 +78,7 @@ export function useFocusTrap(onEscape, active = true) {
 
       if (e.key !== 'Tab') return;
 
-      const focusables = [...el.querySelectorAll(FOCUSABLE_SELECTORS)];
+      const focusables = [...el.querySelectorAll(FOCUSABLE_SELECTORS)].filter(isVisible);
       if (!focusables.length) return;
 
       const first = focusables[0];
