@@ -30,6 +30,21 @@ const KIND_META = {
   },
 };
 
+const INTENT_META = {
+  pto: {
+    heading: 'Request PTO',
+    submitLabel: 'Save PTO Request',
+  },
+  unavailable: {
+    heading: 'Mark Unavailable',
+    submitLabel: 'Save Unavailable Time',
+  },
+  availability: {
+    heading: 'Edit Availability',
+    submitLabel: 'Save Availability',
+  },
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toDateInput(date, allDay) {
@@ -63,8 +78,9 @@ function fromInput(str, allDay) {
 export default function AvailabilityForm({ emp, kind: initialKind, initialStart, onSave, onClose }) {
   const trapRef = useFocusTrap(onClose);
 
-  const [kind, setKind] = useState(initialKind ?? 'pto');
+  const kind = initialKind ?? 'pto';
   const meta = KIND_META[kind] ?? KIND_META.pto;
+  const intentMeta = INTENT_META[kind] ?? INTENT_META.pto;
 
   const startDefault = initialStart ?? new Date();
   const endDefault   = new Date(startDefault.getTime() + (meta.allDayDefault ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000));
@@ -75,22 +91,6 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const [end,    setEnd]    = useState(toDateInput(endDefault,   allDay));
   const [notes,  setNotes]  = useState('');
   const [errors, setErrors] = useState({});
-
-  // When kind changes, update default title + allDay if user hasn't touched them.
-  // Also reformat start/end strings to match the new allDay format so inputs stay valid.
-  function handleKindChange(nextKind) {
-    const nextMeta = KIND_META[nextKind] ?? KIND_META.pto;
-    setKind(nextKind);
-    if (title === meta.defaultTitle) setTitle(nextMeta.defaultTitle);
-    if (allDay === meta.allDayDefault) {
-      const nextAllDay  = nextMeta.allDayDefault;
-      const parsedStart = fromInput(start, allDay);
-      const parsedEnd   = fromInput(end, allDay);
-      setAllDay(nextAllDay);
-      if (parsedStart) setStart(toDateInput(parsedStart, nextAllDay));
-      if (parsedEnd)   setEnd(toDateInput(parsedEnd,   nextAllDay));
-    }
-  }
 
   function validate() {
     const errs = {};
@@ -135,12 +135,12 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
         className={styles.modal}
         role="dialog"
         aria-modal="true"
-        aria-label={`${kindLabel} for ${emp.name}`}
+        aria-label={`${intentMeta.heading} for ${emp.name}`}
       >
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerInfo}>
-            <h2 className={styles.title}>{kindLabel}</h2>
+            <h2 className={styles.title}>{intentMeta.heading}</h2>
             <span className={styles.empName}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
@@ -149,21 +149,6 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          {/* Kind selector */}
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="af-kind">Type</label>
-            <select
-              id="af-kind"
-              className={styles.select}
-              value={kind}
-              onChange={e => handleKindChange(e.target.value)}
-            >
-              <option value="pto">PTO / Time Off</option>
-              <option value="unavailable">Unavailable</option>
-              <option value="availability">Availability</option>
-            </select>
-          </div>
-
           {/* Title */}
           <div className={styles.field}>
             <label className={styles.label} htmlFor="af-title">
@@ -256,7 +241,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
           {/* Actions */}
           <div className={styles.actions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancel</button>
-            <button type="submit" className={styles.btnSave}>Save</button>
+            <button type="submit" className={styles.btnSave}>{intentMeta.submitLabel}</button>
           </div>
         </form>
       </div>
