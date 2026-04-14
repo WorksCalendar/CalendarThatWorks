@@ -138,6 +138,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     employees   = [],
     onEmployeeAdd,
     onEmployeeDelete,
+    onEmployeeAction,
 
     // ── Validation ──
     blockedWindows,
@@ -296,7 +297,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   );
 
   // ── Derive categories / resources / filtered events ──────────────────────
+  // Categories that belong exclusively to the schedule/employee workflow —
+  // they are managed through the EmployeeActionCard, not the generic EventForm.
+  const SCHEDULE_ONLY_CATS = new Set(['pto', 'PTO', 'unavailable', 'Unavailable', 'open-shift', 'availability', 'Availability']);
+
   const categories    = useMemo(() => getCategories(expandedEvents), [expandedEvents]);
+  const eventFormCats = useMemo(
+    () => categories.filter(c => !SCHEDULE_ONLY_CATS.has(c)),
+    [categories],
+  );
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
   const visibleEvents = useMemo(
     () => applyFilters(expandedEvents, cal.filters, schema),
@@ -999,6 +1008,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
+                  onEmployeeAction={onEmployeeAction}
                 />
               )}
             </>
@@ -1027,7 +1037,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           <EventForm
             event={formEvent.id ? formEvent : null}
             config={ownerCfg.config}
-            categories={[...categories, ...eventOptions.categories]}
+            categories={[...eventFormCats, ...eventOptions.categories]}
             onSave={handleEventSave}
             onDelete={(onEventDelete && perms.canDeleteEvent) ? handleEventDelete : null}
             onClose={() => setFormEvent(null)}
