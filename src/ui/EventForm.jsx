@@ -88,9 +88,20 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
 
   const [errors, setErrors] = useState({});
 
-  // When category changes, reset meta to avoid carrying over unrelated fields
+  // When category changes, clear category-specific custom field values from
+  // meta, but preserve system-level keys (templateId, templateVersion) so that
+  // template application is not undone by a simultaneous category change.
   useEffect(() => {
-    setValues(v => ({ ...v, meta: {} }));
+    setValues(v => {
+      const { templateId: tid, templateVersion: tv, ...rest } = v.meta ?? {};
+      void rest; // custom-field keys are dropped; template keys are kept
+      return {
+        ...v,
+        meta: {
+          ...(tid !== undefined ? { templateId: tid, templateVersion: tv } : {}),
+        },
+      };
+    });
   }, [values.category]);
 
   // Get the custom field definitions for the selected category
