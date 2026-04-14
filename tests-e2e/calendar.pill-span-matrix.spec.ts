@@ -94,7 +94,12 @@ const monthGrid = page.locator('[role="grid"]').filter({ has: page.locator('[dat
     if (pillBox && startBox && coveredBox && nextBox) {
       expect(pillBox.x).toBeGreaterThanOrEqual(startBox.x - 8);
       expect(pillBox.x + pillBox.width).toBeLessThanOrEqual(coveredBox.x + coveredBox.width + 8);
-      expect(pillBox.x + pillBox.width).toBeLessThan(nextBox.x + 8);
+      // For same-week events nextDay is in the same row, so we can compare x-coordinates.
+      // For cross-week events nextDay is in the next row (x resets to left edge), so this
+      // cross-row x comparison is meaningless — assertion #2 already covers the boundary.
+      if (c.type !== 'cross-week') {
+        expect(pillBox.x + pillBox.width).toBeLessThan(nextBox.x + 8);
+      }
       expect(pillBox.height).toBeGreaterThan(10);
     }
   });
