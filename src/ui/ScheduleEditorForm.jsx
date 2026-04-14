@@ -114,15 +114,32 @@ export default function ScheduleEditorForm({
 
   const selectedTemplate = SHIFT_TEMPLATES.find(t => t.id === templateId) ?? SHIFT_TEMPLATES[0];
 
+  function validateDateRange(startStr, endStr) {
+    const s = fromInput(startStr, false);
+    const e = fromInput(endStr, false);
+    if (!s || !e) return { isValid: false, message: 'Enter valid start and end date/times' };
+    if (e <= s) return { isValid: false, message: 'End must be after start' };
+    return { isValid: true, message: '' };
+  }
+
   function validate() {
     const errs = {};
     if (!title.trim()) errs.title = 'Title is required';
-    if (!start)        errs.start = 'Start is required';
+    if (!start) {
+      errs.start = 'Start is required';
+    } else if (!fromInput(start, false)) {
+      errs.start = 'Enter a valid start date/time';
+    }
+
     if (mode !== 'template') {
-      if (!end) errs.end = 'End is required';
-      const s = fromInput(start, false);
-      const e = fromInput(end, false);
-      if (s && e && s >= e) errs.end = 'End must be after start';
+      if (!end) {
+        errs.end = 'End is required';
+      } else if (!fromInput(end, false)) {
+        errs.end = 'Enter a valid end date/time';
+      } else {
+        const { isValid, message } = validateDateRange(start, end);
+        if (!isValid) errs.end = message;
+      }
     }
     if (mode === 'recurring' && rrulePreset === 'custom' && !customRrule.trim()) {
       errs.rrule = 'Enter a valid RRULE string';
@@ -191,12 +208,12 @@ export default function ScheduleEditorForm({
         className={styles.modal}
         role="dialog"
         aria-modal="true"
-        aria-label={`Add schedule for ${emp.name}`}
+        aria-label={`Create schedule for ${emp.name}`}
       >
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerInfo}>
-            <h2 className={styles.title}>Add Schedule</h2>
+            <h2 className={styles.title}>Create Shift Schedule</h2>
             <span className={styles.empName}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
@@ -332,7 +349,7 @@ export default function ScheduleEditorForm({
             <button type="submit" className={styles.btnSave}>
               {mode === 'template' && selectedTemplate.id === '7on7off'
                 ? 'Create 7-Day Block'
-                : 'Add Shift'}
+                : 'Create Shift'}
             </button>
           </div>
         </form>
