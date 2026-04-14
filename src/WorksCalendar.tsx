@@ -5,6 +5,7 @@ import {
   useState, useCallback, useEffect, useRef, useReducer,
   useImperativeHandle, forwardRef, useMemo,
 } from 'react';
+import type { ReactNode } from 'react';
 import {
   format, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, addDays,
@@ -54,6 +55,54 @@ import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/t
 
 import styles from './WorksCalendar.module.css';
 import { customThemeToCssVars } from './core/themeSchema.js';
+
+export type WorksCalendarProps = {
+  events?: any[];
+  fetchEvents?: (...args: any[]) => Promise<any[]>;
+  icalFeeds?: any[];
+  onImport?: (events: any[]) => void;
+  scheduleTemplates?: any[];
+  scheduleTemplateAdapter?: any;
+  scheduleInstantiationLimits?: {
+    previewMax?: number;
+    createMax?: number;
+  };
+  onScheduleTemplateAnalytics?: (payload: Record<string, any>) => void;
+  calendarId?: string;
+  ownerPassword?: string;
+  onConfigSave?: (config: any) => void;
+  devMode?: boolean;
+  notes?: Record<string, any>;
+  onNoteSave?: (note: any) => void;
+  onNoteDelete?: (noteId: string) => void;
+  onEventClick?: (event: any) => void;
+  onEventSave?: (event: any) => void;
+  onEventMove?: (event: any, newStart: Date, newEnd: Date) => void;
+  onEventResize?: (event: any, newStart: Date, newEnd: Date) => void;
+  onEventDelete?: (eventId: string) => void;
+  onDateSelect?: (start: Date, end: Date) => void;
+  supabaseUrl?: string;
+  supabaseKey?: string;
+  supabaseTable?: string;
+  supabaseFilter?: string;
+  role?: 'admin' | 'user' | 'readonly';
+  employees?: any[];
+  onEmployeeAdd?: (...args: any[]) => void;
+  onEmployeeDelete?: (...args: any[]) => void;
+  blockedWindows?: any[];
+  theme?: string;
+  colorRules?: any[];
+  businessHours?: any;
+  renderEvent?: (...args: any[]) => ReactNode;
+  renderHoverCard?: (...args: any[]) => ReactNode;
+  renderToolbar?: (...args: any[]) => ReactNode;
+  renderFilterBar?: (...args: any[]) => ReactNode;
+  renderSavedViewsBar?: (...args: any[]) => ReactNode;
+  emptyState?: ReactNode;
+  filterSchema?: any[];
+  showAddButton?: boolean;
+  initialView?: string;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -167,7 +216,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
     // ── Initial view (overrides saved config on first render) ──
     initialView,
-  },
+  }: WorksCalendarProps,
   ref,
 ) {
   // SSR guard: avoid touching browser-only APIs during server rendering.
