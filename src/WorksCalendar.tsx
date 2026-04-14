@@ -706,8 +706,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
    * - 'schedule' → opens ScheduleEditorForm
    * All actions also bubble to the external onEmployeeAction prop.
    */
-  const handleEmployeeAction = useCallback((empId, action) => {
+  const handleEmployeeAction = useCallback((empId, actionInput) => {
     const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
+    const actionPayload = typeof actionInput === 'string'
+      ? { type: actionInput }
+      : (actionInput ?? {});
+    const action = actionPayload.type;
+    if (!action) return;
     const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
     if (AVAILABILITY_ACTIONS.has(action)) {
       const initialEvent = action === 'availability'
@@ -724,12 +729,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             return bStart - aStart;
           })
           .map((ev) => ({ ...ev, id: ev?._eventId ?? ev?.id }))[0] ?? null
+        : actionPayload.sourceShift
+          ? {
+            title: action === 'pto' ? 'PTO' : 'Unavailable',
+            start: actionPayload.sourceShift.start,
+            end: actionPayload.sourceShift.end,
+            allDay: actionPayload.sourceShift.allDay ?? true,
+            meta: actionPayload.sourceShift.meta ?? {},
+          }
         : null;
-      setAvailabilityState({ emp, kind: action, start: new Date(), initialEvent });
+      const initialStart = actionPayload.sourceShift?.start
+        ? new Date(actionPayload.sourceShift.start)
+        : new Date();
+      setAvailabilityState({ emp, kind: action, start: initialStart, initialEvent });
     } else if (action === 'schedule') {
       setScheduleEditorState({ emp, start: new Date() });
     }
-    onEmployeeAction?.(empId, action);
+    onEmployeeAction?.(empId, actionInput);
   }, [employees, expandedEvents, onEmployeeAction]);
 
   /** Save an availability/PTO event through the engine then notify the host.
