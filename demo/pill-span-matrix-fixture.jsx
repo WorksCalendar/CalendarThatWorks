@@ -13,10 +13,6 @@ const base = new Date();
 base.setHours(0, 0, 0, 0);
 const monday = firstMondayInMonth(base);
 
-function iso(day) {
-  return day.toISOString();
-}
-
 const matrixCases = [
   {
     id: 'case-sameweek-oncall',
@@ -59,8 +55,8 @@ const matrixCases = [
 const events = matrixCases.map((item) => ({
   id: item.id,
   title: item.title,
-  start: iso(item.start),
-  end: iso(item.endExclusive),
+  start: item.start,
+  end: item.endExclusive,
   category: item.category,
   color: item.color,
   resource: 'emp-alpha',
