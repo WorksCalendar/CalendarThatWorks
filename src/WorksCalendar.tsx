@@ -939,11 +939,21 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         ) : (
           <div className={styles.toolbar} role="toolbar" aria-label="Calendar navigation">
             <div className={styles.navGroup}>
-              <button className={styles.navBtn} onClick={() => cal.navigate(-1)} aria-label={`Previous ${cal.view}`}>
+              <button
+                className={styles.navBtn}
+                onClick={() => cal.navigate(-1)}
+                aria-label="Previous"
+                title={`Previous ${cal.view}`}
+              >
                 <ChevronLeft size={18} aria-hidden="true" />
               </button>
               <button className={styles.todayBtn} onClick={cal.goToToday}>Today</button>
-              <button className={styles.navBtn} onClick={() => cal.navigate(1)} aria-label={`Next ${cal.view}`}>
+              <button
+                className={styles.navBtn}
+                onClick={() => cal.navigate(1)}
+                aria-label="Next"
+                title={`Next ${cal.view}`}
+              >
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
               <span className={styles.dateLabel} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
