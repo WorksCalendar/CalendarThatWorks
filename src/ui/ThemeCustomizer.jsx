@@ -1,6 +1,6 @@
 import { normalizeCustomTheme, customThemeToCssVars } from '../core/themeSchema.js';
 import styles from './ThemeCustomizer.module.css';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 
 const COLOR_CONTROLS = [
   ['accent', 'Accent'],
@@ -147,6 +147,9 @@ export default function ThemeCustomizer({ theme, onChange }) {
   const [importMode, setImportMode] = useState('merge');
   const [importSuccess, setImportSuccess] = useState('');
   const [copyState, setCopyState] = useState('');
+  const [saveThemeName, setSaveThemeName] = useState('');
+  const [saveFeedback, setSaveFeedback] = useState('');
+  const saveFeedbackTimer = useRef(null);
   const merged = normalizeCustomTheme(theme);
   const selectedFontOptionByRole = useMemo(() => Object.fromEntries(
     FONT_ROLE_CONTROLS.map(({ key }) => {
@@ -178,19 +181,38 @@ export default function ThemeCustomizer({ theme, onChange }) {
 
   function update(path, value) {
     onChange((config) => {
-      const current = normalizeCustomTheme(config.customTheme);
+      // Store only the delta — do NOT normalise before spreading.
+      // Spreading the full normalised object would fill every default value
+      // into customTheme, causing inline CSS vars to override named CSS themes.
+      const current = config.customTheme ?? {};
       const [group, key] = path;
       return {
         ...config,
         customTheme: {
           ...current,
           [group]: {
-            ...current[group],
+            ...(current[group] ?? {}),
             [key]: value,
           },
         },
       };
     });
+  }
+
+  function handleSaveTheme() {
+    const name = saveThemeName.trim();
+    if (!name) return;
+    onChange((config) => ({
+      ...config,
+      savedThemes: [
+        ...(config.savedThemes ?? []).filter(t => t.label !== name),
+        { id: `custom-${Date.now()}`, label: name, customTheme: config.customTheme ?? {} },
+      ],
+    }));
+    setSaveThemeName('');
+    clearTimeout(saveFeedbackTimer.current);
+    setSaveFeedback(`"${name}" saved to theme picker`);
+    saveFeedbackTimer.current = setTimeout(() => setSaveFeedback(''), 3000);
   }
 
   function applyPreset(preset) {
@@ -326,6 +348,28 @@ export default function ThemeCustomizer({ theme, onChange }) {
 
       <div className={styles.actions}>
         <button className={styles.btn} onClick={() => onChange((c) => ({ ...c, customTheme: {} }))}>Reset to default</button>
+      </div>
+
+      <div className={styles.ioSection}>
+        <strong className={styles.blockLabel}>Save as theme option</strong>
+        <p style={{ fontSize: 12, color: 'var(--wc-text-muted)', margin: '4px 0 8px' }}>
+          Give this look a name and it will appear in the theme picker.
+        </p>
+        <div className={styles.inlineActions}>
+          <input
+            className={styles.textarea}
+            style={{ height: 'auto', padding: '6px 8px', fontSize: 13, flex: 1 }}
+            value={saveThemeName}
+            onChange={e => setSaveThemeName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSaveTheme(); } }}
+            placeholder="e.g. Our Brand Theme"
+            aria-label="Theme name"
+          />
+          <button className={styles.btn} onClick={handleSaveTheme} disabled={!saveThemeName.trim()}>
+            Save
+          </button>
+        </div>
+        {saveFeedback && <span className={styles.importSuccess}>{saveFeedback}</span>}
       </div>
 
       <div className={styles.ioSection}>

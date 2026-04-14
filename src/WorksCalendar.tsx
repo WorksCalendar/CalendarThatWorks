@@ -113,6 +113,8 @@ export type WorksCalendarProps = {
   onEmployeeDelete?: (...args: unknown[]) => void;
   blockedWindows?: Array<Record<string, unknown>>;
   theme?: string;
+  /** Override the active custom theme entirely (bypasses owner-config customTheme). */
+  customTheme?: Record<string, unknown>;
   colorRules?: Array<Record<string, unknown>>;
   businessHours?: Record<string, unknown>;
   renderEvent?: (...args: unknown[]) => ReactNode;
@@ -231,6 +233,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── Appearance ──
     theme       = 'light',
+    customTheme: customThemeProp,
     colorRules,
     businessHours,
 
@@ -264,7 +267,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
-  const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
+  const activeCustomTheme = customThemeProp ?? ownerCfg.config?.customTheme;
+  const customThemeVars = useMemo(() => customThemeToCssVars(activeCustomTheme), [activeCustomTheme]);
+  const effectiveTheme = ownerCfg.config?.display?.theme || theme;
 
   // Honor defaultView from owner config (applied once after config loads)
   const defaultViewApplied = useRef(false);
@@ -275,6 +280,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       cal.setView(defaultView);
     }
   }, [ownerCfg.config?.display?.defaultView]);
+
+  // Sync `theme` prop → config.display.theme so the theme picker dropdown
+  // reflects the currently active named theme when the owner is logged in.
+  useEffect(() => {
+    if (!ownerCfg.isOwner) return;
+    if (theme && ownerCfg.config?.display?.theme !== theme) {
+      ownerCfg.updateConfig({ display: { ...ownerCfg.config?.display, theme } });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, ownerCfg.isOwner]);
 
   // ── Permissions ──────────────────────────────────────────────────────────
   const perms = usePermissions(role);
@@ -1129,7 +1144,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars}>
+        <div className={styles.root} data-wc-theme={effectiveTheme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (

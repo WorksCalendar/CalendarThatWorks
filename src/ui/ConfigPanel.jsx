@@ -84,7 +84,7 @@ export default function ConfigPanel({
 }
 
 function SetupTab({ config, onUpdate }) {
-  const selectedTheme = config.wizardData?.preferredTheme ?? 'corporate';
+  const selectedTheme = config.display?.theme ?? config.wizardData?.preferredTheme ?? 'corporate';
   const calendarName = config.wizardData?.calendarName ?? 'My WorksCalendar';
 
   const setCalendarName = (name) => onUpdate(c => ({
@@ -94,6 +94,7 @@ function SetupTab({ config, onUpdate }) {
 
   const setPreferredTheme = (themeId) => onUpdate(c => ({
     ...c,
+    display: { ...(c.display ?? {}), theme: themeId },
     wizardData: { ...(c.wizardData ?? {}), preferredTheme: themeId },
     setupCompleted: true,
   }));

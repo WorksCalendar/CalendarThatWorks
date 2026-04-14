@@ -49,28 +49,47 @@ export function normalizeCustomTheme(theme) {
 export function customThemeToCssVars(themeInput) {
   if (!themeInput || (typeof themeInput === 'object' && Object.keys(themeInput).length === 0)) return undefined;
   const theme = normalizeCustomTheme(themeInput);
-  const e = Math.max(0, Number(theme.shadows.elevation) || 0);
-  const density = Math.max(0.8, Math.min(1.2, Number(theme.spacing.density) || 1));
+  const def   = DEFAULT_CUSTOM_THEME;
+  const vars  = {};
 
-  return {
-    '--wc-accent': theme.colors.accent,
-    '--wc-accent-dim': theme.colors.accentDim,
-    '--wc-bg': theme.colors.bg,
-    '--wc-surface': theme.colors.surface,
-    '--wc-surface-2': theme.colors.surface2,
-    '--wc-border': theme.colors.border,
-    '--wc-border-dark': theme.colors.borderDark,
-    '--wc-text': theme.colors.text,
-    '--wc-text-muted': theme.colors.textMuted,
-    '--wc-font': theme.typography.fontFamily,
-    '--wc-font-heading': theme.typography.headingFontFamily || theme.typography.fontFamily,
-    '--wc-font-mono': theme.typography.monoFontFamily || "ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace",
-    '--wc-radius': `${theme.borders.radius}px`,
-    '--wc-radius-sm': `${theme.borders.radiusSm}px`,
-    '--wc-border-width': `${theme.borders.borderWidth}px`,
-    '--wc-shadow': `0 4px ${12 + Math.round(e)}px rgba(0,0,0,${(0.08 + e / 200).toFixed(2)})`,
-    '--wc-shadow-sm': `0 1px ${3 + Math.round(e / 3)}px rgba(0,0,0,${(0.05 + e / 250).toFixed(2)})`,
-    '--wc-base-font-size': `${theme.typography.baseSize}px`,
-    '--wc-density': density,
-  };
+  // Only emit a CSS custom property when the value explicitly differs from the
+  // built-in default.  This prevents a stored customTheme from overriding named
+  // CSS themes (aviation, dark, ocean …) via inline-style specificity when the
+  // user hasn't actually changed that particular token.
+  const c = theme.colors;
+  const dc = def.colors;
+  if (c.accent     !== dc.accent)     vars['--wc-accent']      = c.accent;
+  if (c.accentDim  !== dc.accentDim)  vars['--wc-accent-dim']  = c.accentDim;
+  if (c.bg         !== dc.bg)         vars['--wc-bg']          = c.bg;
+  if (c.surface    !== dc.surface)    vars['--wc-surface']     = c.surface;
+  if (c.surface2   !== dc.surface2)   vars['--wc-surface-2']   = c.surface2;
+  if (c.border     !== dc.border)     vars['--wc-border']      = c.border;
+  if (c.borderDark !== dc.borderDark) vars['--wc-border-dark'] = c.borderDark;
+  if (c.text       !== dc.text)       vars['--wc-text']        = c.text;
+  if (c.textMuted  !== dc.textMuted)  vars['--wc-text-muted']  = c.textMuted;
+
+  const t = theme.typography;
+  const dt = def.typography;
+  if (t.fontFamily        !== dt.fontFamily)        vars['--wc-font']            = t.fontFamily;
+  if (t.headingFontFamily !== dt.headingFontFamily) vars['--wc-font-heading']    = t.headingFontFamily || t.fontFamily;
+  if (t.monoFontFamily    !== dt.monoFontFamily)    vars['--wc-font-mono']       = t.monoFontFamily;
+  if (t.baseSize          !== dt.baseSize)          vars['--wc-base-font-size']  = `${t.baseSize}px`;
+
+  const density = Math.max(0.8, Math.min(1.2, Number(theme.spacing.density) || 1));
+  if (theme.spacing.density !== def.spacing.density) vars['--wc-density'] = density;
+
+  const b = theme.borders;
+  const db = def.borders;
+  if (b.radius      !== db.radius)      vars['--wc-radius']       = `${b.radius}px`;
+  if (b.radiusSm    !== db.radiusSm)    vars['--wc-radius-sm']    = `${b.radiusSm}px`;
+  if (b.borderWidth !== db.borderWidth) vars['--wc-border-width'] = `${b.borderWidth}px`;
+
+  const e  = Math.max(0, Number(theme.shadows.elevation) || 0);
+  const de = Math.max(0, Number(def.shadows.elevation)   || 0);
+  if (e !== de) {
+    vars['--wc-shadow']    = `0 4px ${12 + Math.round(e)}px rgba(0,0,0,${(0.08 + e / 200).toFixed(2)})`;
+    vars['--wc-shadow-sm'] = `0 1px ${3  + Math.round(e / 3)}px rgba(0,0,0,${(0.05 + e / 250).toFixed(2)})`;
+  }
+
+  return Object.keys(vars).length > 0 ? vars : undefined;
 }

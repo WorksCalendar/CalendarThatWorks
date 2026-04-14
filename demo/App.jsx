@@ -5,8 +5,17 @@ import { WorksCalendar } from '../src/index.js';
 import { THEMES } from '../src/styles/themes.js';
 import { saveProfiles } from '../src/core/profileStore.js';
 
-/* ─── Demo profiles ─────────────────────────────────────────────── */
+/* ─── Demo calendar ID ──────────────────────────────────────────── */
 const DEMO_CALENDAR_ID = 'ihc-oncall-demo';
+
+/* ─── Read initial theme / savedThemes / customTheme from persisted config ── */
+function loadDemoConfig() {
+  try {
+    const raw = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch { return {}; }
+}
 const DEMO_PROFILES = [
   { id:'p1', name:'Full Schedule',       color:'#10b981', filters:{ categories:[],              resources:[], search:'' }, view:'schedule' },
   { id:'p2', name:'On-Call Only',        color:'#ef4444', filters:{ categories:['on-call'],      resources:[], search:'' }, view:'schedule' },
@@ -118,9 +127,15 @@ const INITIAL_EVENTS = [
 ];
 
 /* ─── Theme picker ──────────────────────────────────────────────── */
-function ThemePicker({ current, onChange }) {
+// onChange(themeId, customTheme?) — customTheme is only passed for saved custom themes
+function ThemePicker({ current, onChange, savedThemes = [] }) {
   const [open, setOpen] = useState(false);
-  const active = THEMES.find(t => t.id === current) ?? THEMES[0];
+  const active = THEMES.find(t => t.id === current)
+    ?? savedThemes.find(t => t.id === current)
+    ?? THEMES[0];
+
+  // Build preview swatches for the trigger button
+  const triggerPreview = active.preview ?? { accent: '#3b82f6', bg: '#fff', surface: '#f8fafc', text: '#0f172a' };
 
   return (
     <div style={{ position: 'relative' }}>
@@ -129,16 +144,16 @@ function ThemePicker({ current, onChange }) {
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '6px 10px',
-          background: active.preview.bg,
-          border: `2px solid ${active.preview.accent}`,
+          background: triggerPreview.bg,
+          border: `2px solid ${triggerPreview.accent}`,
           borderRadius: 8, cursor: 'pointer', fontSize: 12,
-          color: active.preview.text, fontWeight: 600,
+          color: triggerPreview.text, fontWeight: 600,
           boxShadow: '0 1px 4px rgba(0,0,0,.12)',
         }}
         title="Change theme"
       >
         <span style={{ display:'flex', gap:3 }}>
-          {[active.preview.accent, active.preview.bg, active.preview.surface].map((c, i) => (
+          {[triggerPreview.accent, triggerPreview.bg, triggerPreview.surface].map((c, i) => (
             <span key={i} style={{ width:12, height:12, borderRadius:'50%', background:c, border:'1px solid rgba(0,0,0,.15)', display:'inline-block' }} />
           ))}
         </span>
@@ -152,7 +167,7 @@ function ThemePicker({ current, onChange }) {
           background: '#fff', border: '1px solid #e2e8f0',
           borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,.15)',
           padding: 10, display: 'flex', flexDirection: 'column', gap: 4,
-          zIndex: 1000, minWidth: 220,
+          zIndex: 1000, minWidth: 220, maxHeight: '80vh', overflowY: 'auto',
         }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', padding: '2px 6px 6px' }}>
             Choose a theme
@@ -160,7 +175,7 @@ function ThemePicker({ current, onChange }) {
           {THEMES.map(t => (
             <button
               key={t.id}
-              onClick={() => { onChange(t.id); setOpen(false); }}
+              onClick={() => { onChange(t.id, null); setOpen(false); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '8px 10px', border: 'none', borderRadius: 8,
@@ -187,6 +202,39 @@ function ThemePicker({ current, onChange }) {
               </div>
             </button>
           ))}
+
+          {savedThemes.length > 0 && (
+            <>
+              <div style={{ height: 1, background: '#e2e8f0', margin: '4px 0' }} />
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', padding: '2px 6px 4px' }}>
+                Custom themes
+              </div>
+              {savedThemes.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => { onChange(t.id, t.customTheme); setOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 10px', border: 'none', borderRadius: 8,
+                    background: t.id === current ? '#6366f118' : 'transparent',
+                    cursor: 'pointer', textAlign: 'left',
+                    outline: t.id === current ? '2px solid #6366f1' : 'none',
+                    outlineOffset: -2,
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 28, borderRadius: 5, flexShrink: 0,
+                    background: '#f8fafc', border: '1px solid #e2e8f0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14,
+                  }}>
+                    🎨
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{t.label}</div>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -229,12 +277,17 @@ function UpdateToast({ onUpdate, onDismiss }) {
 
 /* ─── Demo App ──────────────────────────────────────────────────── */
 function App() {
-  const [events,       setEvents]       = useState(INITIAL_EVENTS);
-  const [notes,        setNotes]        = useState({});
-  const [theme,        setTheme]        = useState('light');
-  const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
-  const [eventLog,     setEventLog]     = useState([]);
-  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const [events,            setEvents]            = useState(INITIAL_EVENTS);
+  const [notes,             setNotes]             = useState({});
+  const [employees,         setEmployees]         = useState(INITIAL_EMPLOYEES);
+  const [eventLog,          setEventLog]          = useState([]);
+  const [needsRefresh,      setNeedsRefresh]      = useState(false);
+
+  // Initialize theme, savedThemes, and activeCustomTheme from persisted owner config
+  const _initConfig      = loadDemoConfig();
+  const [theme,            setTheme]            = useState(_initConfig.display?.theme ?? 'light');
+  const [savedThemes,      setSavedThemes]      = useState(_initConfig.savedThemes ?? []);
+  const [activeCustomTheme, setActiveCustomTheme] = useState(_initConfig.customTheme ?? null);
 
   const [updateSW] = useState(() =>
     registerSW({
@@ -308,7 +361,14 @@ function App() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <ThemePicker current={theme} onChange={setTheme} />
+          <ThemePicker
+            current={theme}
+            savedThemes={savedThemes}
+            onChange={(id, customTheme) => {
+              setTheme(id);
+              setActiveCustomTheme(customTheme ?? null);
+            }}
+          />
         </div>
       </header>
 
@@ -322,7 +382,14 @@ function App() {
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
-            onConfigSave={() => log('Config saved')}
+            onConfigSave={(config) => {
+              log('Config saved');
+              // Sync theme, savedThemes, and customTheme from persisted config
+              if (config.display?.theme) setTheme(config.display.theme);
+              setSavedThemes(config.savedThemes ?? []);
+              setActiveCustomTheme(config.customTheme ?? null);
+            }}
+            customTheme={activeCustomTheme}
             notes={notes}
             onNoteSave={handleNoteSave}
             onNoteDelete={handleNoteDelete}

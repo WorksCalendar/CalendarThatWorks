@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG = {
     dayEnd:       22,       // hour (0-23)
     showWeekNumbers: false,
     enlargeMonthRowOnHover: false,
+    theme: 'light',         // active named theme id; synced with the theme prop
   },
 
   // Filter UI labels editable by owner/dev
@@ -40,6 +41,10 @@ export const DEFAULT_CONFIG = {
 
   // Full custom theme object applied via CSS variable injection.
   customTheme: {},
+
+  // User-saved named custom themes (built in the ThemeCustomizer).
+  // Each entry: { id: string, label: string, customTheme: object }
+  savedThemes: [],
 
   // Access control
   access: {
