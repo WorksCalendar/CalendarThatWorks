@@ -39,6 +39,7 @@ import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
 import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
+import AvailabilityForm        from './ui/AvailabilityForm.jsx';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import MonthView              from './views/MonthView.jsx';
@@ -139,6 +140,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEmployeeAdd,
     onEmployeeDelete,
     onEmployeeAction,
+    onAvailabilitySave,
 
     // ── Validation ──
     blockedWindows,
@@ -365,9 +367,11 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState(null);
-  const [formEvent,      setFormEvent]      = useState(null);
-  const [importOpen,     setImportOpen]     = useState(false);
-  const [scheduleOpen,   setScheduleOpen]   = useState(false);
+  const [formEvent,        setFormEvent]        = useState(null);
+  const [importOpen,       setImportOpen]       = useState(false);
+  const [scheduleOpen,     setScheduleOpen]     = useState(false);
+  // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date }
+  const [availabilityState, setAvailabilityState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [remoteTemplates, setRemoteTemplates] = useState([]);
   const [templateError, setTemplateError] = useState('');
@@ -495,6 +499,29 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
       () => onEventSave?.(ev),
     );
   }, [applyEngineOp, onEventSave]);
+
+  /**
+   * Handle employee action card clicks.  Availability-type actions ('pto',
+   * 'unavailable', 'availability') are intercepted to open the AvailabilityForm
+   * internally; all actions also bubble to the external onEmployeeAction prop.
+   */
+  const handleEmployeeAction = useCallback((empId, action) => {
+    const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
+    if (AVAILABILITY_ACTIONS.has(action)) {
+      const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
+      setAvailabilityState({ emp, kind: action, start: new Date() });
+    }
+    onEmployeeAction?.(empId, action);
+  }, [employees, onEmployeeAction]);
+
+  /** Save an availability/PTO event through the engine then notify the host. */
+  const handleAvailabilitySave = useCallback((availEv) => {
+    applyEngineOp(
+      { type: 'create', event: { ...availEv, id: availEv.id ?? `avail-${Date.now()}` }, source: 'api' },
+      () => onAvailabilitySave?.(availEv),
+    );
+    setAvailabilityState(null);
+  }, [applyEngineOp, onAvailabilitySave]);
 
   // All handlers run through applyEngineOp before touching host state.
 
@@ -1008,7 +1035,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
-                  onEmployeeAction={onEmployeeAction}
+                  onEmployeeAction={handleEmployeeAction}
                 />
               )}
             </>
@@ -1043,6 +1070,17 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             onClose={() => setFormEvent(null)}
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
+          />
+        )}
+
+        {/* ── Availability / PTO form ── */}
+        {availabilityState && (
+          <AvailabilityForm
+            emp={availabilityState.emp}
+            kind={availabilityState.kind}
+            initialStart={availabilityState.start}
+            onSave={handleAvailabilitySave}
+            onClose={() => setAvailabilityState(null)}
           />
         )}
 
