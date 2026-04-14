@@ -14,8 +14,8 @@ base.setHours(0, 0, 0, 0);
 const monday = firstMondayInMonth(base);
 
 const events = [
-  { id: 'source-a-single', title: 'Source A Single', start: monday.toISOString(), end: addDays(monday, 0).toISOString(), category: 'Project', color: '#2563eb' },
-  { id: 'source-b-single', title: 'Source B Single', start: monday.toISOString(), end: addDays(monday, 0).toISOString(), category: 'Project', color: '#dc2626' },
+  { id: 'source-a-single', title: 'Source A Single', start: monday, end: addDays(monday, 1), allDay: true, category: 'Project', color: '#2563eb' },
+  { id: 'source-b-single', title: 'Source B Single', start: monday, end: addDays(monday, 1), allDay: true, category: 'Project', color: '#dc2626' },
 ];
 
 function App() {

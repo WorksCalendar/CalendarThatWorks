@@ -11,6 +11,16 @@ function at(base, dayOffset, hour, minute = 0) {
   return d;
 }
 
+if (typeof window !== 'undefined') {
+  const configKey = `wc-config-${CALENDAR_ID}`;
+  try {
+    const existing = JSON.parse(window.localStorage.getItem(configKey) ?? '{}');
+    window.localStorage.setItem(configKey, JSON.stringify({ ...existing, setupCompleted: true }));
+  } catch {
+    window.localStorage.setItem(configKey, JSON.stringify({ setupCompleted: true }));
+  }
+}
+
 function App() {
   const today = useMemo(() => {
     const d = new Date();
