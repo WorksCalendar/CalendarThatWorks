@@ -603,9 +603,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleShiftStatusChange = useCallback((ev, status) => {
     const eventId = ev._eventId ?? String(ev.id);
     if (!eventId) return;
+    const linkedOpenShifts = expandedEvents.filter((candidate) => {
+      const candidateId = String(candidate._eventId ?? candidate.id ?? '');
+      const linkedById = ev.meta?.openShiftId && candidateId === String(ev.meta.openShiftId);
+      const linkedBySource = isOpenShiftEvent(candidate)
+        && String(candidate.meta?.sourceShiftId ?? '') === String(eventId);
+      return linkedById || linkedBySource;
+    });
+    const primaryOpenShift = linkedOpenShifts[0] ?? null;
+    const linkedMirroredCoverage = expandedEvents.filter(
+      (candidate) => isCoveringEvent(candidate)
+        && String(candidate.meta?.sourceShiftId ?? '') === String(eventId),
+    );
+
     const newMeta = { ...(ev.meta ?? {}) };
     if (status) {
       newMeta.shiftStatus = status;
+      if (primaryOpenShift) {
+        newMeta.openShiftId = String(primaryOpenShift._eventId ?? primaryOpenShift.id ?? '');
+      }
     } else {
       delete newMeta.shiftStatus;
       delete newMeta.coveredBy;
@@ -620,25 +636,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
 
     if (!status) {
-      const openShiftId = ev.meta?.openShiftId;
-      const linkedOpenShifts = expandedEvents.filter((candidate) => {
-        const candidateId = String(candidate._eventId ?? candidate.id ?? '');
-        const linkedById = openShiftId && candidateId === String(openShiftId);
-        const linkedBySource = isOpenShiftEvent(candidate)
-          && String(candidate.meta?.sourceShiftId ?? '') === String(eventId);
-        return linkedById || linkedBySource;
-      });
       linkedOpenShifts.forEach((openEv) => {
         const openId = openEv._eventId ?? String(openEv.id ?? '');
         if (!openId) return;
         applyEngineOp({ type: 'delete', id: openId, source: 'api' }, () => {});
       });
 
-      const mirroredCoverage = expandedEvents.filter(
-        (candidate) => isCoveringEvent(candidate)
-          && String(candidate.meta?.sourceShiftId ?? '') === String(eventId),
-      );
-      mirroredCoverage.forEach((coverEv) => {
+      linkedMirroredCoverage.forEach((coverEv) => {
         const coverId = coverEv._eventId ?? String(coverEv.id ?? '');
         if (!coverId) return;
         applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => {});
@@ -649,9 +653,24 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleCoverageAssign = useCallback((ev, coveringEmployeeId) => {
     const eventId = ev._eventId ?? String(ev.id);
     if (!eventId) return;
+    const normalizedCoveringEmployeeId = String(coveringEmployeeId ?? '');
+    if (!normalizedCoveringEmployeeId) return;
+
+    const openShiftCandidates = expandedEvents.filter((candidate) => {
+      if (!isOpenShiftEvent(candidate)) return false;
+      const candidateId = String(candidate._eventId ?? candidate.id ?? '');
+      const linkedById = ev.meta?.openShiftId && candidateId === String(ev.meta.openShiftId);
+      const linkedBySource = String(candidate.meta?.sourceShiftId ?? '') === String(eventId);
+      return linkedById || linkedBySource;
+    });
+    const primaryOpenShift = openShiftCandidates[0] ?? null;
 
     // 1. Mark the shift as covered
-    const newMeta = { ...(ev.meta ?? {}), coveredBy: coveringEmployeeId };
+    const newMeta = {
+      ...(ev.meta ?? {}),
+      coveredBy: normalizedCoveringEmployeeId,
+      openShiftId: primaryOpenShift ? String(primaryOpenShift._eventId ?? primaryOpenShift.id ?? '') : ev.meta?.openShiftId,
+    };
     applyEngineOp(
       { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
       () => {
@@ -661,16 +680,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
 
     // 2. If there is a linked open-shift record, mark it as covered too
-    const openShiftId = ev.meta?.openShiftId;
-    if (openShiftId) {
-      const openShiftEv = expandedEvents.find(e => String(e.id) === String(openShiftId));
-      if (openShiftEv) {
-        const openMeta = {
-          ...(openShiftEv.meta ?? {}),
-          coveredBy: coveringEmployeeId,
-          status:    'covered',
-        };
-        const openId = openShiftEv._eventId ?? String(openShiftEv.id);
+    if (primaryOpenShift) {
+      const [openShiftEv, ...duplicateOpenShifts] = openShiftCandidates;
+      duplicateOpenShifts.forEach((duplicateOpenShift) => {
+        const duplicateId = duplicateOpenShift._eventId ?? String(duplicateOpenShift.id ?? '');
+        if (!duplicateId) return;
+        applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => {});
+      });
+      const openMeta = {
+        ...(openShiftEv.meta ?? {}),
+        coveredBy: normalizedCoveringEmployeeId,
+        status:    'covered',
+      };
+      const openId = openShiftEv._eventId ?? String(openShiftEv.id ?? '');
+      if (openId) {
         applyEngineOp(
           { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
           () => {},
@@ -695,7 +718,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       start:    ev.start instanceof Date ? ev.start : new Date(ev.start),
       end:      ev.end   instanceof Date ? ev.end   : new Date(ev.end),
       category: onCallCat,
-      resource: coveringEmployeeId,
+      resource: normalizedCoveringEmployeeId,
       meta: {
         kind:              SCHEDULE_KINDS.COVERING,
         sourceShiftId:     eventId,
@@ -798,8 +821,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         const shiftId = shiftEv._eventId ?? String(shiftEv.id ?? '');
         if (!shiftId) return;
         const existingOpenShifts = expandedEvents.filter(
-          (candidate) => isOpenShiftEvent(candidate)
-            && String(candidate.meta?.sourceShiftId ?? '') === String(shiftId),
+          (candidate) => {
+            if (!isOpenShiftEvent(candidate)) return false;
+            const candidateId = String(candidate._eventId ?? candidate.id ?? '');
+            const linkedById = shiftEv.meta?.openShiftId && candidateId === String(shiftEv.meta.openShiftId);
+            const linkedBySource = String(candidate.meta?.sourceShiftId ?? '') === String(shiftId);
+            return linkedById || linkedBySource;
+          },
         );
         existingOpenShifts.slice(1).forEach((duplicateOpenShift) => {
           const duplicateId = duplicateOpenShift._eventId ?? String(duplicateOpenShift.id ?? '');

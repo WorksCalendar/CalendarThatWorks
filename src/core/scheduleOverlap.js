@@ -55,8 +55,12 @@ export function detectShiftConflicts({
   }
 
   const empId = String(employeeId);
+  const seenShiftIds = new Set();
 
   const conflictingEvents = allEvents.filter(ev => {
+    const eventId = String(ev._eventId ?? ev.id ?? '');
+    if (!eventId || seenShiftIds.has(eventId)) return false;
+
     // Must belong to this employee
     if (String(ev.resource ?? ev.employeeId ?? '') !== empId) return false;
 
@@ -70,8 +74,11 @@ export function detectShiftConflicts({
 
     const evStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
     const evEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
+    if (Number.isNaN(evStart.getTime()) || Number.isNaN(evEnd.getTime())) return false;
 
-    return intervalsOverlap(requestStart, requestEnd, evStart, evEnd);
+    const overlaps = intervalsOverlap(requestStart, requestEnd, evStart, evEnd);
+    if (overlaps) seenShiftIds.add(eventId);
+    return overlaps;
   });
 
   return {
@@ -93,7 +100,8 @@ export function detectShiftConflicts({
  * @returns {object} openShiftEvent
  */
 export function buildOpenShiftEvent({ shiftEvent, reason, openShiftCategory = 'open-shift' }) {
-  const id = `open-${shiftEvent._eventId ?? shiftEvent.id ?? Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const sourceShiftId = String(shiftEvent._eventId ?? shiftEvent.id ?? '');
+  const id = `open-${sourceShiftId || Date.now()}`;
   return {
     id,
     title:    `Open: ${shiftEvent.title ?? 'Shift'}`,
@@ -104,7 +112,7 @@ export function buildOpenShiftEvent({ shiftEvent, reason, openShiftCategory = 'o
     color:    '#f59e0b', // amber — visually distinct "needs coverage" colour
     meta: {
       kind:               SCHEDULE_KINDS.OPEN_SHIFT,
-      sourceShiftId:      String(shiftEvent._eventId ?? shiftEvent.id ?? ''),
+      sourceShiftId,
       originalEmployeeId: String(shiftEvent.resource ?? shiftEvent.employeeId ?? ''),
       reason,
       coveredBy:          null,
