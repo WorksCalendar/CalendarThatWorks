@@ -83,6 +83,7 @@ function App() {
             theme="light"
             showAddButton={false}
             initialView="month"
+            weekStartDay={1}
           />
         </div>
       </div>
