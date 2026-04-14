@@ -51,6 +51,7 @@ import { exportToExcel }      from './export/excelExport.js';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
+import { customThemeToCssVars } from './core/themeSchema.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -172,6 +173,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
+  const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
 
   // Honor defaultView from owner config (applied once after config loads)
   const defaultViewApplied = useRef(false);
@@ -861,7 +863,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   return (
     <CalendarContext.Provider value={ctxValue}>
-      <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar">
+      <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" style={customThemeVars}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (

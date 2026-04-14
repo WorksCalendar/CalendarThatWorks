@@ -36,6 +36,11 @@ export const DEFAULT_CONFIG = {
     },
   },
 
+
+
+  // Full custom theme object applied via CSS variable injection.
+  customTheme: {},
+
   // Access control
   access: {
     viewerPassword: '',   // empty = no viewer lock
