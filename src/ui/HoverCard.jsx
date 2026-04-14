@@ -103,6 +103,8 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
             {editing ? (
               <div className={styles.noteEdit}>
                 <textarea
+                  id="hc-note"
+                  aria-label="Event note"
                   className={styles.noteTextarea}
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}

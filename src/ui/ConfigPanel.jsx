@@ -1,26 +1,33 @@
 import { useState } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Check, Camera } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { THEMES } from '../styles/themes.js';
 import SourcePanel from './SourcePanel.jsx';
+import ThemeCustomizer from './ThemeCustomizer.jsx';
+import AdvancedFilterBuilder from './AdvancedFilterBuilder.jsx';
 import styles from './ConfigPanel.module.css';
 
 const TABS = [
+  { id: 'setup',       label: 'Setup' },
   { id: 'hoverCard',   label: 'Hover Card' },
   { id: 'eventFields', label: 'Event Fields' },
   { id: 'display',     label: 'Display' },
+  { id: 'theme',       label: 'Theme' },
   { id: 'feeds',       label: 'Feeds' },
   { id: 'templates',   label: 'Templates' },
+  { id: 'smartViews',  label: 'Smart Views' },
+  { id: 'team',        label: 'Employees' },
   { id: 'access',      label: 'Access' },
 ];
 
 export default function ConfigPanel({
-  config, categories, onUpdate, onClose,
+  config, categories, resources, onUpdate, onClose, onSaveView,
   // Source store props (optional — omitted when owner has no source store)
   sources, feedErrors, onAddSource, onRemoveSource, onToggleSource, onUpdateSource,
   scheduleTemplates, onCreateScheduleTemplate, onDeleteScheduleTemplate, scheduleTemplateError,
 }) {
-  const [tab, setTab] = useState('hoverCard');
+  const [tab, setTab] = useState('setup');
   const trapRef = useFocusTrap(onClose);
 
   return (
@@ -44,9 +51,11 @@ export default function ConfigPanel({
         </div>
 
         <div className={styles.body}>
+          {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} />}
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'display'     && <DisplayTab     config={config} onUpdate={onUpdate} />}
+          {tab === 'theme'       && <ThemeCustomizer theme={config.customTheme} onChange={onUpdate} />}
           {tab === 'feeds'       && (
             <SourcePanel
               sources={sources ?? []}
@@ -65,9 +74,139 @@ export default function ConfigPanel({
               error={scheduleTemplateError}
             />
           )}
+          {tab === 'smartViews'  && <SmartViewsTab categories={categories} resources={resources} onSaveView={onSaveView} />}
+          {tab === 'team'        && <TeamTab config={config} onUpdate={onUpdate} />}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SetupTab({ config, onUpdate }) {
+  const selectedTheme = config.wizardData?.preferredTheme ?? 'corporate';
+  const calendarName = config.wizardData?.calendarName ?? 'My WorksCalendar';
+
+  const setCalendarName = (name) => onUpdate(c => ({
+    ...c,
+    wizardData: { ...(c.wizardData ?? {}), calendarName: name },
+  }));
+
+  const setPreferredTheme = (themeId) => onUpdate(c => ({
+    ...c,
+    wizardData: { ...(c.wizardData ?? {}), preferredTheme: themeId },
+    setupCompleted: true,
+  }));
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>Start setup by naming your calendar and selecting a theme.</p>
+      <label className={styles.formRow}>
+        <span>Calendar name</span>
+        <input
+          className={styles.input}
+          value={calendarName}
+          onChange={(e) => setCalendarName(e.target.value)}
+          maxLength={64}
+          placeholder="My WorksCalendar"
+        />
+      </label>
+      <div className={styles.themeGrid}>
+        {THEMES.map((theme) => (
+          <button
+            key={theme.id}
+            className={[styles.themeCard, selectedTheme === theme.id && styles.themeCardSelected].filter(Boolean).join(' ')}
+            onClick={() => setPreferredTheme(theme.id)}
+            title={theme.description}
+            aria-pressed={selectedTheme === theme.id}
+          >
+            <div className={styles.themeCardPreview} style={{ background: theme.preview.bg, borderColor: theme.preview.border }}>
+              <div className={styles.themeCardAccent} style={{ background: theme.preview.accent }} />
+              <div className={styles.themeCardLines}>
+                <span style={{ background: theme.preview.text }} />
+                <span style={{ background: theme.preview.text, width: '65%' }} />
+              </div>
+            </div>
+            <div className={styles.themeCardTop}>
+              <span>{theme.label}</span>
+              {selectedTheme === theme.id && <Check size={12} />}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SmartViewsTab({ categories, resources, onSaveView }) {
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>Create Smart Views once categories and people are configured.</p>
+      <AdvancedFilterBuilder categories={categories ?? []} resources={resources ?? []} onSave={onSaveView} />
+    </div>
+  );
+}
+
+function TeamTab({ config, onUpdate }) {
+  const teamMembers = config.wizardData?.teamMembers ?? [];
+
+  const updateMembers = (nextMembers) => onUpdate(c => ({
+    ...c,
+    wizardData: { ...(c.wizardData ?? {}), teamMembers: nextMembers },
+    setupCompleted: true,
+  }));
+
+  const addMember = () => {
+    const nextId = Math.max(0, ...teamMembers.map((member) => Number(member.id) || 0)) + 1;
+    updateMembers([...teamMembers, { id: nextId, name: '', color: '#8b5cf6', avatar: null }]);
+  };
+
+  const updateMember = (id, patch) => {
+    updateMembers(teamMembers.map((member) => (member.id === id ? { ...member, ...patch } : member)));
+  };
+
+  const removeMember = (id) => updateMembers(teamMembers.filter((member) => member.id !== id));
+
+  const handleProfileUpload = (memberId, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      updateMember(memberId, { avatar: ev.target.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>Add employee photos after your categories and Smart Views are in place.</p>
+      {teamMembers.map((member) => (
+        <div key={member.id} className={styles.memberRow}>
+          <label className={styles.avatarPicker}>
+            <div className={styles.avatarFrame}>
+              {member.avatar ? (
+                <img src={member.avatar} alt={`${member.name || 'Employee'} avatar`} className={styles.avatarImg} />
+              ) : (
+                <div className={styles.avatarFallback} style={{ backgroundColor: member.color }}>
+                  {(member.name?.trim()?.[0] ?? '?').toUpperCase()}
+                </div>
+              )}
+            </div>
+            <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleProfileUpload(member.id, e)} />
+            <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
+          </label>
+          <input
+            className={styles.input}
+            value={member.name ?? ''}
+            onChange={(e) => updateMember(member.id, { name: e.target.value })}
+            placeholder="Employee name"
+          />
+          <button className={styles.removeBtn} onClick={() => removeMember(member.id)} aria-label={`Remove ${member.name || 'employee'}`}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
+      <button className={styles.addFieldBtn} onClick={addMember}><Plus size={13} /> Add employee</button>
     </div>
   );
 }

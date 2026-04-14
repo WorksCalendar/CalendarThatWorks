@@ -20,6 +20,7 @@ import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { usePermissions }     from './hooks/usePermissions.js';
 import { useEventOptions }    from './hooks/useEventOptions.js';
+import { useTouchSwipe }     from './hooks/useTouchSwipe.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
 import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
@@ -44,15 +45,16 @@ import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
 import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap.js';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
+import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
 import MonthView              from './views/MonthView.jsx';
 import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
-import { exportToExcel }      from './export/excelExport.js';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
+import { customThemeToCssVars } from './core/themeSchema.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -80,6 +82,14 @@ const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
   previewMax: 200,
   createMax: 200,
 };
+let exportToExcelFn = null;
+
+async function exportVisibleEvents(events) {
+  if (!exportToExcelFn) {
+    ({ exportToExcel: exportToExcelFn } = await import('./export/excelExport.js'));
+  }
+  return exportToExcelFn(events);
+}
 
 /** Compute the visible [start, end] range for a given view + date. */
 function viewRange(view, date, weekStartDay = 0) {
@@ -92,6 +102,51 @@ function viewRange(view, date, weekStartDay = 0) {
       return { start: startOfMonth(date), end: endOfMonth(date) };
   }
 }
+
+export type WorksCalendarProps = {
+  events?: unknown[];
+  fetchEvents?: (...args: any[]) => Promise<unknown[]>;
+  icalFeeds?: unknown[];
+  onImport?: (events: unknown[]) => void;
+  scheduleTemplates?: unknown[];
+  scheduleTemplateAdapter?: unknown;
+  scheduleInstantiationLimits?: { previewMax?: number; createMax?: number };
+  onScheduleTemplateAnalytics?: (...args: any[]) => void;
+  calendarId?: string;
+  ownerPassword?: string;
+  onConfigSave?: (...args: any[]) => void;
+  devMode?: boolean;
+  notes?: Record<string, unknown>;
+  onNoteSave?: (...args: any[]) => void;
+  onNoteDelete?: (...args: any[]) => void;
+  onEventClick?: (...args: any[]) => void;
+  onEventSave?: (...args: any[]) => void;
+  onEventMove?: (...args: any[]) => void;
+  onEventResize?: (...args: any[]) => void;
+  onEventDelete?: (...args: any[]) => void;
+  onDateSelect?: (...args: any[]) => void;
+  supabaseUrl?: string;
+  supabaseKey?: string;
+  supabaseTable?: string;
+  supabaseFilter?: string;
+  role?: 'admin' | 'user' | 'readonly';
+  employees?: unknown[];
+  onEmployeeAdd?: (...args: any[]) => void;
+  onEmployeeDelete?: (...args: any[]) => void;
+  blockedWindows?: unknown[];
+  theme?: string;
+  colorRules?: unknown[];
+  businessHours?: unknown;
+  renderEvent?: (...args: any[]) => unknown;
+  renderHoverCard?: (...args: any[]) => unknown;
+  renderToolbar?: (...args: any[]) => unknown;
+  renderFilterBar?: (...args: any[]) => unknown;
+  renderSavedViewsBar?: (...args: any[]) => unknown;
+  emptyState?: unknown;
+  filterSchema?: unknown[];
+  showAddButton?: boolean;
+  initialView?: 'month' | 'week' | 'day' | 'agenda' | 'schedule';
+};
 
 export const WorksCalendar = forwardRef(function WorksCalendar(
   {
@@ -169,14 +224,18 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
     // ── Initial view (overrides saved config on first render) ──
     initialView,
-  },
+  }: WorksCalendarProps,
   ref,
 ) {
+  // SSR guard: avoid touching browser-only APIs during server rendering.
+  if (typeof window === 'undefined') return null;
+
   // ── View / date / filter state ───────────────────────────────────────────
   const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
   const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
+  const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
 
   // Honor defaultView from owner config (applied once after config loads)
   const defaultViewApplied = useRef(false);
@@ -430,6 +489,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
     const onKeyDown = (e) => {
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
@@ -957,6 +1017,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     }
   }
 
+  const swipeAreaRef = useRef(null);
+  const swipeNavigationEnabled = cal.view === 'month' || cal.view === 'schedule';
+  useTouchSwipe({
+    targetRef: swipeAreaRef,
+    enabled: swipeNavigationEnabled,
+    onSwipeLeft: () => cal.navigate(1),
+    onSwipeRight: () => cal.navigate(-1),
+  });
+
   const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
   const hasScheduleTemplates = Array.isArray(visibleScheduleTemplates) && visibleScheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
@@ -982,8 +1051,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   };
 
   return (
-    <CalendarContext.Provider value={ctxValue}>
-      <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar">
+    <CalendarErrorBoundary>
+      <CalendarContext.Provider value={ctxValue}>
+        <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" style={customThemeVars}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
@@ -991,11 +1061,21 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         ) : (
           <div className={styles.toolbar} role="toolbar" aria-label="Calendar navigation">
             <div className={styles.navGroup}>
-              <button className={styles.navBtn} onClick={() => cal.navigate(-1)} aria-label={`Previous ${cal.view}`}>
+              <button
+                className={styles.navBtn}
+                onClick={() => cal.navigate(-1)}
+                aria-label="Previous"
+                title={`Previous ${cal.view}`}
+              >
                 <ChevronLeft size={18} aria-hidden="true" />
               </button>
               <button className={styles.todayBtn} onClick={cal.goToToday}>Today</button>
-              <button className={styles.navBtn} onClick={() => cal.navigate(1)} aria-label={`Next ${cal.view}`}>
+              <button
+                className={styles.navBtn}
+                onClick={() => cal.navigate(1)}
+                aria-label="Next"
+                title={`Next ${cal.view}`}
+              >
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
               <span className={styles.dateLabel} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
@@ -1041,7 +1121,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   <Upload size={15} aria-hidden="true" />
                 </button>
               )}
-              <button className={styles.exportBtn} onClick={() => exportToExcel(visibleEvents)} aria-label="Export to Excel">
+              <button className={styles.exportBtn} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
                 <Download size={15} aria-hidden="true" />
               </button>
               {ownerPassword && (
@@ -1116,7 +1196,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         }
 
         {/* ── View area ── */}
-        <div className={styles.viewArea}>
+        <div ref={swipeAreaRef} className={styles.viewArea}>
           {isEmpty && emptyState ? (
             <div className={styles.emptyStateWrap}>{emptyState}</div>
           ) : (
@@ -1239,8 +1319,10 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           <ConfigPanel
             config={ownerCfg.config}
             categories={categories}
+            resources={resources}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
+            onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
             sources={sourceStore.sources}
             feedErrors={feedErrors}
             onAddSource={sourceStore.addSource}
@@ -1256,7 +1338,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />
-      </div>
-    </CalendarContext.Provider>
+        </div>
+      </CalendarContext.Provider>
+    </CalendarErrorBoundary>
   );
 });

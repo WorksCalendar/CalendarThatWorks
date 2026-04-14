@@ -5,12 +5,12 @@
 // ── Versioned public schema (engine types + serialization helpers) ───────────
 export * from './api/v1/index.js';
 
-export { WorksCalendar }                  from './WorksCalendar.jsx';
+export { WorksCalendar }                  from './WorksCalendar.tsx';
 export { default as TimelineView }        from './views/TimelineView.jsx';
 export { normalizeEvent, normalizeEvents } from './core/eventModel.js';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema.js';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
-export { exportToExcel }                  from './export/excelExport.js';
+export { exportToExcel }                  from './export/exportToExcelLazy.js';
 export { useCalendar }                    from './hooks/useCalendar.js';
 export { useOwnerConfig }                 from './hooks/useOwnerConfig.js';
 export { useRealtimeEvents }              from './hooks/useRealtimeEvents.js';
@@ -25,6 +25,7 @@ export {
   default as CalendarExternalForm,
   SUPPORTED_EXTERNAL_FORM_FIELD_TYPES,
 } from './ui/CalendarExternalForm.jsx';
+export { default as CalendarErrorBoundary } from './ui/CalendarErrorBoundary.jsx';
 export { createLocalStorageDataAdapter } from './external/localStorageDataAdapter.js';
 export { parseICS, fetchAndParseICS }     from './core/icalParser.js';
 export { useOccurrences }                 from './hooks/useOccurrences.js';
