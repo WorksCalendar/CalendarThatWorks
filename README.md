@@ -1,7 +1,3 @@
-Yep — here it is as a single clean copy/paste block with nothing extra. Just drop this straight into your README.md.
-
-⸻
-
 
 # WorksCalendar
 
