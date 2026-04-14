@@ -3,12 +3,14 @@ import { X, Plus, Trash2 } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import SourcePanel from './SourcePanel.jsx';
+import ThemeCustomizer from './ThemeCustomizer.jsx';
 import styles from './ConfigPanel.module.css';
 
 const TABS = [
   { id: 'hoverCard',   label: 'Hover Card' },
   { id: 'eventFields', label: 'Event Fields' },
   { id: 'display',     label: 'Display' },
+  { id: 'theme',       label: 'Theme' },
   { id: 'feeds',       label: 'Feeds' },
   { id: 'templates',   label: 'Templates' },
   { id: 'access',      label: 'Access' },
@@ -47,6 +49,7 @@ export default function ConfigPanel({
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'display'     && <DisplayTab     config={config} onUpdate={onUpdate} />}
+          {tab === 'theme'       && <ThemeCustomizer theme={config.customTheme} onChange={onUpdate} />}
           {tab === 'feeds'       && (
             <SourcePanel
               sources={sources ?? []}
