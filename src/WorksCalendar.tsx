@@ -5,6 +5,7 @@ import {
   useState, useCallback, useEffect, useRef, useReducer,
   useImperativeHandle, forwardRef, useMemo,
 } from 'react';
+import type { ForwardedRef, ReactNode } from 'react';
 import {
   format, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, addDays,
@@ -56,6 +57,74 @@ import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/t
 import styles from './WorksCalendar.module.css';
 import { customThemeToCssVars } from './core/themeSchema.js';
 
+export type WorksCalendarEvent = Record<string, unknown>;
+export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule';
+export type CalendarRole = 'admin' | 'user' | 'readonly';
+
+export type ScheduleInstantiationLimits = {
+  previewMax?: number;
+  createMax?: number;
+};
+
+export type CalendarApi = {
+  navigateTo: (date: Date) => void;
+  setView: (view: CalendarView) => void;
+  goToToday: () => void;
+  openEvent: (id: string) => void;
+  getVisibleEvents: () => WorksCalendarEvent[];
+  clearFilters: () => void;
+  addEvent: (defaults?: Partial<WorksCalendarEvent>) => void;
+  undo: () => boolean;
+  redo: () => boolean;
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+};
+
+export type WorksCalendarProps = {
+  events?: WorksCalendarEvent[];
+  fetchEvents?: (...args: unknown[]) => Promise<WorksCalendarEvent[]>;
+  icalFeeds?: Array<Record<string, unknown>>;
+  onImport?: (events: WorksCalendarEvent[]) => void;
+  scheduleTemplates?: Array<Record<string, unknown>>;
+  scheduleTemplateAdapter?: Record<string, unknown>;
+  scheduleInstantiationLimits?: ScheduleInstantiationLimits;
+  onScheduleTemplateAnalytics?: (payload: Record<string, unknown>) => void;
+  calendarId?: string;
+  ownerPassword?: string;
+  onConfigSave?: (config: Record<string, unknown>) => void;
+  devMode?: boolean;
+  notes?: Record<string, unknown>;
+  onNoteSave?: (note: Record<string, unknown>) => void;
+  onNoteDelete?: (noteId: string) => void;
+  onEventClick?: (event: WorksCalendarEvent) => void;
+  onEventSave?: (event: WorksCalendarEvent) => void;
+  onEventMove?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
+  onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
+  onEventDelete?: (eventId: string) => void;
+  onDateSelect?: (start: Date, end: Date) => void;
+  supabaseUrl?: string;
+  supabaseKey?: string;
+  supabaseTable?: string;
+  supabaseFilter?: string;
+  role?: CalendarRole;
+  employees?: Array<Record<string, unknown>>;
+  onEmployeeAdd?: (...args: unknown[]) => void;
+  onEmployeeDelete?: (...args: unknown[]) => void;
+  blockedWindows?: Array<Record<string, unknown>>;
+  theme?: string;
+  colorRules?: Array<Record<string, unknown>>;
+  businessHours?: Record<string, unknown>;
+  renderEvent?: (...args: unknown[]) => ReactNode;
+  renderHoverCard?: (...args: unknown[]) => ReactNode;
+  renderToolbar?: (api: CalendarApi) => ReactNode;
+  renderFilterBar?: (...args: unknown[]) => ReactNode;
+  renderSavedViewsBar?: (...args: unknown[]) => ReactNode;
+  emptyState?: ReactNode;
+  filterSchema?: Array<Record<string, unknown>>;
+  showAddButton?: boolean;
+  initialView?: CalendarView;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Human-readable announcement text for a completed engine operation. */
@@ -103,52 +172,7 @@ function viewRange(view, date, weekStartDay = 0) {
   }
 }
 
-export type WorksCalendarProps = {
-  events?: unknown[];
-  fetchEvents?: (...args: any[]) => Promise<unknown[]>;
-  icalFeeds?: unknown[];
-  onImport?: (events: unknown[]) => void;
-  scheduleTemplates?: unknown[];
-  scheduleTemplateAdapter?: unknown;
-  scheduleInstantiationLimits?: { previewMax?: number; createMax?: number };
-  onScheduleTemplateAnalytics?: (...args: any[]) => void;
-  calendarId?: string;
-  ownerPassword?: string;
-  onConfigSave?: (...args: any[]) => void;
-  devMode?: boolean;
-  notes?: Record<string, unknown>;
-  onNoteSave?: (...args: any[]) => void;
-  onNoteDelete?: (...args: any[]) => void;
-  onEventClick?: (...args: any[]) => void;
-  onEventSave?: (...args: any[]) => void;
-  onEventMove?: (...args: any[]) => void;
-  onEventResize?: (...args: any[]) => void;
-  onEventDelete?: (...args: any[]) => void;
-  onDateSelect?: (...args: any[]) => void;
-  supabaseUrl?: string;
-  supabaseKey?: string;
-  supabaseTable?: string;
-  supabaseFilter?: string;
-  role?: 'admin' | 'user' | 'readonly';
-  employees?: unknown[];
-  onEmployeeAdd?: (...args: any[]) => void;
-  onEmployeeDelete?: (...args: any[]) => void;
-  blockedWindows?: unknown[];
-  theme?: string;
-  colorRules?: unknown[];
-  businessHours?: unknown;
-  renderEvent?: (...args: any[]) => unknown;
-  renderHoverCard?: (...args: any[]) => unknown;
-  renderToolbar?: (...args: any[]) => unknown;
-  renderFilterBar?: (...args: any[]) => unknown;
-  renderSavedViewsBar?: (...args: any[]) => unknown;
-  emptyState?: unknown;
-  filterSchema?: unknown[];
-  showAddButton?: boolean;
-  initialView?: 'month' | 'week' | 'day' | 'agenda' | 'schedule';
-};
-
-export const WorksCalendar = forwardRef(function WorksCalendar(
+export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendar(
   {
     // ── Data ──
     events:     rawEvents   = [],
@@ -225,7 +249,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     // ── Initial view (overrides saved config on first render) ──
     initialView,
   }: WorksCalendarProps,
-  ref,
+  ref: ForwardedRef<CalendarApi>,
 ) {
   // SSR guard: avoid touching browser-only APIs during server rendering.
   if (typeof window === 'undefined') return null;
