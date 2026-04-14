@@ -76,6 +76,9 @@ function valueLabel(value, suffix) {
 export default function ThemeCustomizer({ theme, onChange }) {
   const [draftImport, setDraftImport] = useState('');
   const [importError, setImportError] = useState('');
+  const [importMode, setImportMode] = useState('merge');
+  const [importSuccess, setImportSuccess] = useState('');
+  const [copyState, setCopyState] = useState('');
   const merged = normalizeCustomTheme(theme);
   const previewVars = customThemeToCssVars(merged);
   const exportJson = useMemo(() => JSON.stringify(merged, null, 2), [merged]);
@@ -106,12 +109,39 @@ export default function ThemeCustomizer({ theme, onChange }) {
       const parsed = JSON.parse(draftImport);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         setImportError('Theme JSON must be an object.');
+        setImportSuccess('');
         return;
       }
       setImportError('');
-      onChange((config) => ({ ...config, customTheme: parsed }));
+      setImportSuccess(importMode === 'merge' ? 'Imported and merged into current theme.' : 'Imported and replaced current theme.');
+      onChange((config) => {
+        const current = normalizeCustomTheme(config.customTheme);
+        const nextCustomTheme = importMode === 'replace'
+          ? parsed
+          : {
+            ...current,
+            ...parsed,
+            colors: { ...current.colors, ...(parsed.colors || {}) },
+            typography: { ...current.typography, ...(parsed.typography || {}) },
+            spacing: { ...current.spacing, ...(parsed.spacing || {}) },
+            borders: { ...current.borders, ...(parsed.borders || {}) },
+            shadows: { ...current.shadows, ...(parsed.shadows || {}) },
+          };
+        return { ...config, customTheme: nextCustomTheme };
+      });
     } catch {
       setImportError('Could not parse JSON. Check formatting and try again.');
+      setImportSuccess('');
+    }
+  }
+
+  async function copyExportJson() {
+    try {
+      if (!navigator?.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(exportJson);
+      setCopyState('Copied JSON to clipboard.');
+    } catch {
+      setCopyState('Clipboard unavailable. Copy manually from the export box.');
     }
   }
 
@@ -183,10 +213,34 @@ export default function ThemeCustomizer({ theme, onChange }) {
       <div className={styles.ioSection}>
         <strong className={styles.blockLabel}>Export theme JSON</strong>
         <textarea className={styles.textarea} value={exportJson} readOnly aria-label="Export theme JSON" />
+        <div className={styles.inlineActions}>
+          <button className={styles.btn} onClick={copyExportJson}>Copy JSON</button>
+          {copyState && <span className={styles.helperText}>{copyState}</span>}
+        </div>
       </div>
 
       <div className={styles.ioSection}>
         <strong className={styles.blockLabel}>Import theme JSON</strong>
+        <div className={styles.importMode}>
+          <label className={styles.radioLabel}>
+            <input
+              type="radio"
+              name="theme-import-mode"
+              checked={importMode === 'merge'}
+              onChange={() => setImportMode('merge')}
+            />
+            Merge into current theme
+          </label>
+          <label className={styles.radioLabel}>
+            <input
+              type="radio"
+              name="theme-import-mode"
+              checked={importMode === 'replace'}
+              onChange={() => setImportMode('replace')}
+            />
+            Replace current theme
+          </label>
+        </div>
         <textarea
           className={styles.textarea}
           value={draftImport}
@@ -195,6 +249,7 @@ export default function ThemeCustomizer({ theme, onChange }) {
           placeholder='{"colors":{"accent":"#00bcd4"}}'
         />
         {importError && <div className={styles.importError} role="alert">{importError}</div>}
+        {importSuccess && <div className={styles.importSuccess} role="status">{importSuccess}</div>}
         <button className={styles.btn} onClick={applyImport}>Apply imported JSON</button>
       </div>
     </div>

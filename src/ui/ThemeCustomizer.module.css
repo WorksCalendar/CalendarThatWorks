@@ -76,7 +76,16 @@
   display: grid;
   gap: 8px;
 }
+.inlineActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .blockLabel {
+  font-size: 12px;
+  color: var(--wc-text-muted);
+}
+.helperText {
   font-size: 12px;
   color: var(--wc-text-muted);
 }
@@ -84,6 +93,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.importMode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.radioLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--wc-text-muted);
 }
 .textarea {
   width: 100%;
@@ -98,6 +119,10 @@
 }
 .importError {
   color: #b91c1c;
+  font-size: 12px;
+}
+.importSuccess {
+  color: #166534;
   font-size: 12px;
 }
 .btn {
