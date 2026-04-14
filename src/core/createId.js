@@ -24,6 +24,5 @@ export function createId(prefix = 'id') {
     return `${scopedPrefix}${uuid}`;
   }
 
-  // Last-resort fallback for non-crypto environments.
-  return `${scopedPrefix}${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  throw new Error('Secure ID generation requires Web Crypto support.');
 }
