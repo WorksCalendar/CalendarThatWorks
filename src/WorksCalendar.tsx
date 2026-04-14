@@ -9,7 +9,7 @@ import {
   format, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Download, Plus, Upload, Wand2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Plus, Upload } from 'lucide-react';
 
 import { useCalendar }        from './hooks/useCalendar.js';
 import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
@@ -41,7 +41,6 @@ import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
 import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
-import SetupWizardModal        from './ui/SetupWizardModal.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
 import MonthView              from './views/MonthView.jsx';
@@ -417,21 +416,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState(null);
   const [formEvent,      setFormEvent]      = useState(null);
-  const [wizardOpen,     setWizardOpen]     = useState(false);
   const [importOpen,     setImportOpen]     = useState(false);
-
-  // Auto-open setup wizard once for owners who haven't completed setup
-  const wizardAutoOpened = useRef(false);
-  useEffect(() => {
-    if (
-      ownerCfg.isOwner &&
-      !ownerCfg.config?.setupCompleted &&
-      !wizardAutoOpened.current
-    ) {
-      wizardAutoOpened.current = true;
-      setWizardOpen(true);
-    }
-  }, [ownerCfg.isOwner, ownerCfg.config?.setupCompleted]);
   const [scheduleOpen,   setScheduleOpen]   = useState(false);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [remoteTemplates, setRemoteTemplates] = useState([]);
@@ -1002,16 +987,6 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
               <button className={styles.exportBtn} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
                 <Download size={15} aria-hidden="true" />
               </button>
-              {ownerCfg.isOwner && (
-                <button
-                  className={styles.exportBtn}
-                  onClick={() => setWizardOpen(true)}
-                  aria-label="Open setup wizard"
-                  title="Setup Wizard"
-                >
-                  <Wand2 size={15} aria-hidden="true" />
-                </button>
-              )}
               {ownerPassword && (
                 <OwnerLock
                   isOwner={ownerCfg.isOwner}
@@ -1179,25 +1154,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           />
         )}
 
-        {/* ── Setup wizard ── */}
-        {wizardOpen && ownerCfg.isOwner && (
-          <SetupWizardModal
-            isOpen={wizardOpen}
-            onClose={() => setWizardOpen(false)}
-            updateConfig={ownerCfg.updateConfig}
-            categories={categories}
-            resources={resources}
-            onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
-          />
-        )}
-
         {/* ── Owner config panel ── */}
         {ownerCfg.configOpen && (
           <ConfigPanel
             config={ownerCfg.config}
             categories={categories}
+            resources={resources}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
+            onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
             sources={sourceStore.sources}
             feedErrors={feedErrors}
             onAddSource={sourceStore.addSource}
