@@ -76,12 +76,20 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const [notes,  setNotes]  = useState('');
   const [errors, setErrors] = useState({});
 
-  // When kind changes, update default title + allDay if user hasn't touched them
+  // When kind changes, update default title + allDay if user hasn't touched them.
+  // Also reformat start/end strings to match the new allDay format so inputs stay valid.
   function handleKindChange(nextKind) {
     const nextMeta = KIND_META[nextKind] ?? KIND_META.pto;
     setKind(nextKind);
     if (title === meta.defaultTitle) setTitle(nextMeta.defaultTitle);
-    if (allDay === meta.allDayDefault) setAllDay(nextMeta.allDayDefault);
+    if (allDay === meta.allDayDefault) {
+      const nextAllDay  = nextMeta.allDayDefault;
+      const parsedStart = fromInput(start, allDay);
+      const parsedEnd   = fromInput(end, allDay);
+      setAllDay(nextAllDay);
+      if (parsedStart) setStart(toDateInput(parsedStart, nextAllDay));
+      if (parsedEnd)   setEnd(toDateInput(parsedEnd,   nextAllDay));
+    }
   }
 
   function validate() {

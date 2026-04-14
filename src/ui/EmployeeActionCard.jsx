@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styles from './EmployeeActionCard.module.css';
 
 /**
@@ -13,6 +13,8 @@ import styles from './EmployeeActionCard.module.css';
  */
 export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose }) {
   const cardRef = useRef(null);
+  // Start invisible so we can measure before revealing
+  const [pos, setPos] = useState({ top: anchorRect.bottom + 4, left: anchorRect.left, visible: false });
 
   // Close on outside click or Escape
   useEffect(() => {
@@ -30,15 +32,35 @@ export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose 
     };
   }, [onClose]);
 
-  // Auto-focus first button for keyboard accessibility
-  useEffect(() => {
-    const firstBtn = cardRef.current?.querySelector('button');
-    firstBtn?.focus();
-  }, []);
+  // Measure card and clamp to viewport before first paint
+  useLayoutEffect(() => {
+    if (!cardRef.current) return;
+    const card = cardRef.current.getBoundingClientRect();
+    const vw   = window.innerWidth;
+    const vh   = window.innerHeight;
+    const gap  = 8;
 
-  // Position below the name cell, clamped to viewport
-  const top  = anchorRect.bottom + 4;
-  const left = anchorRect.left;
+    let top  = anchorRect.bottom + 4;
+    let left = anchorRect.left;
+
+    // Flip above anchor if it would overflow bottom
+    if (top + card.height > vh - gap) top = anchorRect.top - card.height - 4;
+    // Clamp vertical
+    if (top < gap) top = gap;
+
+    // Clamp horizontal
+    if (left + card.width > vw - gap) left = vw - card.width - gap;
+    if (left < gap) left = gap;
+
+    setPos({ top, left, visible: true });
+  }, [anchorRect]);
+
+  // Auto-focus first button once visible
+  useEffect(() => {
+    if (pos.visible) {
+      cardRef.current?.querySelector('button')?.focus();
+    }
+  }, [pos.visible]);
 
   function handleAction(action) {
     onAction(action);
@@ -49,9 +71,8 @@ export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose 
     <div
       ref={cardRef}
       className={styles.card}
-      style={{ top, left }}
-      role="dialog"
-      aria-modal="true"
+      style={{ top: pos.top, left: pos.left, visibility: pos.visible ? 'visible' : 'hidden' }}
+      role="menu"
       aria-label={`Actions for ${emp.name}`}
     >
       <div className={styles.header}>
