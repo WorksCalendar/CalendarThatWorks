@@ -35,14 +35,20 @@ const INTENT_META = {
   pto: {
     heading: 'Request PTO',
     submitLabel: 'Save PTO Request',
+    allDayLocked: true,
+    allDayHelp: 'PTO is tracked as all-day blocks from this action.',
   },
   unavailable: {
     heading: 'Mark Unavailable',
     submitLabel: 'Save Unavailable Time',
+    allDayLocked: true,
+    allDayHelp: 'Unavailable time from this action is all-day only.',
   },
   availability: {
-    heading: 'Edit Availability',
+    heading: 'Set Availability',
     submitLabel: 'Save Availability',
+    allDayLocked: false,
+    allDayHelp: null,
   },
 };
 
@@ -84,15 +90,21 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const meta = KIND_META[kind] ?? KIND_META.pto;
   const isEdit = Boolean(initialEvent?.id);
   const intentMeta = INTENT_META[kind] ?? INTENT_META.pto;
+  const isAllDayLocked = Boolean(intentMeta.allDayLocked && !isEdit);
+  const heading = isEdit && kind === 'availability' ? 'Edit Availability' : intentMeta.heading;
 
   const eventStart = initialEvent?.start ?? initialStart;
   const startDefault = eventStart ?? new Date();
   const endDefault   = initialEvent?.end ?? new Date(startDefault.getTime() + (meta.allDayDefault ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000));
+  const initialAllDay = isAllDayLocked ? true : (initialEvent?.allDay ?? meta.allDayDefault);
+  const initialTitle = kind === 'availability'
+    ? (initialEvent?.title ?? meta.defaultTitle)
+    : meta.defaultTitle;
 
-  const [allDay, setAllDay] = useState(initialEvent?.allDay ?? meta.allDayDefault);
-  const [title,  setTitle]  = useState(initialEvent?.title ?? meta.defaultTitle);
-  const [start,  setStart]  = useState(toDateInput(startDefault, initialEvent?.allDay ?? meta.allDayDefault));
-  const [end,    setEnd]    = useState(toDateInput(endDefault,   initialEvent?.allDay ?? meta.allDayDefault));
+  const [allDay, setAllDay] = useState(initialAllDay);
+  const [title,  setTitle]  = useState(initialTitle);
+  const [start,  setStart]  = useState(toDateInput(startDefault, initialAllDay));
+  const [end,    setEnd]    = useState(toDateInput(endDefault, initialAllDay));
   const [notes,  setNotes]  = useState(initialEvent?.meta?.notes ?? '');
   const [errors, setErrors] = useState({});
 
@@ -103,7 +115,9 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
     if (!end)           errs.end   = 'End date is required';
     const s = fromInput(start, allDay);
     const e = fromInput(end, allDay);
-    if (s && e && s > e) errs.end = 'End must be after start';
+    if (start && !s) errs.start = `Enter a valid ${allDay ? 'start date' : 'start date/time'}`;
+    if (end && !e) errs.end = `Enter a valid ${allDay ? 'end date' : 'end date/time'}`;
+    if (s && e && s >= e) errs.end = 'End must be after start';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -139,12 +153,12 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
         className={styles.modal}
         role="dialog"
         aria-modal="true"
-        aria-label={`${intentMeta.heading} for ${emp.name}`}
+        aria-label={`${heading} for ${emp.name}`}
       >
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerInfo}>
-            <h2 className={styles.title}>{intentMeta.heading}</h2>
+            <h2 className={styles.title}>{heading}</h2>
             <span className={styles.empName}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
@@ -174,6 +188,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
             <input
               type="checkbox"
               checked={allDay}
+              disabled={isAllDayLocked}
               onChange={e => {
                 const next = e.target.checked;
                 setAllDay(next);
@@ -186,6 +201,9 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
             />
             All day
           </label>
+          {isAllDayLocked && intentMeta.allDayHelp && (
+            <span className={styles.helperText}>{intentMeta.allDayHelp}</span>
+          )}
 
           {/* Start / End */}
           <div className={styles.row2}>
@@ -245,7 +263,9 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
           {/* Actions */}
           <div className={styles.actions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancel</button>
-            <button type="submit" className={styles.btnSave}>{isEdit && kind === 'availability' ? 'Save Availability Changes' : intentMeta.submitLabel}</button>
+            <button type="submit" className={styles.btnSave}>
+              {isEdit && kind === 'availability' ? 'Save Availability Changes' : intentMeta.submitLabel}
+            </button>
           </div>
         </form>
       </div>
