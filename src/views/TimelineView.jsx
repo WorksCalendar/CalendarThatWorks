@@ -116,6 +116,12 @@ export default function TimelineView({
   const shiftMenuRef = useRef(null);
   const coverMenuRef = useRef(null);
 
+  const triggerEmployeeAction = useCallback((empId, action, options = {}) => {
+    if (!onEmployeeAction) return false;
+    onEmployeeAction(empId, typeof action === 'string' ? { type: action, ...options } : action);
+    return true;
+  }, [onEmployeeAction]);
+
   const anyMenuOpen = !!(shiftMenu || coverMenu);
   useEffect(() => {
     if (!anyMenuOpen) return;
@@ -748,10 +754,32 @@ export default function TimelineView({
           className={styles.shiftMenu}
           style={{ top: shiftMenu.rect.bottom + 4, left: shiftMenu.rect.left }}
         >
-          <button className={styles.shiftMenuItem} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, 'pto'); setShiftMenu(null); }}>
+          <button
+            className={styles.shiftMenuItem}
+            onClick={() => {
+              const handled = triggerEmployeeAction(
+                shiftMenu.ev.resource ?? shiftMenu.ev.employeeId,
+                'pto',
+                { source: 'shift-quick-action', sourceShift: shiftMenu.ev },
+              );
+              if (!handled) onShiftStatusChange?.(shiftMenu.ev, 'pto');
+              setShiftMenu(null);
+            }}
+          >
             🏖 Mark as PTO
           </button>
-          <button className={styles.shiftMenuItem} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, 'unavailable'); setShiftMenu(null); }}>
+          <button
+            className={styles.shiftMenuItem}
+            onClick={() => {
+              const handled = triggerEmployeeAction(
+                shiftMenu.ev.resource ?? shiftMenu.ev.employeeId,
+                'unavailable',
+                { source: 'shift-quick-action', sourceShift: shiftMenu.ev },
+              );
+              if (!handled) onShiftStatusChange?.(shiftMenu.ev, 'unavailable');
+              setShiftMenu(null);
+            }}
+          >
             🚫 Mark as Unavailable
           </button>
           {shiftMenu.ev.meta?.shiftStatus && (
