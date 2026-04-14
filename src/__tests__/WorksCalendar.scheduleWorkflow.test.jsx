@@ -16,7 +16,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
 
     expect(await screen.findByRole('menu', { name: 'Actions for Alex Rivera' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit Schedule' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Schedule' })).toBeInTheDocument();
   });
 
   it('routes empty schedule-cell click to ScheduleEditorForm instead of EventForm', async () => {
@@ -25,7 +25,43 @@ describe('WorksCalendar schedule workflow entry points', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('gridcell', { name: /^Alex Rivera, April 1, empty/ }));
 
-    expect(await screen.findByRole('dialog', { name: 'Edit schedule for Alex Rivera' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Add schedule for Alex Rivera' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Add event' })).not.toBeInTheDocument();
+  });
+
+  it('opens PTO-focused form when Request PTO is selected', async () => {
+    render(<WorksCalendar events={[]} employees={employees} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Request PTO' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Request PTO for Alex Rivera' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save PTO Request' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
+  });
+
+  it('opens unavailable-focused form when Mark Unavailable is selected', async () => {
+    render(<WorksCalendar events={[]} employees={employees} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark Unavailable' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Mark Unavailable for Alex Rivera' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Unavailable Time' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
+  });
+
+  it('opens availability-focused form when Edit Availability is selected', async () => {
+    render(<WorksCalendar events={[]} employees={employees} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Availability' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Edit Availability for Alex Rivera' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Availability' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
   });
 });

@@ -191,12 +191,12 @@ export default function ScheduleEditorForm({
         className={styles.modal}
         role="dialog"
         aria-modal="true"
-        aria-label={`Edit schedule for ${emp.name}`}
+        aria-label={`Add schedule for ${emp.name}`}
       >
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerInfo}>
-            <h2 className={styles.title}>Edit Schedule</h2>
+            <h2 className={styles.title}>Add Schedule</h2>
             <span className={styles.empName}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
