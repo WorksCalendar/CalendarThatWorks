@@ -278,7 +278,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
-  const effectiveTheme = ownerCfg.config?.setup?.preferredTheme || theme || 'light';
+  const effectiveTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'light';
   const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
   const configuredEmployees = useMemo(() => {
     if (Array.isArray(employees) && employees.length > 0) return employees;
