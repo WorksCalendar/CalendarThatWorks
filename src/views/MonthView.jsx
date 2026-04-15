@@ -529,6 +529,24 @@ export default function MonthView({
       </div>
     </div>
 
+    {popoverState && popoverStyle && (
+      <div
+        id={`wc-popover-${format(popoverState.day, 'yyyy-MM-dd')}`}
+        className={styles.popover}
+        data-month-popover="true"
+        style={popoverStyle}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={styles.popoverHead}>
+          <span>{format(popoverState.day, 'MMMM d')}</span>
+          <button onClick={() => setPopoverState(null)} aria-label="Close expanded day events">×</button>
+        </div>
+        {getPopoverEvents(popoverState.day).map(ev =>
+          renderPill(ev, { onAfterClick: () => setPopoverState(null) }),
+        )}
+      </div>
+    )}
+
     {/* ── Pill hover projection overlay ── */}
     {popoverState && popoverStyle && (
       <div
