@@ -26,6 +26,13 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }) {
     inputRef.current?.select();
   }, []);
 
+  useEffect(() => {
+    setTitle(event.title ?? '');
+    setColor(event.color ?? PRESET_COLORS[0]);
+    setBold(!!(event.meta?._display?.bold));
+    setLarge(!!(event.meta?._display?.large));
+  }, [event]);
+
   // Close on outside click
   useEffect(() => {
     function handler(e) {
@@ -46,7 +53,11 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }) {
       color,
       meta: {
         ...(event.meta ?? {}),
-        _display: { bold, large },
+        _display: {
+          ...(event.meta?._display ?? {}),
+          bold,
+          large,
+        },
       },
     });
   }
@@ -94,6 +105,7 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }) {
       <div className={styles.colorRow} role="group" aria-label="Event color">
         {PRESET_COLORS.map(c => (
           <button
+            type="button"
             key={c}
             className={[styles.colorSwatch, color === c && styles.colorActive].filter(Boolean).join(' ')}
             style={{ background: c }}
@@ -107,6 +119,7 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }) {
       {/* Style toggles */}
       <div className={styles.styleRow}>
         <button
+          type="button"
           className={[styles.styleBtn, bold && styles.styleBtnActive].filter(Boolean).join(' ')}
           onClick={() => setBold(v => !v)}
           aria-pressed={bold}
@@ -115,6 +128,7 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }) {
           <strong>B</strong>
         </button>
         <button
+          type="button"
           className={[styles.styleBtn, large && styles.styleBtnActive].filter(Boolean).join(' ')}
           onClick={() => setLarge(v => !v)}
           aria-pressed={large}
@@ -127,8 +141,8 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }) {
 
       {/* Actions */}
       <div className={styles.actions}>
-        <button className={styles.saveBtn} onClick={handleSave}>Save</button>
-        <button className={styles.cancelBtn} onClick={onClose}>Cancel</button>
+        <button type="button" className={styles.saveBtn} onClick={handleSave}>Save</button>
+        <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
       </div>
     </div>
   );

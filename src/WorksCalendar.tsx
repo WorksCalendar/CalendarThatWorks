@@ -278,6 +278,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
+  const configuredEmployees = useMemo(
+    () => (ownerCfg.config?.wizardData?.teamMembers ?? [])
+      .filter((member) => String(member?.name ?? '').trim().length > 0)
+      .map((member, index) => ({
+        id: String(member?.id ?? `cfg-emp-${index}`),
+        name: String(member?.name ?? '').trim(),
+        color: member?.color,
+        role: member?.role,
+        avatar: member?.avatar ?? null,
+      })),
+    [ownerCfg.config?.wizardData?.teamMembers],
+  );
+  const resolvedEmployees = useMemo(
+    () => (employees.length > 0 ? employees : configuredEmployees),
+    [configuredEmployees, employees],
+  );
 
   // Honor defaultView from owner config (applied once after config loads)
   const defaultViewApplied = useRef(false);
@@ -724,7 +740,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
    * All actions also bubble to the external onEmployeeAction prop.
    */
   const handleEmployeeAction = useCallback((empId, actionInput) => {
-    const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
+    const emp = resolvedEmployees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
     const actionPayload = typeof actionInput === 'string'
       ? { type: actionInput }
       : (actionInput ?? {});
@@ -763,7 +779,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       setScheduleEditorState({ emp, start: new Date() });
     }
     onEmployeeAction?.(empId, actionInput);
-  }, [employees, expandedEvents, onEmployeeAction]);
+  }, [expandedEvents, onEmployeeAction, resolvedEmployees]);
 
   /** Save an availability/PTO event through the engine then notify the host.
    *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
@@ -1272,7 +1288,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (!hasAddButton) return;
     onDateSelect?.(start, end, resourceId);
 
-    const emp = employees.find(e => String(e.id) === String(resourceId));
+    const emp = resolvedEmployees.find(e => String(e.id) === String(resourceId));
     if (!emp) return;
 
     setScheduleEditorState({
@@ -1280,7 +1296,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       start: start instanceof Date ? start : new Date(start),
       end: end instanceof Date ? end : new Date(end),
     });
-  }, [employees, hasAddButton, onDateSelect]);
+  }, [hasAddButton, onDateSelect, resolvedEmployees]);
 
   const sharedViewProps = {
     currentDate:   cal.currentDate,
@@ -1486,7 +1502,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   events={visibleEvents}
                   onEventClick={handleEventClick}
                   onDateSelect={handleScheduleDateSelect}
-                  employees={employees}
+                  employees={resolvedEmployees}
                   onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
                   onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
                   onShiftStatusChange={handleShiftStatusChange}
@@ -1620,6 +1636,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── Inline event editor (edit mode) ── */}
         {inlineEditTarget && (
           <InlineEventEditor
+            key={`${inlineEditTarget.event?._eventId ?? inlineEditTarget.event?.id ?? 'inline'}-${inlineEditTarget.event?.id ?? 'event'}`}
             event={inlineEditTarget.event}
             x={inlineEditTarget.x}
             y={inlineEditTarget.y}
