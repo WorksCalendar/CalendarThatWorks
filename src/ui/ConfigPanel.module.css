@@ -67,6 +67,11 @@
   display: flex;
   border-bottom: 1px solid var(--wc-border);
   flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
 }
 
 .tab {
@@ -80,6 +85,8 @@
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: all 0.15s;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 .tab:hover { color: var(--wc-text); }
 .activeTab {
