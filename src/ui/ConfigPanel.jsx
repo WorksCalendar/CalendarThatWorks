@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Plus, Trash2, Check, Camera } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
@@ -29,6 +29,15 @@ export default function ConfigPanel({
 }) {
   const [tab, setTab] = useState('setup');
   const trapRef = useFocusTrap(onClose);
+  const tabRefs = useRef({});
+
+  useEffect(() => {
+    tabRefs.current[tab]?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: 'smooth',
+    });
+  }, [tab]);
 
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -40,12 +49,17 @@ export default function ConfigPanel({
           </button>
         </div>
 
-        <div className={styles.tabBar}>
+        <div className={styles.tabBar} role="tablist" aria-label="Calendar settings sections">
           {TABS.map(t => (
             <button
               key={t.id}
+              ref={(node) => {
+                if (node) tabRefs.current[t.id] = node;
+              }}
               className={[styles.tab, tab === t.id && styles.activeTab].filter(Boolean).join(' ')}
               onClick={() => setTab(t.id)}
+              role="tab"
+              aria-selected={tab === t.id}
             >{t.label}</button>
           ))}
         </div>
