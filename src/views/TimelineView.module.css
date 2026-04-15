@@ -309,19 +309,6 @@
   letter-spacing: 0.04em;
 }
 
-.empActionHint {
-  width: fit-content;
-  font-size: 9px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--wc-accent, #2563eb) 78%, var(--wc-text, #111));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: color-mix(in srgb, var(--wc-accent, #2563eb) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--wc-accent, #2563eb) 24%, transparent);
-  border-radius: 999px;
-  padding: 1px 6px;
-}
-
 /* ── Event zone (holds day bg lines + event bars) ──────────────── */
 .eventZone {
   flex-shrink: 0;

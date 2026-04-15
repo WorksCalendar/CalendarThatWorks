@@ -520,7 +520,6 @@ export default function TimelineView({
                           <span className={styles.nameInfo}>
                             <span className={styles.empName}>{emp.name}</span>
                             {emp.role && <span className={styles.empRole}>{emp.role}</span>}
-                            <span className={styles.empActionHint}>Primary action</span>
                           </span>
                         </button>
                       ) : (
@@ -782,7 +781,7 @@ export default function TimelineView({
               setShiftMenu(null);
             }}
           >
-            Shift shortcut: Mark as PTO
+            Shift-only shortcut: Mark PTO
           </button>
           <button
             className={styles.shiftMenuItem}
@@ -796,7 +795,7 @@ export default function TimelineView({
               setShiftMenu(null);
             }}
           >
-            Shift shortcut: Mark as Unavailable
+            Shift-only shortcut: Mark Unavailable
           </button>
           {shiftMenu.ev.meta?.shiftStatus && (
             <>
