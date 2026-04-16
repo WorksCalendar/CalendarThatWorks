@@ -29,12 +29,13 @@ function normalizeSavedView(view) {
   if (!view.filters || typeof view.filters !== 'object') return null;
 
   return {
-    id:        view.id,
-    name:      view.name,
-    createdAt: typeof view.createdAt === 'string' ? view.createdAt : new Date().toISOString(),
-    color:     view.color ?? null,
-    view:      view.view ?? null,
-    filters:   view.filters,
+    id:         view.id,
+    name:       view.name,
+    createdAt:  typeof view.createdAt === 'string' ? view.createdAt : new Date().toISOString(),
+    color:      view.color ?? null,
+    view:       view.view ?? null,
+    conditions: Array.isArray(view.conditions) ? view.conditions : null,
+    filters:    view.filters,
   };
 }
 
@@ -186,14 +187,15 @@ export function useSavedViews(calendarId) {
     persistViews(calendarId, views);
   }, [calendarId, views]);
 
-  const saveView = useCallback((name, filters, { color, view } = {}) => {
+  const saveView = useCallback((name, filters, { color, view, conditions } = {}) => {
     const savedView = {
-      id:        createId('view'),
+      id:         createId('view'),
       name,
-      createdAt: new Date().toISOString(),
-      color:     color ?? null,
-      view:      view ?? null,
-      filters:   serializeFilters(filters),
+      createdAt:  new Date().toISOString(),
+      color:      color ?? null,
+      view:       view ?? null,
+      conditions: conditions ?? null,
+      filters:    serializeFilters(filters),
     };
     setViews(prev => [...prev, savedView]);
     return savedView;
