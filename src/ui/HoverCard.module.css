@@ -38,7 +38,7 @@
 }
 
 .title {
-  font-size: 15px;
+  font-size: calc(15px * var(--wc-font-scale, 1));
   font-weight: 700;
   color: var(--wc-text);
   margin: 0;

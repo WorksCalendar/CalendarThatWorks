@@ -73,7 +73,7 @@
   flex-direction: column;
   gap: 6px;
   min-width: 180px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  box-shadow: var(--wc-shadow-sm);
 }
 
 .addPersonInput {
@@ -151,7 +151,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6px 0;
+  padding: calc(6px * var(--wc-density, 1)) 0;
   border-right: 1px solid var(--wc-border);
   flex-shrink: 0;
   gap: 2px;
@@ -177,7 +177,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: calc(13px * var(--wc-font-scale, 1));
   font-weight: 600;
   color: var(--wc-text);
 }
@@ -215,7 +215,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px;
+  padding: 0 calc(12px * var(--wc-density, 1));
   flex-shrink: 0;
   transition: background 0.1s;
 }
@@ -224,7 +224,7 @@
 }
 
 .resourceName {
-  font-size: 13px;
+  font-size: calc(13px * var(--wc-font-scale, 1));
   font-weight: 600;
   color: var(--wc-text);
   white-space: nowrap;
@@ -290,7 +290,7 @@
 }
 
 .empName {
-  font-size: 13px;
+  font-size: calc(13px * var(--wc-font-scale, 1));
   font-weight: 600;
   color: var(--wc-text);
   white-space: nowrap;
@@ -373,7 +373,7 @@
 }
 .event:hover {
   filter: brightness(1.12);
-  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  box-shadow: var(--wc-shadow-sm);
   z-index: 6;
 }
 .event.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px); }
@@ -443,7 +443,7 @@
 }
 .eventWrap:hover {
   filter: brightness(1.12);
-  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  box-shadow: var(--wc-shadow-sm);
   z-index: 6;
 }
 /* Inner pill inside wrapper: relative so the wrapper handles positioning */
@@ -515,7 +515,7 @@
   background: var(--wc-surface, #fff);
   border: 1px solid var(--wc-border-dark, #ddd);
   border-radius: 8px;
-  box-shadow: 0 4px 18px rgba(0,0,0,.18);
+  box-shadow: var(--wc-shadow);
   padding: 4px;
   min-width: 170px;
 }
@@ -597,7 +597,7 @@
   background: var(--wc-surface, #fff);
   border: 1px solid var(--wc-border-dark, #ddd);
   border-radius: 10px;
-  box-shadow: 0 6px 26px rgba(0,0,0,.2);
+  box-shadow: var(--wc-shadow);
   padding: 12px;
   min-width: 210px;
   max-width: 270px;

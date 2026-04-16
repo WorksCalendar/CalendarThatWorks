@@ -158,7 +158,6 @@ export default function ThemeCustomizer({ theme, onChange }) {
   const previewVars = customThemeToCssVars(merged);
   const previewStyle = {
     ...previewVars,
-    '--tc-density': merged.spacing.density,
   };
   const exportJson = useMemo(() => JSON.stringify(merged, null, 2), [merged]);
   const contrastChecks = useMemo(() => ([
