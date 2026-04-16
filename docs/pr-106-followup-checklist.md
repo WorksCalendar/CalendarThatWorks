@@ -1,6 +1,6 @@
 # PR 106 follow-up checklist for issue #98
 
-This branch exists to track the remaining wiring work after PR #105.
+This branch exists to track the remaining wiring work after PR #106.
 
 ## Still required
 
@@ -38,7 +38,7 @@ This branch exists to track the remaining wiring work after PR #105.
   - border width vars on grouped controls/buttons
 
 ## Why this PR exists
-PR #105 merged the schema + migration layer only. The actual live wiring is still incomplete.
+PR #106 merged the schema + migration layer only. The actual live wiring is still incomplete.
 
 ## Success criteria
 - Setup tab updates the real live calendar
