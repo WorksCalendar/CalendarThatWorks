@@ -271,7 +271,7 @@
 }
 
 .dateLabel {
-  font-size: 15px;
+  font-size: calc(15px * var(--wc-font-scale, 1));
   font-weight: 700;
   color: var(--wc-text);
   padding-left: 8px;
@@ -279,7 +279,7 @@
 }
 
 .calendarTitle {
-  font-size: 12px;
+  font-size: calc(12px * var(--wc-font-scale, 1));
   font-weight: 600;
   color: var(--wc-text-muted);
   padding-left: 8px;

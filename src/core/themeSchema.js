@@ -71,6 +71,7 @@ export function customThemeToCssVars(themeInput) {
     '--wc-shadow': `0 4px ${12 + Math.round(e)}px rgba(0,0,0,${(0.08 + e / 200).toFixed(2)})`,
     '--wc-shadow-sm': `0 1px ${3 + Math.round(e / 3)}px rgba(0,0,0,${(0.05 + e / 250).toFixed(2)})`,
     '--wc-base-font-size': `${theme.typography.baseSize}px`,
+    '--wc-font-scale': (theme.typography.baseSize / 14).toFixed(4),
     '--wc-density': density,
   };
 }
