@@ -55,12 +55,14 @@ export default function SetupWizardModal({
   };
 
   const handleFinish = () => {
+    const themeEntry = THEMES.find(t => t.id === selectedTheme);
     updateConfig?.({
       title: calendarName.trim() || 'My WorksCalendar',
       setup: {
         preferredTheme: selectedTheme,
         completed: true,
       },
+      customTheme: themeEntry?.customTheme ?? {},
       team: {
         members: teamMembers.map(({ id, name, color, avatar }) => ({ id, name: name.trim() || 'Teammate', color, avatar })),
       },
@@ -371,14 +373,6 @@ function Step3({ calendarName, selectedTheme, teamMembers, createdViews }) {
           </div>
         </div>
       </div>
-
-      {theme && (
-        <div className={styles.themeNote}>
-          To apply the <strong>{theme.label}</strong> theme pass{' '}
-          <code className={styles.code}>theme="{selectedTheme}"</code> to your{' '}
-          <code className={styles.code}>WorksCalendar</code> component.
-        </div>
-      )}
     </div>
   );
 }

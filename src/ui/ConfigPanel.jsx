@@ -106,10 +106,14 @@ function SetupTab({ config, onUpdate }) {
     title: name,
   }));
 
-  const setPreferredTheme = (themeId) => onUpdate(c => ({
-    ...c,
-    setup: { ...(c.setup ?? {}), preferredTheme: themeId },
-  }));
+  const setPreferredTheme = (themeId) => {
+    const themeEntry = THEMES.find(t => t.id === themeId);
+    onUpdate(c => ({
+      ...c,
+      setup: { ...(c.setup ?? {}), preferredTheme: themeId },
+      customTheme: themeEntry?.customTheme ?? {},
+    }));
+  };
 
   return (
     <div className={styles.section}>
