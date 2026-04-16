@@ -311,17 +311,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
 
-  // Mark dirty when filters/view change after a saved view was applied
+  // ── Active groupBy (controlled by prop; overridden when a saved view is applied) ──
+  const [activeGroupBy, setActiveGroupBy] = useState<string | null>(groupBy ?? null);
+  useEffect(() => setActiveGroupBy(groupBy ?? null), [groupBy]);
+
+  // Mark dirty when filters/view/groupBy change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView) => {
     skipDirtyRef.current = true;
     cal.replaceFilters(deserializeFilters(savedView.filters, schema));
     if (savedView.view) cal.setView(savedView.view);
+    setActiveGroupBy(savedView.groupBy ?? null);
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
   }, [cal, schema]);
@@ -1424,9 +1429,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, opts),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
@@ -1441,9 +1446,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               schema={schema}
               onApply={handleApplyView}
               onAdd={({ name, color, pinView }) =>
-                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null })
+                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view)}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy)}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
             />
@@ -1493,7 +1498,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} groupBy={groupBy} />}
+              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} groupBy={activeGroupBy} />}
               {cal.view === 'schedule' && (
                 <TimelineView
                   currentDate={cal.currentDate}
@@ -1506,7 +1511,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
                   onEmployeeAction={handleEmployeeAction}
-                  groupBy={groupBy}
+                  groupBy={activeGroupBy}
                 />
               )}
             </>
