@@ -69,13 +69,16 @@ import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
+import AssetsView             from './views/AssetsView.jsx';
+import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
+import type { AssetsZoomLevel, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
 import { customThemeToCssVars } from './core/themeSchema.js';
 
 export type WorksCalendarEvent = Record<string, unknown>;
-export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule';
+export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'assets';
 export type CalendarRole = 'admin' | 'user' | 'readonly';
 
 export type ScheduleInstantiationLimits = {
@@ -145,6 +148,14 @@ export type WorksCalendarProps = {
   groupBy?: GroupByInput;
   sort?: SortConfig | SortConfig[];
   showAllGroups?: boolean;
+
+  // ── Assets view ──
+  locationProvider?: LocationProvider;
+  categoriesConfig?: Record<string, unknown>;
+  onConflictCheck?: (...args: unknown[]) => Promise<unknown>;
+  onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
+  renderAssetLocation?: (...args: unknown[]) => ReactNode;
+  renderConflictBody?: (...args: unknown[]) => ReactNode;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -168,6 +179,7 @@ const VIEWS = [
   { id: 'day',      label: 'Day'      },
   { id: 'agenda',   label: 'Agenda'   },
   { id: 'schedule', label: 'Schedule' },
+  { id: 'assets',   label: 'Assets'   },
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -190,7 +202,7 @@ function viewRange(view, date, weekStartDay = 0) {
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
     case 'day':
       return { start: date, end: addDays(date, 1) };
-    default: // month, agenda, schedule (timeline)
+    default: // month, agenda, schedule (timeline), assets
       return { start: startOfMonth(date), end: endOfMonth(date) };
   }
 }
@@ -280,6 +292,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     groupBy,
     sort,
     showAllGroups,
+
+    // ── Assets view ──
+    locationProvider,
+    categoriesConfig,
+    onConflictCheck,
+    onApprovalAction,
+    renderAssetLocation,
+    renderConflictBody,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -333,15 +353,18 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEmployeeDelete?.(id);
   }, [ownerCfg.updateConfig, onEmployeeDelete]);
 
-  // Honor defaultView from owner config (applied once after config loads)
+  // Honor defaultView from owner config (applied once after config loads).
+  // Explicit initialView prop takes precedence — hosts that opt into a
+  // specific startup view shouldn't be overridden by DEFAULT_CONFIG's 'month'.
   const defaultViewApplied = useRef(false);
   useEffect(() => {
+    if (initialView) return;
     const defaultView = ownerCfg.config?.display?.defaultView;
     if (defaultView && !defaultViewApplied.current) {
       defaultViewApplied.current = true;
       cal.setView(defaultView);
     }
-  }, [ownerCfg.config?.display?.defaultView]);
+  }, [ownerCfg.config?.display?.defaultView, initialView]);
 
   // ── Permissions ──────────────────────────────────────────────────────────
   const perms = usePermissions(role);
@@ -368,6 +391,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
   useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
+
+  // ── Assets view: zoom level + location provider ──
+  const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
+  const effectiveLocationProvider = useMemo<LocationProvider>(
+    () => locationProvider ?? createManualLocationProvider(),
+    [locationProvider],
+  );
 
   // Mark dirty when filters/view/groupBy/sort/showAllGroups change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
@@ -1510,7 +1540,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               applyView:   handleApplyView,
               saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups }),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
@@ -1527,7 +1557,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               onAdd={({ name, color, pinView }) =>
                 savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups)}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups })}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
             />
@@ -1593,6 +1623,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEmployeeAction={handleEmployeeAction}
                   groupBy={activeGroupBy}
                   sort={activeSort}
+                />
+              )}
+              {cal.view === 'assets'   && (
+                <AssetsView
+                  currentDate={cal.currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                  onDateSelect={handleScheduleDateSelect}
+                  groupBy={activeGroupBy}
+                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
+                  zoomLevel={activeAssetsZoom}
+                  onZoomChange={setActiveAssetsZoom}
+                  locationProvider={effectiveLocationProvider}
+                  renderAssetLocation={renderAssetLocation}
                 />
               )}
             </>

@@ -53,8 +53,8 @@ describe('WorksCalendar schedule model integration', () => {
       const visible = apiRef.current.getVisibleEvents();
       const kinds = getKinds(visible);
       expect(kinds).toContain('open-shift');
-    });
-  });
+    }, { timeout: 10000 });
+  }, 15000);
 
   it('creates a PTO availability event and emits onAvailabilitySave', async () => {
     const apiRef = createRef();

@@ -25,6 +25,7 @@ import { SetupWizardExample }      from './setup-wizard.jsx';
 import { AdvancedFiltersExample }  from './advanced-filters.jsx';
 import { LocalDataAdapterExample } from './data-adapter-local.jsx';
 import { ExternalFormExample }     from './external-form.jsx';
+import { AssetsDemoExample }       from './assets-demo.jsx';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [
