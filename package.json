@@ -42,6 +42,8 @@
     "qa:visual": "playwright test visual-qa --config playwright.config.ts && node scripts/ai-qa-review.mjs",
     "qa:review": "node scripts/ai-qa-review.mjs",
     "ai:qa": "playwright test && node scripts/ai-qa-review.mjs",
+    "perf:benchmark": "node scripts/perf-benchmark.mjs",
+    "perf:benchmark:update": "node scripts/perf-benchmark.mjs --write",
     "dev": "vite --config vite.demo.config.js",
     "examples": "vite --config vite.examples.config.js",
     "build": "vite build",
