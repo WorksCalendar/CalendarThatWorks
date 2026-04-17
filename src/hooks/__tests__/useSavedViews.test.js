@@ -462,3 +462,143 @@ describe('useSavedViews — groupBy persistence', () => {
     expect(result.current.views[0].groupBy).toBe('role');
   });
 });
+
+describe('useSavedViews — sortBy persistence', () => {
+  it('saveView stores a valid sortBy array', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    const sortBy = [
+      { field: 'start',    direction: 'asc'  },
+      { field: 'priority', direction: 'desc' },
+    ];
+    act(() => {
+      result.current.saveView('Sorted', EMPTY_FILTERS, { sortBy });
+    });
+    expect(result.current.views[0].sortBy).toEqual(sortBy);
+  });
+
+  it('saveView defaults sortBy to null when not provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Plain', EMPTY_FILTERS);
+    });
+    expect(result.current.views[0].sortBy).toBeNull();
+  });
+
+  it('sortBy survives localStorage round-trip', () => {
+    const sortBy = [{ field: 'start', direction: 'desc' }];
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Persisted Sort', EMPTY_FILTERS, { sortBy });
+    });
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result2.current.views[0].sortBy).toEqual(sortBy);
+  });
+
+  it('normalizeSavedView drops malformed sortBy entries', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Mixed', EMPTY_FILTERS, {
+        sortBy: [
+          { field: 'start', direction: 'asc' },
+          { field: 42, direction: 'asc' },            // bad field type
+          { field: 'bad', direction: 'sideways' },    // bad direction
+          null,
+        ],
+      });
+    });
+    expect(result.current.views[0].sortBy).toEqual([
+      { field: 'start', direction: 'asc' },
+    ]);
+  });
+
+  it('normalizeSavedView returns null when all entries are invalid', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('All Bad', EMPTY_FILTERS, {
+        sortBy: ['not-an-object', { only: 'field' }],
+      });
+    });
+    expect(result.current.views[0].sortBy).toBeNull();
+  });
+
+  it('resaveView updates sortBy when opts.sortBy is passed', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Resave Sort', EMPTY_FILTERS, {
+        sortBy: [{ field: 'start', direction: 'asc' }],
+      });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, undefined, undefined, {
+        sortBy: [{ field: 'end', direction: 'desc' }],
+      });
+    });
+    expect(result.current.views[0].sortBy).toEqual([
+      { field: 'end', direction: 'desc' },
+    ]);
+  });
+
+  it('resaveView preserves sortBy when opts.sortBy is not passed', () => {
+    const originalSort = [{ field: 'start', direction: 'asc' }];
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Preserve Sort', EMPTY_FILTERS, { sortBy: originalSort });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, 'agenda', 'department');
+    });
+    expect(result.current.views[0].sortBy).toEqual(originalSort);
+  });
+});
+
+describe('useSavedViews — zoomLevel persistence', () => {
+  it('saveView accepts valid Assets zoom levels', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    for (const level of ['day', 'week', 'month', 'quarter']) {
+      localStorage.clear();
+      act(() => {
+        result.current.saveView(`View ${level}`, EMPTY_FILTERS, { zoomLevel: level });
+      });
+      expect(result.current.views.at(-1).zoomLevel).toBe(level);
+    }
+  });
+
+  it('saveView defaults zoomLevel to null when not provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Plain', EMPTY_FILTERS);
+    });
+    expect(result.current.views[0].zoomLevel).toBeNull();
+  });
+
+  it('zoomLevel survives localStorage round-trip', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Zoomed', EMPTY_FILTERS, { zoomLevel: 'quarter' });
+    });
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result2.current.views[0].zoomLevel).toBe('quarter');
+  });
+
+  it('normalizeSavedView rejects unknown zoom levels', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Bad Zoom', EMPTY_FILTERS, { zoomLevel: 'century' });
+    });
+    expect(result.current.views[0].zoomLevel).toBeNull();
+  });
+
+  it('resaveView updates zoomLevel via opts', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Resave Zoom', EMPTY_FILTERS, { zoomLevel: 'day' });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, undefined, undefined, { zoomLevel: 'month' });
+    });
+    expect(result.current.views[0].zoomLevel).toBe('month');
+  });
+});

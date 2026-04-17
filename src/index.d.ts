@@ -4,9 +4,25 @@
  */
 import type * as React from 'react';
 
+// Re-export type surface for the Assets view + grouping/sort engines.
+export * from './types/assets';
+export type { GroupConfig, GroupResult, SortConfig, SortDirection } from './types/grouping';
+
+import type {
+  AssetsZoomLevel,
+  CategoriesConfig,
+  ConflictCheckRequest,
+  ConflictCheckResult,
+  LocationData,
+  LocationProvider,
+  OnApprovalAction,
+  RenderAssetLocation,
+} from './types/assets';
+import type { SortConfig } from './types/grouping';
+
 // ─── Core types ────────────────────────────────────────────────────────────────
 
-export type ViewType = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'timeline';
+export type ViewType = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'timeline' | 'assets';
 
 export type ThemeId =
   | 'light' | 'dark'
@@ -127,18 +143,43 @@ export interface SavedView {
   name: string;
   createdAt: string;
   color: string | null;
-  /** Optional pinned calendar view (e.g. 'month', 'week'). */
+  /** Optional pinned calendar view (e.g. 'month', 'week', 'assets'). */
   view: string | null;
-  /** Optional row grouping field for TimelineView / AgendaView. */
+  /** Optional row grouping field for TimelineView / AgendaView / AssetsView. */
   groupBy: string | null;
+  /**
+   * Optional multi-field sort tiebreakers applied by sortEvents().
+   * Persisted in localStorage alongside filters and groupBy.
+   */
+  sortBy?: SortConfig[];
+  /**
+   * Optional Assets-view zoom level. Ignored by other views.
+   */
+  zoomLevel?: AssetsZoomLevel;
   filters: Record<string, unknown>;
 }
 
 export declare function useSavedViews(calendarId: string): {
   views: SavedView[];
-  saveView: (name: string, filters: object, opts?: { color?: string; view?: string; groupBy?: string }) => SavedView;
+  saveView: (
+    name: string,
+    filters: object,
+    opts?: {
+      color?: string;
+      view?: string;
+      groupBy?: string;
+      sortBy?: SortConfig[];
+      zoomLevel?: AssetsZoomLevel;
+    },
+  ) => SavedView;
   updateView: (id: string, patch: Partial<SavedView>) => void;
-  resaveView: (id: string, filters: object, viewName?: string, groupBy?: string) => void;
+  resaveView: (
+    id: string,
+    filters: object,
+    viewName?: string,
+    groupBy?: string,
+    opts?: { sortBy?: SortConfig[]; zoomLevel?: AssetsZoomLevel },
+  ) => void;
   deleteView: (id: string) => void;
 };
 
@@ -531,8 +572,43 @@ export interface WorksCalendarProps {
   showAddButton?: boolean;
 
   // ── Grouping ──
-  /** Field name to group rows by in TimelineView and AgendaView. */
+  /** Field name to group rows by in TimelineView, AgendaView, and AssetsView. */
   groupBy?: string;
+
+  // ── Assets view ──
+  /**
+   * Swappable live-location plugin used by the Assets view's sticky-column
+   * banner. Defaults to createManualLocationProvider() when absent.
+   */
+  locationProvider?: LocationProvider;
+  /**
+   * Owner-configured categories. When provided, overrides the equivalent
+   * section in the stored calendar config. Falls back to DEFAULT_CATEGORIES
+   * when neither prop nor config is present.
+   */
+  categoriesConfig?: CategoriesConfig;
+  /**
+   * Invoked by the Assets submit flow before creating a request. Host runs
+   * its own overlap / business-rule query and returns a ConflictCheckResult.
+   * When hasConflict is true, the calendar shows the ConflictModal.
+   */
+  onConflictCheck?: (request: ConflictCheckRequest) => Promise<ConflictCheckResult>;
+  /**
+   * Fired when the user invokes an approval action on an Assets pill.
+   * Calendar does not mutate meta.approvalStage — the host owns the
+   * workflow state machine and echoes the updated event back via its
+   * normal save path.
+   */
+  onApprovalAction?: OnApprovalAction;
+  /**
+   * Replace the default sticky-column location banner on the Assets view.
+   */
+  renderAssetLocation?: RenderAssetLocation;
+  /**
+   * Replace the default body of the conflict modal on the Assets submit
+   * flow. Receives the host-returned ConflictCheckResult.
+   */
+  renderConflictBody?: (result: ConflictCheckResult) => React.ReactNode;
 
   // ── Imperative handle ──
   ref?: React.Ref<CalendarApi>;

@@ -72,7 +72,7 @@ import styles from './WorksCalendar.module.css';
 import { customThemeToCssVars } from './core/themeSchema.js';
 
 export type WorksCalendarEvent = Record<string, unknown>;
-export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule';
+export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'assets';
 export type CalendarRole = 'admin' | 'user' | 'readonly';
 
 export type ScheduleInstantiationLimits = {
@@ -161,6 +161,7 @@ const VIEWS = [
   { id: 'day',      label: 'Day'      },
   { id: 'agenda',   label: 'Agenda'   },
   { id: 'schedule', label: 'Schedule' },
+  { id: 'assets',   label: 'Assets'   },
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -183,9 +184,41 @@ function viewRange(view, date, weekStartDay = 0) {
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
     case 'day':
       return { start: date, end: addDays(date, 1) };
-    default: // month, agenda, schedule (timeline)
+    default: // month, agenda, schedule (timeline), assets
       return { start: startOfMonth(date), end: endOfMonth(date) };
   }
+}
+
+/**
+ * Placeholder shown on the Assets tab during Sprint 1. Replaced by the
+ * real AssetsView in Phase 1 Sprint 2. Keeps the tab clickable so routing
+ * + saved-view persistence can be QA'd without the full view.
+ */
+function AssetsPlaceholder() {
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        minHeight: 320,
+        padding: '2rem',
+        textAlign: 'center',
+        color: 'var(--text-muted, #6b7280)',
+        fontSize: 14,
+      }}
+    >
+      <div>
+        <strong style={{ display: 'block', marginBottom: 8, fontSize: 16 }}>
+          Assets view — under construction
+        </strong>
+        Scheduled for Phase&nbsp;1 Sprint&nbsp;2. See{' '}
+        <code>docs/assets-tab-phase1-sprint-plan.md</code>.
+      </div>
+    </div>
+  );
 }
 
 export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendar(
@@ -1548,6 +1581,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   groupBy={activeGroupBy}
                 />
               )}
+              {cal.view === 'assets'   && <AssetsPlaceholder />}
             </>
           )}
         </div>

@@ -18,9 +18,27 @@ import { createId } from '../core/createId.js';
 function viewsKey(calendarId) { return `wc-saved-views-${calendarId}`; }
 const STORAGE_VERSION = 2;
 
+const ASSETS_ZOOM_LEVELS = new Set(['day', 'week', 'month', 'quarter']);
+
 function isValidDate(value) {
   const date = new Date(value);
   return !Number.isNaN(date.getTime());
+}
+
+function normalizeSortBy(sortBy) {
+  if (!Array.isArray(sortBy)) return null;
+  const cleaned = sortBy.filter(entry =>
+    entry && typeof entry === 'object'
+    && typeof entry.field === 'string'
+    && (entry.direction === 'asc' || entry.direction === 'desc'),
+  ).map(entry => ({ field: entry.field, direction: entry.direction }));
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function normalizeZoomLevel(zoomLevel) {
+  return typeof zoomLevel === 'string' && ASSETS_ZOOM_LEVELS.has(zoomLevel)
+    ? zoomLevel
+    : null;
 }
 
 function normalizeSavedView(view) {
@@ -36,6 +54,8 @@ function normalizeSavedView(view) {
     view:       view.view ?? null,
     conditions: Array.isArray(view.conditions) ? view.conditions : null,
     groupBy:    typeof view.groupBy === 'string' ? view.groupBy : null,
+    sortBy:     normalizeSortBy(view.sortBy),
+    zoomLevel:  normalizeZoomLevel(view.zoomLevel),
     filters:    view.filters,
   };
 }
@@ -188,7 +208,7 @@ export function useSavedViews(calendarId) {
     persistViews(calendarId, views);
   }, [calendarId, views]);
 
-  const saveView = useCallback((name, filters, { color, view, conditions, groupBy } = {}) => {
+  const saveView = useCallback((name, filters, { color, view, conditions, groupBy, sortBy, zoomLevel } = {}) => {
     const savedView = {
       id:         createId('view'),
       name,
@@ -197,6 +217,8 @@ export function useSavedViews(calendarId) {
       view:       view ?? null,
       conditions: conditions ?? null,
       groupBy:    typeof groupBy === 'string' ? groupBy : null,
+      sortBy:     normalizeSortBy(sortBy),
+      zoomLevel:  normalizeZoomLevel(zoomLevel),
       filters:    serializeFilters(filters),
     };
     setViews(prev => [...prev, savedView]);
@@ -207,7 +229,8 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName, groupBy) => {
+  const resaveView = useCallback((id, filters, viewName, groupBy, opts = {}) => {
+    const { sortBy, zoomLevel } = opts;
     setViews(prev => prev.map(v =>
       v.id === id
         ? {
@@ -215,6 +238,8 @@ export function useSavedViews(calendarId) {
             filters: serializeFilters(filters),
             view:    viewName ?? v.view,
             ...(groupBy !== undefined ? { groupBy } : {}),
+            ...(sortBy !== undefined ? { sortBy: normalizeSortBy(sortBy) } : {}),
+            ...(zoomLevel !== undefined ? { zoomLevel: normalizeZoomLevel(zoomLevel) } : {}),
           }
         : v
     ));
