@@ -124,6 +124,50 @@ describe('AgendaView grouping', () => {
     expect(titles[1].textContent).toBe('Early');
   });
 
+  describe('showAllGroups', () => {
+    it('renders each event in every leaf bucket, marking non-matching copies as cross-group', () => {
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={events}
+            onEventClick={vi.fn()}
+            groupBy="category"
+            showAllGroups
+          />
+        </CalendarContext.Provider>,
+      );
+      // 3 events × 2 groups = 6 event renders
+      const runInstances = screen.getAllByText('Morning Run');
+      expect(runInstances).toHaveLength(2);
+      const meetingInstances = screen.getAllByText('Team Meeting');
+      expect(meetingInstances).toHaveLength(2);
+
+      // One instance of each event is native (not dimmed); the others are cross-group.
+      const crossGroupEls = document.querySelectorAll('[data-cross-group="true"]');
+      // 3 events, each duplicated into 1 other bucket → 3 cross-group nodes.
+      expect(crossGroupEls).toHaveLength(3);
+
+      // Cross-group copies show a "from <source>" badge.
+      expect(screen.getAllByText(/from Exercise/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/from Work/i).length).toBeGreaterThan(0);
+    });
+
+    it('does not duplicate events when showAllGroups is off (default)', () => {
+      renderAgenda({ groupBy: 'category' });
+      expect(screen.getAllByText('Morning Run')).toHaveLength(1);
+      expect(screen.getAllByText('Team Meeting')).toHaveLength(1);
+      expect(document.querySelectorAll('[data-cross-group="true"]')).toHaveLength(0);
+    });
+
+    it('does nothing special when showAllGroups is on but groupBy is unset', () => {
+      renderAgenda({ showAllGroups: true });
+      // No grouping → no duplication, no crossGroup markers.
+      expect(screen.getAllByText('Morning Run')).toHaveLength(1);
+      expect(document.querySelectorAll('[data-cross-group="true"]')).toHaveLength(0);
+    });
+  });
+
   it('applies default start-time sort per day when no sort prop is given', () => {
     const d1 = new Date(2026, 3, 5, 9);
     const d2 = new Date(2026, 3, 5, 14);

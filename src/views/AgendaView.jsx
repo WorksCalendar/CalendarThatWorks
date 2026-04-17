@@ -8,7 +8,14 @@ import { buildGroupTree } from '../hooks/useGrouping.ts';
 import GroupHeader from '../ui/GroupHeader.tsx';
 import styles from './AgendaView.module.css';
 
-export default function AgendaView({ currentDate, events, onEventClick, groupBy, sort }) {
+export default function AgendaView({
+  currentDate,
+  events,
+  onEventClick,
+  groupBy,
+  sort,
+  showAllGroups = false,
+}) {
   const ctx = useCalendarContext();
 
   const days = useMemo(() => {
@@ -56,18 +63,26 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
     });
   }, []);
 
-  function renderEventItem(ev) {
+  function renderEventItem(ev, opts = {}) {
+    const { crossGroup = false, sourceLabel = null } = opts;
     const color = resolveColor(ev, ctx?.colorRules);
     const onClick = () => onEventClick?.(ev);
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
+    const className = [
+      styles.event,
+      statusClass,
+      crossGroup && styles.crossGroup,
+    ].filter(Boolean).join(' ');
+    // Unique key per (event, render-slot) so cross-group duplication doesn't
+    // collide with the native instance.
+    const key = crossGroup ? `${ev.id}::${sourceLabel ?? ''}` : ev.id;
 
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev, { view: 'agenda', isCompact: true, onClick, color });
       if (custom != null) {
         return (
-          <div key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-            onClick={onClick}>
+          <div key={key} className={className} data-cross-group={crossGroup || undefined} onClick={onClick}>
             {custom}
           </div>
         );
@@ -75,8 +90,13 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
     }
 
     return (
-      <button key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-        onClick={onClick}>
+      <button
+        key={key}
+        className={className}
+        data-cross-group={crossGroup || undefined}
+        onClick={onClick}
+        aria-label={crossGroup && sourceLabel ? `${ev.title} (from ${sourceLabel})` : undefined}
+      >
         <span className={styles.evDot} style={{ background: color }} />
         <div className={styles.evBody}>
           <span className={styles.evTitle}>{ev.title}</span>
@@ -87,6 +107,11 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
             {ev.allDay && <span>All day</span>}
             {ev.category && <span className={styles.cat}>{ev.category}</span>}
             {ev.resource && <span>{ev.resource}</span>}
+            {crossGroup && sourceLabel && (
+              <span className={styles.sourceBadge} aria-hidden="true">
+                from {sourceLabel}
+              </span>
+            )}
           </div>
         </div>
       </button>
@@ -99,10 +124,40 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
     return group.children.reduce((sum, c) => sum + countEvents(c), 0);
   }
 
-  function renderGroupNode(group, parentPath, posInSet, setSize) {
+  // Collect all leaf events in a tree, paired with their native path.
+  function collectLeafEvents(tree, parentPath) {
+    const out = [];
+    for (const group of tree) {
+      const path = parentPath ? `${parentPath}/${group.key}` : group.key;
+      if (group.children.length === 0) {
+        for (const ev of group.events) out.push({ ev, nativePath: path, nativeLabel: group.label });
+      } else {
+        out.push(...collectLeafEvents(group.children, path));
+      }
+    }
+    return out;
+  }
+
+  function renderGroupNode(group, parentPath, posInSet, setSize, allLeafEvents) {
     const path = parentPath ? `${parentPath}/${group.key}` : group.key;
     const collapsed = collapsedGroups.has(path);
     const total = countEvents(group);
+    const isLeaf = group.children.length === 0;
+
+    // When showAllGroups is on, a leaf bucket renders every leaf event that
+    // exists in this day's tree — with non-matching events marked crossGroup.
+    const renderedEvents = (() => {
+      if (!isLeaf) return null;
+      if (!showAllGroups) return group.events.map(ev => renderEventItem(ev));
+      return allLeafEvents.map(({ ev, nativePath, nativeLabel }) => {
+        const isNative = nativePath === path;
+        return renderEventItem(ev, {
+          crossGroup: !isNative,
+          sourceLabel: isNative ? null : nativeLabel,
+        });
+      });
+    })();
+
     return (
       <div key={path} className={styles.subGroup} role="group">
         <GroupHeader
@@ -116,11 +171,11 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
           fieldLabel={group.field}
         />
         {!collapsed && (
-          group.children.length > 0
-            ? group.children.map((child, i) =>
-                renderGroupNode(child, path, i + 1, group.children.length),
+          isLeaf
+            ? renderedEvents
+            : group.children.map((child, i) =>
+                renderGroupNode(child, path, i + 1, group.children.length, allLeafEvents),
               )
-            : group.events.map(renderEventItem)
         )}
       </div>
     );
@@ -138,9 +193,11 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
   return (
     <div className={styles.agenda}>
       {grouped.map(({ day, events: dayEvents }, idx) => {
+        const dayKey = format(day, 'yyyy-MM-dd');
         const tree = dayTrees?.[idx]?.tree ?? null;
+        const allLeafEvents = tree ? collectLeafEvents(tree, dayKey) : [];
         return (
-          <div key={format(day, 'yyyy-MM-dd')} className={styles.group}>
+          <div key={dayKey} className={styles.group}>
             <div className={[styles.dateHead, isToday(day) && styles.today].filter(Boolean).join(' ')}>
               <span className={styles.dayName}>{format(day, 'EEE')}</span>
               <span className={styles.dayNum}>{format(day, 'd')}</span>
@@ -148,8 +205,10 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
             </div>
             <div className={styles.events} role={tree && tree.length > 0 ? 'tree' : undefined}>
               {tree && tree.length > 0
-                ? tree.map((g, i) => renderGroupNode(g, format(day, 'yyyy-MM-dd'), i + 1, tree.length))
-                : dayEvents.map(renderEventItem)
+                ? tree.map((g, i) =>
+                    renderGroupNode(g, dayKey, i + 1, tree.length, allLeafEvents),
+                  )
+                : dayEvents.map(ev => renderEventItem(ev))
               }
             </div>
           </div>
