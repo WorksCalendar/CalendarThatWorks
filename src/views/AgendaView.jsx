@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isSameDay, isToday,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import { buildGroupTree } from '../hooks/useGrouping.ts';
+import GroupHeader from '../ui/GroupHeader.tsx';
 import styles from './AgendaView.module.css';
 
 export default function AgendaView({ currentDate, events, onEventClick, groupBy, sort }) {
@@ -15,29 +17,44 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
+  // When an upstream `sort` is set, trust the incoming order and skip the
+  // default chronological resort so user sort wins. When no sort is set,
+  // keep the historical start-time ordering per day.
+  const hasSort = Array.isArray(sort) ? sort.length > 0 : !!sort;
+
   const grouped = useMemo(() => {
     return days
-      .map(day => ({
-        day,
-        events: events
-          .filter(e => isSameDay(e.start, day))
-          .sort((a, b) => a.start - b.start),
-      }))
+      .map(day => {
+        const dayEvents = events.filter(e => isSameDay(e.start, day));
+        return {
+          day,
+          events: hasSort
+            ? dayEvents
+            : [...dayEvents].sort((a, b) => a.start - b.start),
+        };
+      })
       .filter(g => g.events.length > 0);
-  }, [days, events]);
+  }, [days, events, hasSort]);
 
-  const secondaryGrouped = useMemo(() => {
+  // Per-day group trees built from the event-level grouping engine. Pure —
+  // no collapse state baked in; that lives in local React state below.
+  const dayTrees = useMemo(() => {
     if (!groupBy) return null;
-    return grouped.map(({ day, events: dayEvents }) => {
-      const groups = new Map();
-      dayEvents.forEach(ev => {
-        const key = ev[groupBy] ?? ev.meta?.[groupBy] ?? '(Ungrouped)';
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(ev);
-      });
-      return { day, groups: [...groups.entries()].map(([key, evts]) => ({ key, events: evts })) };
-    });
+    return grouped.map(({ day, events: dayEvents }) => ({
+      day,
+      tree: buildGroupTree(dayEvents, groupBy),
+    }));
   }, [grouped, groupBy]);
+
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const toggleGroup = useCallback((path) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
 
   function renderEventItem(ev) {
     const color = resolveColor(ev, ctx?.colorRules);
@@ -76,6 +93,39 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
     );
   }
 
+  // Count every leaf event reachable under a group (respecting nested trees).
+  function countEvents(group) {
+    if (group.children.length === 0) return group.events.length;
+    return group.children.reduce((sum, c) => sum + countEvents(c), 0);
+  }
+
+  function renderGroupNode(group, parentPath, posInSet, setSize) {
+    const path = parentPath ? `${parentPath}/${group.key}` : group.key;
+    const collapsed = collapsedGroups.has(path);
+    const total = countEvents(group);
+    return (
+      <div key={path} className={styles.subGroup} role="group">
+        <GroupHeader
+          label={group.label}
+          count={total}
+          depth={group.depth}
+          collapsed={collapsed}
+          onToggle={() => toggleGroup(path)}
+          posInSet={posInSet}
+          setSize={setSize}
+          fieldLabel={group.field}
+        />
+        {!collapsed && (
+          group.children.length > 0
+            ? group.children.map((child, i) =>
+                renderGroupNode(child, path, i + 1, group.children.length),
+              )
+            : group.events.map(renderEventItem)
+        )}
+      </div>
+    );
+  }
+
   if (grouped.length === 0) {
     if (ctx?.emptyState) return <>{ctx.emptyState}</>;
     return (
@@ -88,7 +138,7 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
   return (
     <div className={styles.agenda}>
       {grouped.map(({ day, events: dayEvents }, idx) => {
-        const subGroups = secondaryGrouped?.[idx]?.groups ?? null;
+        const tree = dayTrees?.[idx]?.tree ?? null;
         return (
           <div key={format(day, 'yyyy-MM-dd')} className={styles.group}>
             <div className={[styles.dateHead, isToday(day) && styles.today].filter(Boolean).join(' ')}>
@@ -96,14 +146,9 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy,
               <span className={styles.dayNum}>{format(day, 'd')}</span>
               <span className={styles.monthLabel}>{format(day, 'MMM yyyy')}</span>
             </div>
-            <div className={styles.events}>
-              {subGroups
-                ? subGroups.map(({ key, events: grpEvts }) => (
-                    <div key={key} className={styles.subGroup}>
-                      <div className={styles.subGroupLabel} role="heading" aria-level={3}>{key}</div>
-                      {grpEvts.map(renderEventItem)}
-                    </div>
-                  ))
+            <div className={styles.events} role={tree && tree.length > 0 ? 'tree' : undefined}>
+              {tree && tree.length > 0
+                ? tree.map((g, i) => renderGroupNode(g, format(day, 'yyyy-MM-dd'), i + 1, tree.length))
                 : dayEvents.map(renderEventItem)
               }
             </div>

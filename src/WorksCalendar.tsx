@@ -20,6 +20,7 @@ import { useSourceAggregator } from './hooks/useSourceAggregator.js';
 import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
 import type { GroupByInput } from './hooks/useNormalizedConfig.ts';
 import type { SortConfig } from './types/grouping.ts';
+import { sortEvents } from './core/sortEngine.ts';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { usePermissions }     from './hooks/usePermissions.js';
 import { useEventOptions }    from './hooks/useEventOptions.js';
@@ -474,9 +475,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [categories],
   );
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
-  const visibleEvents = useMemo(
+  const filteredEvents = useMemo(
     () => applyFilters(expandedEvents, cal.filters, schema),
     [expandedEvents, cal.filters, schema],
+  );
+  const visibleEvents = useMemo(
+    () => (activeSort && activeSort.length > 0
+      ? sortEvents(filteredEvents, activeSort)
+      : filteredEvents),
+    [filteredEvents, activeSort],
   );
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────

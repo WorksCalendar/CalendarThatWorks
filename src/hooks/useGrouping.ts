@@ -2,7 +2,11 @@ import { useState, useMemo, useCallback } from 'react'
 import type { NormalizedEvent } from '../index.d.ts'
 import type { GroupConfig, GroupResult } from '../types/grouping.ts'
 import { sortGroupKeys } from '../core/sortEngine.ts'
-import { useNormalizedConfig, type GroupByInput } from './useNormalizedConfig.ts'
+import {
+  normalizeGroupConfig,
+  useNormalizedConfig,
+  type GroupByInput,
+} from './useNormalizedConfig.ts'
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
@@ -76,6 +80,19 @@ function collectAllPaths(groups: GroupResult[], prefix: string): string[] {
     const p = prefix ? `${prefix}/${g.key}` : g.key
     return [p, ...collectAllPaths(g.children, p)]
   })
+}
+
+/**
+ * Pure, hook-free group tree builder. Callers that need grouping in a loop
+ * (e.g. per-day buckets in AgendaView) use this instead of the hook.
+ */
+export function buildGroupTree(
+  events: NormalizedEvent[],
+  groupBy: GroupByInput,
+): GroupResult[] {
+  const configs = normalizeGroupConfig(groupBy)
+  if (!configs.length) return []
+  return buildGroups(events, configs, 0, '')
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
