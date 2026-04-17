@@ -284,10 +284,44 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
   const effectiveTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'light';
   const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
+  // Merge parent's employees prop with owner-config team.members so edits
+  // made from the Settings → Employees tab (e.g. renaming a member) are
+  // reflected live in the schedule, even when the parent's prop is stale.
+  // Config entries take precedence for matching ids; parent-only entries
+  // (not yet mirrored into config) are preserved.
   const configuredEmployees = useMemo(() => {
-    if (Array.isArray(employees) && employees.length > 0) return employees;
-    return ownerCfg.config?.team?.members ?? [];
+    const configMembers = ownerCfg.config?.team?.members ?? [];
+    const parentMembers = Array.isArray(employees) ? employees : [];
+    if (configMembers.length === 0) return parentMembers;
+    if (parentMembers.length === 0) return configMembers;
+    const configById = new Map(configMembers.map((m) => [String(m.id), m]));
+    const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
+    return [...configMembers, ...parentOnly];
   }, [employees, ownerCfg.config?.team?.members]);
+
+  // Wrap parent employee handlers so edits from ANY surface (timeline add-form
+  // or TeamTab settings) flow both to the consumer's state AND to the owner
+  // config. Keeps TeamTab and the live schedule in sync. See issue #101.
+  const handleEmployeeAddInternal = useCallback((member) => {
+    ownerCfg.updateConfig(c => {
+      const existing = c.team?.members ?? [];
+      if (existing.some(m => String(m.id) === String(member.id))) return c;
+      return {
+        ...c,
+        team: { ...(c.team ?? {}), members: [...existing, member] },
+        setup: { ...(c.setup ?? {}), completed: true },
+      };
+    });
+    onEmployeeAdd?.(member);
+  }, [ownerCfg.updateConfig, onEmployeeAdd]);
+
+  const handleEmployeeDeleteInternal = useCallback((id) => {
+    ownerCfg.updateConfig(c => ({
+      ...c,
+      team: { ...(c.team ?? {}), members: (c.team?.members ?? []).filter(m => String(m.id) !== String(id)) },
+    }));
+    onEmployeeDelete?.(id);
+  }, [ownerCfg.updateConfig, onEmployeeDelete]);
 
   // Honor defaultView from owner config (applied once after config loads)
   const defaultViewApplied = useRef(false);
@@ -1506,8 +1540,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEventClick={handleEventClick}
                   onDateSelect={handleScheduleDateSelect}
                   employees={configuredEmployees}
-                  onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
-                  onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
+                  onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
+                  onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
                   onEmployeeAction={handleEmployeeAction}
@@ -1625,6 +1659,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             savedViews={savedViews.views}
             onUpdateView={savedViews.updateView}
             onDeleteView={handleDeleteView}
+            onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
+            onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
             sources={sourceStore.sources}
             feedErrors={feedErrors}
             onAddSource={sourceStore.addSource}

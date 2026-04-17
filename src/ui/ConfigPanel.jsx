@@ -28,6 +28,9 @@ export default function ConfigPanel({
   // Source store props (optional — omitted when owner has no source store)
   sources, feedErrors, onAddSource, onRemoveSource, onToggleSource, onUpdateSource,
   scheduleTemplates, onCreateScheduleTemplate, onDeleteScheduleTemplate, scheduleTemplateError,
+  // Team-tab hooks: when provided, TeamTab emits add/delete upstream so the
+  // parent's employees prop can stay in sync with config-side edits.
+  onEmployeeAdd, onEmployeeDelete,
 }) {
   const [tab, setTab] = useState('setup');
   const trapRef = useFocusTrap(onClose);
@@ -102,7 +105,14 @@ export default function ConfigPanel({
               onDeleteView={onDeleteView}
             />
           )}
-          {tab === 'team'        && <TeamTab config={config} onUpdate={onUpdate} />}
+          {tab === 'team'        && (
+            <TeamTab
+              config={config}
+              onUpdate={onUpdate}
+              onEmployeeAdd={onEmployeeAdd}
+              onEmployeeDelete={onEmployeeDelete}
+            />
+          )}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
       </div>
@@ -164,7 +174,7 @@ function SetupTab({ config, onUpdate }) {
   );
 }
 
-function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
+export function SmartViewsTab({ categories, resources, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
   const [editingId,   setEditingId]   = useState(null);
   const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
 
@@ -192,7 +202,7 @@ function SmartViewsTab({ categories, resources, schema, items, onSaveView, saved
               <div className={styles.smartViewActions}>
                 <button
                   className={styles.svActionBtn}
-                  onClick={() => setEditingId(prev => prev === view.id ? null : view.id)}
+                  onClick={() => setEditingId(view.id)}
                   title="Edit conditions"
                   aria-label={`Edit ${view.name}`}
                   aria-pressed={editingId === view.id}
@@ -257,8 +267,17 @@ function SmartViewsTab({ categories, resources, schema, items, onSaveView, saved
   );
 }
 
-function TeamTab({ config, onUpdate }) {
+export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
   const teamMembers = config.team?.members ?? [];
+  // Pending (unsaved) new member — holds its name until the user commits.
+  // Keeping it local prevents a blank row from appearing in the schedule.
+  const [pendingName, setPendingName] = useState('');
+  const [isAdding,    setIsAdding]    = useState(false);
+  const pendingInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isAdding) pendingInputRef.current?.focus();
+  }, [isAdding]);
 
   const updateMembers = (nextMembers) => onUpdate(c => ({
     ...c,
@@ -266,16 +285,30 @@ function TeamTab({ config, onUpdate }) {
     setup: { ...(c.setup ?? {}), completed: true },
   }));
 
-  const addMember = () => {
+  const commitPending = () => {
+    const trimmed = pendingName.trim();
+    if (!trimmed) { setIsAdding(false); setPendingName(''); return; }
     const nextId = Math.max(0, ...teamMembers.map((member) => Number(member.id) || 0)) + 1;
-    updateMembers([...teamMembers, { id: nextId, name: '', color: '#8b5cf6', avatar: null }]);
+    const newMember = { id: nextId, name: trimmed, color: '#8b5cf6', avatar: null };
+    updateMembers([...teamMembers, newMember]);
+    onEmployeeAdd?.(newMember);
+    setPendingName('');
+    setIsAdding(false);
+  };
+
+  const cancelPending = () => {
+    setPendingName('');
+    setIsAdding(false);
   };
 
   const updateMember = (id, patch) => {
     updateMembers(teamMembers.map((member) => (member.id === id ? { ...member, ...patch } : member)));
   };
 
-  const removeMember = (id) => updateMembers(teamMembers.filter((member) => member.id !== id));
+  const removeMember = (id) => {
+    updateMembers(teamMembers.filter((member) => member.id !== id));
+    onEmployeeDelete?.(id);
+  };
 
   const handleProfileUpload = (memberId, e) => {
     const file = e.target.files?.[0];
@@ -316,7 +349,41 @@ function TeamTab({ config, onUpdate }) {
           </button>
         </div>
       ))}
-      <button className={styles.addFieldBtn} onClick={addMember}><Plus size={13} /> Add employee</button>
+      {isAdding ? (
+        <div className={styles.memberRow}>
+          <div className={styles.avatarPicker}>
+            <div className={styles.avatarFrame}>
+              <div className={styles.avatarFallback} style={{ backgroundColor: '#8b5cf6' }}>
+                {(pendingName.trim()?.[0] ?? '?').toUpperCase()}
+              </div>
+            </div>
+          </div>
+          <input
+            ref={pendingInputRef}
+            className={styles.input}
+            value={pendingName}
+            onChange={(e) => setPendingName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commitPending(); }
+              if (e.key === 'Escape') { e.preventDefault(); cancelPending(); }
+            }}
+            onBlur={commitPending}
+            placeholder="Employee name"
+          />
+          <button
+            className={styles.removeBtn}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={commitPending}
+            aria-label="Add employee"
+          >
+            <Check size={13} />
+          </button>
+        </div>
+      ) : (
+        <button className={styles.addFieldBtn} onClick={() => setIsAdding(true)}>
+          <Plus size={13} /> Add employee
+        </button>
+      )}
     </div>
   );
 }

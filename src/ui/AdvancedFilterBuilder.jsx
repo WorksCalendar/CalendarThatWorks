@@ -79,23 +79,25 @@ export default function AdvancedFilterBuilder({
   const [nameError,  setNameError]  = useState('');
   const [saved,      setSaved]      = useState(false);
   const savedTimerRef = useRef(null);
+  const rootRef       = useRef(null);
+  const nameInputRef  = useRef(null);
 
   // Clear the "Saved!" feedback timeout on unmount to avoid state updates on
   // an unmounted component (can happen in edit mode when the parent unmounts
   // the builder immediately after onUpdate).
   useEffect(() => () => { clearTimeout(savedTimerRef.current); }, []);
 
-  // Sync when switching to a different view for editing.
+  // On mount in edit mode, scroll the builder into view and focus the name
+  // input so users immediately see the editor populate after clicking pencil.
+  // The parent remounts this component via `key={editingId}` on each edit
+  // switch, so this mount-only effect runs exactly when a new target is chosen.
   useEffect(() => {
-    setViewName(initialName);
-    setConditions(
-      initialConditions && initialConditions.length > 0
-        ? initialConditions.map(c => ({ ...c, id: createId('cond') }))
-        : [makeCondition('AND', firstFieldKey)]
-    );
-    setNameError('');
-    setSaved(false);
-  }, [editingId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (editingId == null) return;
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    nameInputRef.current?.focus();
+    nameInputRef.current?.select();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only on edit open
+  }, []);
 
   // ── Condition mutations ─────────────────────────────────────────────────
 
@@ -148,7 +150,7 @@ export default function AdvancedFilterBuilder({
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className={styles.builder}>
+    <div className={styles.builder} ref={rootRef}>
 
       {/* ── Condition rows ── */}
       <div className={styles.conditions}>
@@ -255,6 +257,7 @@ export default function AdvancedFilterBuilder({
           <label htmlFor="afb-view-name" className={styles.srOnly}>Smart View name</label>
           <input
             id="afb-view-name"
+            ref={nameInputRef}
             className={[styles.input, styles.nameInput, nameError ? styles.inputError : ''].filter(Boolean).join(' ')}
             type="text"
             value={viewName}
