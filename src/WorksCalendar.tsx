@@ -67,7 +67,8 @@ import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
 import AssetsView             from './views/AssetsView.jsx';
-import type { AssetsZoomLevel } from './types/assets';
+import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
+import type { AssetsZoomLevel, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
@@ -362,6 +363,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── Assets view zoom (persisted on SavedView.zoomLevel) ──
   const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
+
+  // ── Assets view: default location provider ──
+  // Hosts that supply one use theirs; otherwise the shipped default is the
+  // no-op ManualLocationProvider (returns "Unknown" for every resource).
+  const effectiveLocationProvider = useMemo<LocationProvider>(
+    () => locationProvider ?? createManualLocationProvider(),
+    [locationProvider],
+  );
 
   // Mark dirty when filters/view/groupBy/zoom change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
@@ -1588,6 +1597,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
                   zoomLevel={activeAssetsZoom}
                   onZoomChange={setActiveAssetsZoom}
+                  locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
                 />
               )}

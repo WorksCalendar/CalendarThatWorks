@@ -285,6 +285,14 @@
   font-style: italic;
 }
 
+.locationText {
+  color: var(--wc-text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Event zone ─────────────────────────────────────────────────── */
 .eventZone {
   flex-shrink: 0;

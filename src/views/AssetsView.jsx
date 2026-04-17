@@ -27,6 +27,7 @@ import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './AssetsView.module.css';
 import { useGrouping } from '../hooks/useGrouping.js';
 import { buildFieldAccessor } from '../grouping/buildFieldAccessor.js';
+import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -140,6 +141,7 @@ export default function AssetsView({
   categoriesConfig,
   zoomLevel = 'month',
   onZoomChange,
+  locationProvider,
   renderAssetLocation,
 }) {
   const ctx = useCalendarContext();
@@ -195,6 +197,9 @@ export default function AssetsView({
       return a.localeCompare(b);
     });
   }, [events]);
+
+  // ── Live locations (via LocationProvider) ──────────────────────────────────
+  const locations = useResourceLocations(resourceList, locationProvider);
 
   const rows = useMemo(() => resourceList.map(resource => {
     const resEvents = events.filter(e => (e.resource ?? '(Unassigned)') === resource);
@@ -444,7 +449,7 @@ export default function AssetsView({
 
             const { key, resource, sublabel, events: rowEvents, rowH } = rowData;
             const topOffset = rowOffsets[rowIdx];
-            const locationData = null; // Sprint 3 wires LocationProvider.
+            const locationData = locations.get(resource) ?? null;
 
             return (
               <div
@@ -476,16 +481,16 @@ export default function AssetsView({
                   </div>
                   <div
                     className={styles.locationBanner}
-                    aria-label="Asset location"
+                    aria-label={locationData
+                      ? `Asset location: ${locationData.text} (${locationData.status})`
+                      : 'Asset location'}
                     data-status={locationData?.status ?? 'placeholder'}
                   >
                     {renderAssetLocation
                       ? renderAssetLocation(locationData, { id: resource })
-                      : (
-                        <span className={styles.locationPlaceholder}>
-                          Location —
-                        </span>
-                      )
+                      : locationData
+                        ? <span className={styles.locationText}>{locationData.text}</span>
+                        : <span className={styles.locationPlaceholder}>Location —</span>
                     }
                   </div>
                 </div>

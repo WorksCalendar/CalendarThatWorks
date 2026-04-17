@@ -211,14 +211,31 @@ describe('AssetsView — grouping', () => {
 });
 
 describe('AssetsView — renderAssetLocation render prop', () => {
-  it('calls the render prop with null LocationData and the resource object', () => {
+  it('calls the render prop and passes the resource object', () => {
     const renderAssetLocation = vi.fn(() => <span data-testid="custom-loc">Custom</span>);
     renderAssets({ renderAssetLocation });
     expect(renderAssetLocation).toHaveBeenCalled();
-    const [data, resource] = renderAssetLocation.mock.calls[0];
-    expect(data).toBeNull();
+    const [, resource] = renderAssetLocation.mock.calls[0];
     expect(resource).toMatchObject({ id: 'N121AB' });
     expect(screen.getAllByTestId('custom-loc').length).toBeGreaterThan(0);
+  });
+});
+
+describe('AssetsView — locationProvider wiring', () => {
+  it('renders the banner text returned by the provider', async () => {
+    const provider = {
+      id: 'stub',
+      refreshIntervalMs: 0,
+      fetchLocation: vi.fn(async (id) => ({
+        text: `at ${id}`,
+        status: 'live',
+        asOf:  '2026-04-17T00:00:00Z',
+      })),
+    };
+    renderAssets({ locationProvider: provider });
+    // Provider resolves on microtask; findByText waits for the render.
+    expect(await screen.findByText('at N121AB')).toBeInTheDocument();
+    expect(await screen.findByText('at N505CD')).toBeInTheDocument();
   });
 });
 
