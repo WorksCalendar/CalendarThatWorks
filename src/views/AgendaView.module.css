@@ -174,3 +174,34 @@
   border-bottom: 1px solid var(--wc-border);
   margin-bottom: 6px;
 }
+
+/* ── Cross-group events (showAllGroups=true) ──────────────── */
+.crossGroup {
+  opacity: 0.55;
+  background: var(--wc-surface-2, var(--wc-surface));
+  border-style: dashed;
+}
+.crossGroup:hover {
+  opacity: 0.85;
+}
+
+/* ── Drop target (DnD between groups) ──────────────────────── */
+.dropTarget {
+  outline: 2px dashed var(--wc-accent);
+  outline-offset: 2px;
+  border-radius: var(--wc-radius);
+  background: color-mix(in srgb, var(--wc-accent) 8%, transparent);
+}
+
+.sourceBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--wc-text-faint);
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 4px;
+  padding: 0 5px;
+}

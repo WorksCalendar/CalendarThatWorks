@@ -118,6 +118,7 @@ export type WorksCalendarProps = {
   onEventMove?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
+  onEventGroupChange?: (event: WorksCalendarEvent, patch: Record<string, unknown>) => void;
   onDateSelect?: (start: Date, end: Date) => void;
   supabaseUrl?: string;
   supabaseKey?: string;
@@ -143,6 +144,7 @@ export type WorksCalendarProps = {
   weekStartDay?: 0 | 1;
   groupBy?: GroupByInput;
   sort?: SortConfig | SortConfig[];
+  showAllGroups?: boolean;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -155,6 +157,7 @@ function opAnnouncement(op) {
     case 'delete': return 'Event deleted.';
     case 'move':   return 'Event moved.';
     case 'resize': return 'Event resized.';
+    case 'group-change': return 'Event reassigned.';
     default:       return 'Change applied.';
   }
 }
@@ -225,6 +228,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventMove,
     onEventResize,
     onEventDelete,
+    onEventGroupChange,
     onDateSelect,
 
     // ── Supabase realtime ──
@@ -275,6 +279,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // ── Grouping ──
     groupBy,
     sort,
+    showAllGroups,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -361,12 +366,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [activeSort, setActiveSort] = useState<SortConfig[] | null>(normalizeSortProp(sort));
   useEffect(() => setActiveSort(normalizeSortProp(sort)), [sort]);
 
-  // Mark dirty when filters/view/groupBy/sort change after a saved view was applied
+  const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
+  useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
+
+  // Mark dirty when filters/view/groupBy/sort/showAllGroups change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view, activeGroupBy, activeSort]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView) => {
     skipDirtyRef.current = true;
@@ -374,6 +382,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (savedView.view) cal.setView(savedView.view);
     setActiveGroupBy(savedView.groupBy ?? null);
     setActiveSort(Array.isArray(savedView.sort) ? savedView.sort : null);
+    setActiveShowAllGroups(!!savedView.showAllGroups);
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
   }, [cal, schema]);
@@ -1066,6 +1075,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
   }, [applyWithRecurringCheck, getSavedEventPayload, onEventResize, onEventSave]);
 
+  const handleEventGroupChange = useCallback((ev, patch) => {
+    if (!patch || typeof patch !== 'object') return;
+    const raw = ev._raw ?? ev;
+    const id  = ev._eventId ?? String(ev.id);
+    applyEngineOp(
+      { type: 'group-change', id, patch, source: 'drag' },
+      () => {
+        if (onEventGroupChange) onEventGroupChange(ev, patch);
+        else emitEventSave(id, raw, patch);
+      },
+    );
+  }, [applyEngineOp, emitEventSave, onEventGroupChange]);
+
   const handleEventDelete = useCallback((id) => {
     // Find the event so we can check if it's recurring.
     const ev      = expandedEvents.find(e => String(e.id) === String(id)) ?? { id };
@@ -1356,12 +1378,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventClick:  handleEventClick,
     onEventMove:   handleEventMove,
     onEventResize: handleEventResize,
+    onEventGroupChange: handleEventGroupChange,
     onDateSelect:  handleDateSelect,
     config:        ownerCfg.config,
     weekStartDay,
     pillHoverTitle,
     groupBy:       activeGroupBy,
     sort:          activeSort,
+    showAllGroups: activeShowAllGroups,
   };
 
   return (
@@ -1484,9 +1508,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, ...opts }),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
@@ -1501,9 +1525,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               schema={schema}
               onApply={handleApplyView}
               onAdd={({ name, color, pinView }) =>
-                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort })
+                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort)}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups)}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
             />
@@ -1553,12 +1577,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} groupBy={activeGroupBy} sort={activeSort} />}
+              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} onEventGroupChange={handleEventGroupChange} groupBy={activeGroupBy} sort={activeSort} showAllGroups={activeShowAllGroups} />}
               {cal.view === 'schedule' && (
                 <TimelineView
                   currentDate={cal.currentDate}
                   events={visibleEvents}
                   onEventClick={handleEventClick}
+                  onEventGroupChange={handleEventGroupChange}
                   onDateSelect={handleScheduleDateSelect}
                   employees={configuredEmployees}
                   onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}

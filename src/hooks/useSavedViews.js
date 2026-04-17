@@ -275,7 +275,7 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName, groupBy, sort) => {
+  const resaveView = useCallback((id, filters, viewName, groupBy, sort, showAllGroups) => {
     setViews(prev => prev.map(v =>
       v.id === id
         ? {
@@ -284,6 +284,9 @@ export function useSavedViews(calendarId) {
             view:    viewName ?? v.view,
             ...(groupBy !== undefined ? { groupBy: sanitizeGroupBy(groupBy) } : {}),
             ...(sort !== undefined ? { sort: sanitizeSort(sort) } : {}),
+            ...(showAllGroups !== undefined
+              ? { showAllGroups: typeof showAllGroups === 'boolean' ? showAllGroups : null }
+              : {}),
           }
         : v
     ));
