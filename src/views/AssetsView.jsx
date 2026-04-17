@@ -25,8 +25,8 @@ import {
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './AssetsView.module.css';
-import { useGrouping } from '../hooks/useGrouping.js';
-import { buildFieldAccessor } from '../grouping/buildFieldAccessor.js';
+import { buildGroupTree } from '../hooks/useGrouping.ts';
+import GroupHeader from '../ui/GroupHeader.tsx';
 import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import AuditDrawer from './AuditDrawer.jsx';
@@ -176,6 +176,8 @@ export default function AssetsView({
   onZoomChange,
   locationProvider,
   renderAssetLocation,
+  collapsedGroups: collapsedGroupsProp,
+  onCollapsedGroupsChange,
 }) {
   const ctx = useCalendarContext();
 
@@ -252,7 +254,7 @@ export default function AssetsView({
     };
   }, []);
 
-  // ── Row source: derive asset rows from event.resource ──────────────────────
+  // ── Row source: all resources appearing in events (for location provider) ──
   const resourceList = useMemo(() => {
     const set = new Set();
     events.forEach(e => set.add(e.resource ?? '(Unassigned)'));
@@ -266,17 +268,24 @@ export default function AssetsView({
   // ── Live locations (via LocationProvider) ──────────────────────────────────
   const locations = useResourceLocations(resourceList, locationProvider);
 
-  const rows = useMemo(() => resourceList.map(resource => {
-    const resEvents = events.filter(e => (e.resource ?? '(Unassigned)') === resource);
+  /**
+   * Build one asset row for `resource` given a scoped `subsetEvents`.
+   * Row height is computed from the laned events so rows stay tight when
+   * most events are filtered into a different group bucket.
+   */
+  const buildAssetRow = useCallback((resource, subsetEvents) => {
+    const resEvents = subsetEvents.filter(
+      e => (e.resource ?? '(Unassigned)') === resource,
+    );
     const { events: laned, laneCount } = assignLanes(resEvents, monthStart, monthEnd);
     const rowH = Math.max(
       laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2,
       ROW_PAD * 2 + LANE_H + 16,
     );
-    // Sublabel: first event with meta.assetSublabel / meta.sublabel wins.
     const firstWithMeta = resEvents.find(e => e.meta?.assetSublabel || e.meta?.sublabel);
     const sublabel = firstWithMeta?.meta?.assetSublabel ?? firstWithMeta?.meta?.sublabel ?? null;
     return {
+      _type: 'assetRow',
       key: resource,
       resource,
       sublabel,
@@ -284,17 +293,101 @@ export default function AssetsView({
       laneCount,
       rowH,
     };
-  }), [resourceList, events, monthStart.toISOString(), monthEnd.toISOString()]);
+  }, [monthStart.toISOString(), monthEnd.toISOString()]);
 
-  // ── Grouping ───────────────────────────────────────────────────────────────
+  const sortResourceKeys = useCallback((keys) => {
+    return [...keys].sort((a, b) => {
+      if (a === '(Unassigned)') return 1;
+      if (b === '(Unassigned)') return -1;
+      return a.localeCompare(b);
+    });
+  }, []);
+
+  // ── Grouping (TS engine) ───────────────────────────────────────────────────
   const GROUP_HEADER_H = 36;
-  const fieldAccessor = useMemo(
-    () => groupBy ? buildFieldAccessor(groupBy, 'resource') : null,
-    [groupBy],
+
+  const isGrouped = groupBy != null && (
+    typeof groupBy === 'string' ? true : Array.isArray(groupBy) ? groupBy.length > 0 : true
   );
-  const { flatRows, toggleGroup } = useGrouping(rows, {
-    groupBy, fieldAccessor, groupHeaderHeight: GROUP_HEADER_H,
-  });
+
+  const groupTree = useMemo(() => {
+    if (!isGrouped) return null;
+    return buildGroupTree(events, groupBy);
+  }, [isGrouped, events, groupBy]);
+
+  // Collapse state — controlled via props when provided, otherwise local.
+  const [collapsedLocal, setCollapsedLocal] = useState(() => new Set());
+  const collapsedControlled = collapsedGroupsProp instanceof Set
+    ? collapsedGroupsProp
+    : (Array.isArray(collapsedGroupsProp) ? new Set(collapsedGroupsProp) : null);
+  const collapsedGroups = collapsedControlled ?? collapsedLocal;
+
+  const toggleGroup = useCallback((path) => {
+    if (collapsedControlled && onCollapsedGroupsChange) {
+      const next = new Set(collapsedControlled);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      onCollapsedGroupsChange(next);
+      return;
+    }
+    setCollapsedLocal(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      if (onCollapsedGroupsChange) onCollapsedGroupsChange(next);
+      return next;
+    });
+  }, [collapsedControlled, onCollapsedGroupsChange]);
+
+  // Count every leaf event reachable under a group (respecting nested trees).
+  const countEvents = useCallback((node) => {
+    if (!node.children || node.children.length === 0) return node.events.length;
+    return node.children.reduce((sum, c) => sum + countEvents(c), 0);
+  }, []);
+
+  // Flat list of rows for virtualization: interleaves groupHeader pseudo-rows
+  // with asset rows scoped to the leaf group's events.
+  const flatRows = useMemo(() => {
+    if (!groupTree) {
+      return resourceList.map(r => buildAssetRow(r, events));
+    }
+    const out = [];
+    const walk = (nodes, parentPath) => {
+      nodes.forEach((node, i) => {
+        const path = parentPath ? `${parentPath}/${node.key}` : node.key;
+        const collapsed = collapsedGroups.has(path);
+        out.push({
+          _type: 'groupHeader',
+          groupPath: path,
+          groupLabel: node.label,
+          field: node.field,
+          depth: node.depth,
+          collapsed,
+          count: countEvents(node),
+          posInSet: i + 1,
+          setSize: nodes.length,
+          rowH: GROUP_HEADER_H,
+        });
+        if (collapsed) return;
+        if (node.children && node.children.length > 0) {
+          walk(node.children, path);
+        } else {
+          // Leaf: build one asset row per distinct resource in this bucket.
+          const leafResources = new Set();
+          for (const ev of node.events) {
+            leafResources.add(ev.resource ?? '(Unassigned)');
+          }
+          for (const resource of sortResourceKeys(leafResources)) {
+            const row = buildAssetRow(resource, node.events);
+            // Disambiguate keys when an asset appears in multiple groups.
+            out.push({ ...row, key: `${path}::${resource}`, groupPath: path });
+          }
+        }
+      });
+    };
+    walk(groupTree, '');
+    return out;
+  }, [groupTree, collapsedGroups, events, resourceList, buildAssetRow, countEvents, sortResourceKeys]);
 
   // ── Cumulative row offsets ─────────────────────────────────────────────────
   const rowOffsets = useMemo(() => {
@@ -398,7 +491,7 @@ export default function AssetsView({
   }, [flatRows, totalDays, onEventClick, onDateSelect, days, openAudit]);
 
   // ── Empty state ────────────────────────────────────────────────────────────
-  if (rows.length === 0) {
+  if (resourceList.length === 0) {
     if (ctx?.emptyState) return <>{ctx.emptyState}</>;
     return (
       <div className={styles.empty}>
@@ -492,23 +585,28 @@ export default function AssetsView({
               const topOffset = rowOffsets[rowIdx];
               return (
                 <div
-                  key={`gh-${rowData.groupKey}`}
+                  key={`gh-${rowData.groupPath}`}
                   className={styles.groupHeaderRow}
                   style={{ position: 'absolute', top: topOffset, left: 0, right: 0, height: rowData.rowH }}
                   role="row"
                   aria-rowindex={rowIdx + 2}
+                  data-depth={rowData.depth}
+                  data-group-path={rowData.groupPath}
                 >
-                  <div className={styles.groupHeaderCell} style={{ width: NAME_W + totalDays * dayColW }}>
-                    <button
-                      className={styles.groupToggleBtn}
-                      onClick={() => toggleGroup(rowData.groupKey)}
-                      aria-expanded={!rowData.collapsed}
-                      aria-label={`${rowData.collapsed ? 'Expand' : 'Collapse'} group ${rowData.groupLabel}`}
-                    >
-                      <span className={styles.groupChevron} data-collapsed={rowData.collapsed || undefined}>&#9656;</span>
-                      <span className={styles.groupLabel}>{rowData.groupLabel}</span>
-                      <span className={styles.groupCount}>{rowData.count}</span>
-                    </button>
+                  <div
+                    className={styles.groupHeaderCell}
+                    style={{ width: NAME_W + totalDays * dayColW }}
+                  >
+                    <GroupHeader
+                      label={rowData.groupLabel}
+                      count={rowData.count}
+                      depth={rowData.depth}
+                      collapsed={rowData.collapsed}
+                      onToggle={() => toggleGroup(rowData.groupPath)}
+                      posInSet={rowData.posInSet}
+                      setSize={rowData.setSize}
+                      fieldLabel={rowData.field}
+                    />
                   </div>
                 </div>
               );
