@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Plus, Trash2, Check, Camera, Pencil } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
+import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import { serializeFilters } from '../hooks/useSavedViews.js';
 import { THEMES } from '../styles/themes.js';
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'setup',       label: 'Setup' },
   { id: 'hoverCard',   label: 'Hover Card' },
   { id: 'eventFields', label: 'Event Fields' },
+  { id: 'categories',  label: 'Categories' },
   { id: 'display',     label: 'Display' },
   { id: 'theme',       label: 'Theme' },
   { id: 'feeds',       label: 'Feeds' },
@@ -73,6 +75,7 @@ export default function ConfigPanel({
           {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} />}
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
+          {tab === 'categories'  && <CategoriesTab   config={config} onUpdate={onUpdate} />}
           {tab === 'display'     && <DisplayTab     config={config} onUpdate={onUpdate} />}
           {tab === 'theme'       && <ThemeCustomizer theme={config.customTheme} onChange={onUpdate} />}
           {tab === 'feeds'       && (
@@ -584,6 +587,129 @@ function EventFieldsTab({ config, categories, onUpdate }) {
           <button className={styles.addFieldBtn} onClick={addField}><Plus size={13} /> Add field</button>
         </>
       )}
+    </div>
+  );
+}
+
+/* ----- Categories tab ----- */
+/**
+ * Owner-editable CategoriesConfig. Persists to config.categoriesConfig;
+ * WorksCalendar merges `props.categoriesConfig ?? config.categoriesConfig ??
+ * { categories: DEFAULT_CATEGORIES }`. Category hue drives AssetsView pill
+ * color; id is the key referenced by event.category.
+ */
+export function CategoriesTab({ config, onUpdate }) {
+  const current = config.categoriesConfig ?? { categories: DEFAULT_CATEGORIES };
+  const cats = current.categories ?? [];
+  const pillStyle = current.pillStyle ?? 'hue';
+  const defaultId = current.defaultCategoryId ?? cats[0]?.id ?? '';
+
+  const patchConfig = (patch) => onUpdate(c => ({
+    ...c,
+    categoriesConfig: { ...(c.categoriesConfig ?? { categories: DEFAULT_CATEGORIES }), ...patch },
+  }));
+
+  const patchCats = (next) => patchConfig({ categories: next });
+
+  const updateCat = (idx, patch) => {
+    const next = cats.map((cat, i) => (i === idx ? { ...cat, ...patch } : cat));
+    patchCats(next);
+  };
+
+  const addCat = () => {
+    const n = cats.length + 1;
+    patchCats([...cats, { id: `category-${n}`, label: `Category ${n}`, color: '#64748b' }]);
+  };
+
+  const removeCat = (idx) => patchCats(cats.filter((_, i) => i !== idx));
+
+  const resetToDefaults = () => patchConfig({
+    categories: DEFAULT_CATEGORIES.map(c => ({ ...c })),
+    pillStyle: 'hue',
+    defaultCategoryId: DEFAULT_CATEGORIES[0].id,
+  });
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Configure event categories. Color drives pill hue on Assets and Timeline;
+        disabling a category hides it from new-event pickers but keeps history intact.
+      </p>
+
+      <div className={styles.formRow}>
+        <span>Pill style</span>
+        <select
+          className={styles.select}
+          value={pillStyle}
+          onChange={e => patchConfig({ pillStyle: e.target.value })}
+          aria-label="Pill style"
+        >
+          <option value="hue">Hue (full fill)</option>
+          <option value="stripe">Stripe (left edge)</option>
+          <option value="border">Border only</option>
+        </select>
+      </div>
+
+      <div className={styles.formRow}>
+        <span>Default category</span>
+        <select
+          className={styles.select}
+          value={defaultId}
+          onChange={e => patchConfig({ defaultCategoryId: e.target.value })}
+          aria-label="Default category"
+        >
+          {cats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </select>
+      </div>
+
+      {cats.map((cat, i) => (
+        <div key={cat.id + ':' + i} className={styles.fieldRow} data-category-id={cat.id}>
+          <input
+            type="color"
+            className={styles.input}
+            style={{ width: 52, padding: 2 }}
+            value={cat.color}
+            onChange={e => updateCat(i, { color: e.target.value })}
+            aria-label={`Color for ${cat.label}`}
+          />
+          <input
+            className={styles.input}
+            value={cat.label}
+            onChange={e => updateCat(i, { label: e.target.value })}
+            placeholder="Label"
+            aria-label={`Label for ${cat.id}`}
+          />
+          <input
+            className={styles.input}
+            value={cat.id}
+            onChange={e => updateCat(i, { id: e.target.value.trim() || cat.id })}
+            placeholder="id"
+            aria-label={`Id for ${cat.label}`}
+          />
+          <label className={styles.reqLabel}>
+            <input
+              type="checkbox"
+              checked={!!cat.disabled}
+              onChange={e => updateCat(i, { disabled: e.target.checked })}
+            />
+            Disabled
+          </label>
+          <button
+            className={styles.removeBtn}
+            onClick={() => removeCat(i)}
+            aria-label={`Remove ${cat.label}`}
+          ><Trash2 size={13} /></button>
+        </div>
+      ))}
+
+      <button className={styles.addFieldBtn} onClick={addCat}>
+        <Plus size={13} /> Add category
+      </button>
+
+      <div className={styles.formRow} style={{ marginTop: 16 }}>
+        <span>Reset to shipped defaults</span>
+        <button className={styles.addBtn} onClick={resetToDefaults}>Reset</button>
+      </div>
     </div>
   );
 }
