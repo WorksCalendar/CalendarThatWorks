@@ -604,25 +604,48 @@ export function CategoriesTab({ config, onUpdate }) {
   const pillStyle = current.pillStyle ?? 'hue';
   const defaultId = current.defaultCategoryId ?? cats[0]?.id ?? '';
 
+  /**
+   * Shallow-merges `patch` into `config.categoriesConfig`, seeding the
+   * object with `{ categories: DEFAULT_CATEGORIES }` if the owner never
+   * set it. Every other mutator in this tab funnels through here so the
+   * baseline shape is always preserved.
+   */
   const patchConfig = (patch) => onUpdate(c => ({
     ...c,
     categoriesConfig: { ...(c.categoriesConfig ?? { categories: DEFAULT_CATEGORIES }), ...patch },
   }));
 
+  /** Replaces the full `categories` array; convenience wrapper over `patchConfig`. */
   const patchCats = (next) => patchConfig({ categories: next });
 
+  /**
+   * Patches a single category at `idx` by index. Unknown indices are a
+   * no-op because `.map` simply yields an identical array. Callers use
+   * this for color / label / id / disabled edits.
+   */
   const updateCat = (idx, patch) => {
     const next = cats.map((cat, i) => (i === idx ? { ...cat, ...patch } : cat));
     patchCats(next);
   };
 
+  /**
+   * Appends a new blank category with a deterministic id (`category-<N>`)
+   * and a neutral slate color so the owner can immediately customize it.
+   * The id uses the post-append length to stay unique without a UUID dep.
+   */
   const addCat = () => {
     const n = cats.length + 1;
     patchCats([...cats, { id: `category-${n}`, label: `Category ${n}`, color: '#64748b' }]);
   };
 
+  /** Removes the category at `idx`; history events keep their original category id. */
   const removeCat = (idx) => patchCats(cats.filter((_, i) => i !== idx));
 
+  /**
+   * Restores the DEFAULT_CATEGORIES seed + default pillStyle + default
+   * categoryId in one atomic update. Clones entries so later edits can't
+   * mutate the exported `DEFAULT_CATEGORIES` constant.
+   */
   const resetToDefaults = () => patchConfig({
     categories: DEFAULT_CATEGORIES.map(c => ({ ...c })),
     pillStyle: 'hue',

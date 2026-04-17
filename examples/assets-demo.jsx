@@ -16,6 +16,11 @@ import { useMemo, useState } from 'react';
 import { WorksCalendar, createManualLocationProvider, DEFAULT_CATEGORIES } from '../src/index.js';
 
 // ── Seeded PRNG ───────────────────────────────────────────────────────────────
+/**
+ * mulberry32 — a tiny, fast 32-bit PRNG. Used here so the fixture is
+ * byte-for-byte reproducible across reloads and CI visual-QA runs.
+ * Do NOT use for anything security-sensitive.
+ */
 function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {
@@ -27,7 +32,9 @@ function mulberry32(seed) {
   };
 }
 const rand = mulberry32(20260417);
+/** Returns a uniformly random element from `arr` via the shared seeded rng. */
 const pick = (arr) => arr[Math.floor(rand() * arr.length)];
+/** Returns an inclusive-range integer in [min, max] via the shared seeded rng. */
 const randInt = (min, max) => Math.floor(rand() * (max - min + 1)) + min;
 
 // ── Fixture constants ─────────────────────────────────────────────────────────

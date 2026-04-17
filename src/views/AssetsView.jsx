@@ -53,6 +53,12 @@ const APPROVAL_STAGES = new Set([
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * First-fit lane packing for horizontal Gantt bars. Clips each event to the
+ * visible month window, sorts by start then end, and assigns `_lane` to the
+ * earliest slot that's free at the event's start day. Returns the clipped
+ * events plus the max lane count so the row can size its height.
+ */
 function assignLanes(events, monthStart, monthEnd) {
   const clipped = events
     .filter(e => startOfDay(e.start) <= monthEnd && startOfDay(e.end) >= monthStart)
@@ -89,6 +95,11 @@ function assignLanes(events, monthStart, monthEnd) {
   return { events: clipped, laneCount: Math.max(1, laneEnd.length) };
 }
 
+/**
+ * Builds a Map of category id → hex color from CategoriesConfig.categories
+ * (falling back to DEFAULT_CATEGORIES when the prop is empty). Used by
+ * resolveAssetColor to look up the pill hue for a given event.
+ */
 function buildCategoryColorMap(categoriesConfig) {
   const map = new Map();
   const defs = categoriesConfig?.categories?.length
@@ -100,8 +111,12 @@ function buildCategoryColorMap(categoriesConfig) {
   return map;
 }
 
+/**
+ * Resolves the pill hue for an event with the documented priority chain:
+ * context colorRules > categoriesConfig > event.color > undefined (falls
+ * through to CSS default).
+ */
 function resolveAssetColor(ev, categoryColorMap, colorRules) {
-  // Priority: colorRules > categoriesConfig > event.color > undefined.
   const ruleColor = resolveColor(ev, colorRules);
   if (ruleColor) return ruleColor;
   if (ev.category && categoryColorMap.has(ev.category)) {
@@ -110,11 +125,20 @@ function resolveAssetColor(ev, categoryColorMap, colorRules) {
   return ev.color;
 }
 
+/**
+ * Returns the 5-state approval stage id when the event's meta has a known
+ * value, otherwise null. Unknown strings are treated as null so the pill
+ * renders without a stage-specific CSS class.
+ */
 function getApprovalStage(ev) {
   const stage = ev?.meta?.approvalStage?.stage;
   return APPROVAL_STAGES.has(stage) ? stage : null;
 }
 
+/**
+ * Maps an ApprovalStageId to the CSS module class that styles the pill for
+ * that stage. Returns '' for null/unknown stages.
+ */
 function approvalClass(stage) {
   switch (stage) {
     case 'requested':      return styles.stageRequested;
@@ -126,6 +150,12 @@ function approvalClass(stage) {
   }
 }
 
+/**
+ * Short uppercase label rendered inside a pill to communicate stages that
+ * aren't self-evident from title + color (requested / finalized / pending).
+ * Approved and denied skip the prefix — approved is the "happy path" and
+ * denied is already communicated via strikethrough + fade.
+ */
 function approvalPrefix(stage) {
   if (stage === 'requested')      return 'REQUESTED';
   if (stage === 'finalized')      return 'FINALIZED';

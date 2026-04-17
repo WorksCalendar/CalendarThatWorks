@@ -10,6 +10,11 @@ import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import styles from './AuditDrawer.module.css';
 
+/**
+ * Formats an ISO timestamp as a locale-aware date + time string. Returns the
+ * raw input unchanged when the value is falsy or unparseable so the caller
+ * never renders "Invalid Date".
+ */
 function formatAt(iso) {
   if (!iso) return '';
   try {

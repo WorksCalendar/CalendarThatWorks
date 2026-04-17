@@ -44,12 +44,19 @@ export interface CreateManualLocationProviderOptions extends ManualLocationProvi
   getResource?: (resourceId: string) => ResourceLike | null | undefined;
 }
 
+/** Builds a fresh LocationData placeholder for resources with no meta match. */
 const UNKNOWN_LOCATION = (): LocationData => ({
   text:   'Unknown',
   asOf:   new Date().toISOString(),
   status: 'unknown',
 });
 
+/**
+ * Normalizes whatever value the host placed on `resource.meta[metaKey]` into
+ * a LocationData. Strings are wrapped as `{ text, status: 'unknown' }`;
+ * objects with a `text` string are passed through with defaults filled in;
+ * null / malformed values fall through to the Unknown placeholder.
+ */
 function toLocationData(raw: unknown): LocationData {
   if (raw == null) return UNKNOWN_LOCATION();
 
@@ -77,6 +84,13 @@ function toLocationData(raw: unknown): LocationData {
   return UNKNOWN_LOCATION();
 }
 
+/**
+ * Factory for the zero-config default LocationProvider. Accepts either a
+ * static `resources` array or a dynamic `getResource` resolver; both read
+ * the location off `resource.meta[metaKey]` (default key: 'location').
+ * `refreshIntervalMs` is 0 so AssetsView never polls — meta is re-read on
+ * demand when AssetsView calls `fetchLocation`.
+ */
 export function createManualLocationProvider(
   options: CreateManualLocationProviderOptions = {},
 ): LocationProvider {

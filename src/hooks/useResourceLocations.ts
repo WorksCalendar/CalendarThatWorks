@@ -20,8 +20,24 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LocationData, LocationProvider } from '../types/assets';
 
+/**
+ * Floor for provider poll intervals. Providers that advertise a shorter
+ * `refreshIntervalMs` are clamped up to this value so a misbehaving plugin
+ * can't hammer the host with sub-second fetch calls. `refreshIntervalMs: 0`
+ * disables polling entirely (initial fetch only) and bypasses this floor.
+ */
 const MIN_POLL_MS = 5000;
 
+/**
+ * React hook that binds a `LocationProvider` to a list of resource ids and
+ * returns a `Map<resourceId, LocationData | null>` suitable for rendering
+ * the AssetsView sticky-column location banners.
+ *
+ * See the file-level docstring for the full lifecycle contract. Callers
+ * should memoize `resourceIds` — changes to array identity (not content)
+ * are tolerated via the join-based `idsKey`, but a stable upstream array
+ * minimizes re-subscription churn.
+ */
 export function useResourceLocations(
   resourceIds: string[],
   provider: LocationProvider | null | undefined,
@@ -45,6 +61,12 @@ export function useResourceLocations(
     const unsubs: Array<() => void> = [];
     const intervals: ReturnType<typeof setInterval>[] = [];
 
+    /**
+     * Commits a single resource's location into state. Bails out when the
+     * effect has been torn down, and returns the previous Map reference
+     * unchanged when the value for `resourceId` hasn't moved — so downstream
+     * memoized selectors don't see a phantom identity change.
+     */
     const update = (resourceId: string, data: LocationData | null) => {
       if (cancelled) return;
       setLocations(prev => {
@@ -56,6 +78,12 @@ export function useResourceLocations(
       });
     };
 
+    /**
+     * Runs a single `fetchLocation` call for `id`, forwarding the abort
+     * signal so in-flight requests are cancelled on unmount. Failures are
+     * coerced into an `{ status: 'error' }` LocationData so the UI can
+     * surface a badge instead of hanging on stale text.
+     */
     const runFetch = (id: string) => {
       provider.fetchLocation(id, abort.signal)
         .then(data => update(id, data))
@@ -66,6 +94,13 @@ export function useResourceLocations(
         }));
     };
 
+    /**
+     * Top-level orchestration for the effect: awaits optional `init()`,
+     * computes the clamped poll interval, then for each id either opens a
+     * push subscription or kicks off the fetch + interval polling pair.
+     * Subscribed resources still do one eager fetch so the banner isn't
+     * blank while waiting for the first pushed update.
+     */
     const start = async () => {
       if (provider.init) {
         try { await provider.init(); } catch { /* ignore, per plugin contract */ }
