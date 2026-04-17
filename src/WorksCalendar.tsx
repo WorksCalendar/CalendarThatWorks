@@ -148,6 +148,14 @@ export type WorksCalendarProps = {
   groupBy?: GroupByInput;
   sort?: SortConfig | SortConfig[];
   showAllGroups?: boolean;
+
+  // ── Assets view ──
+  locationProvider?: LocationProvider;
+  categoriesConfig?: Record<string, unknown>;
+  onConflictCheck?: (...args: unknown[]) => Promise<unknown>;
+  onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
+  renderAssetLocation?: (...args: unknown[]) => ReactNode;
+  renderConflictBody?: (...args: unknown[]) => ReactNode;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -284,6 +292,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     groupBy,
     sort,
     showAllGroups,
+
+    // ── Assets view ──
+    locationProvider,
+    categoriesConfig,
+    onConflictCheck,
+    onApprovalAction,
+    renderAssetLocation,
+    renderConflictBody,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -375,6 +391,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
   useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
+
+  // ── Assets view: zoom level + location provider ──
+  const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
+  const effectiveLocationProvider = useMemo<LocationProvider>(
+    () => locationProvider ?? createManualLocationProvider(),
+    [locationProvider],
+  );
 
   // Mark dirty when filters/view/groupBy/sort/showAllGroups change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
@@ -1517,7 +1540,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               applyView:   handleApplyView,
               saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups }),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
@@ -1534,7 +1557,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               onAdd={({ name, color, pinView }) =>
                 savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups)}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups })}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
             />

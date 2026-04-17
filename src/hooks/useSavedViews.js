@@ -73,6 +73,11 @@ function sanitizeCollapsedGroups(value) {
   return entries.length > 0 ? entries : null;
 }
 
+/** Assets-view zoom level: one of 'day' | 'week' | 'month' | 'quarter', else null. */
+function sanitizeZoomLevel(value) {
+  return typeof value === 'string' && ASSETS_ZOOM_LEVELS.has(value) ? value : null;
+}
+
 function normalizeSavedView(view) {
   if (!view || typeof view !== 'object') return null;
   if (typeof view.id !== 'string' || typeof view.name !== 'string') return null;
@@ -87,6 +92,8 @@ function normalizeSavedView(view) {
     conditions:      Array.isArray(view.conditions) ? view.conditions : null,
     groupBy:         sanitizeGroupBy(view.groupBy),
     sort:            sanitizeSort(view.sort),
+    sortBy:          sanitizeSort(view.sortBy),
+    zoomLevel:       sanitizeZoomLevel(view.zoomLevel),
     collapsedGroups: sanitizeCollapsedGroups(view.collapsedGroups),
     showAllGroups:   typeof view.showAllGroups === 'boolean' ? view.showAllGroups : null,
     filters:         view.filters,
@@ -253,6 +260,8 @@ export function useSavedViews(calendarId) {
     conditions,
     groupBy,
     sort,
+    sortBy,
+    zoomLevel,
     collapsedGroups,
     showAllGroups,
   } = {}) => {
@@ -265,6 +274,8 @@ export function useSavedViews(calendarId) {
       conditions:      conditions ?? null,
       groupBy:         sanitizeGroupBy(groupBy),
       sort:            sanitizeSort(sort),
+      sortBy:          sanitizeSort(sortBy),
+      zoomLevel:       sanitizeZoomLevel(zoomLevel),
       collapsedGroups: sanitizeCollapsedGroups(collapsedGroups),
       showAllGroups:   typeof showAllGroups === 'boolean' ? showAllGroups : null,
       filters:         serializeFilters(filters),
@@ -277,7 +288,8 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName, groupBy, sort, showAllGroups) => {
+  const resaveView = useCallback((id, filters, viewName, groupBy, opts = {}) => {
+    const { sort, showAllGroups, sortBy, zoomLevel } = opts || {};
     setViews(prev => prev.map(v =>
       v.id === id
         ? {
@@ -286,6 +298,8 @@ export function useSavedViews(calendarId) {
             view:    viewName ?? v.view,
             ...(groupBy !== undefined ? { groupBy: sanitizeGroupBy(groupBy) } : {}),
             ...(sort !== undefined ? { sort: sanitizeSort(sort) } : {}),
+            ...(sortBy !== undefined ? { sortBy: sanitizeSort(sortBy) } : {}),
+            ...(zoomLevel !== undefined ? { zoomLevel: sanitizeZoomLevel(zoomLevel) } : {}),
             ...(showAllGroups !== undefined
               ? { showAllGroups: typeof showAllGroups === 'boolean' ? showAllGroups : null }
               : {}),
