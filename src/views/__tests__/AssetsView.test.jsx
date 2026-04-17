@@ -239,6 +239,39 @@ describe('AssetsView — locationProvider wiring', () => {
   });
 });
 
+describe('AssetsView — audit drawer', () => {
+  it('opens the audit drawer when a denied pill is clicked (and does NOT call onEventClick)', () => {
+    const onEventClick = vi.fn();
+    renderAssets({ onEventClick });
+    fireEvent.click(screen.getByRole('button', { name: /Maintenance \(denied\)/ }));
+    expect(screen.getByRole('dialog', { name: /Audit history for Maintenance/ })).toBeInTheDocument();
+    expect(onEventClick).not.toHaveBeenCalled();
+  });
+
+  it('opens the audit drawer when a pending_higher pill is clicked', () => {
+    const onEventClick = vi.fn();
+    renderAssets({ onEventClick });
+    fireEvent.click(screen.getByRole('button', { name: /Coverage run/ }));
+    expect(screen.getByRole('dialog', { name: /Audit history for Coverage run/ })).toBeInTheDocument();
+    expect(onEventClick).not.toHaveBeenCalled();
+  });
+
+  it('does NOT open the drawer for approved pills (onEventClick still fires)', () => {
+    const onEventClick = vi.fn();
+    renderAssets({ onEventClick });
+    fireEvent.click(screen.getByRole('button', { name: /Training block/ }));
+    expect(screen.queryByRole('dialog', { name: /Audit history/ })).not.toBeInTheDocument();
+    expect(onEventClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the drawer via the close button', () => {
+    renderAssets();
+    fireEvent.click(screen.getByRole('button', { name: /Maintenance \(denied\)/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Close audit history/ }));
+    expect(screen.queryByRole('dialog', { name: /Audit history/ })).not.toBeInTheDocument();
+  });
+});
+
 describe('AssetsView — keyboard navigation', () => {
   it('moves focus right with ArrowRight', () => {
     renderAssets();

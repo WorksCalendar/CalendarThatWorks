@@ -29,6 +29,9 @@ import { useGrouping } from '../hooks/useGrouping.js';
 import { buildFieldAccessor } from '../grouping/buildFieldAccessor.js';
 import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
+import AuditDrawer from './AuditDrawer.jsx';
+
+const AUDIT_STAGES = new Set(['denied', 'pending_higher']);
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -145,6 +148,8 @@ export default function AssetsView({
   renderAssetLocation,
 }) {
   const ctx = useCalendarContext();
+
+  const [auditEvent, setAuditEvent] = useState(null);
 
   const activeZoom = ZOOM_PX_PER_DAY[zoomLevel] ? zoomLevel : 'month';
   const pxPerDay   = ZOOM_PX_PER_DAY[activeZoom];
@@ -314,7 +319,9 @@ export default function AssetsView({
         e.preventDefault();
         const hit = cellRowEvents.find(ev => ev._dayStart <= di && ev._dayEnd >= di);
         if (hit) {
-          onEventClick?.(hit);
+          const hitStage = getApprovalStage(hit);
+          if (AUDIT_STAGES.has(hitStage)) setAuditEvent(hit);
+          else onEventClick?.(hit);
         } else {
           const dayDate = days[di];
           onDateSelect?.(startOfDay(dayDate), addDays(startOfDay(dayDate), 1), resourceId);
@@ -545,9 +552,11 @@ export default function AssetsView({
                     const left    = ev._dayStart * dayColW + 2;
                     const width   = Math.max(dayColW - 4, (ev._dayEnd - ev._dayStart + 1) * dayColW - 4);
                     const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
-                    const onClick = () => onEventClick?.(ev);
-
                     const stage       = getApprovalStage(ev);
+                    const onClick = () => {
+                      if (AUDIT_STAGES.has(stage)) setAuditEvent(ev);
+                      else onEventClick?.(ev);
+                    };
                     const prefix      = approvalPrefix(stage);
                     const statusClass = ev.status === 'cancelled' ? styles.cancelled
                       : ev.status === 'tentative' ? styles.tentative : '';
@@ -589,6 +598,7 @@ export default function AssetsView({
           })}
         </div>
       </div>
+      <AuditDrawer event={auditEvent} onClose={() => setAuditEvent(null)} />
     </div>
   );
 }
