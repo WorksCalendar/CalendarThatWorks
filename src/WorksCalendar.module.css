@@ -516,6 +516,36 @@
   }
 }
 
+/* Touch devices: guarantee comfortable tap targets (≥44px per iOS HIG).
+ * Keyed to (pointer: coarse) so mouse users keep the dense desktop UI. */
+@media (pointer: coarse) {
+  .navBtn,
+  .exportBtn,
+  .wandBtn {
+    width: 44px;
+    height: 44px;
+  }
+  .todayBtn {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+  .viewBtn {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  .addBtn {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+  .editModeExit {
+    min-height: 36px;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}
+
 /* Mobile (≤ 480px): two-row toolbar, tighter everything */
 @media (max-width: 480px) {
   .toolbar {

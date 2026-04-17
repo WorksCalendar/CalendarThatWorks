@@ -225,3 +225,34 @@
   .evTitle { font-size: 12px; }
   .evTime  { font-size: 10px; }
 }
+
+/* Touch devices: expand the resize handle hit area. */
+@media (pointer: coarse) {
+  .resizeHandle {
+    height: 18px;
+  }
+  .resizeHandle::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
+  }
+  .resizeHandleTop {
+    height: 16px;
+  }
+  .resizeHandleTop::before {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
+  }
+  .allDayPill {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}

@@ -319,3 +319,21 @@
   .spanBar   { font-size: 10px; padding: 0 3px; }
   .popover   { width: min(260px, calc(100vw - 16px)) !important; }
 }
+
+/* Touch devices: bump small hit targets. Event pills stay visually dense
+ * because month-cell real estate is scarce, but we expand the "more" link
+ * and popover controls to a comfortable size. */
+@media (pointer: coarse) {
+  .moreLink {
+    min-height: 32px;
+    min-width: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .popoverHead button {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+    font-size: 18px;
+  }
+}

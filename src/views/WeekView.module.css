@@ -400,3 +400,35 @@
   .allDayRow { grid-template-columns: 40px 1fr; }
   .grid { grid-template-columns: 40px repeat(7, 88px); min-width: max-content; overflow-y: visible; }
 }
+
+/* Touch devices: expand the resize handle visual + hit area.
+ * 5px is unreachable with a fingertip; bump to 14px visual with a further 8px
+ * upward hit area via pseudo-element so the event body still gets the rest. */
+@media (pointer: coarse) {
+  .resizeHandle {
+    height: 14px;
+  }
+  .resizeHandle::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+  }
+  .resizeHandleTop {
+    height: 14px;
+  }
+  .resizeHandleTop::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+  }
+  .allDaySpan {
+    min-height: 28px;
+    font-size: 12px;
+  }
+}
