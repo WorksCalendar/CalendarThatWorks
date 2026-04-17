@@ -185,6 +185,14 @@
   opacity: 0.85;
 }
 
+/* ── Drop target (DnD between groups) ──────────────────────── */
+.dropTarget {
+  outline: 2px dashed var(--wc-accent);
+  outline-offset: 2px;
+  border-radius: var(--wc-radius);
+  background: color-mix(in srgb, var(--wc-accent) 8%, transparent);
+}
+
 .sourceBadge {
   display: inline-block;
   font-size: 10px;

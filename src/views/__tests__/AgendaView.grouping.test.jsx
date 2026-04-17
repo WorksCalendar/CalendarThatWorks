@@ -168,6 +168,142 @@ describe('AgendaView grouping', () => {
     });
   });
 
+  describe('DnD between groups', () => {
+    function dragAndDrop(source, target) {
+      const dt = {
+        effectAllowed: '',
+        dropEffect: '',
+        _data: {},
+        setData(k, v) { this._data[k] = v; },
+        getData(k) { return this._data[k]; },
+      };
+      fireEvent.dragStart(source, { dataTransfer: dt });
+      fireEvent.dragOver(target, { dataTransfer: dt });
+      fireEvent.drop(target, { dataTransfer: dt });
+      fireEvent.dragEnd(source, { dataTransfer: dt });
+    }
+
+    it('dragging an event into another group calls onEventGroupChange with a field patch', () => {
+      const onEventGroupChange = vi.fn();
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={events}
+            onEventClick={vi.fn()}
+            onEventGroupChange={onEventGroupChange}
+            groupBy="category"
+          />
+        </CalendarContext.Provider>,
+      );
+
+      // Source: "Team Meeting" (natively under Work).
+      const source = screen.getByText('Team Meeting').closest('button');
+      expect(source).toHaveAttribute('draggable', 'true');
+
+      // Target: the Exercise group container (any sub-group div role=group).
+      const exerciseItem = screen.getAllByRole('treeitem').find(
+        i => i.textContent?.startsWith('Exercise'),
+      );
+      const target = exerciseItem.closest('[role="group"]');
+      expect(target).toBeTruthy();
+
+      dragAndDrop(source, target);
+
+      expect(onEventGroupChange).toHaveBeenCalledTimes(1);
+      const [evArg, patchArg] = onEventGroupChange.mock.calls[0];
+      expect(evArg.id).toBe('e3'); // Team Meeting
+      expect(patchArg).toEqual({ category: 'Exercise' });
+    });
+
+    it('dropping into the same group does not fire onEventGroupChange', () => {
+      const onEventGroupChange = vi.fn();
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={events}
+            onEventClick={vi.fn()}
+            onEventGroupChange={onEventGroupChange}
+            groupBy="category"
+          />
+        </CalendarContext.Provider>,
+      );
+
+      // Drag "Morning Run" into Exercise (its native group).
+      const source = screen.getByText('Morning Run').closest('button');
+      const exerciseItem = screen.getAllByRole('treeitem').find(
+        i => i.textContent?.startsWith('Exercise'),
+      );
+      const target = exerciseItem.closest('[role="group"]');
+
+      dragAndDrop(source, target);
+
+      expect(onEventGroupChange).not.toHaveBeenCalled();
+    });
+
+    it('nested groupBy builds multi-field patch from ancestor groups', () => {
+      const multi = [
+        { id: 'a', title: 'Alice PT', category: 'Work',     resource: 'Alice', start: sameDay, end: sameDay, allDay: true },
+        { id: 'b', title: 'Bob Run',  category: 'Exercise', resource: 'Bob',   start: sameDay, end: sameDay, allDay: true },
+      ];
+      const onEventGroupChange = vi.fn();
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={multi}
+            onEventClick={vi.fn()}
+            onEventGroupChange={onEventGroupChange}
+            groupBy={['category', 'resource']}
+          />
+        </CalendarContext.Provider>,
+      );
+
+      // Drag Alice (Work/Alice) into the Exercise/Bob leaf.
+      const source = screen.getByText('Alice PT').closest('button');
+      const exerciseBob = screen.getAllByRole('treeitem').filter(
+        i => i.textContent?.startsWith('Bob') && i.getAttribute('aria-level') === '2',
+      );
+      // Find the one under Exercise (not Work — but in this fixture Bob only
+      // exists under Exercise, so there's exactly one).
+      const target = exerciseBob[0].closest('[role="group"]');
+      expect(target).toBeTruthy();
+
+      dragAndDrop(source, target);
+
+      expect(onEventGroupChange).toHaveBeenCalledTimes(1);
+      const [, patchArg] = onEventGroupChange.mock.calls[0];
+      expect(patchArg).toEqual({ category: 'Exercise', resource: 'Bob' });
+    });
+
+    it('cross-group copies (showAllGroups) are not draggable', () => {
+      const onEventGroupChange = vi.fn();
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={events}
+            onEventClick={vi.fn()}
+            onEventGroupChange={onEventGroupChange}
+            groupBy="category"
+            showAllGroups
+          />
+        </CalendarContext.Provider>,
+      );
+      // Each event appears twice; only the native copy should be draggable.
+      const runs = screen.getAllByText('Morning Run');
+      const draggables = runs.map(r => r.closest('button')).filter(b => b?.getAttribute('draggable') === 'true');
+      expect(draggables).toHaveLength(1);
+    });
+
+    it('events are not draggable when onEventGroupChange is not provided', () => {
+      renderAgenda({ groupBy: 'category' });
+      const source = screen.getByText('Team Meeting').closest('button');
+      expect(source).not.toHaveAttribute('draggable', 'true');
+    });
+  });
+
   it('applies default start-time sort per day when no sort prop is given', () => {
     const d1 = new Date(2026, 3, 5, 9);
     const d2 = new Date(2026, 3, 5, 14);

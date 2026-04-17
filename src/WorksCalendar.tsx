@@ -118,6 +118,7 @@ export type WorksCalendarProps = {
   onEventMove?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
+  onEventGroupChange?: (event: WorksCalendarEvent, patch: Record<string, unknown>) => void;
   onDateSelect?: (start: Date, end: Date) => void;
   supabaseUrl?: string;
   supabaseKey?: string;
@@ -226,6 +227,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventMove,
     onEventResize,
     onEventDelete,
+    onEventGroupChange,
     onDateSelect,
 
     // ── Supabase realtime ──
@@ -1072,6 +1074,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
   }, [applyWithRecurringCheck, getSavedEventPayload, onEventResize, onEventSave]);
 
+  const handleEventGroupChange = useCallback((ev, patch) => {
+    if (!patch || typeof patch !== 'object') return;
+    const raw = ev._raw ?? ev;
+    const id  = ev._eventId ?? String(ev.id);
+    if (onEventGroupChange) {
+      onEventGroupChange(ev, patch);
+      return;
+    }
+    applyEngineOp(
+      { type: 'update', id, patch, source: 'api' },
+      () => emitEventSave(id, raw, patch),
+    );
+  }, [applyEngineOp, emitEventSave, onEventGroupChange]);
+
   const handleEventDelete = useCallback((id) => {
     // Find the event so we can check if it's recurring.
     const ev      = expandedEvents.find(e => String(e.id) === String(id)) ?? { id };
@@ -1362,6 +1378,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventClick:  handleEventClick,
     onEventMove:   handleEventMove,
     onEventResize: handleEventResize,
+    onEventGroupChange: handleEventGroupChange,
     onDateSelect:  handleDateSelect,
     config:        ownerCfg.config,
     weekStartDay,
@@ -1560,7 +1577,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} groupBy={activeGroupBy} sort={activeSort} showAllGroups={activeShowAllGroups} />}
+              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} onEventGroupChange={handleEventGroupChange} groupBy={activeGroupBy} sort={activeSort} showAllGroups={activeShowAllGroups} />}
               {cal.view === 'schedule' && (
                 <TimelineView
                   currentDate={cal.currentDate}
