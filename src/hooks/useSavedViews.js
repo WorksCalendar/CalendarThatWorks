@@ -16,7 +16,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { createId } from '../core/createId.js';
 
 function viewsKey(calendarId) { return `wc-saved-views-${calendarId}`; }
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
+const MIN_READABLE_VERSION = 2;
 
 const ASSETS_ZOOM_LEVELS = new Set(['day', 'week', 'month', 'quarter']);
 
@@ -25,20 +26,51 @@ function isValidDate(value) {
   return !Number.isNaN(date.getTime());
 }
 
-function normalizeSortBy(sortBy) {
-  if (!Array.isArray(sortBy)) return null;
-  const cleaned = sortBy.filter(entry =>
-    entry && typeof entry === 'object'
-    && typeof entry.field === 'string'
-    && (entry.direction === 'asc' || entry.direction === 'desc'),
-  ).map(entry => ({ field: entry.field, direction: entry.direction }));
-  return cleaned.length > 0 ? cleaned : null;
+/**
+ * Accept the three GroupByInput shapes (string | string[] | GroupConfig[]),
+ * stripping any non-serialisable fields (e.g. getKey/getLabel functions) so
+ * the value survives JSON.stringify/parse.
+ */
+function sanitizeGroupBy(value) {
+  if (typeof value === 'string' && value) return value;
+  if (!Array.isArray(value) || value.length === 0) return null;
+
+  if (value.every(item => typeof item === 'string' && item)) {
+    return value.slice();
+  }
+
+  const objects = value
+    .filter(item => item && typeof item === 'object' && typeof item.field === 'string' && item.field)
+    .map(item => {
+      const out = { field: item.field };
+      if (typeof item.label === 'string') out.label = item.label;
+      if (typeof item.showEmpty === 'boolean') out.showEmpty = item.showEmpty;
+      return out;
+    });
+  return objects.length > 0 ? objects : null;
 }
 
-function normalizeZoomLevel(zoomLevel) {
-  return typeof zoomLevel === 'string' && ASSETS_ZOOM_LEVELS.has(zoomLevel)
-    ? zoomLevel
-    : null;
+/** Accept SortConfig[] with serialisable fields only. */
+function sanitizeSort(value) {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const entries = value
+    .filter(item =>
+      item
+      && typeof item === 'object'
+      && typeof item.field === 'string'
+      && item.field
+      && (item.direction === 'asc' || item.direction === 'desc'),
+    )
+    .map(item => ({ field: item.field, direction: item.direction }));
+  return entries.length > 0 ? entries : null;
+}
+
+/** Accept Set<string> | string[]; persist as string[]. */
+function sanitizeCollapsedGroups(value) {
+  if (value instanceof Set) value = [...value];
+  if (!Array.isArray(value)) return null;
+  const entries = value.filter(item => typeof item === 'string' && item);
+  return entries.length > 0 ? entries : null;
 }
 
 function normalizeSavedView(view) {
@@ -47,16 +79,17 @@ function normalizeSavedView(view) {
   if (!view.filters || typeof view.filters !== 'object') return null;
 
   return {
-    id:         view.id,
-    name:       view.name,
-    createdAt:  typeof view.createdAt === 'string' ? view.createdAt : new Date().toISOString(),
-    color:      view.color ?? null,
-    view:       view.view ?? null,
-    conditions: Array.isArray(view.conditions) ? view.conditions : null,
-    groupBy:    typeof view.groupBy === 'string' ? view.groupBy : null,
-    sortBy:     normalizeSortBy(view.sortBy),
-    zoomLevel:  normalizeZoomLevel(view.zoomLevel),
-    filters:    view.filters,
+    id:              view.id,
+    name:            view.name,
+    createdAt:       typeof view.createdAt === 'string' ? view.createdAt : new Date().toISOString(),
+    color:           view.color ?? null,
+    view:            view.view ?? null,
+    conditions:      Array.isArray(view.conditions) ? view.conditions : null,
+    groupBy:         sanitizeGroupBy(view.groupBy),
+    sort:            sanitizeSort(view.sort),
+    collapsedGroups: sanitizeCollapsedGroups(view.collapsedGroups),
+    showAllGroups:   typeof view.showAllGroups === 'boolean' ? view.showAllGroups : null,
+    filters:         view.filters,
   };
 }
 
@@ -72,7 +105,13 @@ function migrateSavedViewsPayload(payload, calendarId) {
   }
 
   if (payload && typeof payload === 'object') {
-    if (payload.version === STORAGE_VERSION) {
+    if (
+      typeof payload.version === 'number'
+      && payload.version >= MIN_READABLE_VERSION
+      && payload.version <= STORAGE_VERSION
+    ) {
+      // v2 and v3 share the same on-disk shape; normalizeSavedView fills in
+      // new fields (sort, collapsedGroups, showAllGroups) as null on load.
       return normalizeViews(payload.views);
     }
 
@@ -208,18 +247,27 @@ export function useSavedViews(calendarId) {
     persistViews(calendarId, views);
   }, [calendarId, views]);
 
-  const saveView = useCallback((name, filters, { color, view, conditions, groupBy, sortBy, zoomLevel } = {}) => {
+  const saveView = useCallback((name, filters, {
+    color,
+    view,
+    conditions,
+    groupBy,
+    sort,
+    collapsedGroups,
+    showAllGroups,
+  } = {}) => {
     const savedView = {
-      id:         createId('view'),
+      id:              createId('view'),
       name,
-      createdAt:  new Date().toISOString(),
-      color:      color ?? null,
-      view:       view ?? null,
-      conditions: conditions ?? null,
-      groupBy:    typeof groupBy === 'string' ? groupBy : null,
-      sortBy:     normalizeSortBy(sortBy),
-      zoomLevel:  normalizeZoomLevel(zoomLevel),
-      filters:    serializeFilters(filters),
+      createdAt:       new Date().toISOString(),
+      color:           color ?? null,
+      view:            view ?? null,
+      conditions:      conditions ?? null,
+      groupBy:         sanitizeGroupBy(groupBy),
+      sort:            sanitizeSort(sort),
+      collapsedGroups: sanitizeCollapsedGroups(collapsedGroups),
+      showAllGroups:   typeof showAllGroups === 'boolean' ? showAllGroups : null,
+      filters:         serializeFilters(filters),
     };
     setViews(prev => [...prev, savedView]);
     return savedView;
@@ -229,17 +277,18 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName, groupBy, opts = {}) => {
-    const { sortBy, zoomLevel } = opts;
+  const resaveView = useCallback((id, filters, viewName, groupBy, sort, showAllGroups) => {
     setViews(prev => prev.map(v =>
       v.id === id
         ? {
             ...v,
             filters: serializeFilters(filters),
             view:    viewName ?? v.view,
-            ...(groupBy !== undefined ? { groupBy } : {}),
-            ...(sortBy !== undefined ? { sortBy: normalizeSortBy(sortBy) } : {}),
-            ...(zoomLevel !== undefined ? { zoomLevel: normalizeZoomLevel(zoomLevel) } : {}),
+            ...(groupBy !== undefined ? { groupBy: sanitizeGroupBy(groupBy) } : {}),
+            ...(sort !== undefined ? { sort: sanitizeSort(sort) } : {}),
+            ...(showAllGroups !== undefined
+              ? { showAllGroups: typeof showAllGroups === 'boolean' ? showAllGroups : null }
+              : {}),
           }
         : v
     ));

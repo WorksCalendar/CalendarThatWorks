@@ -18,6 +18,8 @@ import { CustomFilters }           from './05-CustomFilters.jsx';
 import { TeamCalendar }            from './06-TeamCalendar.jsx';
 import { MultiSource }             from './07-MultiSource.jsx';
 import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking.jsx';
+import { GroupingExample }         from './09-Grouping.jsx';
+import { DragAndDropExample }      from './10-DragAndDrop.jsx';
 import { BasicUsageExample }       from './basic-usage.jsx';
 import { SetupWizardExample }      from './setup-wizard.jsx';
 import { AdvancedFiltersExample }  from './advanced-filters.jsx';
@@ -126,11 +128,18 @@ const EXAMPLES = [
     component: ShiftCoverageTracking,
   },
   {
-    id:    'assets-demo',
-    label: 'Assets (Gantt) Demo',
-    tag:   '20 resources · 200 requests',
-    desc:  '5-state approval workflow, ManualLocationProvider banner, category hue, zoom Day/Week/Month/Quarter, and denied/pending pills that open the audit drawer.',
-    component: AssetsDemoExample,
+    id:    'grouping',
+    label: 'Grouping & Sort',
+    tag:   '1-, 2-, 3-level',
+    desc:  'Story patterns for infinite grouping: single/nested groupBy, showAllGroups, multi-field sort, saved views.',
+    component: GroupingExample,
+  },
+  {
+    id:    'drag-and-drop',
+    label: 'DnD Between Groups',
+    tag:   'onEventGroupChange',
+    desc:  'Drag an event across groups (agenda) or rows (timeline) to reassign. Patches flow through engine validation.',
+    component: DragAndDropExample,
   },
 ];
 
@@ -218,6 +227,8 @@ function SourceHint({ id }) {
     'team-calendar':   '06-TeamCalendar.jsx',
     'multi-source':         '07-MultiSource.jsx',
     'shift-coverage':       '08-ShiftCoverageTracking.jsx',
+    'grouping':             '09-Grouping.jsx',
+    'drag-and-drop':        '10-DragAndDrop.jsx',
     'basic-usage-modern':   'basic-usage.jsx',
     'setup-wizard':         'setup-wizard.jsx',
     'advanced-filters-new': 'advanced-filters.jsx',

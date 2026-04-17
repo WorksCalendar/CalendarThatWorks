@@ -1,12 +1,23 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isSameDay, isToday,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import { buildGroupTree } from '../hooks/useGrouping.ts';
+import { useTouchDnd } from '../hooks/useTouchDnd.js';
+import GroupHeader from '../ui/GroupHeader.tsx';
 import styles from './AgendaView.module.css';
 
-export default function AgendaView({ currentDate, events, onEventClick, groupBy }) {
+export default function AgendaView({
+  currentDate,
+  events,
+  onEventClick,
+  onEventGroupChange,
+  groupBy,
+  sort,
+  showAllGroups = false,
+}) {
   const ctx = useCalendarContext();
 
   const days = useMemo(() => {
@@ -15,42 +26,136 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy 
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
+  // When an upstream `sort` is set, trust the incoming order and skip the
+  // default chronological resort so user sort wins. When no sort is set,
+  // keep the historical start-time ordering per day.
+  const hasSort = Array.isArray(sort) ? sort.length > 0 : !!sort;
+
   const grouped = useMemo(() => {
     return days
-      .map(day => ({
-        day,
-        events: events
-          .filter(e => isSameDay(e.start, day))
-          .sort((a, b) => a.start - b.start),
-      }))
+      .map(day => {
+        const dayEvents = events.filter(e => isSameDay(e.start, day));
+        return {
+          day,
+          events: hasSort
+            ? dayEvents
+            : [...dayEvents].sort((a, b) => a.start - b.start),
+        };
+      })
       .filter(g => g.events.length > 0);
-  }, [days, events]);
+  }, [days, events, hasSort]);
 
-  const secondaryGrouped = useMemo(() => {
+  // Per-day group trees built from the event-level grouping engine. Pure —
+  // no collapse state baked in; that lives in local React state below.
+  const dayTrees = useMemo(() => {
     if (!groupBy) return null;
-    return grouped.map(({ day, events: dayEvents }) => {
-      const groups = new Map();
-      dayEvents.forEach(ev => {
-        const key = ev[groupBy] ?? ev.meta?.[groupBy] ?? '(Ungrouped)';
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(ev);
-      });
-      return { day, groups: [...groups.entries()].map(([key, evts]) => ({ key, events: evts })) };
-    });
+    return grouped.map(({ day, events: dayEvents }) => ({
+      day,
+      tree: buildGroupTree(dayEvents, groupBy),
+    }));
   }, [grouped, groupBy]);
 
-  function renderEventItem(ev) {
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const toggleGroup = useCallback((path) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
+
+  // Active drag state: tracks the event being dragged and its native leaf path
+  // so onDrop handlers can decide whether to emit a change.
+  const dragRef = useRef(null);
+  const [dropTargetPath, setDropTargetPath] = useState(null);
+
+  // Walk a tree along a slashed path (relative to parentPath/day) and collect
+  // the { field: value } patch implied by landing in that leaf. "(Ungrouped)"
+  // keys map to null to clear the field.
+  const resolveDropPatch = useCallback((tree, targetPath, dayKey) => {
+    if (!tree || !targetPath) return null;
+    const parts = targetPath.split('/');
+    if (parts[0] === dayKey) parts.shift();
+    const patch = {};
+    let level = tree;
+    for (const keyPart of parts) {
+      const match = level.find(g => g.key === keyPart);
+      if (!match) return null;
+      patch[match.field] = match.key === '(Ungrouped)' ? null : match.key;
+      level = match.children;
+    }
+    return patch;
+  }, []);
+
+  // Touch-drag pathway (mobile).  Mirrors the HTML5 DnD branch above using
+  // long-press + elementFromPoint hit-testing.  See useTouchDnd.
+  const bindTouchDnd = useTouchDnd({
+    enabled: !!onEventGroupChange,
+    dropAttr: 'data-wc-drop',
+    onStart: ({ ev, nativePath }) => { dragRef.current = { ev, nativePath }; },
+    onOver:  (dropEl) => {
+      const path = dropEl?.getAttribute('data-wc-drop') ?? null;
+      setDropTargetPath(prev => (prev === path ? prev : path));
+    },
+    onDrop:  (dropEl, { ev, nativePath, dayTree, dayKey }) => {
+      dragRef.current = null;
+      setDropTargetPath(null);
+      if (!dropEl || !onEventGroupChange) return;
+      const targetPath = dropEl.getAttribute('data-wc-drop');
+      if (!targetPath || targetPath === nativePath) return;
+      const patch = resolveDropPatch(dayTree, targetPath, dayKey);
+      if (patch) onEventGroupChange(ev, patch);
+    },
+    onCancel: () => { dragRef.current = null; setDropTargetPath(null); },
+  });
+
+  function renderEventItem(ev, opts = {}) {
+    const { crossGroup = false, sourceLabel = null, nativePath = null, dayTree = null, dayKey = null } = opts;
     const color = resolveColor(ev, ctx?.colorRules);
     const onClick = () => onEventClick?.(ev);
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
+    const className = [
+      styles.event,
+      statusClass,
+      crossGroup && styles.crossGroup,
+    ].filter(Boolean).join(' ');
+    // Unique key per (event, render-slot) so cross-group duplication doesn't
+    // collide with the native instance.
+    const key = crossGroup ? `${ev.id}::${sourceLabel ?? ''}` : ev.id;
+
+    // Only native (non-cross-group) renders are draggable — dragging a dimmed
+    // shadow copy would be ambiguous.
+    const dndEnabled = !!onEventGroupChange && !crossGroup && !!nativePath;
+    const onDragStart = dndEnabled
+      ? (e) => {
+          dragRef.current = { ev, nativePath };
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', String(ev.id)); } catch {}
+          }
+        }
+      : undefined;
+    const onDragEnd = dndEnabled ? () => { dragRef.current = null; setDropTargetPath(null); } : undefined;
+    const onTouchStart = dndEnabled
+      ? (e) => bindTouchDnd(e, { ev, nativePath, dayTree, dayKey })
+      : undefined;
 
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev, { view: 'agenda', isCompact: true, onClick, color });
       if (custom != null) {
         return (
-          <div key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-            onClick={onClick}>
+          <div
+            key={key}
+            className={className}
+            data-cross-group={crossGroup || undefined}
+            draggable={dndEnabled || undefined}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onTouchStart={onTouchStart}
+            onClick={onClick}
+          >
             {custom}
           </div>
         );
@@ -58,8 +163,17 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy 
     }
 
     return (
-      <button key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-        onClick={onClick}>
+      <button
+        key={key}
+        className={className}
+        data-cross-group={crossGroup || undefined}
+        draggable={dndEnabled || undefined}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onTouchStart={onTouchStart}
+        onClick={onClick}
+        aria-label={crossGroup && sourceLabel ? `${ev.title} (from ${sourceLabel})` : undefined}
+      >
         <span className={styles.evDot} style={{ background: color }} />
         <div className={styles.evBody}>
           <span className={styles.evTitle}>{ev.title}</span>
@@ -70,9 +184,121 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy 
             {ev.allDay && <span>All day</span>}
             {ev.category && <span className={styles.cat}>{ev.category}</span>}
             {ev.resource && <span>{ev.resource}</span>}
+            {crossGroup && sourceLabel && (
+              <span className={styles.sourceBadge} aria-hidden="true">
+                from {sourceLabel}
+              </span>
+            )}
           </div>
         </div>
       </button>
+    );
+  }
+
+  // Count every leaf event reachable under a group (respecting nested trees).
+  function countEvents(group) {
+    if (group.children.length === 0) return group.events.length;
+    return group.children.reduce((sum, c) => sum + countEvents(c), 0);
+  }
+
+  // Collect all leaf events in a tree, paired with their native path.
+  function collectLeafEvents(tree, parentPath) {
+    const out = [];
+    for (const group of tree) {
+      const path = parentPath ? `${parentPath}/${group.key}` : group.key;
+      if (group.children.length === 0) {
+        for (const ev of group.events) out.push({ ev, nativePath: path, nativeLabel: group.label });
+      } else {
+        out.push(...collectLeafEvents(group.children, path));
+      }
+    }
+    return out;
+  }
+
+  function renderGroupNode(group, parentPath, posInSet, setSize, allLeafEvents, dayTree) {
+    const path = parentPath ? `${parentPath}/${group.key}` : group.key;
+    const collapsed = collapsedGroups.has(path);
+    const total = countEvents(group);
+    const isLeaf = group.children.length === 0;
+
+    // When showAllGroups is on, a leaf bucket renders every leaf event that
+    // exists in this day's tree — with non-matching events marked crossGroup.
+    const dayKey = path.split('/')[0];
+    const renderedEvents = (() => {
+      if (!isLeaf) return null;
+      if (!showAllGroups) return group.events.map(ev => renderEventItem(ev, { nativePath: path, dayTree, dayKey }));
+      return allLeafEvents.map(({ ev, nativePath, nativeLabel }) => {
+        const isNative = nativePath === path;
+        return renderEventItem(ev, {
+          crossGroup: !isNative,
+          sourceLabel: isNative ? null : nativeLabel,
+          nativePath,
+          dayTree,
+          dayKey,
+        });
+      });
+    })();
+
+    // Leaf groups are drop targets when onEventGroupChange is wired up.
+    const dndEnabled = isLeaf && !!onEventGroupChange;
+    const isDropTarget = dndEnabled && dropTargetPath === path;
+
+    const onDragOver = dndEnabled
+      ? (e) => {
+          if (!dragRef.current) return;
+          e.preventDefault();
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+          if (dropTargetPath !== path) setDropTargetPath(path);
+        }
+      : undefined;
+    const onDragLeave = dndEnabled
+      ? () => { if (dropTargetPath === path) setDropTargetPath(null); }
+      : undefined;
+    const onDrop = dndEnabled
+      ? (e) => {
+          e.preventDefault();
+          const drag = dragRef.current;
+          dragRef.current = null;
+          setDropTargetPath(null);
+          if (!drag) return;
+          if (drag.nativePath === path) return;
+          const patch = resolveDropPatch(dayTree, path, dayKey);
+          if (!patch) return;
+          onEventGroupChange(drag.ev, patch);
+        }
+      : undefined;
+
+    const className = [styles.subGroup, isDropTarget && styles.dropTarget].filter(Boolean).join(' ');
+
+    return (
+      <div
+        key={path}
+        className={className}
+        role="group"
+        data-drop-target={isDropTarget || undefined}
+        data-wc-drop={dndEnabled ? path : undefined}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
+        <GroupHeader
+          label={group.label}
+          count={total}
+          depth={group.depth}
+          collapsed={collapsed}
+          onToggle={() => toggleGroup(path)}
+          posInSet={posInSet}
+          setSize={setSize}
+          fieldLabel={group.field}
+        />
+        {!collapsed && (
+          isLeaf
+            ? renderedEvents
+            : group.children.map((child, i) =>
+                renderGroupNode(child, path, i + 1, group.children.length, allLeafEvents, dayTree),
+              )
+        )}
+      </div>
     );
   }
 
@@ -88,23 +314,22 @@ export default function AgendaView({ currentDate, events, onEventClick, groupBy 
   return (
     <div className={styles.agenda}>
       {grouped.map(({ day, events: dayEvents }, idx) => {
-        const subGroups = secondaryGrouped?.[idx]?.groups ?? null;
+        const dayKey = format(day, 'yyyy-MM-dd');
+        const tree = dayTrees?.[idx]?.tree ?? null;
+        const allLeafEvents = tree ? collectLeafEvents(tree, dayKey) : [];
         return (
-          <div key={format(day, 'yyyy-MM-dd')} className={styles.group}>
+          <div key={dayKey} className={styles.group}>
             <div className={[styles.dateHead, isToday(day) && styles.today].filter(Boolean).join(' ')}>
               <span className={styles.dayName}>{format(day, 'EEE')}</span>
               <span className={styles.dayNum}>{format(day, 'd')}</span>
               <span className={styles.monthLabel}>{format(day, 'MMM yyyy')}</span>
             </div>
-            <div className={styles.events}>
-              {subGroups
-                ? subGroups.map(({ key, events: grpEvts }) => (
-                    <div key={key} className={styles.subGroup}>
-                      <div className={styles.subGroupLabel} role="heading" aria-level={3}>{key}</div>
-                      {grpEvts.map(renderEventItem)}
-                    </div>
-                  ))
-                : dayEvents.map(renderEventItem)
+            <div className={styles.events} role={tree && tree.length > 0 ? 'tree' : undefined}>
+              {tree && tree.length > 0
+                ? tree.map((g, i) =>
+                    renderGroupNode(g, dayKey, i + 1, tree.length, allLeafEvents, tree),
+                  )
+                : dayEvents.map(ev => renderEventItem(ev))
               }
             </div>
           </div>
