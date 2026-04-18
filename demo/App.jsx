@@ -412,6 +412,14 @@ function App() {
       </div>
 
 
+      {/* Demo hint: owner password floats below the gear icon */}
+      <div style={{
+        position: 'fixed', top: 56, right: 12, zIndex: 50,
+        fontSize: 10, color: '#94a3b8', pointerEvents: 'none', userSelect: 'none',
+      }}>
+        pw: <code style={{ background: 'rgba(0,0,0,.06)', padding: '1px 4px', borderRadius: 3 }}>demo1234</code>
+      </div>
+
       {needsRefresh && (
         <UpdateToast
           onUpdate={() => { updateSW(true); setNeedsRefresh(false); }}
