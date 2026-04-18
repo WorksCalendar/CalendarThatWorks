@@ -12,8 +12,8 @@ import { useDrag } from '../hooks/useDrag.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './WeekView.module.css';
 
-const SPAN_H    = 22;
-const SPAN_GAP  = 2;
+const SPAN_H    = 34;
+const SPAN_GAP  = 3;
 const MAX_SPANS = 4;
 const GUTTER_W  = 56;
 
@@ -263,6 +263,15 @@ export default function WeekView({
 
   // ── Renderers ─────────────────────────────────────────────────────────────
 
+
+  function formatPillDate(date) {
+    return format(date, 'M/d h:mma');
+  }
+
+  function pillResource(ev) {
+    return ev.resource || 'Unassigned';
+  }
+
   function renderTimedEvent(ev) {
     const isDimmed = drag.draggedId === ev.id;
     const color    = resolveColor(ev, ctx?.colorRules);
@@ -306,8 +315,10 @@ export default function WeekView({
           aria-hidden="true" />
         {inner ?? (
           <>
-            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>{ev.title}</span>
-            <span className={styles.evTime}>{format(ev.start, 'h:mm a')}</span>
+            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>Title: {ev.title}</span>
+            <span className={styles.evTime}>Start: {format(ev.start, 'h:mm a')}</span>
+            <span className={styles.evTime}>End: {format(ev.end, 'h:mm a')}</span>
+            <span className={styles.evMeta}>Resource: {pillResource(ev)}</span>
           </>
         )}
         <div className={styles.resizeHandle}
@@ -389,7 +400,10 @@ export default function WeekView({
                 const statusClass = ev.status === 'cancelled' ? styles.cancelled
                   : ev.status === 'tentative' ? styles.tentative : '';
                 const isDimmedBar = allDayGhost?.ev?.id === ev.id;
-                const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
+                const startLabel = formatPillDate(ev.start);
+                const endLabel = formatPillDate(ev.end);
+                const resourceLabel = pillResource(ev);
+                const ariaLabel = `${ev.title}, start ${startLabel}, end ${endLabel}, resource ${resourceLabel}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
                 return (
                   <button key={ev.id}
                     className={[
@@ -411,7 +425,12 @@ export default function WeekView({
                     onClick={() => !isDimmedBar && onEventClick?.(ev)}
                     onPointerDown={e => startAllDayBarDrag(ev, e, startCol, endCol)}
                   >
-                    {!continuesBefore && ev.title}
+                    <span className={styles.allDayTitleLine}>Title: {ev.title}</span>
+                    <span className={styles.allDayMetaLine}>
+                      <span>Start: {startLabel}</span>
+                      <span>End: {endLabel}</span>
+                      <span>Resource: {resourceLabel}</span>
+                    </span>
                   </button>
                 );
               })}

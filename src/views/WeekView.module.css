@@ -73,8 +73,9 @@
 .allDaySpan {
   position: absolute;
   display: flex;
-  align-items: center;
-  padding: 0 7px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3px 7px;
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
@@ -82,9 +83,7 @@
   font-weight: 500;
   border: none;
   cursor: pointer;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   box-sizing: border-box;
   transition: filter 0.1s;
   z-index: 2;
@@ -95,6 +94,30 @@
 .allDaySpan.continuesAfter  { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 3px; }
 .allDaySpan.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
 .allDaySpan.cancelled { opacity: 0.45; text-decoration: line-through; }
+
+
+.allDayTitleLine {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.allDayMetaLine {
+  display: flex;
+  gap: 8px;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.allDayMetaLine > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Overflow button wrapper — sits at bottom-right of the all-day grid */
 .allDayMoreWrapper {
@@ -311,7 +334,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.evTime { font-size: 10px; opacity: 0.85; }
+.evTime { font-size: 10px; opacity: 0.9; line-height: 1.2; }
+.evMeta { font-size: 10px; opacity: 0.9; line-height: 1.2; }
 
 /* ── Resize handles ── */
 .resizeHandle {
@@ -392,6 +416,16 @@
   .headerRow, .grid { grid-template-columns: 44px repeat(7, minmax(80px, 1fr)); }
   .allDayRow { grid-template-columns: 44px 1fr; }
   .dayAbbr { font-size: 10px; }
+  .allDaySpan {
+    align-items: center;
+    padding: 0 7px;
+  }
+  .allDayMetaLine { display: none; }
+  .allDayTitleLine {
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .evMeta { display: none; }
 }
 
 @media (max-width: 480px) {
