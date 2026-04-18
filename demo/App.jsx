@@ -341,8 +341,8 @@ function App() {
       </header>
 
       {/* ── Calendar ── */}
-      <div style={{ flex: 1, padding: 'clamp(8px, 3vw, 20px)', minHeight: 0 }}>
-        <div style={{ height: 'max(400px, calc(100vh - 148px))', maxWidth: 1400, margin: '0 auto' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        <div style={{ flex: 1, minHeight: 0 }}>
           <WorksCalendar
             events={events}
             employees={employees}
