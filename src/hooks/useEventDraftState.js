@@ -144,7 +144,7 @@ export function useEventDraftState(event, categories, config) {
     if (!values.title.trim()) errs.title = 'Title is required';
     if (!values.start) errs.start = 'Start date is required';
     if (!values.end) errs.end = 'End date is required';
-    if (values.start && values.end && new Date(values.start) > new Date(values.end)) {
+    if (values.start && values.end && new Date(values.start) >= new Date(values.end)) {
       errs.end = 'End must be after start';
     }
     customFields.filter(f => f.required).forEach(f => {
