@@ -141,25 +141,19 @@ const INITIAL_EVENTS = [
   ...REGULAR_EVENTS,
 ];
 
-/* ─── Fleet dataset (for the Assets view) ──────────────────────────
+/* ─── Assets (aircraft, trucks, equipment…) ───────────────────────
  *
- * The Engineering dataset wires employee IDs into `event.resource`,
- * which means the Assets view derives its rows from employees. To
- * preview the Assets view with its intended aircraft-as-resources
- * model, switch the dataset toggle in the header to "Fleet". This
- * swaps the entire event/employee set with aircraft registrations
- * and fleet-oriented events (training, maintenance, charters).
- *
- * Note: this is a demo-time workaround. The production fix is a
- * first-class `assets` prop on WorksCalendar (tracking: #134/9).
+ * Assets are first-class rows in the Assets view (distinct from people,
+ * who live on the Schedule view). The demo ships a small fleet of
+ * aircraft; the library accepts any resource kind the user defines.
  */
 const AIRCRAFT_RESOURCES = [
-  { id: 'N121AB', name: 'N121AB', group: 'West',    meta: { model: 'Citation CJ3',  location: { text: 'KPHX', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N505CD', name: 'N505CD', group: 'West',    meta: { model: 'Phenom 300',    location: { text: 'KLAX', status: 'stale', asOf: new Date().toISOString() } } },
-  { id: 'N88QR',  name: 'N88QR',  group: 'Central', meta: { model: 'King Air 350',  location: { text: 'KDEN', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N733XY', name: 'N733XY', group: 'Central', meta: { model: 'Challenger 350',location: { text: 'KORD', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N901JT', name: 'N901JT', group: 'East',    meta: { model: 'Gulfstream G280', location: { text: 'KJFK', status: 'live', asOf: new Date().toISOString() } } },
-  { id: 'N245LM', name: 'N245LM', group: 'East',    meta: { model: 'Pilatus PC-24', location: { text: 'KBOS', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N121AB', label: 'N121AB', group: 'West',    meta: { sublabel: 'Citation CJ3',    model: 'Citation CJ3',     location: { text: 'KPHX', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N505CD', label: 'N505CD', group: 'West',    meta: { sublabel: 'Phenom 300',      model: 'Phenom 300',       location: { text: 'KLAX', status: 'stale', asOf: new Date().toISOString() } } },
+  { id: 'N88QR',  label: 'N88QR',  group: 'Central', meta: { sublabel: 'King Air 350',    model: 'King Air 350',     location: { text: 'KDEN', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N733XY', label: 'N733XY', group: 'Central', meta: { sublabel: 'Challenger 350',  model: 'Challenger 350',   location: { text: 'KORD', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N901JT', label: 'N901JT', group: 'East',    meta: { sublabel: 'Gulfstream G280', model: 'Gulfstream G280',  location: { text: 'KJFK', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N245LM', label: 'N245LM', group: 'East',    meta: { sublabel: 'Pilatus PC-24',   model: 'Pilatus PC-24',    location: { text: 'KBOS', status: 'live',  asOf: new Date().toISOString() } } },
 ];
 
 const FLEET_EVENTS = [
@@ -177,8 +171,23 @@ const FLEET_EVENTS = [
   { id: 'f12', title: 'SIM session',          start: d(11, 9),  end: dEnd(11, 9, 4), category: 'training',    resource: 'N505CD', meta: { sublabel: 'Phenom 300',    region: 'West' } },
 ];
 
-const FLEET_CATEGORIES_CONFIG = {
-  categories: DEFAULT_CATEGORIES,
+// Unified category palette — engineering ops + fleet ops. The calendar
+// uses a single category set across views; each event references whichever
+// category suits it (on-call / Incident / Deploy for people, training /
+// maintenance / pr / coverage for aircraft).
+const UNIFIED_CATEGORIES = [
+  // Engineering
+  { id: 'on-call',  label: 'On Call',    color: '#ef4444' },
+  { id: 'Incident', label: 'Incident',   color: '#f97316' },
+  { id: 'Deploy',   label: 'Deploy',     color: '#8b5cf6' },
+  { id: 'Meeting',  label: 'Meeting',    color: '#64748b' },
+  { id: 'PTO',      label: 'PTO',        color: '#10b981' },
+  // Fleet (from DEFAULT_CATEGORIES, spread here so both sets share the palette)
+  ...DEFAULT_CATEGORIES,
+];
+
+const UNIFIED_CATEGORIES_CONFIG = {
+  categories: UNIFIED_CATEGORIES,
   pillStyle: 'hue',
   defaultCategoryId: 'other',
 };
@@ -295,16 +304,18 @@ function UpdateToast({ onUpdate, onDismiss }) {
 
 /* ─── Demo App ──────────────────────────────────────────────────── */
 function App() {
-  const [dataset,      setDataset]      = useState('engineering'); // 'engineering' | 'fleet'
-  const [events,       setEvents]       = useState(INITIAL_EVENTS);
-  const [fleetEvents,  setFleetEvents]  = useState(FLEET_EVENTS);
+  // A single events array holds both people-events (resource = emp-*) and
+  // asset-events (resource = aircraft registration). Schedule view picks up
+  // the people subset via the employees prop; Assets view picks up the
+  // aircraft subset via the assets prop + strictAssetFiltering.
+  const [events,       setEvents]       = useState([...INITIAL_EVENTS, ...FLEET_EVENTS]);
   const [notes,        setNotes]        = useState({});
   const [theme,        setTheme]        = useState(INITIAL_THEME);
   const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
   const [eventLog,     setEventLog]     = useState([]);
   const [needsRefresh, setNeedsRefresh] = useState(false);
 
-  const fleetLocationProvider = useMemo(
+  const assetLocationProvider = useMemo(
     () => createManualLocationProvider({ resources: AIRCRAFT_RESOURCES }),
     [],
   );
@@ -332,20 +343,18 @@ function App() {
   const pageBg       = isDark ? '#060d1a' : '#f1f5f9';
 
   const handleEventSave = useCallback((ev) => {
-    const setter = dataset === 'fleet' ? setFleetEvents : setEvents;
-    setter(prev => {
+    setEvents(prev => {
       const idx = prev.findIndex(e => e.id === ev.id);
       if (idx >= 0) { const next = [...prev]; next[idx] = ev; return next; }
       return [...prev, { ...ev, id: `demo-${Date.now()}` }];
     });
     log(`Saved: ${ev.title}`);
-  }, [dataset]);
+  }, []);
 
   const handleEventDelete = useCallback((id) => {
-    const setter = dataset === 'fleet' ? setFleetEvents : setEvents;
-    setter(prev => prev.filter(e => e.id !== id));
+    setEvents(prev => prev.filter(e => e.id !== id));
     log(`Deleted: ${id}`);
-  }, [dataset]);
+  }, []);
 
   const handleNoteSave = useCallback((note) => {
     setNotes(prev => ({ ...prev, [note.eventId]: { id: `note-${note.eventId}`, ...note } }));
@@ -386,46 +395,11 @@ function App() {
             WorksCalendar
           </h1>
           <p style={{ margin: 0, fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>
-            Engineering On-Call Schedule — Demo
+            People on Schedule · Aircraft on Assets — Demo
           </p>
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div
-            role="group"
-            aria-label="Dataset"
-            style={{
-              display: 'flex', gap: 0, padding: 2,
-              background: isDark ? '#1e293b' : '#f1f5f9',
-              border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
-              borderRadius: 8, fontSize: 12, fontWeight: 600,
-            }}
-          >
-            {[
-              { id: 'engineering', label: 'Engineering' },
-              { id: 'fleet',       label: 'Fleet'       },
-            ].map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => setDataset(opt.id)}
-                aria-pressed={dataset === opt.id}
-                style={{
-                  padding: '4px 10px', border: 'none', borderRadius: 6,
-                  cursor: 'pointer',
-                  background: dataset === opt.id
-                    ? (isDark ? '#334155' : '#fff')
-                    : 'transparent',
-                  color: dataset === opt.id
-                    ? (isDark ? '#f1f5f9' : '#0f172a')
-                    : (isDark ? '#94a3b8' : '#64748b'),
-                  boxShadow: dataset === opt.id ? '0 1px 3px rgba(0,0,0,.12)' : 'none',
-                }}
-                title={opt.id === 'fleet' ? 'Show aircraft on the Assets view' : 'Show employee schedule'}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
           <ThemePicker current={theme} onChange={setTheme} />
         </div>
       </header>
@@ -434,14 +408,13 @@ function App() {
       <div style={{ flex: 1, padding: 'clamp(8px, 3vw, 20px)', minHeight: 0 }}>
         <div style={{ height: 'max(400px, calc(100vh - 148px))', maxWidth: 1400, margin: '0 auto' }}>
           <WorksCalendar
-            key={dataset}
-            events={dataset === 'fleet' ? fleetEvents : events}
-            employees={dataset === 'fleet' ? [] : employees}
+            events={events}
+            employees={employees}
             onEmployeeAdd={handleEmployeeAdd}
             onEmployeeDelete={handleEmployeeDelete}
-            calendarId={dataset === 'fleet' ? `${DEMO_CALENDAR_ID}-fleet` : DEMO_CALENDAR_ID}
+            calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
-            initialView={dataset === 'fleet' ? 'assets' : 'schedule'}
+            initialView="schedule"
             onConfigSave={handleConfigSave}
             notes={notes}
             onNoteSave={handleNoteSave}
@@ -451,8 +424,10 @@ function App() {
             onEventClick={ev => log(`Clicked: ${ev.title}`)}
             theme={theme}
             showAddButton={true}
-            categoriesConfig={dataset === 'fleet' ? FLEET_CATEGORIES_CONFIG : undefined}
-            locationProvider={dataset === 'fleet' ? fleetLocationProvider : undefined}
+            categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
+            assets={AIRCRAFT_RESOURCES}
+            strictAssetFiltering={true}
+            locationProvider={assetLocationProvider}
           />
         </div>
       </div>

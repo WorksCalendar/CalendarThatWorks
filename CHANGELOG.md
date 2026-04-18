@@ -28,6 +28,19 @@ live in day-to-day.
 - **Create-shift fallback** — Schedule view date-select now routes to the
   generic `EventForm` when the dropped cell isn't a configured employee,
   instead of silently dropping the interaction.
+- **`strictAssetFiltering` prop** on `<WorksCalendar>` (default `false`).
+  When `true` and an `assets` registry is provided, AssetsView keeps
+  only events whose `resource` matches a registered asset id — drops
+  both foreign-id events (e.g. employees in a unified calendar) and
+  null/empty-resource events (e.g. team-wide meetings that belong on
+  Schedule). This mirrors TimelineView's implicit scoping to the
+  `employees` prop, letting host apps feed one unified event list to a
+  calendar that shows people on Schedule and aircraft on Assets.
+- **Unified demo** — `demo/App.jsx` no longer has a separate
+  Engineering/Fleet dataset toggle. Both people (on-call rotations,
+  incidents, PTO) and aircraft (charters, maintenance with approval
+  workflow) now live in one event array, rendered together via the new
+  `strictAssetFiltering` flag.
 
 ### Fixed
 
