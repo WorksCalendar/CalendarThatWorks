@@ -184,14 +184,93 @@ Each event's `employeeId` links it to a person. Colors, filters, and grouping al
 
 ## 6. Turn on team scheduling (optional)
 
-This is WorksCalendar's headline feature. Use `initialView="schedule"` and the workflow turns on automatically:
+This is WorksCalendar's headline feature: PTO automatically turns into open shifts, and open shifts turn into double-sided coverage events.
 
-- Mark an employee unavailable (PTO, sick).
-- Any of their shifts on that day become **uncovered**.
-- Other employees can be assigned to cover.
-- Saved views remember filters like "show only uncovered shifts."
+Switch the view on:
 
-Read the full walkthrough: [Schedule workflow guide](./ScheduleWorkflow.md).
+```jsx
+<WorksCalendar
+  employees={employees}
+  events={events}
+  initialView="schedule"
+  onEventSave={handleSave}
+/>
+```
+
+### The flow in plain English
+
+1. **Alex has a shift.** Tuesday, 9 AM–5 PM. One event, assigned to Alex.
+2. **Alex requests PTO.** In the timeline, click Alex's row → **Request PTO**. The calendar scans every shift Alex owns and looks for any that overlap the PTO window.
+3. **Any overlapping shift becomes uncovered.** For each conflict, the calendar automatically creates an **open-shift** event (amber, unassigned, labelled `Open: <original shift>`). The original shift is marked covered so it doesn't keep regenerating.
+4. **Someone picks up the open shift.** The scheduler (or the owner, or anyone with an assigned saved view of "open shifts") drags an employee onto the open shift — or uses the Cover action card.
+5. **The calendar creates two mirrored events.** The original shift stays (now marked covered). The coverer gets a new shift of kind `covering` pointing back to the source. Both people see their own version; payroll/reporting can tell the difference.
+
+Reverse the flow by deleting the PTO (everything folds back) or by revoking coverage.
+
+### The four event kinds in the schedule
+
+These are in `src/core/scheduleModel.js` — you don't write them by hand, but understanding them helps when you look at your data:
+
+| Kind | Who has it | What it means |
+| --- | --- | --- |
+| `shift` | Normal employee | A regular assigned shift |
+| `on-call` | Normal employee | An on-call window (treated like a shift for conflicts) |
+| `open-shift` | Nobody (amber) | Needs coverage — auto-created when PTO eats a shift |
+| `covering` | The coverer | The mirror event when someone picks up an open shift |
+
+### What the owner has to provide
+
+The only thing you have to wire up is save. The calendar emits normal event operations; you persist them:
+
+```jsx
+async function handleSave(event) {
+  // This same handler receives:
+  //  - a new PTO event
+  //  - an auto-generated open-shift event (meta.kind === 'open-shift')
+  //  - a new covering event when someone covers
+  //  - a mutation to the original shift flagging it covered
+  await saveToYourBackend(event);
+}
+```
+
+Nothing special is required to "turn on" the auto-open-shift logic — it fires whenever a PTO or Unavailable event is saved against an employee who has overlapping shifts.
+
+### What users see
+
+- **Employee on PTO:** their row shows a PTO block. Their original shifts look "covered" (muted).
+- **The open shift:** an amber unassigned event sitting on the date that needs a warm body. Click it to see who was originally on.
+- **The coverer:** their row shows the mirrored shift. Title prefixed `Covering: …` so it's obvious on their schedule.
+- **Everyone else:** no visual change.
+
+### "Auto-covered-by" — the truth about the "auto" part
+
+The calendar **auto-detects** uncovered shifts. It does **not** auto-assign a coverer — a human clicks. If you want fully automatic assignment ("the next available employee gets it"), wire it in your save handler:
+
+```jsx
+async function handleSave(event) {
+  if (event.meta?.kind === 'open-shift' && event.meta.status === 'open') {
+    const candidate = pickNextAvailable(employees, event, allEvents);
+    if (candidate) {
+      return saveToYourBackend(assignCoverer(event, candidate));
+    }
+  }
+  return saveToYourBackend(event);
+}
+```
+
+`pickNextAvailable` is yours to write (fair rotation, seniority, lowest hours this week — whatever your team needs). Leaving it out is the common choice: most teams want a human to make that call.
+
+### Common patterns
+
+| You want… | Do this |
+| --- | --- |
+| A "needs coverage" queue | Saved view with filter `meta.kind == 'open-shift' AND meta.status == 'open'` |
+| Only supervisors can cover | Gate the Cover action in your save handler by `user.role` |
+| Require confirmation from the coverer | Pair this with the [approvals workflow](#75-turn-on-propose--review--approve--deny-for-assets-optional) on `covering` events |
+| Fair rotation | Implement `pickNextAvailable` with a rolling index per team |
+| Block coverers with their own conflict | Call `detectShiftConflicts` from `src/core/scheduleOverlap.js` before saving |
+
+Full walkthrough: [Schedule workflow guide](./ScheduleWorkflow.md).
 
 ## 7. Track things, not just people (optional)
 
