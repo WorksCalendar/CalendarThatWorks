@@ -103,6 +103,24 @@ export const DEFAULT_CONFIG = {
   // Shape: { id: string, label: string, group?: string, meta?: object }
   assets: [],
 
+  // Owner-configurable RequestForm schema (ticket #134-12). Drives the
+  // schema-driven request form in src/ui/RequestForm.jsx. Owners add/
+  // remove/reorder fields from ConfigPanel → Request Form with zero
+  // host-app redeploy. Host-level validators / onSubmit remain the escape
+  // hatch for domain logic.
+  //
+  // Shape per field: { key, label, type, required?, placeholder?, options? }
+  // `options` is a comma-separated string (used by select-type fields).
+  // Default ships a minimal three-field schema covering the common case;
+  // owners override in place.
+  requestForm: {
+    fields: [
+      { key: 'title',  label: 'Title',  type: 'text',     required: true,  placeholder: 'Short summary' },
+      { key: 'start',  label: 'Starts', type: 'datetime', required: true },
+      { key: 'notes',  label: 'Notes',  type: 'textarea', required: false, placeholder: 'Optional details' },
+    ],
+  },
+
   // Owner-configurable conflict rules (ticket #134-13). Runs via
   // src/core/conflictEngine.ts before an event write. Rules are data, not
   // code — owners add / tune them from ConfigPanel → Conflicts without

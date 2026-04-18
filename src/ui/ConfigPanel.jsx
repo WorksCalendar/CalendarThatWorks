@@ -29,6 +29,7 @@ const TABS = [
   { id: 'team',        label: 'Employees' },
   { id: 'approvals',   label: 'Approvals' },
   { id: 'conflicts',   label: 'Conflicts' },
+  { id: 'requestForm', label: 'Request Form' },
   { id: 'access',      label: 'Access' },
 ];
 
@@ -139,6 +140,7 @@ export default function ConfigPanel({
           )}
           {tab === 'approvals'   && <ApprovalsTab   config={config} onUpdate={onUpdate} />}
           {tab === 'conflicts'   && <ConflictsTab   config={config} onUpdate={onUpdate} />}
+          {tab === 'requestForm' && <RequestFormTab config={config} onUpdate={onUpdate} />}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
       </div>
@@ -1222,6 +1224,142 @@ export function ApprovalsTab({ config, onUpdate }) {
           </label>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ----- Request Form tab ----- */
+const REQUEST_FIELD_TYPES = [
+  { value: 'text',     label: 'Text' },
+  { value: 'textarea', label: 'Textarea' },
+  { value: 'number',   label: 'Number' },
+  { value: 'date',     label: 'Date' },
+  { value: 'datetime', label: 'Datetime' },
+  { value: 'select',   label: 'Select' },
+  { value: 'checkbox', label: 'Checkbox' },
+];
+
+/**
+ * Owner-editable RequestForm schema. Writes to `config.requestForm.fields`;
+ * src/ui/RequestForm.jsx renders one input per entry. Field types match
+ * the RequestForm renderer's built-in handlers — adding a new type means
+ * updating both sides.
+ */
+export function RequestFormTab({ config, onUpdate }) {
+  const schema = config.requestForm ?? {};
+  const fields = Array.isArray(schema.fields) ? schema.fields : [];
+
+  const patch = (next) => onUpdate(c => ({
+    ...c,
+    requestForm: { ...(c.requestForm ?? {}), ...next },
+  }));
+
+  const writeFields = (next) => patch({ fields: next });
+
+  const addField = () => {
+    const n = fields.length + 1;
+    writeFields([
+      ...fields,
+      { key: `field-${n}`, label: `Field ${n}`, type: 'text', required: false },
+    ]);
+  };
+
+  const updateField = (idx, delta) =>
+    writeFields(fields.map((f, i) => (i === idx ? { ...f, ...delta } : f)));
+
+  const removeField = (idx) => writeFields(fields.filter((_, i) => i !== idx));
+
+  const moveField = (idx, delta) => {
+    const target = idx + delta;
+    if (target < 0 || target >= fields.length) return;
+    const next = [...fields];
+    const [moved] = next.splice(idx, 1);
+    next.splice(target, 0, moved);
+    writeFields(next);
+  };
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Fields rendered by the request form (src/ui/RequestForm.jsx).
+        Changes apply to every open request form on next render — no host
+        redeploy required.
+      </p>
+
+      {fields.map((field, i) => (
+        <div key={field.key + ':' + i} className={styles.fieldRow} data-field-key={field.key}>
+          <input
+            className={styles.input}
+            value={field.label ?? ''}
+            onChange={e => updateField(i, { label: e.target.value })}
+            placeholder="Label"
+            aria-label={`Label for ${field.key}`}
+          />
+          <input
+            className={styles.input}
+            value={field.key}
+            onChange={e => updateField(i, { key: e.target.value.trim() || field.key })}
+            placeholder="key"
+            aria-label={`Key for ${field.label || field.key}`}
+          />
+          <select
+            className={styles.select}
+            value={field.type}
+            onChange={e => updateField(i, { type: e.target.value })}
+            aria-label={`Type for ${field.label || field.key}`}
+          >
+            {REQUEST_FIELD_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          {field.type === 'select' && (
+            <input
+              className={styles.input}
+              value={field.options ?? ''}
+              onChange={e => updateField(i, { options: e.target.value })}
+              placeholder="Option 1, Option 2, …"
+              aria-label={`Options for ${field.label || field.key}`}
+            />
+          )}
+          <input
+            className={styles.input}
+            value={field.placeholder ?? ''}
+            onChange={e => updateField(i, { placeholder: e.target.value })}
+            placeholder="Placeholder"
+            aria-label={`Placeholder for ${field.label || field.key}`}
+          />
+          <label className={styles.reqLabel}>
+            <input
+              type="checkbox"
+              checked={!!field.required}
+              onChange={e => updateField(i, { required: e.target.checked })}
+              aria-label={`Required for ${field.label || field.key}`}
+            />
+            Required
+          </label>
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveField(i, -1)}
+            disabled={i === 0}
+            aria-label={`Move ${field.label || field.key} up`}
+          ><ArrowUp size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveField(i, 1)}
+            disabled={i === fields.length - 1}
+            aria-label={`Move ${field.label || field.key} down`}
+          ><ArrowDown size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => removeField(i)}
+            aria-label={`Remove ${field.label || field.key}`}
+          ><Trash2 size={13} /></button>
+        </div>
+      ))}
+
+      <button className={styles.addFieldBtn} onClick={addField}>
+        <Plus size={13} /> Add field
+      </button>
     </div>
   );
 }
