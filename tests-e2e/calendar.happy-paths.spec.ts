@@ -98,6 +98,9 @@ test.describe('WorksCalendar happy paths', () => {
     await page.getByPlaceholder(/Enter password/i).fill('demo1234');
     await page.getByRole('button', { name: /Unlock/i }).click();
 
+    // Wait for authentication to complete and the login prompt to disappear
+    await expect(page.getByPlaceholder(/Enter password/i)).not.toBeVisible();
+
     // Now open the Settings panel
     await page.getByLabel('Open settings').click();
     await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible();
