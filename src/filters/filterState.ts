@@ -43,11 +43,11 @@ export function clearFilterValue(field) {
  * Build an initial FilterState from a schema.
  * Returns { [field.key]: cleared_value } for every field in the schema.
  *
- * @param {import('./filterSchema.js').FilterField[]} schema
+ * @param schema
  * @returns {Record<string, unknown>}
  */
-export function createInitialFilters(schema = DEFAULT_FILTER_SCHEMA): Record<string, unknown> {
-  const filters: Record<string, unknown> = {};
+export function createInitialFilters(schema: any[] = DEFAULT_FILTER_SCHEMA): any {
+  const filters: any = {};
   for (const field of schema) {
     filters[field.key] = clearFilterValue(field);
   }
@@ -66,9 +66,9 @@ export function createInitialFilters(schema = DEFAULT_FILTER_SCHEMA): Record<str
  * Useful as context for renderFilterBar implementations.
  *
  * @param {Record<string, unknown>} filters
- * @param {import('./filterSchema.js').FilterField[]} schema
+ * @param schema
  */
-export function buildActiveFilterPills(filters, schema = DEFAULT_FILTER_SCHEMA) {
+export function buildActiveFilterPills(filters, schema: any[] = DEFAULT_FILTER_SCHEMA) {
   const pills = [];
   for (const field of schema) {
     const value = filters[field.key];
@@ -118,10 +118,10 @@ export function buildActiveFilterPills(filters, schema = DEFAULT_FILTER_SCHEMA) 
  * falls back to capitalize-key + stringify.
  *
  * @param {Record<string, unknown>} filters
- * @param {import('./filterSchema.js').FilterField[]} schema
+ * @param schema
  * @returns {Array<{ key: string, label: string, type: string, displayValues: string[] }>}
  */
-export function buildFilterSummary(filters, schema = DEFAULT_FILTER_SCHEMA) {
+export function buildFilterSummary(filters, schema: any[] = DEFAULT_FILTER_SCHEMA) {
   if (!filters) return [];
 
   const fieldMap = new Map();

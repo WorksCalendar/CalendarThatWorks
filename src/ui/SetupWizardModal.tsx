@@ -39,7 +39,7 @@ export default function SetupWizardModal({
   categories = [],
   resources  = [],
   onSaveView,
-}) {
+}: any) {
   const [step,           setStep]           = useState(1);
   const [calendarName,   setCalendarName]   = useState('My WorksCalendar');
   const [selectedTheme,  setSelectedTheme]  = useState('corporate');
@@ -182,7 +182,7 @@ export default function SetupWizardModal({
 
 // ─── Step 1: Basic info ───────────────────────────────────────────────────────
 
-function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChange }) {
+function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChange }: any) {
   return (
     <div className={styles.step}>
       <div className={styles.stepHeader}>
@@ -241,7 +241,7 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
 
 // ─── Step 2: Team members ─────────────────────────────────────────────────────
 
-function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }) {
+function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }: any) {
   return (
     <div className={styles.step}>
       <div className={styles.stepHeader}>
@@ -294,7 +294,7 @@ function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }) {
 
 // ─── Step 3: Smart Views ──────────────────────────────────────────────────────
 
-function Step2({ categories, resources, createdViews, onSaveView }) {
+function Step2({ categories, resources, createdViews, onSaveView }: any) {
   return (
     <div className={styles.step}>
       <div className={styles.stepHeader}>
@@ -331,7 +331,7 @@ function Step2({ categories, resources, createdViews, onSaveView }) {
 
 // ─── Step 4: Done ─────────────────────────────────────────────────────────────
 
-function Step3({ calendarName, selectedTheme, teamMembers, createdViews }) {
+function Step3({ calendarName, selectedTheme, teamMembers, createdViews }: any) {
   const theme = THEMES.find(t => t.id === selectedTheme);
 
   return (

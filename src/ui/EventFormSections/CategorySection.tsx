@@ -11,7 +11,7 @@ import styles from '../EventForm.module.css';
  *   onAddCategory (name) => void | undefined  — omit to hide the + button
  *   onChange      (value) => void
  */
-export function CategorySection({ value, allCats, onAddCategory, onChange }) {
+export function CategorySection({ value, allCats, onAddCategory, onChange }: any) {
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const newCatRef = useRef(null);

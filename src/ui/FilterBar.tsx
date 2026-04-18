@@ -38,7 +38,7 @@ export default function FilterBar({
   groupLabels = {},
   pillHoverTitle = false,
   onPillHoverTitleToggle = undefined,
-}) {
+}: any) {
   const [openGroup, setOpenGroup] = useState(null);
   const dropdownRefs = useRef({});
 

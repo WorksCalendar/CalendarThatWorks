@@ -34,7 +34,7 @@ export default function ProfileBar({
   onResave,
   onUpdate,
   onDelete,
-}) {
+}: any) {
   const [saveOpen,    setSaveOpen]    = useState(false);
   const [manageId,    setManageId]    = useState(null); // which view is being managed
   const scrollRef = useRef(null);
@@ -271,7 +271,7 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
 }
 
 /* ─── Filter Summary (inside manage panel) ─────────────────────── */
-function FilterSummary({ savedView, schema }) {
+function FilterSummary({ savedView, schema }: any) {
   const summaryItems = buildFilterSummary(savedView.filters, schema);
 
   if (summaryItems.length === 0 && !savedView.view) {
@@ -303,7 +303,7 @@ function FilterSummary({ savedView, schema }) {
 }
 
 /* ─── Save Form ────────────────────────────────────────────────── */
-function SaveForm({ onSave, onCancel }) {
+function SaveForm({ onSave, onCancel }: any) {
   const [name,     setName]     = useState('');
   const [color,    setColor]    = useState(PROFILE_COLORS[0]);
   const [pinView,  setPinView]  = useState(false);

@@ -84,7 +84,7 @@ export default function CalendarExternalForm({
   submitLabel = 'Submit event',
   onSuccess,
   onError,
-}) {
+}: any) {
   const safeAdapter = ensureAdapter(adapter);
   const normalizedFields = useMemo(() => normalizeFields(fields), [fields]);
 

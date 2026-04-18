@@ -21,7 +21,7 @@ const baseSchema = {
   ],
 };
 
-function renderForm(props = {}) {
+function renderForm(props: any = {}) {
   const onSubmit = props.onSubmit ?? vi.fn();
   const onCancel = props.onCancel ?? vi.fn();
   const result = render(

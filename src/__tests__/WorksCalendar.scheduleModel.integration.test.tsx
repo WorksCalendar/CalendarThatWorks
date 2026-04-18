@@ -43,7 +43,7 @@ describe('WorksCalendar schedule model integration', () => {
   }
 
   it('creates an open-shift record when PTO overlaps a shift', async () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
@@ -57,7 +57,7 @@ describe('WorksCalendar schedule model integration', () => {
   }, 15000);
 
   it('creates a PTO availability event and emits onAvailabilitySave', async () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     const onAvailabilitySave = vi.fn();
 
     render(
@@ -86,7 +86,7 @@ describe('WorksCalendar schedule model integration', () => {
   }, 15000);
 
   it('does not create duplicate open-shift records when PTO is re-saved', async () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
@@ -104,7 +104,7 @@ describe('WorksCalendar schedule model integration', () => {
   }, 15000);
 
   it('assigns coverage by updating shift/open-shift state and creating one mirror event', async () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
@@ -130,7 +130,7 @@ describe('WorksCalendar schedule model integration', () => {
   }, 15000);
 
   it('clears linked schedule metadata and open/covering events when status is cleared', async () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
@@ -155,7 +155,7 @@ describe('WorksCalendar schedule model integration', () => {
   }, 15000);
 
   it('emits onEventSave/onEventDelete for linked schedule records during coverage + clear', async () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     const onEventSave = vi.fn();
     const onEventDelete = vi.fn();
     render(
@@ -190,7 +190,7 @@ describe('WorksCalendar schedule model integration', () => {
   }, 15000);
 
   it('keeps exactly one covering record when coverage is reassigned', async () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));

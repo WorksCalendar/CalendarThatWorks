@@ -22,7 +22,7 @@ function isMultiDay(ev) {
 export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0, pillHoverTitle = false,
-}: { currentDate: Date; events: any[]; onEventClick?: (ev: any) => void; onEventMove?: any; onDateSelect?: any; config?: any; weekStartDay?: Day; pillHoverTitle?: boolean }) {
+}: { currentDate: Date; events: any; onEventClick?: any; onEventMove?: any; onDateSelect?: any; config?: any; weekStartDay?: Day; pillHoverTitle?: boolean } & Record<string, any>) {
   const [popoverState, setPopoverState] = useState(null);
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(

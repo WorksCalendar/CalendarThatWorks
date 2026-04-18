@@ -11,7 +11,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 
-export function useRealtimeEvents({ supabaseClient, table, filter }) {
+export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseClient: any; table: any; filter?: any }) {
   const [events, setEvents] = useState([]);
   const [status, setStatus] = useState('disabled');
   const channelRef = useRef(null);

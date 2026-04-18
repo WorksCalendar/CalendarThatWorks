@@ -4,7 +4,7 @@ import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-reac
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './HoverCard.module.css';
 
-export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor, resolveResourceLabel }) {
+export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor, resolveResourceLabel }: any) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
   const cardRef = useRef(null);

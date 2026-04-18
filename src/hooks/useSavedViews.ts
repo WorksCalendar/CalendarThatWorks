@@ -198,7 +198,7 @@ export function serializeFilters(filters) {
  * @param {import('../filters/filterSchema.js').FilterField[]} [schema]
  * @returns {object} live filter state
  */
-export function deserializeFilters(saved, schema) {
+export function deserializeFilters(saved, schema?: any[]) {
   if (!saved) return {};
 
   const result = { ...saved };
@@ -298,7 +298,7 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName, groupBy, opts: {
+  const resaveView = useCallback((id, filters, viewName?, groupBy?, opts: {
     sort?: any
     showAllGroups?: any
     sortBy?: any

@@ -13,7 +13,7 @@ import '@testing-library/jest-dom';
 
 import { RequestFormTab } from '../ConfigPanel.jsx';
 
-function renderTab({ initialConfig = {}, onUpdate } = {}) {
+function renderTab({ initialConfig = {}, onUpdate }: any = {}) {
   let currentConfig = { ...initialConfig };
   const update = onUpdate ?? vi.fn(updater => {
     currentConfig = typeof updater === 'function'

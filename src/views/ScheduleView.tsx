@@ -13,7 +13,7 @@ import styles from './ScheduleView.module.css';
 
 const WEEKS = 6;
 
-export default function ScheduleView({ currentDate, events, onEventClick, weekStartDay = 0 }: { currentDate: Date; events: any[]; onEventClick?: (ev: any) => void; weekStartDay?: Day }) {
+export default function ScheduleView({ currentDate, events, onEventClick, weekStartDay = 0 }: { currentDate: Date; events: any; onEventClick?: any; weekStartDay?: Day } & Record<string, any>) {
   const ctx = useCalendarContext();
 
   const resources = useMemo<string[]>(() => {

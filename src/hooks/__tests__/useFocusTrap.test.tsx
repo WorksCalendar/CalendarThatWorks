@@ -11,7 +11,7 @@ import { useFocusTrap } from '../useFocusTrap.js';
 
 /* ── tiny helper component ──────────────────────────────────────────────── */
 
-function Trap({ onEscape, children, active = true }) {
+function Trap({ onEscape, children, active = true }: any) {
   const ref = useFocusTrap(onEscape, active);
   return (
     <div ref={ref} role="dialog" aria-modal="true" data-testid="trap">
@@ -126,7 +126,7 @@ describe('useFocusTrap — inert attribute skipped', () => {
   it('does not auto-focus a button inside an inert subtree', () => {
     render(
       <Trap>
-        <div inert="">
+        <div {...({ inert: '' } as any)}>
           <button data-testid="inert-btn">Inert</button>
         </div>
         <button data-testid="visible">Visible</button>

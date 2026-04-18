@@ -10,7 +10,7 @@ import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EventForm from '../EventForm.jsx';
 
-function renderForm(extra = {}) {
+function renderForm(extra: any = {}) {
   render(
     <EventForm
       event={{

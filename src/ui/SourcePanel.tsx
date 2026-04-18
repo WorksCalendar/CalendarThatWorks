@@ -40,7 +40,7 @@ const REFRESH_OPTIONS = [
   { label: 'Manual',     value: null       },
 ];
 
-function ColorDot({ color, size = 12, onClick }) {
+function ColorDot({ color, size = 12, onClick }: any) {
   return (
     <button
       title="Change colour"
@@ -60,7 +60,7 @@ function ColorDot({ color, size = 12, onClick }) {
   );
 }
 
-function ToggleSwitch({ checked, onChange, title }) {
+function ToggleSwitch({ checked, onChange, title }: any) {
   return (
     <label
       className={styles.toggle}
@@ -73,7 +73,7 @@ function ToggleSwitch({ checked, onChange, title }) {
   );
 }
 
-function RemoveBtn({ onClick, title = 'Remove' }) {
+function RemoveBtn({ onClick, title = 'Remove' }: any) {
   return (
     <button
       className={styles.removeBtn}
@@ -99,7 +99,7 @@ function rowStyle(enabled) {
 
 // ── ICS feed row ──────────────────────────────────────────────────────────────
 
-function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }) {
+function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: any) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(source.label);
   const inputRef = useRef(null);
@@ -179,7 +179,7 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }) {
 
 // ── CSV dataset row ───────────────────────────────────────────────────────────
 
-function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }) {
+function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: any) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(source.label);
 
@@ -250,7 +250,7 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }) {
 
 // ── Add ICS feed form ─────────────────────────────────────────────────────────
 
-function AddFeedForm({ onAdd }) {
+function AddFeedForm({ onAdd }: any) {
   const [open,            setOpen]            = useState(false);
   const [url,             setUrl]             = useState('');
   const [label,           setLabel]           = useState('');
@@ -437,7 +437,7 @@ function AddFeedForm({ onAdd }) {
 
 // ── Section heading ───────────────────────────────────────────────────────────
 
-function SectionHeading({ icon: Icon, label, count, errors }) {
+function SectionHeading({ icon: Icon, label, count, errors }: any) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
@@ -463,7 +463,7 @@ function SectionHeading({ icon: Icon, label, count, errors }) {
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onToggle, onUpdate }) {
+export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onToggle, onUpdate }: any) {
   const icsSources = (sources ?? []).filter(s => s.type === 'ics');
   const csvSources = (sources ?? []).filter(s => s.type === 'csv');
 

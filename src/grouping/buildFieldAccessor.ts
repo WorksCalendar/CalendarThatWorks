@@ -22,7 +22,7 @@ function buildSingleAccessor(fieldName, mode) {
  *   "role"                 → single accessor fn
  *   ["role", "shift"]      → array of accessor fns (one per grouping level)
  */
-export function buildFieldAccessor(fieldName, mode) {
+export function buildFieldAccessor(fieldName, mode): any {
   if (Array.isArray(fieldName)) {
     return fieldName.map(f => buildSingleAccessor(f, mode));
   }

@@ -98,7 +98,7 @@ export default function ScheduleEditorForm({
   onCallCategory = 'on-call',
   onSave,
   onClose,
-}) {
+}: any) {
   const trapRef = useFocusTrap(onClose);
 
   // Mode: 'onetime' | 'recurring' | 'template'

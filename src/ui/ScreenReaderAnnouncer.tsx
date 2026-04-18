@@ -35,7 +35,7 @@ const srOnly: React.CSSProperties = {
  * A single live region with two alternating slots.
  * `politeness` must be 'polite' or 'assertive'.
  */
-function LiveRegion({ politeness, slots }) {
+function LiveRegion({ politeness, slots }: any) {
   return (
     <div aria-live={politeness} aria-atomic="true" style={srOnly}>
       <span>{slots[0]}</span>

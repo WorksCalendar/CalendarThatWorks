@@ -19,7 +19,7 @@ export default function AgendaView({
   sort,
   showAllGroups = false,
   employees,
-}) {
+}: any) {
   const ctx = useCalendarContext();
 
   // Resolve resource IDs (e.g. "emp-sarah") to display names (e.g. "Sarah Chen").

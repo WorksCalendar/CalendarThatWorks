@@ -32,7 +32,7 @@ const SCOPE_OPTIONS = [
  *   onConfirm(scope: 'single' | 'following' | 'series') → void
  *   onCancel()  → void
  */
-export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, onCancel }) {
+export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, onCancel }: any) {
   const [scope, setScope] = useState('single');
   const trapRef = useFocusTrap(onCancel);
 

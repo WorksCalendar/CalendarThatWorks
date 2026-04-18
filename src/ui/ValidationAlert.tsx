@@ -7,7 +7,7 @@ import styles from './ValidationAlert.module.css';
  * Hard  → one "Dismiss" button (commit is blocked).
  * Soft  → "Cancel" + "Save anyway" (user can override the warning).
  */
-export default function ValidationAlert({ violations, isHard, onConfirm, onCancel }) {
+export default function ValidationAlert({ violations, isHard, onConfirm, onCancel }: any) {
   const trapRef = useFocusTrap(onCancel);
   return (
     <div

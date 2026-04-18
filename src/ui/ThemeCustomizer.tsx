@@ -141,7 +141,7 @@ function wcagRating(ratio) {
   return { label: 'Fail', tone: 'bad' };
 }
 
-export default function ThemeCustomizer({ theme, onChange }) {
+export default function ThemeCustomizer({ theme, onChange }: any) {
   const [draftImport, setDraftImport] = useState('');
   const [importError, setImportError] = useState('');
   const [importMode, setImportMode] = useState('merge');

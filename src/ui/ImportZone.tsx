@@ -11,7 +11,7 @@ import ImportPreview from './ImportPreview.jsx';
 import CSVImportDialog from './CSVImportDialog.jsx';
 import styles from './ImportZone.module.css';
 
-export default function ImportZone({ onImport, onClose }) {
+export default function ImportZone({ onImport, onClose }: any) {
   const [dragging,  setDragging]  = useState(false);
   const [parsed,    setParsed]    = useState(null); // ICS parsed events
   const [csvMode,   setCsvMode]   = useState(false); // switch to CSV dialog

@@ -14,7 +14,7 @@ import { CustomFieldsSection } from './EventFormSections/CustomFieldsSection.jsx
 import ConfirmDialog from './ConfirmDialog.jsx';
 import styles from './EventForm.module.css';
 
-export default function EventForm({ event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory }) {
+export default function EventForm({ event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const trapRef = useFocusTrap(onClose);
   const draft   = useEventDraftState(event, categories, config);

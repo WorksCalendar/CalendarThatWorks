@@ -2,7 +2,7 @@ import { render, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useTouchDnd } from '../useTouchDnd.js';
 
-function Harness({ enabled = true, longPressMs = 300, cbs }) {
+function Harness({ enabled = true, longPressMs = 300, cbs }: any) {
   const onTouchStart = useTouchDnd({
     enabled,
     longPressMs,

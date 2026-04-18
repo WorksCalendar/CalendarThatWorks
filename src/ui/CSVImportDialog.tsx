@@ -28,7 +28,7 @@ import pStyles from './ImportPreview.module.css';
 
 // ── Step 1: Drop zone ─────────────────────────────────────────────────────────
 
-function DropStep({ onFile, onClose }) {
+function DropStep({ onFile, onClose }: any) {
   const [dragging, setDragging] = useState(false);
   const [error,    setError]    = useState(null);
   const inputRef = useRef(null);
@@ -92,7 +92,7 @@ function DropStep({ onFile, onClose }) {
 
 const SKIP = '';
 
-function MapStep({ filename, headers, rows, onBack, onNext }) {
+function MapStep({ filename, headers, rows, onBack, onNext }: any) {
   const [mapping,     setMapping]     = useState(() => suggestMapping(headers));
   const [dateFormat,  setDateFormat]  = useState('auto');
   const [presets,     setPresets]     = useState(() => loadPresets());
@@ -358,7 +358,7 @@ function MapStep({ filename, headers, rows, onBack, onNext }) {
 
 // ── Step 3: Preview & import ──────────────────────────────────────────────────
 
-function PreviewStep({ events, errors, onBack, onImport, onClose }) {
+function PreviewStep({ events, errors, onBack, onImport, onClose }: any) {
   const [selected, setSelected] = useState(() => new Set(events.map((_, i) => i)));
 
   function toggle(i) {
@@ -462,7 +462,7 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }) {
 
 // ── Main dialog ───────────────────────────────────────────────────────────────
 
-export default function CSVImportDialog({ onImport, onClose }) {
+export default function CSVImportDialog({ onImport, onClose }: any) {
   const [step, setStep] = useState('drop'); // 'drop' | 'map' | 'preview'
   const [fileData, setFileData]     = useState(null); // { filename, headers, rows }
   const [mappedData, setMappedData] = useState(null); // { events, errors }

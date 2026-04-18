@@ -22,7 +22,7 @@ const events = [
 
 describe('WorksCalendar sort prop', () => {
   it('orders visibleEvents by a single string field ascending', () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(
       <WorksCalendar
         ref={apiRef}
@@ -35,7 +35,7 @@ describe('WorksCalendar sort prop', () => {
   });
 
   it('supports multi-field sort with tiebreakers', () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(
       <WorksCalendar
         ref={apiRef}
@@ -52,7 +52,7 @@ describe('WorksCalendar sort prop', () => {
   });
 
   it('defaults to start-date order when sort is omitted (baseline preserved)', () => {
-    const apiRef = createRef();
+    const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} events={events} />);
     const ids = apiRef.current.getVisibleEvents().map(e => e.id);
     // Pipeline default: events surface in chronological start order.

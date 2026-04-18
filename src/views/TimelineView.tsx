@@ -113,7 +113,7 @@ export default function TimelineView({
   sort,
   roles = [],
   bases = [],
-}) {
+}: any) {
   const ctx        = useCalendarContext();
 
   // ── Shift coverage menu state ─────────────────────────────────────────────

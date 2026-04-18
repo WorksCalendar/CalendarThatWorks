@@ -78,7 +78,7 @@ const seededEvent = {
  * Small orchestrator that wires the three systems the way a host app would.
  * Not production code — exists only for the test pipeline.
  */
-function Pipeline({ config, initialEvents = [seededEvent], onCommit }) {
+function Pipeline({ config, initialEvents = [seededEvent], onCommit }: any) {
   const [events, setEvents]     = useState(initialEvents);
   const [proposed, setProposed] = useState(null);
   const [conflict, setConflict] = useState(null);
@@ -145,7 +145,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }) {
   );
 }
 
-function fillRequestForm({ title, start, end, resource, category }) {
+function fillRequestForm({ title, start, end, resource, category }: any) {
   fireEvent.change(screen.getByLabelText('Title'),    { target: { value: title } });
   fireEvent.change(screen.getByLabelText('Starts'),   { target: { value: start } });
   fireEvent.change(screen.getByLabelText('Ends'),     { target: { value: end } });

@@ -27,7 +27,7 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 export default function WeekView({
   currentDate, events, onEventClick, onEventMove, onEventResize, onDateSelect,
   config, weekStartDay = 0,
-}: { currentDate: Date; events: any[]; onEventClick?: (ev: any) => void; onEventMove?: any; onEventResize?: any; onDateSelect?: any; config?: any; weekStartDay?: Day }) {
+}: { currentDate: Date; events: any; onEventClick?: any; onEventMove?: any; onEventResize?: any; onDateSelect?: any; config?: any; weekStartDay?: Day } & Record<string, any>) {
   const ctx = useCalendarContext();
   const dayStart   = config?.display?.dayStart ?? 6;
   const dayEnd     = config?.display?.dayEnd   ?? 22;

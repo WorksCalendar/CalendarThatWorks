@@ -44,7 +44,7 @@ function colorDot(color, size = 10) {
 
 // ── Feed row ──────────────────────────────────────────────────────────────────
 
-function FeedRow({ feed, error, onToggle, onRemove, onUpdate }) {
+function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(feed.label);
   const inputRef = useRef(null);
@@ -141,7 +141,7 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }) {
 
 // ── Add feed form ─────────────────────────────────────────────────────────────
 
-function AddFeedForm({ onAdd }) {
+function AddFeedForm({ onAdd }: any) {
   const [open,            setOpen]            = useState(false);
   const [url,             setUrl]             = useState('');
   const [label,           setLabel]           = useState('');
@@ -346,7 +346,7 @@ function AddFeedForm({ onAdd }) {
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onToggle, onUpdate }) {
+export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onToggle, onUpdate }: any) {
   // Build a quick error lookup by URL
   const errorByUrl = Object.fromEntries(
     (feedErrors ?? []).map(({ feed, err }) => [feed.url, err])

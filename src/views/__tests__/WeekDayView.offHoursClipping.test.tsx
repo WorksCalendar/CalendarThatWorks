@@ -20,7 +20,7 @@ function d(y, mo, day, h = 0, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);
 }
 
-function Wrap({ children }) {
+function Wrap({ children }: any) {
   return (
     <CalendarContext.Provider value={null}>{children}</CalendarContext.Provider>
   );

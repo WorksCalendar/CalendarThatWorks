@@ -20,10 +20,10 @@ import { isEmptyFilterValue }    from './filterState.js';
  *
  * @param {object[]} items    — normalized events
  * @param {object}   filters  — { [fieldKey]: value }
- * @param {import('./filterSchema.js').FilterField[]} [schema]
+ * @param [schema]
  * @returns {object[]}
  */
-export function applyFilters(items, filters = {}, schema = DEFAULT_FILTER_SCHEMA) {
+export function applyFilters(items, filters = {}, schema: any[] = DEFAULT_FILTER_SCHEMA) {
   return items.filter(item =>
     schema.every(field => {
       const value = filters[field.key];

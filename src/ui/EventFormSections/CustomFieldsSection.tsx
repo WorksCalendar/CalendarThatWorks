@@ -12,7 +12,7 @@ import styles from '../EventForm.module.css';
  *   errors       object        — validation errors keyed by `meta_<fieldName>`
  *   onMetaChange (key, val) => void
  */
-export function CustomFieldsSection({ category, customFields, metaValues, errors, onMetaChange }) {
+export function CustomFieldsSection({ category, customFields, metaValues, errors, onMetaChange }: any) {
   if (!customFields.length) return null;
 
   return (
@@ -33,7 +33,7 @@ export function CustomFieldsSection({ category, customFields, metaValues, errors
 
 /* ── Individual field renderer ──────────────────────────────────────────── */
 
-function CustomField({ field, value, error, onChange }) {
+function CustomField({ field, value, error, onChange }: any) {
   const opts = field.options
     ? field.options.split(',').map(s => s.trim()).filter(Boolean)
     : [];

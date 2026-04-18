@@ -11,7 +11,7 @@ import styles from './EmployeeActionCard.module.css';
  *   onAction   (action) => void      — called with 'pto' | 'unavailable' | 'availability' | 'schedule'
  *   onClose    () => void
  */
-export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose }) {
+export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose }: any) {
   const cardRef = useRef(null);
   // Start invisible so we can measure before revealing
   const [pos, setPos] = useState({ top: anchorRect.bottom + 4, left: anchorRect.left, visible: false });

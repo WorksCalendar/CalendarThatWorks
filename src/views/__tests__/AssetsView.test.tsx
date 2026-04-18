@@ -217,7 +217,7 @@ describe('AssetsView — renderAssetLocation render prop', () => {
     const renderAssetLocation = vi.fn(() => <span data-testid="custom-loc">Custom</span>);
     renderAssets({ renderAssetLocation });
     expect(renderAssetLocation).toHaveBeenCalled();
-    const [, resource] = renderAssetLocation.mock.calls[0];
+    const [, resource] = renderAssetLocation.mock.calls[0] as any;
     expect(resource).toMatchObject({ id: 'N121AB' });
     expect(screen.getAllByTestId('custom-loc').length).toBeGreaterThan(0);
   });
@@ -277,7 +277,7 @@ describe('AssetsView — audit drawer', () => {
 describe('AssetsView — keyboard navigation', () => {
   it('moves focus right with ArrowRight', () => {
     renderAssets();
-    const firstCell = document.querySelector('[data-cell="0-0"]');
+    const firstCell = document.querySelector('[data-cell="0-0"]') as HTMLElement;
     firstCell.focus();
     fireEvent.keyDown(firstCell, { key: 'ArrowRight' });
     const nextCell = document.querySelector('[data-cell="0-1"]');
@@ -289,7 +289,7 @@ describe('AssetsView — keyboard navigation', () => {
     const onEventClick = vi.fn();
     renderAssets({ onEventClick });
     // ev-1 starts on April 3 (day index 2 for a month starting April 1)
-    const cell = document.querySelector('[data-cell="0-2"]');
+    const cell = document.querySelector('[data-cell="0-2"]') as HTMLElement;
     cell.focus();
     fireEvent.keyDown(cell, { key: 'Enter' });
     expect(onEventClick).toHaveBeenCalled();
@@ -299,7 +299,7 @@ describe('AssetsView — keyboard navigation', () => {
     const onDateSelect = vi.fn();
     renderAssets({ onDateSelect });
     // April 20 = day index 19, no event on N121AB
-    const cell = document.querySelector('[data-cell="0-19"]');
+    const cell = document.querySelector('[data-cell="0-19"]') as HTMLElement;
     cell.focus();
     fireEvent.keyDown(cell, { key: 'Enter' });
     expect(onDateSelect).toHaveBeenCalled();

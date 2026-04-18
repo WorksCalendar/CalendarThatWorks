@@ -90,7 +90,7 @@ describe('AssetRequestForm', () => {
 
   it('pre-fills the asset when initialAssetId is provided', () => {
     renderForm({ initialAssetId: 'n200bb' });
-    expect(screen.getByLabelText(/Asset/).value).toBe('n200bb');
+    expect((screen.getByLabelText(/Asset/) as HTMLInputElement).value).toBe('n200bb');
   });
 
   it('includes notes in meta when provided', () => {

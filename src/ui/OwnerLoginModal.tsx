@@ -11,7 +11,7 @@ import { Eye, EyeOff, Lock, X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './OwnerLoginModal.module.css';
 
-export default function OwnerLoginModal({ authError, isAuthLoading, onAuthenticate, onClose }) {
+export default function OwnerLoginModal({ authError, isAuthLoading, onAuthenticate, onClose }: any) {
   const trapRef = useFocusTrap(onClose);
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);

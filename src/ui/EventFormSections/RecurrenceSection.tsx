@@ -18,7 +18,7 @@ const RECURRENCE_PRESETS = [
  *   onPresetChange      (id) => void
  *   onCustomRruleChange (str) => void
  */
-export function RecurrenceSection({ preset, customRrule, onPresetChange, onCustomRruleChange }) {
+export function RecurrenceSection({ preset, customRrule, onPresetChange, onCustomRruleChange }: any) {
   function handlePresetChange(e) {
     const next = e.target.value;
     onPresetChange(next);

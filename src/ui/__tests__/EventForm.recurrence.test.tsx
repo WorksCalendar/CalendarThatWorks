@@ -5,7 +5,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EventForm from '../EventForm.jsx';
 
-function renderForm(props = {}) {
+function renderForm(props: any = {}) {
   const onSave = vi.fn();
   render(
     <EventForm

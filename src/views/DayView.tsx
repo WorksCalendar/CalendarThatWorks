@@ -13,7 +13,7 @@ const GUTTER_W = 56;
 
 export default function DayView({
   currentDate, events, onEventClick, onEventMove, onEventResize, onDateSelect, config,
-}) {
+}: any) {
   const ctx = useCalendarContext();
   const dayStart  = config?.display?.dayStart ?? 6;
   const dayEnd    = config?.display?.dayEnd   ?? 22;

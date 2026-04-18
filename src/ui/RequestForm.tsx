@@ -68,7 +68,7 @@ export default function RequestForm({
   onSubmit,
   onCancel,
   title = 'New request',
-}) {
+}: any) {
   const trapRef = useFocusTrap(onCancel);
 
   const fields = useMemo(() => {

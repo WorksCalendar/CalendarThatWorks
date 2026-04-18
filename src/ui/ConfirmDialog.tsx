@@ -13,7 +13,7 @@ import styles from './ConfirmDialog.module.css';
  *   onConfirm     () => void
  *   onCancel      () => void
  */
-export default function ConfirmDialog({ message, confirmLabel = 'Delete', onConfirm, onCancel }) {
+export default function ConfirmDialog({ message, confirmLabel = 'Delete', onConfirm, onCancel }: any) {
   const trapRef = useFocusTrap(onCancel);
 
   return (

@@ -35,7 +35,7 @@ const ACTION_LABELS = {
   finalize:  'Finalized',
 };
 
-export default function AuditDrawer({ event, onClose, approvalsConfig, onAction }) {
+export default function AuditDrawer({ event, onClose, approvalsConfig, onAction }: any) {
   const closeRef = useRef(null);
 
   useEffect(() => {

@@ -10,7 +10,7 @@ import '@testing-library/jest-dom';
 
 import { useKeyboardShortcuts } from '../useKeyboardShortcuts.js';
 
-function Harness({ api }) {
+function Harness({ api }: any) {
   useKeyboardShortcuts(api);
   return (
     <div>

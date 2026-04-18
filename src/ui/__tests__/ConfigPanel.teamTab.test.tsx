@@ -12,7 +12,7 @@ import '@testing-library/jest-dom';
 
 import { TeamTab } from '../ConfigPanel.jsx';
 
-function renderTab({ initialMembers = [], onUpdate, onEmployeeAdd, onEmployeeDelete } = {}) {
+function renderTab({ initialMembers = [], onUpdate, onEmployeeAdd, onEmployeeDelete }: any = {}) {
   let currentConfig = { team: { members: initialMembers } };
   const update = onUpdate ?? vi.fn(updater => {
     currentConfig = typeof updater === 'function' ? updater(currentConfig) : { ...currentConfig, ...updater };
@@ -105,7 +105,7 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
     // The pending input is the newly-added one (empty value); filter it out.
     const inputs = screen.getAllByPlaceholderText('Employee name');
-    const pending = inputs.find(el => el.value === '');
+    const pending = inputs.find(el => (el as HTMLInputElement).value === '');
     fireEvent.change(pending, { target: { value: 'Nora' } });
     fireEvent.keyDown(pending, { key: 'Enter' });
     expect(getConfig().team.members.map(m => m.id)).toEqual([5, 6]);

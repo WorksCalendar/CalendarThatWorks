@@ -187,7 +187,7 @@ export default function AssetsView({
   onApprovalAction,
   resolveResourceLabel,
   strictAssetFiltering = false,
-}) {
+}: any) {
   const ctx = useCalendarContext();
 
   const [auditEvent, setAuditEvent] = useState(null);

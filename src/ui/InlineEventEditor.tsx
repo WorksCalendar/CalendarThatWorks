@@ -13,7 +13,7 @@ const PRESET_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#64748b',
 ];
 
-export default function InlineEventEditor({ event, x, y, onSave, onClose }) {
+export default function InlineEventEditor({ event, x, y, onSave, onClose }: any) {
   const [title, setTitle] = useState(event.title ?? '');
   const [color, setColor] = useState(event.color ?? PRESET_COLORS[0]);
   const [bold,  setBold]  = useState(!!(event.meta?._display?.bold));

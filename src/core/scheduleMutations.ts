@@ -25,7 +25,7 @@ export function findLinkedMirroredCoverage(events, shiftEvent) {
   );
 }
 
-export function buildShiftStatusMeta(shiftEvent, { status, openShiftId }) {
+export function buildShiftStatusMeta(shiftEvent, { status, openShiftId }: { status?: any; openShiftId?: any }) {
   const nextMeta = { ...(shiftEvent?.meta ?? {}) };
   if (status) {
     nextMeta.shiftStatus = status;

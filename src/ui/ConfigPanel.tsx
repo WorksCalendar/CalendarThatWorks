@@ -62,7 +62,7 @@ export default function ConfigPanel({
   // the prop changes so consecutive deep-links (e.g. two clicks of "Edit
   // assets" with a different target each time) land on the right tab.
   initialTab,
-}) {
+}: any) {
   const [tab, setTab] = useState(() =>
     initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
   );
@@ -216,7 +216,7 @@ export default function ConfigPanel({
   );
 }
 
-function SetupTab({ config, onUpdate }) {
+function SetupTab({ config, onUpdate }: any) {
   const selectedTheme = config.setup?.preferredTheme ?? 'corporate';
   const calendarName = config.title ?? 'My WorksCalendar';
 
@@ -270,7 +270,7 @@ function SetupTab({ config, onUpdate }) {
   );
 }
 
-export function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
+export function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView }: any) {
   const [editingId,   setEditingId]   = useState(null);
   const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
 
@@ -363,7 +363,7 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
   );
 }
 
-export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
+export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: any) {
   const teamMembers = config.team?.members ?? [];
   const roles       = config.team?.roles   ?? [];
   const bases       = config.team?.bases   ?? [];
@@ -606,7 +606,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
   );
 }
 
-function TemplateTab({ templates, onCreate, onDelete, error }) {
+function TemplateTab({ templates, onCreate, onDelete, error }: any) {
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState('team');
   const [title, setTitle] = useState('');
@@ -695,7 +695,7 @@ function TemplateTab({ templates, onCreate, onDelete, error }) {
 }
 
 /* ----- HoverCard tab ----- */
-function HoverCardTab({ config, onUpdate }) {
+function HoverCardTab({ config, onUpdate }: any) {
   const hc = config.hoverCard;
   const toggle = (key) =>
     onUpdate(c => ({ ...c, hoverCard: { ...c.hoverCard, [key]: !c.hoverCard[key] } }));
@@ -723,7 +723,7 @@ function HoverCardTab({ config, onUpdate }) {
 }
 
 /* ----- EventFields tab ----- */
-function EventFieldsTab({ config, categories, onUpdate }) {
+function EventFieldsTab({ config, categories, onUpdate }: any) {
   const [selCat, setSelCat] = useState(categories[0] || '');
   const [newCat, setNewCat] = useState('');
 
@@ -813,7 +813,7 @@ function EventFieldsTab({ config, categories, onUpdate }) {
  * { categories: DEFAULT_CATEGORIES }`. Category hue drives AssetsView pill
  * color; id is the key referenced by event.category.
  */
-export function CategoriesTab({ config, onUpdate }) {
+export function CategoriesTab({ config, onUpdate }: any) {
   const current = config.categoriesConfig ?? { categories: DEFAULT_CATEGORIES };
   const cats = current.categories ?? [];
   const pillStyle = current.pillStyle ?? 'hue';
@@ -967,7 +967,7 @@ export function CategoriesTab({ config, onUpdate }) {
  *            groupBy dropdowns added by ticket 10.
  *   meta   — free-form; sublabel appears under label in the asset cell.
  */
-export function AssetsTab({ config, onUpdate }) {
+export function AssetsTab({ config, onUpdate }: any) {
   const assets = Array.isArray(config.assets) ? config.assets : [];
 
   const writeAssets = (next) => onUpdate(c => ({ ...c, assets: next }));
@@ -1079,7 +1079,7 @@ export function AssetsTab({ config, onUpdate }) {
 }
 
 /* ----- Display tab ----- */
-function DisplayTab({ config, onUpdate }) {
+function DisplayTab({ config, onUpdate }: any) {
   const d = config.display;
   const labels = config.filterUi?.groupLabels ?? {};
   const set = (key, val) => onUpdate(c => ({ ...c, display: { ...c.display, [key]: val } }));
@@ -1232,7 +1232,7 @@ const STAGE_LABELS = {
  *   approvals.rules   — per-stage `{ allow: ApprovalAction[], prefix }`.
  *   approvals.labels  — per-action button copy shown to approvers.
  */
-export function ApprovalsTab({ config, onUpdate }) {
+export function ApprovalsTab({ config, onUpdate }: any) {
   const approvals = config.approvals ?? {};
   const enabled   = !!approvals.enabled;
   const tiers     = Array.isArray(approvals.tiers) ? approvals.tiers : [];
@@ -1447,7 +1447,7 @@ const REQUEST_FIELD_TYPES = [
  * the RequestForm renderer's built-in handlers — adding a new type means
  * updating both sides.
  */
-export function RequestFormTab({ config, onUpdate }) {
+export function RequestFormTab({ config, onUpdate }: any) {
   const schema = config.requestForm ?? {};
   const fields = Array.isArray(schema.fields) ? schema.fields : [];
 
@@ -1579,7 +1579,7 @@ export function RequestFormTab({ config, onUpdate }) {
  *   category-mutex   — listed categories cannot coexist on one resource.
  *   min-rest         — minimum gap (in minutes) between same-resource events.
  */
-export function ConflictsTab({ config, onUpdate }) {
+export function ConflictsTab({ config, onUpdate }: any) {
   const conflicts = config.conflicts ?? {};
   const enabled   = !!conflicts.enabled;
   const rules     = Array.isArray(conflicts.rules) ? conflicts.rules : [];
@@ -1706,7 +1706,7 @@ export function ConflictsTab({ config, onUpdate }) {
 }
 
 /* ----- Access tab ----- */
-function AccessTab({ config, onUpdate }) {
+function AccessTab({ config, onUpdate }: any) {
   return (
     <div className={styles.section}>
       <p className={styles.sectionDesc}>Optionally require a password to view this calendar.</p>

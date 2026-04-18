@@ -52,7 +52,7 @@ export default function AdvancedFilterBuilder({
   editingId = null,
   onUpdate,
   onCancelEdit,
-}) {
+}: any) {
   // Exclude date-range fields from the condition builder field list
   const fieldOptions = useMemo(
     () => schema.filter(f => f.type !== 'date-range'),

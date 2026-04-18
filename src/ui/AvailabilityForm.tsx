@@ -83,7 +83,7 @@ function fromInput(str, allDay) {
  *   onSave     (availabilityEvent) => void
  *   onClose    () => void
  */
-export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }) {
+export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }: any) {
   const trapRef = useFocusTrap(onClose);
 
   const kind = initialKind ?? 'pto';

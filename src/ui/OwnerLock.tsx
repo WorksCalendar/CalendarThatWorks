@@ -3,7 +3,7 @@ import { Settings } from 'lucide-react';
 import OwnerLoginModal from './OwnerLoginModal.jsx';
 import styles from './OwnerLock.module.css';
 
-export default function OwnerLock({ isOwner, authError, isAuthLoading, onAuthenticate, onOpen }) {
+export default function OwnerLock({ isOwner, authError, isAuthLoading, onAuthenticate, onOpen }: any) {
   const [showLogin, setShowLogin] = useState(false);
 
   function handleGearClick() {

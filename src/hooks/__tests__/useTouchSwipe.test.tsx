@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { useRef } from 'react';
 import { useTouchSwipe } from '../useTouchSwipe.js';
 
-function Harness({ enabled = true, onSwipeLeft, onSwipeRight }) {
+function Harness({ enabled = true, onSwipeLeft, onSwipeRight }: any) {
   const ref = useRef(null);
   useTouchSwipe({ targetRef: ref, enabled, onSwipeLeft, onSwipeRight, minDistance: 40 });
   return <div ref={ref} data-testid="swipe-target">Swipe target</div>;

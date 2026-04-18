@@ -104,9 +104,9 @@ const FIELD_HINTS = {
  * Given a list of CSV column headers, return a best-guess field mapping.
  * Returns a Record<EventField, string> where value is the matched header.
  */
-export function suggestMapping(headers) {
-  const mapping = {};
-  const used = new Set();
+export function suggestMapping(headers): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const used = new Set<string>();
 
   for (const [field, hints] of Object.entries(FIELD_HINTS)) {
     for (const header of headers) {

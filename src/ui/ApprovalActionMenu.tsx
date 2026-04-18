@@ -46,7 +46,7 @@ export default function ApprovalActionMenu({
   labelledBy,
   anchorRect,
   variant = 'popover',
-}) {
+}: any) {
   const ref = useRef(null);
   const actions = allowedActionsFor(stage, approvalsConfig);
 

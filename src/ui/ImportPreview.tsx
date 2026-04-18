@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import styles from './ImportPreview.module.css';
 
-export default function ImportPreview({ events, onImport, onClose }) {
+export default function ImportPreview({ events, onImport, onClose }: any) {
   const [selected, setSelected] = useState(() => new Set(events.map((_, i) => i)));
 
   function toggle(i) {

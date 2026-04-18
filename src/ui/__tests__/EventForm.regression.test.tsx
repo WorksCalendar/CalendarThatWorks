@@ -24,7 +24,7 @@ const CONFIG_WITH_FIELDS = {
   },
 };
 
-function renderForm(props = {}) {
+function renderForm(props: any = {}) {
   const onSave = vi.fn();
   render(
     <EventForm

@@ -16,7 +16,7 @@ import { CustomFieldsSection } from '../EventFormSections/CustomFieldsSection.js
 ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('RecurrenceSection', () => {
-  function renderRecurrence(props = {}) {
+  function renderRecurrence(props: any = {}) {
     return render(
       <RecurrenceSection
         preset={props.preset ?? 'none'}
@@ -77,7 +77,7 @@ describe('RecurrenceSection', () => {
 ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('CategorySection', () => {
-  function renderCategory(props = {}) {
+  function renderCategory(props: any = {}) {
     return render(
       <CategorySection
         value={props.value ?? ''}

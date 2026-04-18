@@ -31,7 +31,7 @@ function d(y, mo, day, h = 9, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);
 }
 
-function makeEvent(id, overrides = {}) {
+function makeEvent(id, overrides: any = {}) {
   return {
     id,
     title: overrides.title ?? `Event ${id}`,
@@ -45,7 +45,7 @@ function makeEvent(id, overrides = {}) {
 
 const calCtx = null; // CalendarContext.Provider value (null = default)
 
-function CalCtxWrap({ children }) {
+function CalCtxWrap({ children }: any) {
   return (
     <CalendarContext.Provider value={calCtx}>
       {children}
@@ -68,7 +68,7 @@ describe('ScreenReaderAnnouncer', () => {
   });
 
   it('routes polite announcements to the polite region', async () => {
-    const ref = createRef();
+    const ref = createRef<any>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
     act(() => {
@@ -84,7 +84,7 @@ describe('ScreenReaderAnnouncer', () => {
   });
 
   it('routes assertive announcements to the assertive region', async () => {
-    const ref = createRef();
+    const ref = createRef<any>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
     act(() => {
@@ -100,7 +100,7 @@ describe('ScreenReaderAnnouncer', () => {
   });
 
   it('defaults to polite when no politeness is specified', async () => {
-    const ref = createRef();
+    const ref = createRef<any>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
     act(() => {
@@ -113,7 +113,7 @@ describe('ScreenReaderAnnouncer', () => {
   });
 
   it('alternates slots so identical messages re-trigger screen readers', async () => {
-    const ref = createRef();
+    const ref = createRef<any>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
     // First announcement
@@ -205,7 +205,7 @@ describe('useFocusTrap', () => {
 describe('MonthView ARIA semantics', () => {
   const currentDate = d(2026, 4, 1); // April 2026
 
-  function renderMonth(props = {}) {
+  function renderMonth(props: any = {}) {
     return render(
       <CalCtxWrap>
         <MonthView
@@ -311,7 +311,7 @@ describe('MonthView ARIA semantics', () => {
     const newFocused = screen.getAllByRole('gridcell').find(c => c.tabIndex === 0);
     const oldDate = new Date(focusedCell.getAttribute('data-date'));
     const newDate = new Date(newFocused.getAttribute('data-date'));
-    const dayDiff = Math.round((newDate - oldDate) / (1000 * 60 * 60 * 24));
+    const dayDiff = Math.round((newDate.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24));
     expect(dayDiff).toBe(7);
   });
 
@@ -360,7 +360,7 @@ describe('MonthView ARIA semantics', () => {
 describe('WeekView ARIA semantics', () => {
   const currentDate = d(2026, 4, 6); // A Monday
 
-  function renderWeek(props = {}) {
+  function renderWeek(props: any = {}) {
     return render(
       <CalCtxWrap>
         <WeekView
@@ -487,7 +487,7 @@ describe('WeekView ARIA semantics', () => {
 describe('DayView ARIA semantics', () => {
   const currentDate = d(2026, 4, 10);
 
-  function renderDay(props = {}) {
+  function renderDay(props: any = {}) {
     return render(
       <CalCtxWrap>
         <DayView
@@ -618,7 +618,7 @@ describe('TimelineView ARIA semantics', () => {
     { id: 'bob',   name: 'Bob Jones',  role: 'Designer' },
   ];
 
-  function renderTimeline(props = {}) {
+  function renderTimeline(props: any = {}) {
     return render(
       <CalCtxWrap>
         <TimelineView

@@ -35,7 +35,7 @@ const events = [
 ];
 
 /** Apply the three-stage pipeline end-to-end. */
-function pipeline({ filters = {}, sort = [], groupBy = null } = {}) {
+function pipeline({ filters = {}, sort = [], groupBy = null }: any = {}) {
   const filtered = applyFilters(events, filters, DEFAULT_FILTER_SCHEMA);
   const sorted   = sortEvents(filtered, sort);
   const tree     = groupBy ? buildGroupTree(sorted, groupBy) : [];

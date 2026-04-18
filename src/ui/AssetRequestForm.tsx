@@ -34,7 +34,7 @@ export default function AssetRequestForm({
   initialAssetId,
   onSubmit,
   onClose,
-}) {
+}: any) {
   const trapRef = useFocusTrap(onClose);
 
   const start = initialStart instanceof Date ? initialStart : new Date();

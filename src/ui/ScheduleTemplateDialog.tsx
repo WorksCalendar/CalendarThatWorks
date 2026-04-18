@@ -30,7 +30,7 @@ export default function ScheduleTemplateDialog({
   onInstantiate,
   onPreview,
   onClose,
-}) {
+}: any) {
   const [templateId, setTemplateId] = useState(() => templates[0]?.id ?? '');
   const [anchor, setAnchor] = useState(() => toDatetimeLocal(new Date()));
   const [resource, setResource] = useState('');
