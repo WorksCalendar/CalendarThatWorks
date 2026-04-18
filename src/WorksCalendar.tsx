@@ -40,6 +40,8 @@ import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
 import HoverCard              from './ui/HoverCard.jsx';
 import OwnerLock              from './ui/OwnerLock.jsx';
+import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay.jsx';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
@@ -614,6 +616,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [scheduleEditorState, setScheduleEditorState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
+  const [helpOpen,         setHelpOpen]         = useState(false);
   // { event, x, y } — set when an event is clicked in edit mode
   const [inlineEditTarget, setInlineEditTarget] = useState(null);
   // Capture last click coords so InlineEventEditor can position near the pill
@@ -1402,6 +1405,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onSwipeRight: () => cal.navigate(-1),
   });
 
+  useKeyboardShortcuts({
+    setView: cal.setView,
+    navigate: cal.navigate,
+    goToToday: cal.goToToday,
+    openHelp: () => setHelpOpen(true),
+  });
+
   const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
   const hasScheduleTemplates = Array.isArray(visibleScheduleTemplates) && visibleScheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
@@ -1801,6 +1811,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             scheduleTemplateError={templateError}
           />
         )}
+
+        {/* ── Keyboard shortcuts cheat sheet ── */}
+        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} />}
 
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />
