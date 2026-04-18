@@ -518,9 +518,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
   }
 
-  // True when allNormalized is about to change because we called onEventSave.
-  // Prevents the sync effect from wiping the undo stack we just recorded.
-  const engineMutationPendingRef = useRef(false);
+  // Counts how many onEventSave-triggered prop updates to suppress clear() for.
+  // Scope ops (single/following) emit multiple onEventSave calls; each one
+  // causes a separate allNormalized update that must not wipe the undo stack.
+  const engineMutationPendingRef = useRef(0);
 
   // Version counter: increments whenever the engine emits a state change.
   const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
@@ -531,8 +532,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // undo stack survives the controlled-events prop round-trip.
   useEffect(() => {
     engineRef.current.setEvents(fromLegacyEvents(allNormalized));
-    if (engineMutationPendingRef.current) {
-      engineMutationPendingRef.current = false;
+    if (engineMutationPendingRef.current > 0) {
+      engineMutationPendingRef.current -= 1;
     } else {
       undoManagerRef.current.clear();
     }
@@ -613,8 +614,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // State has changed — record the pre-mutation snapshot.
       undoMgr.record(preSnap, op.type);
       announcerRef.current?.announce(opAnnouncement(op));
-      engineMutationPendingRef.current = true;
-      onAccepted();
+      // Each emitted onEventSave call will trigger an allNormalized update; count
+      // them so the effect can skip clear() for all of them.
+      engineMutationPendingRef.current = Math.max(1, result.changes.length);
+      onAccepted(result);
 
     } else if (result.status === 'pending-confirmation') {
       // Engine state is UNCHANGED at this point (pending means no commit yet).
@@ -627,8 +630,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
             undoMgr.record(preSnap, op.type);
             announcerRef.current?.announce(opAnnouncement(op));
-            engineMutationPendingRef.current = true;
-            onAccepted();
+            engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
+            onAccepted(confirmed);
           }
         },
       });
@@ -1130,9 +1133,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         },
         source: 'form',
       }),
-      () => {
-        const savedPayload = getSavedEventPayload(eventId, rawEv);
-        if (savedPayload) onEventSave?.(savedPayload);
+      (result) => {
+        // For scoped recurring ops the engine may produce multiple changes
+        // (e.g. updated master + created detached occurrence). Emit onEventSave
+        // for every changed/created event so the host stays fully in sync.
+        if (result?.changes?.length > 1) {
+          result.changes.forEach(change => {
+            if (change.type === 'created') {
+              onEventSave?.(toLegacyEvent(change.event));
+            } else if (change.type === 'updated') {
+              onEventSave?.(toLegacyEvent(change.after));
+            }
+          });
+        } else {
+          const savedPayload = getSavedEventPayload(eventId, rawEv);
+          if (savedPayload) onEventSave?.(savedPayload);
+        }
         setFormEvent(null);
       },
       'Edit',
@@ -1145,9 +1161,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     applyWithRecurringCheck(
       ev,
       (scope) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
-      () => {
-        if (onEventMove) onEventMove(ev, newStart, newEnd);
-        else {
+      (result) => {
+        if (onEventMove) {
+          onEventMove(ev, newStart, newEnd);
+        } else if (result?.changes?.length > 1) {
+          result.changes.forEach(change => {
+            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event));
+            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after));
+          });
+        } else {
           const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
           if (savedPayload) onEventSave?.(savedPayload);
         }
@@ -1162,9 +1184,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     applyWithRecurringCheck(
       ev,
       (scope) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
-      () => {
-        if (onEventResize) onEventResize(ev, newStart, newEnd);
-        else {
+      (result) => {
+        if (onEventResize) {
+          onEventResize(ev, newStart, newEnd);
+        } else if (result?.changes?.length > 1) {
+          result.changes.forEach(change => {
+            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event));
+            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after));
+          });
+        } else {
           const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
           if (savedPayload) onEventSave?.(savedPayload);
         }
