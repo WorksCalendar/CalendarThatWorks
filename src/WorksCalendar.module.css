@@ -24,7 +24,6 @@
   font-size: var(--wc-base-font-size, 14px);
   background: var(--wc-bg);
   color: var(--wc-text);
-  border: var(--wc-border-width, 1px) solid var(--wc-border);
   border-radius: var(--wc-radius);
   overflow: hidden;
   display: flex;
