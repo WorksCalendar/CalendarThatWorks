@@ -88,9 +88,13 @@ export default function DayView({
     const endH   = displayTz ? hoursInTimezone(end,   displayTz) : getHours(end)   + getMinutes(end)   / 60;
     const startMin = (startH - dayStart) * 60;
     const endMin   = (endH   - dayStart) * 60;
+    const totalMin = (dayEnd - dayStart) * 60;
+    const visStart = Math.max(0, startMin);
+    const visEnd   = Math.min(totalMin, endMin);
+    if (visEnd <= visStart) return null;
     return {
-      top:    Math.max(0, startMin) / 60 * pxPerHour,
-      height: Math.max(22, endMin - startMin) / 60 * pxPerHour,
+      top:    visStart / 60 * pxPerHour,
+      height: Math.max(22, visEnd - visStart) / 60 * pxPerHour,
     };
   }
 
@@ -129,7 +133,9 @@ export default function DayView({
     const isDimmed = drag.draggedId === ev.id;
     const color    = resolveColor(ev, ctx?.colorRules);
     const onClick  = () => !isDimmed && onEventClick?.(ev);
-    const { top, height } = eventPosition(ev.start, ev.end);
+    const pos = eventPosition(ev.start, ev.end);
+    if (!pos) return null;
+    const { top, height } = pos;
     const numCols  = ev._numCols ?? 1;
     const col      = ev._col     ?? 0;
     const pctLeft  = (col / numCols) * 100;
@@ -189,7 +195,9 @@ export default function DayView({
   function renderGhost() {
     const g = drag.ghost;
     if (!g || !isSameDay(g.start, currentDate)) return null;
-    const { top, height } = eventPosition(g.start, g.end);
+    const pos = eventPosition(g.start, g.end);
+    if (!pos) return null;
+    const { top, height } = pos;
     let left, width;
     if (g.ev) {
       const numCols = g.ev._numCols ?? 1;

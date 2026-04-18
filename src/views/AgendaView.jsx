@@ -18,8 +18,18 @@ export default function AgendaView({
   groupBy,
   sort,
   showAllGroups = false,
+  employees,
 }) {
   const ctx = useCalendarContext();
+
+  // Resolve resource IDs (e.g. "emp-sarah") to display names (e.g. "Sarah Chen").
+  // Falls back to the raw ID when no match — preserves fleet/asset datasets
+  // where the resource ID is already the tail number or asset name.
+  const resourceLabelFor = useMemo(() => {
+    const list = Array.isArray(employees) ? employees : [];
+    const byId = new Map(list.map((m) => [String(m.id), m.name || m.displayName || m.id]));
+    return (id) => byId.get(String(id)) ?? id;
+  }, [employees]);
 
   const days = useMemo(() => {
     const start = startOfMonth(currentDate);
@@ -203,7 +213,7 @@ export default function AgendaView({
               <span>All day · {format(evStartDay, 'MMM d')} → {format(evEndDay, 'MMM d')}</span>
             )}
             {ev.category && <span className={styles.cat}>{ev.category}</span>}
-            {ev.resource && <span>{ev.resource}</span>}
+            {ev.resource && <span>{resourceLabelFor(ev.resource)}</span>}
             {crossGroup && sourceLabel && (
               <span className={styles.sourceBadge} aria-hidden="true">
                 from {sourceLabel}
