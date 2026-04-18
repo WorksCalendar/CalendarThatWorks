@@ -50,6 +50,7 @@ export default function AdvancedFilterBuilder({
   initialName = '',
   initialConditions = null,
   editingId = null,
+  openNonce = 0,
   onUpdate,
   onCancelEdit,
 }) {
@@ -96,8 +97,7 @@ export default function AdvancedFilterBuilder({
     rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     nameInputRef.current?.focus();
     nameInputRef.current?.select();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only on edit open
-  }, []);
+  }, [editingId, openNonce]);
 
   // ── Condition mutations ─────────────────────────────────────────────────
 

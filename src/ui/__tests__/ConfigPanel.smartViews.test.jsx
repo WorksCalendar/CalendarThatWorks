@@ -81,6 +81,23 @@ describe('SmartViewsTab edit UI (issue #100)', () => {
     scrollSpy.mockRestore();
   });
 
+  it('re-clicking the same pencil re-focuses and scrolls the editor', () => {
+    renderTab();
+    const pencil = screen.getByLabelText('Edit Bravo');
+    fireEvent.click(pencil);
+
+    const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+
+    fireEvent.click(pencil);
+
+    expect(scrollSpy).toHaveBeenCalled();
+    expect(document.activeElement).toBe(screen.getByDisplayValue('Bravo'));
+    scrollSpy.mockRestore();
+  });
+
   it('focuses the view-name input when editing opens', () => {
     renderTab();
     fireEvent.click(screen.getByLabelText('Edit Bravo'));

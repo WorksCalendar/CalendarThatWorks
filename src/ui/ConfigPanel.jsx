@@ -204,9 +204,16 @@ function SetupTab({ config, onUpdate }) {
 
 export function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
   const [editingId,   setEditingId]   = useState(null);
+  const [editNonce,   setEditNonce]   = useState(0);
   const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
 
   const editingView = editingId ? savedViews.find(v => v.id === editingId) : null;
+
+  const startEditing = (viewId) => {
+    setConfirmDel(null);
+    setEditingId(viewId);
+    setEditNonce(n => n + 1);
+  };
 
   const handleUpdate = (id, name, filters, conditions) => {
     onUpdateView?.(id, { name, filters: serializeFilters(filters), conditions });
@@ -230,7 +237,7 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
               <div className={styles.smartViewActions}>
                 <button
                   className={styles.svActionBtn}
-                  onClick={() => setEditingId(view.id)}
+                  onClick={() => startEditing(view.id)}
                   title="Edit conditions"
                   aria-label={`Edit ${view.name}`}
                   aria-pressed={editingId === view.id}
@@ -279,7 +286,7 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
           : 'Create Smart Views once categories and people are configured.'}
       </p>
       <AdvancedFilterBuilder
-        key={editingId ?? '__new__'}
+        key={editingId ? `${editingId}-${editNonce}` : '__new__'}
         schema={schema}
         items={items}
         categories={categories ?? []}
@@ -288,6 +295,7 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
         initialName={editingView?.name ?? ''}
         initialConditions={editingView?.conditions ?? null}
         editingId={editingId}
+        openNonce={editNonce}
         onUpdate={handleUpdate}
         onCancelEdit={() => setEditingId(null)}
       />
