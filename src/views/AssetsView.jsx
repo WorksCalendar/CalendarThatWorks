@@ -168,7 +168,7 @@ function approvalPrefix(stage) {
 
 export default function AssetsView({
   currentDate,
-  events,
+  events: eventsProp,
   onEventClick,
   onDateSelect,
   groupBy,
@@ -185,6 +185,7 @@ export default function AssetsView({
   approvalsConfig,
   onApprovalAction,
   resolveResourceLabel,
+  strictAssetFiltering = false,
 }) {
   const ctx = useCalendarContext();
 
@@ -312,6 +313,18 @@ export default function AssetsView({
     }
     return map;
   }, [assetRegistry]);
+
+  // Strict filtering — when on and a registry is provided, keep only events
+  // whose resource matches a registered asset id. Drops both foreign-id events
+  // (e.g. employee IDs in a unified calendar) and null/empty-resource events
+  // (e.g. team-wide meetings that belong on Schedule, not Assets).
+  const events = useMemo(() => {
+    if (!strictAssetFiltering || !assetRegistry) return eventsProp;
+    return eventsProp.filter(e => {
+      const r = e.resource;
+      return r != null && r !== '' && assetById.has(r);
+    });
+  }, [strictAssetFiltering, assetRegistry, assetById, eventsProp]);
 
   // Toolbar sort order. "registry" preserves declared order (default when a
   // registry is present); "label" / "group" / "lastEvent" resort the rows

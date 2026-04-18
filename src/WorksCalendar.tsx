@@ -155,6 +155,7 @@ export type WorksCalendarProps = {
   locationProvider?: LocationProvider;
   categoriesConfig?: Record<string, unknown>;
   assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
+  strictAssetFiltering?: boolean;
   onConflictCheck?: (...args: unknown[]) => Promise<unknown>;
   onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
   renderAssetLocation?: (...args: unknown[]) => ReactNode;
@@ -300,6 +301,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     locationProvider,
     categoriesConfig,
     assets,
+    strictAssetFiltering,
     onConflictCheck,
     onApprovalAction,
     renderAssetLocation,
@@ -1676,6 +1678,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onGroupByChange={setActiveGroupBy}
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
                   assets={effectiveAssets}
+                  strictAssetFiltering={strictAssetFiltering}
                   resolveResourceLabel={resolveResourceLabel}
                   zoomLevel={activeAssetsZoom}
                   onZoomChange={setActiveAssetsZoom}

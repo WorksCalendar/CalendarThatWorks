@@ -114,4 +114,44 @@ describe('AssetsView — assets registry prop', () => {
     });
     expect(screen.getByRole('rowheader', { name: 'N500XX' })).toBeInTheDocument();
   });
+
+  describe('strictAssetFiltering', () => {
+    it('drops events whose resource is not in the registry', () => {
+      renderView({
+        assets: [{ id: 'n100aa', label: 'N100AA', meta: {} }],
+        strictAssetFiltering: true,
+        events: [
+          { id: 'asset-ev', title: 'keeps',   start: evOn(3), end: evOn(4), resource: 'n100aa'   },
+          { id: 'emp-ev',   title: 'dropped', start: evOn(5), end: evOn(6), resource: 'emp-sarah' },
+        ],
+      });
+      // Foreign-id event must not create an Unassigned row.
+      const rowheaders = screen.getAllByRole('rowheader');
+      expect(rowheaders).toHaveLength(1);
+      expect(rowheaders[0].getAttribute('aria-label')).toBe('N100AA');
+    });
+
+    it('also drops null-resource events (no leaked (Unassigned) row)', () => {
+      renderView({
+        assets: [{ id: 'n100aa', label: 'N100AA', meta: {} }],
+        strictAssetFiltering: true,
+        events: [
+          { id: 'orphan', title: 'team-wide', start: evOn(3), end: evOn(4), resource: null },
+        ],
+      });
+      const labels = screen.getAllByRole('rowheader').map(el => el.getAttribute('aria-label'));
+      expect(labels).toEqual(['N100AA']);
+    });
+
+    it('is a no-op when the registry is absent', () => {
+      renderView({
+        strictAssetFiltering: true,
+        events: [
+          { id: 'e1', title: 'a', start: evOn(3), end: evOn(4), resource: 'whatever' },
+        ],
+      });
+      // No registry → legacy derived rows, nothing filtered.
+      expect(screen.getByRole('rowheader', { name: 'whatever' })).toBeInTheDocument();
+    });
+  });
 });
