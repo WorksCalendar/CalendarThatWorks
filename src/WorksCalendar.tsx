@@ -1865,8 +1865,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onToggleSource={sourceStore.toggleSource}
             onUpdateSource={sourceStore.updateSource}
             scheduleTemplates={mergedScheduleTemplates}
-            onCreateScheduleTemplate={ownerCfg.isOwner ? handleCreateScheduleTemplate : undefined}
-            onDeleteScheduleTemplate={ownerCfg.isOwner ? handleDeleteScheduleTemplate : undefined}
+            onCreateScheduleTemplate={ownerCfg.isOwner && !!scheduleTemplateAdapter?.createScheduleTemplate ? handleCreateScheduleTemplate : undefined}
+            onDeleteScheduleTemplate={ownerCfg.isOwner && !!scheduleTemplateAdapter?.deleteScheduleTemplate ? handleDeleteScheduleTemplate : undefined}
             scheduleTemplateError={templateError}
           />
         )}
