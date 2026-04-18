@@ -29,11 +29,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CalendarThatWorks/works-calendar.git"
+    "url": "git+https://github.com/natehorst240-sketch/CalendarThatWorks.git"
   },
-  "homepage": "https://github.com/CalendarThatWorks/works-calendar#readme",
+  "homepage": "https://github.com/natehorst240-sketch/CalendarThatWorks#readme",
   "bugs": {
-    "url": "https://github.com/CalendarThatWorks/works-calendar/issues"
+    "url": "https://github.com/natehorst240-sketch/CalendarThatWorks/issues"
   },
   "scripts": {
     "test": "vitest run",
@@ -49,7 +49,8 @@
     "build": "vite build",
     "build:demo": "vite build --config vite.demo.config.js",
     "build:examples": "vite build --config vite.examples.config.js",
-    "preview": "vite preview --config vite.demo.config.js"
+    "preview": "vite preview --config vite.demo.config.js",
+    "prepublishOnly": "npm run test && npm run build"
   },
   "peerDependencies": {
     "react": "^18.0.0",
@@ -77,5 +78,15 @@
     "vite": "^5.2.11",
     "vite-plugin-pwa": "^0.21.2",
     "vitest": "^4.1.4"
-  }
+  },
+  "keywords": [
+    "calendar",
+    "scheduler",
+    "react-calendar",
+    "team-scheduling",
+    "pto",
+    "drag-and-drop",
+    "timeline",
+    "agenda"
+  ]
 }
