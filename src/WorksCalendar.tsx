@@ -1654,6 +1654,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
+                  approvalsConfig={ownerCfg.config?.approvals}
+                  onApprovalAction={onApprovalAction}
                 />
               )}
             </>

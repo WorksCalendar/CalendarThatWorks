@@ -550,6 +550,32 @@
   text-decoration: line-through;
 }
 
+/* ── Approval action caret (ticket #134-15) ─────────────────────── */
+/* Small trigger button overlaid on the right edge of the pill. It
+   opens the inline approval action menu; pill-click retains its
+   existing behavior (audit drawer for denied/pending, edit otherwise). */
+.stageCaret {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  cursor: pointer;
+  z-index: 6;
+}
+
+.stageCaret:hover,
+.stageCaret:focus-visible {
+  background: rgba(0, 0, 0, 0.45);
+  outline: none;
+}
+
 /* ── Empty state ────────────────────────────────────────────────── */
 .empty {
   display: flex;

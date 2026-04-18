@@ -30,6 +30,7 @@ import GroupHeader from '../ui/GroupHeader.tsx';
 import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import AuditDrawer from './AuditDrawer.jsx';
+import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu.jsx';
 
 const AUDIT_STAGES = new Set(['denied', 'pending_higher']);
 
@@ -181,12 +182,40 @@ export default function AssetsView({
   onCollapsedGroupsChange,
   assets,
   onEditAssets,
+  approvalsConfig,
+  onApprovalAction,
 }) {
   const ctx = useCalendarContext();
 
   const [auditEvent, setAuditEvent] = useState(null);
   const [announcement, setAnnouncement] = useState('');
   const drawerOpenerRef = useRef(null);
+  const [approvalMenu, setApprovalMenu] = useState(null);
+  const approvalMenuOpenerRef = useRef(null);
+
+  const openApprovalMenu = useCallback((ev, stage, trigger) => {
+    const rect = trigger?.getBoundingClientRect?.();
+    approvalMenuOpenerRef.current = trigger ?? null;
+    setApprovalMenu({
+      event: ev,
+      stage,
+      anchorRect: rect ? { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right } : null,
+    });
+  }, []);
+
+  const closeApprovalMenu = useCallback(() => {
+    setApprovalMenu(null);
+    const opener = approvalMenuOpenerRef.current;
+    if (opener && typeof opener.focus === 'function') {
+      requestAnimationFrame(() => opener.focus());
+    }
+    approvalMenuOpenerRef.current = null;
+  }, []);
+
+  const handleApprovalActionInternal = useCallback((action) => {
+    if (!approvalMenu) return;
+    onApprovalAction?.(approvalMenu.event, action);
+  }, [approvalMenu, onApprovalAction]);
 
   const announce = useCallback((msg) => {
     // Appending a zero-width space forces a diff so screen readers re-read
@@ -909,6 +938,12 @@ export default function AssetsView({
                     const statusClass = ev.status === 'cancelled' ? styles.cancelled
                       : ev.status === 'tentative' ? styles.tentative : '';
 
+                    const approvalActions = stage
+                      ? allowedActionsFor(stage, approvalsConfig)
+                      : [];
+                    const showCaret = approvalActions.length > 0
+                      && typeof onApprovalAction === 'function';
+
                     const ariaLabel = [
                       ev.title,
                       ev.category && `category ${ev.category}`,
@@ -917,27 +952,47 @@ export default function AssetsView({
                     ].filter(Boolean).join(', ');
 
                     return (
-                      <button
-                        key={ev.id}
-                        className={[
-                          styles.event,
-                          styles[`pill_${pillStyle}`] || styles.pill_hue,
-                          approvalClass(stage),
-                          statusClass,
-                        ].filter(Boolean).join(' ')}
-                        style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
-                        onClick={onClick}
-                        aria-label={ariaLabel}
-                        data-stage={stage || undefined}
-                      >
-                        {prefix && (
-                          <span className={styles.stagePrefix} aria-hidden="true">{prefix}</span>
+                      <div key={ev.id} style={{ display: 'contents' }}>
+                        <button
+                          className={[
+                            styles.event,
+                            styles[`pill_${pillStyle}`] || styles.pill_hue,
+                            approvalClass(stage),
+                            statusClass,
+                          ].filter(Boolean).join(' ')}
+                          style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
+                          onClick={onClick}
+                          aria-label={ariaLabel}
+                          data-stage={stage || undefined}
+                        >
+                          {prefix && (
+                            <span className={styles.stagePrefix} aria-hidden="true">{prefix}</span>
+                          )}
+                          <span className={styles.evTitle}>{ev.title}</span>
+                          {(ev._dayEnd - ev._dayStart + 1) * dayColW >= 60 && ev.category && (
+                            <span className={styles.evCat} aria-hidden="true">{ev.category}</span>
+                          )}
+                        </button>
+                        {showCaret && (
+                          <button
+                            className={styles.stageCaret}
+                            style={{
+                              left: left + width - 18,
+                              top:  top + (LANE_H - 16) / 2,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openApprovalMenu(ev, stage, e.currentTarget);
+                            }}
+                            aria-haspopup="menu"
+                            aria-expanded={approvalMenu?.event?.id === ev.id}
+                            aria-label={`Approval actions for ${ev.title}`}
+                            data-stage={stage}
+                          >
+                            ▾
+                          </button>
                         )}
-                        <span className={styles.evTitle}>{ev.title}</span>
-                        {(ev._dayEnd - ev._dayStart + 1) * dayColW >= 60 && ev.category && (
-                          <span className={styles.evCat} aria-hidden="true">{ev.category}</span>
-                        )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -946,7 +1001,25 @@ export default function AssetsView({
           })}
         </div>
       </div>
-      <AuditDrawer event={auditEvent} onClose={closeAudit} />
+      <AuditDrawer
+        event={auditEvent}
+        onClose={closeAudit}
+        approvalsConfig={approvalsConfig}
+        onAction={
+          auditEvent && typeof onApprovalAction === 'function'
+            ? (action) => onApprovalAction(auditEvent, action)
+            : undefined
+        }
+      />
+      {approvalMenu && (
+        <ApprovalActionMenu
+          stage={approvalMenu.stage}
+          approvalsConfig={approvalsConfig}
+          anchorRect={approvalMenu.anchorRect}
+          onAction={handleApprovalActionInternal}
+          onClose={closeApprovalMenu}
+        />
+      )}
       <div
         className={styles.srOnly}
         role="status"
