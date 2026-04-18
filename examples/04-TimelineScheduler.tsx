@@ -15,7 +15,7 @@
  * row.
  */
 import { useState, useCallback } from 'react';
-import { WorksCalendar } from '../src/index.js';
+import { WorksCalendar } from '../src/index.ts';
 
 // ── Team ──────────────────────────────────────────────────────────────────────
 const INITIAL_TEAM = [

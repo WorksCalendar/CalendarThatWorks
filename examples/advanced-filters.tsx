@@ -5,7 +5,7 @@ import {
   priorityField,
   ownerField,
   tagsField,
-} from '../src/index.js';
+} from '../src/index.ts';
 
 const schema = [...DEFAULT_FILTER_SCHEMA, priorityField(), ownerField(), tagsField()];
 

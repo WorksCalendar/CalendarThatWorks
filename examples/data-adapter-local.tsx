@@ -1,4 +1,4 @@
-import { CalendarExternalForm, createLocalStorageDataAdapter } from '../src/index.js';
+import { CalendarExternalForm, createLocalStorageDataAdapter } from '../src/index.ts';
 
 const fields = [
   { name: 'title', label: 'Title', type: 'text', required: true },

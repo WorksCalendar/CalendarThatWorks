@@ -1,4 +1,4 @@
-import type { NormalizedEvent } from '../index.d.ts'
+import type { NormalizedEvent } from './events.ts'
 
 // ── GroupConfig ────────────────────────────────────────────────────────────────
 

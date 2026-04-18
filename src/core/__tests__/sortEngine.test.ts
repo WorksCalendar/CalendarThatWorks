@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { sortEvents, sortGroupKeys } from '../sortEngine.ts'
-import type { NormalizedEvent } from '../../index.d.ts'
+import type { NormalizedEvent } from '../../types/events.ts'
 import type { SortConfig } from '../../types/grouping.ts'
 
 function makeEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {

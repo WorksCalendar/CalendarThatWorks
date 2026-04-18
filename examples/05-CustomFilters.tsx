@@ -23,7 +23,7 @@ import {
   priorityField,
   ownerField,
   tagsField,
-} from '../src/index.js';
+} from '../src/index.ts';
 
 // ── Filter schema ─────────────────────────────────────────────────────────────
 // Spread DEFAULT_FILTER_SCHEMA first to keep the built-in categories /

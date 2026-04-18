@@ -1,6 +1,7 @@
+// @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CalendarExternalForm } from '../src/index.js';
+import { CalendarExternalForm } from '../src/index.ts';
 
 const FIELDS = [
   { name: 'title', label: 'Title', type: 'text', required: true },

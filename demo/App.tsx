@@ -1,3 +1,4 @@
+// @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
 import { StrictMode, useState, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
@@ -5,7 +6,7 @@ import {
   WorksCalendar,
   DEFAULT_CATEGORIES,
   createManualLocationProvider,
-} from '../src/index.js';
+} from '../src/index.ts';
 import { THEMES } from '../src/styles/themes.js';
 import { saveProfiles } from '../src/core/profileStore.js';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema.js';

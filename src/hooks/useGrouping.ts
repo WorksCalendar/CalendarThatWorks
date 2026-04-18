@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import type { NormalizedEvent } from '../index.d.ts'
+import type { NormalizedEvent } from '../types/events.ts'
 import type { GroupConfig, GroupResult } from '../types/grouping.ts'
 import { sortGroupKeys } from '../core/sortEngine.ts'
 import {

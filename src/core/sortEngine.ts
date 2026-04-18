@@ -1,4 +1,4 @@
-import type { NormalizedEvent } from '../index.d.ts'
+import type { NormalizedEvent } from '../types/events.ts'
 import type { SortConfig } from '../types/grouping.ts'
 
 function extractValue(event: NormalizedEvent, config: SortConfig): unknown {

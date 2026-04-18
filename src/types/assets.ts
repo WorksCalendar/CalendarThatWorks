@@ -11,7 +11,7 @@
  *
  * Runtime export: DEFAULT_CATEGORIES. Everything else is type-only.
  */
-import type { NormalizedEvent } from '../index.d.ts'
+import type { NormalizedEvent } from './events.ts'
 
 // ── Approval workflow ──────────────────────────────────────────────────────────
 

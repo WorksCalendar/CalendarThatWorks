@@ -21,7 +21,7 @@
  *   • Drag a bar to reassign or reschedule, then save a view of the result
  */
 import { useState, useCallback } from 'react';
-import { WorksCalendar } from '../src/index.js';
+import { WorksCalendar } from '../src/index.ts';
 
 // ── Team ──────────────────────────────────────────────────────────────────────
 const TEAM = [

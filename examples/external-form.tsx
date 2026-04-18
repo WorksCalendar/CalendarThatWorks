@@ -1,4 +1,4 @@
-import { CalendarExternalForm } from '../src/index.js';
+import { CalendarExternalForm } from '../src/index.ts';
 
 const fields = [
   { name: 'title', label: 'Title', type: 'text', required: true },

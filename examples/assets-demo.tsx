@@ -1,3 +1,4 @@
+// @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
 /**
  * AssetsDemoExample — Phase 1 Sprint 4 PR D performance + visual fixture.
  *
@@ -13,7 +14,7 @@
  * across reloads and reproducible for `npm run qa:visual`.
  */
 import { useMemo, useState } from 'react';
-import { WorksCalendar, createManualLocationProvider, DEFAULT_CATEGORIES } from '../src/index.js';
+import { WorksCalendar, createManualLocationProvider, DEFAULT_CATEGORIES } from '../src/index.ts';
 
 // ── Seeded PRNG ───────────────────────────────────────────────────────────────
 /**

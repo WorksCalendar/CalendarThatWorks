@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { WorksCalendar } from '../src/index.js';
+import { WorksCalendar } from '../src/index.ts';
 
 const now = new Date();
 const addHours = (h) => new Date(now.getTime() + (h * 60 * 60 * 1000));

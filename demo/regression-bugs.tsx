@@ -1,6 +1,7 @@
+// @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
 import { StrictMode, useCallback, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { WorksCalendar } from '../src/index.js';
+import { WorksCalendar } from '../src/index.ts';
 
 const CALENDAR_ID = 'regression-bug-fixtures';
 

@@ -21,7 +21,7 @@ export default defineConfig({
   plugins: [react(), tsExtensionFallback(), copyPublishAssetsPlugin()],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.js'),
+      entry: resolve(__dirname, 'src/index.ts'),
       name: 'WorksCalendar',
       formats: ['es', 'umd'],
       fileName: (format) => `works-calendar.${format}.js`,

@@ -18,7 +18,7 @@
  *   • Use the date-range picker to scope to a window
  */
 import { useState, useCallback } from 'react';
-import { WorksCalendar } from '../src/index.js';
+import { WorksCalendar } from '../src/index.ts';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const now = new Date();

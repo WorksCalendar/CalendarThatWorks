@@ -15,7 +15,7 @@
  * hard-reject reassignments via the standard validation protocol.
  */
 import { useState, useCallback } from 'react';
-import { WorksCalendar } from '../src/index.js';
+import { WorksCalendar } from '../src/index.ts';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const now = new Date();

@@ -1,4 +1,4 @@
-import { CalendarExternalForm } from '../../src/index.js';
+import { CalendarExternalForm } from '../../src/index.ts';
 import { createMicrosoft365Adapter } from './microsoft365Adapter.js';
 
 const fields = [
