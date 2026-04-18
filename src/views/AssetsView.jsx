@@ -535,15 +535,19 @@ export default function AssetsView({
       }
     }
 
+    const isHeader = flatRows[rowIdx]?._type === 'groupHeader';
+    const selector = isHeader
+      ? `#assets-gh-${rowIdx}`
+      : `[data-cell="${rowIdx}-${dayIdx}"]`;
     const tryFocus = () => {
-      const el = gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`);
+      const el = gridRef.current?.querySelector(selector);
       el?.focus({ preventScroll: false });
     };
     tryFocus();
-    if (!gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`)) {
+    if (!gridRef.current?.querySelector(selector)) {
       requestAnimationFrame(tryFocus);
     }
-  }, [focusedCell, rowOffsets]);
+  }, [focusedCell, rowOffsets, flatRows]);
 
   const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents, resourceId) => {
     const maxRi = flatRows.length - 1;
@@ -553,20 +557,8 @@ export default function AssetsView({
     switch (e.key) {
       case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     move = true; break;
       case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
-      case 'ArrowUp': {
-        nextRi = ri - 1;
-        while (nextRi >= 0 && flatRows[nextRi]?._type === 'groupHeader') nextRi--;
-        nextRi = Math.max(0, nextRi);
-        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
-        move = true; break;
-      }
-      case 'ArrowDown': {
-        nextRi = ri + 1;
-        while (nextRi <= maxRi && flatRows[nextRi]?._type === 'groupHeader') nextRi++;
-        nextRi = Math.min(maxRi, nextRi);
-        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
-        move = true; break;
-      }
+      case 'ArrowUp':    nextRi = Math.max(0, ri - 1);     move = true; break;
+      case 'ArrowDown':  nextRi = Math.min(maxRi, ri + 1); move = true; break;
       case 'Home': nextDi = 0;     move = true; break;
       case 'End':  nextDi = maxDi; move = true; break;
       case 'Enter':
@@ -590,7 +582,44 @@ export default function AssetsView({
       lastKeyNavCell.current = true;
       setFocusedCell({ rowIdx: nextRi, dayIdx: nextDi });
     }
-  }, [flatRows, totalDays, onEventClick, onDateSelect, days, openAudit]);
+  }, [flatRows.length, totalDays, onEventClick, onDateSelect, days, openAudit]);
+
+  /**
+   * Header-row keyboard handling:
+   *   ArrowUp / ArrowDown — traverse to the previous / next row (header or
+   *     data). Preserves `dayIdx` so landing back on a data cell keeps the
+   *     column.
+   *   ArrowLeft  — if the group is expanded, collapse it; otherwise no-op.
+   *   ArrowRight — if the group is collapsed, expand it; otherwise move to
+   *     the first child row so the tree pattern flows naturally.
+   */
+  const handleHeaderArrowKey = useCallback((rowIdx, key) => {
+    const row = flatRows[rowIdx];
+    if (!row || row._type !== 'groupHeader') return;
+    const maxRi = flatRows.length - 1;
+    if (key === 'ArrowUp') {
+      if (rowIdx <= 0) return;
+      lastKeyNavCell.current = true;
+      setFocusedCell(prev => ({ rowIdx: rowIdx - 1, dayIdx: prev.dayIdx }));
+      return;
+    }
+    if (key === 'ArrowDown') {
+      if (rowIdx >= maxRi) return;
+      lastKeyNavCell.current = true;
+      setFocusedCell(prev => ({ rowIdx: rowIdx + 1, dayIdx: prev.dayIdx }));
+      return;
+    }
+    if (key === 'ArrowLeft') {
+      if (!row.collapsed) toggleGroup(row.groupPath);
+      return;
+    }
+    if (key === 'ArrowRight') {
+      if (row.collapsed) { toggleGroup(row.groupPath); return; }
+      if (rowIdx >= maxRi) return;
+      lastKeyNavCell.current = true;
+      setFocusedCell(prev => ({ rowIdx: rowIdx + 1, dayIdx: prev.dayIdx }));
+    }
+  }, [flatRows, toggleGroup]);
 
   // ── Toolbar (declared above the empty-state branch so owners can still
   // reach the Edit-assets deep-link when the registry has no rows yet) ──
@@ -748,12 +777,14 @@ export default function AssetsView({
                   aria-rowindex={rowIdx + 2}
                   data-depth={rowData.depth}
                   data-group-path={rowData.groupPath}
+                  data-header-idx={rowIdx}
                 >
                   <div
                     className={styles.groupHeaderCell}
                     style={{ width: NAME_W + totalDays * dayColW }}
                   >
                     <GroupHeader
+                      id={`assets-gh-${rowIdx}`}
                       label={rowData.groupLabel}
                       count={rowData.count}
                       depth={rowData.depth}
@@ -762,6 +793,7 @@ export default function AssetsView({
                       posInSet={rowData.posInSet}
                       setSize={rowData.setSize}
                       fieldLabel={rowData.field}
+                      onArrowKey={(key) => handleHeaderArrowKey(rowIdx, key)}
                     />
                   </div>
                 </div>
