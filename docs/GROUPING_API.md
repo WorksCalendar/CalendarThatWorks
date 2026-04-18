@@ -190,3 +190,83 @@ import {
 ```
 
 See `src/grouping/` and `src/hooks/useGrouping.{js,ts}` for full signatures.
+
+---
+
+## AssetsView — first-class assets registry
+
+AssetsView is a Gantt-style resource timeline. Unlike the other views, its
+rows are driven by a dedicated **assets registry** rather than by events —
+which means an asset shows up even if it has zero events on screen. The
+registry is **owner-configurable** via the ConfigPanel → Assets tab and
+persists through `useOwnerConfig`. Host apps never need to redeploy to add,
+rename, or regroup an asset.
+
+### `assets` prop
+
+```ts
+type Asset = {
+  id:    string;             // stable key; matches event.resource
+  label: string;             // display name
+  group?: string;            // optional grouping key (owner-chosen dimension)
+  meta?: Record<string, unknown>;  // arbitrary metadata surfaced to getLabel etc.
+};
+
+<WorksCalendar assets={assets} /* ... */ />
+```
+
+When `assets` is provided, AssetsView renders **one row per registered asset**
+in registry order (or per the toolbar's Sort-by selection). Events whose
+`resource` does not match any asset `id` are treated as unassigned and
+bucketed under `(Unassigned)`.
+
+### On-page toolbar
+
+Above the grid, AssetsView renders a toolbar with:
+
+| Control       | Purpose                                                                              |
+| ------------- | ------------------------------------------------------------------------------------ |
+| **Group by**  | Switches `groupBy` on the fly. Options come from asset `group` + `meta.*` fields.    |
+| **Sort by**   | `registry` (default), `label`, `group`, or `lastEvent` (most recent activity first). |
+| **Edit assets** | Deep-links to ConfigPanel's Assets tab. Owner-only; hidden for non-owners.         |
+
+The Edit button calls `useOwnerConfig.openConfigToTab('assets')`, which sets
+both `configOpen` and `configInitialTab`; `ConfigPanel`'s `initialTab` prop
+re-applies on change, so subsequent clicks re-target the Assets tab even if
+the panel is already open on another tab.
+
+### Keyboard contract
+
+AssetsView implements the WAI-ARIA tree-interleaved-with-grid pattern. Both
+`GroupHeader` rows (role=`treeitem`) and data cells (role=`gridcell`)
+participate in the same roving-tabindex chain:
+
+| Key          | On a `treeitem` header                    | On a `gridcell`                       |
+| ------------ | ----------------------------------------- | ------------------------------------- |
+| `ArrowUp`    | Move to row above (header or data cell)   | Move to row above                     |
+| `ArrowDown`  | Move to row below (header or data cell)   | Move to row below                     |
+| `ArrowLeft`  | Expanded → collapse; collapsed → no-op    | Move one day left (existing behavior) |
+| `ArrowRight` | Collapsed → expand; expanded → descend to first child cell | Move one day right |
+| `Enter` / `Space` | Toggle collapse                       | (view-specific click behavior)        |
+
+The contract is pinned by `src/views/__tests__/AssetsView.keyboardNav.test.jsx`.
+
+### Saved-view fields
+
+AssetsView extends the v3 saved-view schema with two Gantt-specific fields:
+
+| Field            | Type                      | Notes                                                          |
+| ---------------- | ------------------------- | -------------------------------------------------------------- |
+| `zoomLevel`      | `'day' \| 'week' \| 'month' \| 'quarter'` | Restores the zoom control's aria-pressed state. |
+| `collapsedGroups`| `string[]`                | Group keys to restore in the collapsed state on apply.         |
+
+Round-trip (seed → reload → click chip → state restored) is proven end-to-end
+by `tests-e2e/calendar.assets-grouping.spec.ts`.
+
+### ConfigPanel — Assets tab
+
+Owners can edit the registry from ConfigPanel → Assets without leaving the
+calendar. Changes flow through `useOwnerConfig.updateConfig`, so saved-view
+pins, group counts, and row order all refresh live. `openConfigToTab(tabId)`
+is the recommended deep-link API; it validates that the requested tab id
+exists in `TABS` before applying.
