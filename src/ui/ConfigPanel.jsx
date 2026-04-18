@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Plus, Trash2, Check, Camera, Pencil, ArrowUp, ArrowDown } from 'lucide-react';
-import { FIELD_TYPES } from '../core/configSchema.js';
+import {
+  FIELD_TYPES,
+  APPROVAL_STAGE_IDS,
+  APPROVAL_ACTIONS,
+} from '../core/configSchema.js';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import { serializeFilters } from '../hooks/useSavedViews.js';
@@ -22,6 +26,7 @@ const TABS = [
   { id: 'templates',   label: 'Templates' },
   { id: 'smartViews',  label: 'Smart Views' },
   { id: 'team',        label: 'Employees' },
+  { id: 'approvals',   label: 'Approvals' },
   { id: 'access',      label: 'Access' },
 ];
 
@@ -130,6 +135,7 @@ export default function ConfigPanel({
               onEmployeeDelete={onEmployeeDelete}
             />
           )}
+          {tab === 'approvals'   && <ApprovalsTab   config={config} onUpdate={onUpdate} />}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
       </div>
@@ -991,6 +997,227 @@ function DisplayTab({ config, onUpdate }) {
             placeholder="More"
           />
         </label>
+      </div>
+    </div>
+  );
+}
+
+/* ----- Approvals tab ----- */
+const STAGE_LABELS = {
+  requested:      'Requested',
+  approved:       'Approved',
+  finalized:      'Finalized',
+  pending_higher: 'Pending higher tier',
+  denied:         'Denied',
+};
+
+/**
+ * Owner-editable approval policy. Writes to `config.approvals`; runtime
+ * surfaces (AssetsView pill prefixes, AuditDrawer menus, #134-15 inline
+ * actions) read from the same block so a calendar owner can tune the
+ * workflow — add/rename tiers, restrict actions per stage, change pill
+ * copy — without redeploying the host app.
+ *
+ * Shape notes:
+ *   approvals.enabled — master off switch; false keeps the whole UX silent.
+ *   approvals.tiers[] — ordered; `requires: 'any' | 'all'` controls the
+ *                       quorum rule for promotion out of that tier.
+ *   approvals.rules   — per-stage `{ allow: ApprovalAction[], prefix }`.
+ *   approvals.labels  — per-action button copy shown to approvers.
+ */
+export function ApprovalsTab({ config, onUpdate }) {
+  const approvals = config.approvals ?? {};
+  const enabled   = !!approvals.enabled;
+  const tiers     = Array.isArray(approvals.tiers) ? approvals.tiers : [];
+  const rules     = approvals.rules ?? {};
+  const labels    = approvals.labels ?? {};
+
+  const patch = (next) => onUpdate(c => ({
+    ...c,
+    approvals: { ...(c.approvals ?? {}), ...next },
+  }));
+
+  const writeTiers = (next) => patch({ tiers: next });
+  const writeRules = (next) => patch({ rules: next });
+  const writeLabels = (next) => patch({ labels: next });
+
+  const addTier = () => {
+    const n = tiers.length + 1;
+    writeTiers([...tiers, { id: `tier-${n}`, label: `Tier ${n}`, requires: 'any', roles: [] }]);
+  };
+
+  const updateTier = (idx, delta) => {
+    writeTiers(tiers.map((t, i) => (i === idx ? { ...t, ...delta } : t)));
+  };
+
+  const removeTier = (idx) => writeTiers(tiers.filter((_, i) => i !== idx));
+
+  const moveTier = (idx, delta) => {
+    const target = idx + delta;
+    if (target < 0 || target >= tiers.length) return;
+    const next = [...tiers];
+    const [moved] = next.splice(idx, 1);
+    next.splice(target, 0, moved);
+    writeTiers(next);
+  };
+
+  const toggleAction = (stage, action) => {
+    const stageRule = rules[stage] ?? { allow: [], prefix: '' };
+    const allow = stageRule.allow ?? [];
+    const next  = allow.includes(action)
+      ? allow.filter(a => a !== action)
+      : [...allow, action];
+    writeRules({ ...rules, [stage]: { ...stageRule, allow: next } });
+  };
+
+  const setStagePrefix = (stage, prefix) => {
+    const stageRule = rules[stage] ?? { allow: [], prefix: '' };
+    writeRules({ ...rules, [stage]: { ...stageRule, prefix } });
+  };
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Configure the approval workflow applied to events with
+        <code> meta.approvalStage</code>. While disabled, approval pills render
+        as plain category pills and no inline actions appear.
+      </p>
+
+      <label className={styles.toggle}>
+        <span>Enable approvals workflow</span>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={e => patch({ enabled: e.target.checked })}
+          aria-label="Enable approvals workflow"
+        />
+        <span className={styles.toggleTrack} />
+      </label>
+
+      <div className={styles.section} style={{ paddingTop: 12 }}>
+        <p className={styles.sectionDesc}>
+          Tiers are evaluated in order. <code>requires: any</code> promotes on
+          the first approver action; <code>all</code> waits for every listed
+          role to sign off.
+        </p>
+
+        {tiers.map((tier, i) => (
+          <div key={tier.id + ':' + i} className={styles.fieldRow} data-tier-id={tier.id}>
+            <input
+              className={styles.input}
+              value={tier.label ?? ''}
+              onChange={e => updateTier(i, { label: e.target.value })}
+              placeholder="Label"
+              aria-label={`Label for ${tier.id}`}
+            />
+            <input
+              className={styles.input}
+              value={tier.id}
+              onChange={e => updateTier(i, { id: e.target.value.trim() || tier.id })}
+              placeholder="id"
+              aria-label={`Id for ${tier.label || tier.id}`}
+            />
+            <select
+              className={styles.select}
+              value={tier.requires ?? 'any'}
+              onChange={e => updateTier(i, { requires: e.target.value })}
+              aria-label={`Quorum for ${tier.label || tier.id}`}
+            >
+              <option value="any">Any approver</option>
+              <option value="all">All approvers</option>
+            </select>
+            <input
+              className={styles.input}
+              value={(tier.roles ?? []).join(', ')}
+              onChange={e => updateTier(i, {
+                roles: e.target.value.split(',').map(r => r.trim()).filter(Boolean),
+              })}
+              placeholder="Roles (comma-separated)"
+              aria-label={`Roles for ${tier.label || tier.id}`}
+            />
+            <button
+              className={styles.removeBtn}
+              onClick={() => moveTier(i, -1)}
+              disabled={i === 0}
+              aria-label={`Move ${tier.label || tier.id} up`}
+            ><ArrowUp size={13} /></button>
+            <button
+              className={styles.removeBtn}
+              onClick={() => moveTier(i, 1)}
+              disabled={i === tiers.length - 1}
+              aria-label={`Move ${tier.label || tier.id} down`}
+            ><ArrowDown size={13} /></button>
+            <button
+              className={styles.removeBtn}
+              onClick={() => removeTier(i)}
+              aria-label={`Remove ${tier.label || tier.id}`}
+            ><Trash2 size={13} /></button>
+          </div>
+        ))}
+
+        <button className={styles.addFieldBtn} onClick={addTier}>
+          <Plus size={13} /> Add tier
+        </button>
+      </div>
+
+      <div className={styles.section} style={{ paddingTop: 12 }}>
+        <p className={styles.sectionDesc}>
+          Per-stage rules. The prefix rides on the left of the pill label
+          (e.g. <code>Req · Flight 202</code>); leave blank for no prefix.
+        </p>
+
+        {APPROVAL_STAGE_IDS.map(stage => {
+          const stageRule = rules[stage] ?? { allow: [], prefix: '' };
+          return (
+            <div key={stage} className={styles.fieldRow} data-stage-id={stage}>
+              <span style={{ minWidth: 120, fontWeight: 600 }}>
+                {STAGE_LABELS[stage] ?? stage}
+              </span>
+              <input
+                className={styles.input}
+                value={stageRule.prefix ?? ''}
+                onChange={e => setStagePrefix(stage, e.target.value)}
+                placeholder="Prefix"
+                aria-label={`Prefix for ${stage}`}
+                style={{ maxWidth: 120 }}
+              />
+              {APPROVAL_ACTIONS.map(action => {
+                const checked = (stageRule.allow ?? []).includes(action);
+                return (
+                  <label key={action} className={styles.reqLabel}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleAction(stage, action)}
+                      aria-label={`Allow ${action} on ${stage}`}
+                    />
+                    {action}
+                  </label>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={styles.section} style={{ paddingTop: 12 }}>
+        <p className={styles.sectionDesc}>
+          Button copy shown to approvers in the audit drawer and inline pill
+          menu. Rename these to match your organisation's vocabulary.
+        </p>
+
+        {APPROVAL_ACTIONS.map(action => (
+          <label key={action} className={styles.formRow}>
+            <span>{action.charAt(0).toUpperCase() + action.slice(1)} label</span>
+            <input
+              className={styles.input}
+              value={labels[action] ?? ''}
+              onChange={e => writeLabels({ ...labels, [action]: e.target.value })}
+              placeholder={action}
+              aria-label={`${action} button label`}
+            />
+          </label>
+        ))}
       </div>
     </div>
   );

@@ -2,8 +2,49 @@
  * configSchema.js — Owner config schema, defaults, and localStorage persistence.
  */
 
+/**
+ * On-disk schema version for `wc-config-<calendarId>`.
+ *
+ * History:
+ *   (no version)  legacy pre-sprint owner config.
+ *   3            implicit version once first-class assets[] landed (#134-9).
+ *   4            adds config.approvals block (#134-14). Additive only —
+ *                calendars with schemaVersion < 4 auto-merge the defaults on
+ *                load so nothing in the UI changes until the owner toggles
+ *                `approvals.enabled`.
+ */
+export const CONFIG_SCHEMA_VERSION = 4;
+
+/** 5-state approval machine shared with AssetsView + AuditDrawer. */
+export const APPROVAL_STAGE_IDS = Object.freeze([
+  'requested',
+  'approved',
+  'finalized',
+  'pending_higher',
+  'denied',
+]);
+
+/** Named actions the owner can allow/deny per stage. */
+export const APPROVAL_ACTIONS = Object.freeze([
+  'approve',
+  'deny',
+  'finalize',
+  'revoke',
+]);
+
+function defaultApprovalRules() {
+  return {
+    requested:      { allow: ['approve', 'deny'], prefix: 'Req' },
+    pending_higher: { allow: ['approve', 'deny'], prefix: 'Pend' },
+    approved:       { allow: ['finalize', 'revoke'], prefix: '' },
+    finalized:      { allow: ['revoke'], prefix: 'Final' },
+    denied:         { allow: ['revoke'], prefix: 'Denied' },
+  };
+}
+
 export const DEFAULT_CONFIG = {
   title: 'My WorksCalendar',
+  schemaVersion: CONFIG_SCHEMA_VERSION,
 
   setup: {
     completed: false,
@@ -61,6 +102,33 @@ export const DEFAULT_CONFIG = {
   // the ConfigPanel → Assets tab; no host redeploy needed to change the fleet.
   // Shape: { id: string, label: string, group?: string, meta?: object }
   assets: [],
+
+  // Owner-configurable approval workflow (ticket #134-14). The runtime
+  // machinery (AssetsView pill prefixes, AuditDrawer menus, inline approve
+  // actions added later in #134-15) reads this block. `enabled: false`
+  // keeps the surface invisible so calendars that never opt in see no
+  // behavioral change.
+  //
+  //   tiers   — ordered approver levels; events promote through this list.
+  //             `requires: 'any' | 'all'` decides whether one approver is
+  //             enough or every listed role must sign off before promotion.
+  //   rules   — per-stage: which actions are allowed and what label prefix
+  //             the pill wears (keeps AssetsView prefixes owner-editable).
+  //   labels  — button copy shown in the audit drawer + inline pill menu.
+  approvals: {
+    enabled: false,
+    tiers: [
+      { id: 'tier-1', label: 'Supervisor', requires: 'any', roles: [] },
+      { id: 'tier-2', label: 'Director',   requires: 'any', roles: [] },
+    ],
+    rules: defaultApprovalRules(),
+    labels: {
+      approve:  'Approve',
+      deny:     'Deny',
+      finalize: 'Finalize',
+      revoke:   'Revoke',
+    },
+  },
 };
 
 function mergeDeep(target, source) {
@@ -99,6 +167,17 @@ export function loadConfig(calendarId) {
 
     if (parsed?.setupCompleted && !parsed?.setup?.completed) {
       merged.setup.completed = true;
+    }
+
+    // Schema-version migration. mergeDeep above already folds in any new
+    // DEFAULT_CONFIG keys (e.g. the `approvals` block added in v4), so the
+    // migration here is just stamping the current version so we can branch
+    // on it in the future without re-scanning every field.
+    const storedVersion = typeof parsed.schemaVersion === 'number'
+      ? parsed.schemaVersion
+      : 3;
+    if (storedVersion < CONFIG_SCHEMA_VERSION) {
+      merged.schemaVersion = CONFIG_SCHEMA_VERSION;
     }
 
     return merged;
