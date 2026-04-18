@@ -59,7 +59,7 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }) {
   const statusIcon = !feed.enabled
     ? null
     : error
-      ? <AlertCircle size={14} color="var(--wc-danger)" title={error.message} />
+      ? <AlertCircle size={14} color="var(--wc-danger)" aria-label={error.message} />
       : <CheckCircle size={14} color="var(--wc-success, #10b981)" />;
 
   return (

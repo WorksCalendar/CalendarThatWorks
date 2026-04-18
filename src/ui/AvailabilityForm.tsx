@@ -106,10 +106,10 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const [start,  setStart]  = useState(toDateInput(startDefault, initialAllDay));
   const [end,    setEnd]    = useState(toDateInput(endDefault, initialAllDay));
   const [notes,  setNotes]  = useState(initialEvent?.meta?.notes ?? '');
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate() {
-    const errs = {};
+    const errs: Record<string, string> = {};
     if (!title.trim())  errs.title = 'Title is required';
     if (!start)         errs.start = 'Start date is required';
     if (!end)           errs.end   = 'End date is required';

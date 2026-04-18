@@ -7,16 +7,17 @@ import {
   startOfWeek, addDays, eachDayOfInterval, format,
   isSameDay, isToday,
 } from 'date-fns';
+import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './ScheduleView.module.css';
 
 const WEEKS = 6;
 
-export default function ScheduleView({ currentDate, events, onEventClick, weekStartDay = 0 }) {
+export default function ScheduleView({ currentDate, events, onEventClick, weekStartDay = 0 }: { currentDate: Date; events: any[]; onEventClick?: (ev: any) => void; weekStartDay?: Day }) {
   const ctx = useCalendarContext();
 
-  const resources = useMemo(() => {
-    const set = new Set();
+  const resources = useMemo<string[]>(() => {
+    const set = new Set<string>();
     events.forEach(e => { if (e.resource) set.add(e.resource); });
     return [...set].sort();
   }, [events]);

@@ -19,7 +19,7 @@
 
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
 
-const srOnly = {
+const srOnly: React.CSSProperties = {
   position:   'absolute',
   width:      '1px',
   height:     '1px',

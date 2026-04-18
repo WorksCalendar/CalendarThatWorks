@@ -1,11 +1,19 @@
-import { Component } from 'react';
+import { Component, type ReactNode, type ErrorInfo } from 'react';
+
+type Props = {
+  children?: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: unknown, info: ErrorInfo) => void;
+};
+
+type State = { hasError: boolean };
 
 /**
  * Catches runtime render errors from the calendar subtree so host apps
  * can keep running even if the calendar fails.
  */
-export default class CalendarErrorBoundary extends Component {
-  constructor(props) {
+export default class CalendarErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
   }
@@ -14,7 +22,7 @@ export default class CalendarErrorBoundary extends Component {
     return { hasError: true };
   }
 
-  componentDidCatch(error, info) {
+  componentDidCatch(error: unknown, info: ErrorInfo) {
     this.props.onError?.(error, info);
   }
 

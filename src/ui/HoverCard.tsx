@@ -64,7 +64,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
         {hc.showCategory !== false && event.category && (
           <div className={styles.field}>
             <Tag size={13} className={styles.icon} />
-            <span className={styles.badge} style={{ '--badge-color': event.color }}>
+            <span className={styles.badge} style={{ '--badge-color': event.color } as React.CSSProperties}>
               {event.category}
             </span>
           </div>

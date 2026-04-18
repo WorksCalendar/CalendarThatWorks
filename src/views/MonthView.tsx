@@ -4,6 +4,7 @@ import {
   eachDayOfInterval, isSameMonth, isSameDay, isToday,
   format, getISOWeek, startOfDay, addDays, subDays,
 } from 'date-fns';
+import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { displayEndDay, layoutSpans } from '../core/layout.js';
 import styles from './MonthView.module.css';
@@ -21,7 +22,7 @@ function isMultiDay(ev) {
 export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0, pillHoverTitle = false,
-}) {
+}: { currentDate: Date; events: any[]; onEventClick?: (ev: any) => void; onEventMove?: any; onDateSelect?: any; config?: any; weekStartDay?: Day; pillHoverTitle?: boolean }) {
   const [popoverState, setPopoverState] = useState(null);
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(
@@ -264,7 +265,7 @@ export default function MonthView({
   }, [popoverState]);
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-  function renderPill(ev, extra = {}, weekIdx = null) {
+  function renderPill(ev, extra: { onAfterClick?: () => void } = {}, weekIdx = null) {
     const color       = resolveColor(ev, ctx?.colorRules);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;

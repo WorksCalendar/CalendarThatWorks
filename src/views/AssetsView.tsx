@@ -372,7 +372,7 @@ export default function AssetsView({
       const base = hasOrphan ? [...ordered, '(Unassigned)'] : ordered;
       return applySort(base);
     }
-    const set = new Set();
+    const set = new Set<string>();
     events.forEach(e => set.add(e.resource ?? '(Unassigned)'));
     return [...set].sort((a, b) => {
       if (a === '(Unassigned)') return 1;
@@ -1081,6 +1081,7 @@ export default function AssetsView({
           anchorRect={approvalMenu.anchorRect}
           onAction={handleApprovalActionInternal}
           onClose={closeApprovalMenu}
+          labelledBy={undefined}
         />
       )}
       <div

@@ -225,7 +225,7 @@ export default function FilterBar({
           >
             <option value="">{field.placeholder ?? `All ${field.label ?? field.key}`}</option>
             {options.map(opt => (
-              <option key={String(opt.value)} value={opt.value}>
+              <option key={String(opt.value)} value={opt.value as string | number | readonly string[]}>
                 {opt.label}
               </option>
             ))}

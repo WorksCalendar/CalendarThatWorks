@@ -309,6 +309,8 @@ function Step2({ categories, resources, createdViews, onSaveView }) {
         categories={categories}
         resources={resources}
         onSave={onSaveView}
+        onUpdate={() => {}}
+        onCancelEdit={() => {}}
       />
 
       {createdViews.length > 0 && (

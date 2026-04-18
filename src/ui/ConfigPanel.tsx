@@ -292,7 +292,7 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
               key={view.id}
               className={[styles.smartViewRow, editingId === view.id && styles.smartViewRowEditing].filter(Boolean).join(' ')}
             >
-              <span className={styles.smartViewName} style={{ '--chip-color': view.color ?? '#64748b' }}>
+              <span className={styles.smartViewName} style={{ '--chip-color': view.color ?? '#64748b' } as React.CSSProperties}>
                 {view.name}
               </span>
               <div className={styles.smartViewActions}>
@@ -610,8 +610,8 @@ function TemplateTab({ templates, onCreate, onDelete, error }) {
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState('team');
   const [title, setTitle] = useState('');
-  const [startOffsetMinutes, setStartOffsetMinutes] = useState(0);
-  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [startOffsetMinutes, setStartOffsetMinutes] = useState<number | string>(0);
+  const [durationMinutes, setDurationMinutes] = useState<number | string>(60);
   const [rrule, setRrule] = useState('FREQ=DAILY');
 
   function resetForm() {

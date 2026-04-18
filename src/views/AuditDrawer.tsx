@@ -77,6 +77,9 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction 
                 approvalsConfig={approvalsConfig}
                 onAction={onAction}
                 variant="inline"
+                onClose={undefined}
+                labelledBy={undefined}
+                anchorRect={undefined}
               />
             )}
           </div>

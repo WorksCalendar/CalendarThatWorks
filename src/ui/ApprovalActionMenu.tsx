@@ -10,7 +10,7 @@
  * fires `onAction(actionId)` and the host persists the new stage + history
  * entry, then re-renders with the updated event.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import styles from './ApprovalActionMenu.module.css';
 
 const DEFAULT_LABELS = {
@@ -67,7 +67,7 @@ export default function ApprovalActionMenu({
   if (actions.length === 0) return null;
   const labels = approvalsConfig?.labels ?? {};
 
-  const style = variant === 'popover' && anchorRect
+  const style: CSSProperties | undefined = variant === 'popover' && anchorRect
     ? {
         position: 'fixed',
         top:  (anchorRect.bottom ?? 0) + 4,

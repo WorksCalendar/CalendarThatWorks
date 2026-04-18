@@ -144,7 +144,7 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
     <div
       ref={chipRef}
       className={wrapClass}
-      style={{ '--chip-color': color }}
+      style={{ '--chip-color': color } as React.CSSProperties}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

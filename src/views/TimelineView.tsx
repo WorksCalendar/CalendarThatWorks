@@ -259,7 +259,7 @@ export default function TimelineView({
 
   const resourceList = useMemo(() => {
     if (useEmployees) return null; // not used
-    const set = new Set();
+    const set = new Set<string>();
     events.forEach(e => set.add(e.resource ?? '(Unassigned)'));
     return [...set].sort((a, b) => {
       if (a === '(Unassigned)') return 1;

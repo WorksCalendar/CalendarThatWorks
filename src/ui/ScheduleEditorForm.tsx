@@ -113,7 +113,7 @@ export default function ScheduleEditorForm({
   const [rrulePreset, setRrulePreset] = useState('weekdays');
   const [customRrule, setCustomRrule] = useState('');
   const [templateId,  setTemplateId]  = useState(SHIFT_TEMPLATES[0].id);
-  const [errors,      setErrors]      = useState({});
+  const [errors,      setErrors]      = useState<Record<string, string>>({});
 
   const selectedTemplate = SHIFT_TEMPLATES.find(t => t.id === templateId) ?? SHIFT_TEMPLATES[0];
 
@@ -126,7 +126,7 @@ export default function ScheduleEditorForm({
   }
 
   function validate() {
-    const errs = {};
+    const errs: Record<string, string> = {};
     if (!title.trim()) errs.title = 'Title is required';
     if (!start) {
       errs.start = 'Start is required';

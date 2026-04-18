@@ -130,7 +130,7 @@ export default function AgendaView({
     onCancel: () => { dragRef.current = null; setDropTargetPath(null); },
   });
 
-  function renderEventItem(ev, opts = {}) {
+  function renderEventItem(ev, opts: { crossGroup?: boolean; sourceLabel?: string | null; nativePath?: string | null; dayTree?: any; dayKey?: string | null } = {}) {
     const { crossGroup = false, sourceLabel = null, nativePath = null, dayTree = null, dayKey = null } = opts;
     const color = resolveColor(ev, ctx?.colorRules);
     const evStartDay = startOfDay(ev.start);

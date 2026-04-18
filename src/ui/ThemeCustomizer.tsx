@@ -158,7 +158,7 @@ export default function ThemeCustomizer({ theme, onChange }) {
   const previewVars = customThemeToCssVars(merged);
   const previewStyle = {
     ...previewVars,
-  };
+  } as React.CSSProperties;
   const exportJson = useMemo(() => JSON.stringify(merged, null, 2), [merged]);
   const contrastChecks = useMemo(() => ([
     { id: 'text-on-bg', label: 'Body text on background', fg: merged.colors.text, bg: merged.colors.bg },

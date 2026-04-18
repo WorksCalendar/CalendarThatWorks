@@ -52,7 +52,7 @@ function ensureAdapter(adapter) {
 }
 
 function defaultValidate(values, fields) {
-  const errors = {};
+  const errors: Record<string, string> = {};
   fields.forEach((field) => {
     if (!field.required) return;
     if (field.type === 'checkbox') return;

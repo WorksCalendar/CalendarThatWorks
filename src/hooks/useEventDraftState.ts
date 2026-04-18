@@ -76,7 +76,7 @@ export function useEventDraftState(event, categories, config) {
   const [customRrule,       setCustomRrule]       = useState(() => (
     event?.rrule && inferPresetFromRRule(event.rrule) === 'custom' ? event.rrule : ''
   ));
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // When category changes, clear category-specific custom field values from
   // meta but preserve system-level keys (templateId, templateVersion) so that

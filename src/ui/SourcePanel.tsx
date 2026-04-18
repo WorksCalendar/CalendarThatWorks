@@ -114,7 +114,7 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }) {
   const statusIcon = !source.enabled
     ? null
     : error
-      ? <AlertCircle size={14} color="var(--wc-danger)" title={error.message} />
+      ? <AlertCircle size={14} color="var(--wc-danger)" aria-label={error.message} />
       : <CheckCircle size={14} color="var(--wc-success, #10b981)" />;
 
   return (
@@ -530,6 +530,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
             icon={FileSpreadsheet}
             label="CSV Datasets"
             count={csvSources.length}
+            errors={null}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {csvSources.map(src => (

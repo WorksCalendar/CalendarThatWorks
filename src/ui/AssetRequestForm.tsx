@@ -46,7 +46,7 @@ export default function AssetRequestForm({
   const [startStr, setStartStr] = useState(toLocalInput(start));
   const [endStr,   setEndStr]   = useState(toLocalInput(defaultEnd));
   const [notes,    setNotes]    = useState('');
-  const [errors,   setErrors]   = useState({});
+  const [errors,   setErrors]   = useState<Record<string, string>>({});
 
   const assetOptions = useMemo(
     () => assets.map(a => ({ value: a.id, label: a.label || a.id })),
@@ -54,7 +54,7 @@ export default function AssetRequestForm({
   );
 
   function validate() {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!title.trim())      e.title    = 'Title is required';
     if (!assetId)           e.assetId  = 'Select an asset';
     if (!category)          e.category = 'Select a category';
