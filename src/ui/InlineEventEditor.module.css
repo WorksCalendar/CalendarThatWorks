@@ -1,18 +1,20 @@
 .panel {
   position: fixed;
   z-index: 2000;
-  background: var(--wc-bg);
-  border: 1.5px solid var(--wc-border-dark);
+  background: var(--wc-bg, #fff);
+  border: 1px solid color-mix(in srgb, var(--wc-border-dark, #94a3b8) 72%, #000 8%);
+  outline: 1px solid color-mix(in srgb, var(--wc-bg, #fff) 55%, var(--wc-border, #cbd5e1));
   border-radius: var(--wc-radius);
-  box-shadow: var(--wc-shadow);
-  padding: 12px;
-  width: 252px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.24);
+  padding: 14px;
+  width: 272px;
   /* Clamp to viewport so the panel never overflows on narrow screens. */
   max-width: calc(100vw - 16px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   box-sizing: border-box;
+  isolation: isolate;
 }
 
 /* ── Header ── */
@@ -50,9 +52,9 @@
 .titleInput {
   width: 100%;
   padding: 7px 9px;
-  border: 1px solid var(--wc-border);
-  border-radius: var(--wc-radius-sm);
-  background: var(--wc-surface);
+  border: 1px solid var(--wc-border, #cbd5e1);
+  border-radius: var(--wc-radius-sm, 8px);
+  background: var(--wc-surface, #f8fafc);
   color: var(--wc-text);
   font-size: 13px;
   font-family: var(--wc-font);
@@ -132,6 +134,7 @@
 .actions {
   display: flex;
   gap: 8px;
+  margin-top: 2px;
 }
 
 .saveBtn {

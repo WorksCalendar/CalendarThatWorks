@@ -1936,6 +1936,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── Inline event editor (edit mode) ── */}
         {inlineEditTarget && (
           <InlineEventEditor
+            key={`${inlineEditTarget.event?._eventId ?? inlineEditTarget.event?.id ?? 'inline'}-${inlineEditTarget.event?.id ?? 'event'}`}
             event={inlineEditTarget.event}
             x={inlineEditTarget.x}
             y={inlineEditTarget.y}
