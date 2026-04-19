@@ -23,9 +23,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
   function handleSubmit(e) {
     e.preventDefault();
     if (!draft.validate()) return;
-    const normalizedResource = typeof draft.values.resource === 'string'
-      ? draft.values.resource.trim()
-      : String(draft.values.resource ?? '').trim();
+    const normalizedResource = draft.values.resource == null ? '' : String(draft.values.resource);
     onSave({
       ...(event || {}),
       title:    draft.values.title.trim(),
@@ -33,7 +31,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
       end:      fromDatetimeLocal(draft.values.end),
       allDay:   draft.values.allDay,
       category: draft.values.category || null,
-      resource: normalizedResource || null,
+      resource: normalizedResource.trim() || null,
       color:    draft.values.color || undefined,
       meta:     draft.values.meta,
       rrule:    draft.buildRRule(),
