@@ -50,17 +50,23 @@ if (!storedCfg) {
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
 } else {
-  // Idempotent patch: make sure returning demo users pick up bases and
-  // approvals without having to clear localStorage.
-  const existing = loadConfig(DEMO_CALENDAR_ID);
-  const needsBases = !Array.isArray(existing.team?.bases) || existing.team.bases.length === 0;
-  const needsApprovals = !existing.approvals?.enabled;
-  if (needsBases || needsApprovals) {
-    saveConfig(DEMO_CALENDAR_ID, {
-      ...existing,
-      team:      needsBases     ? { ...existing.team, bases: DEMO_BASES }            : existing.team,
-      approvals: needsApprovals ? { ...existing.approvals, enabled: true }           : existing.approvals,
-    });
+  // Idempotent backfill: returning demo users pick up bases / approvals
+  // without clearing localStorage. Reads the RAW stored payload (not the
+  // default-merged result) so an owner who explicitly disabled approvals
+  // in Settings keeps their choice — only missing values are filled in.
+  let parsedRaw = null;
+  try { parsedRaw = JSON.parse(storedCfg); } catch {}
+  if (parsedRaw && typeof parsedRaw === 'object') {
+    const needsBases     = !Array.isArray(parsedRaw.team?.bases) || parsedRaw.team.bases.length === 0;
+    const needsApprovals = parsedRaw.approvals?.enabled === undefined;
+    if (needsBases || needsApprovals) {
+      const existing = loadConfig(DEMO_CALENDAR_ID);
+      saveConfig(DEMO_CALENDAR_ID, {
+        ...existing,
+        ...(needsBases     ? { team:      { ...existing.team,      bases: DEMO_BASES } } : {}),
+        ...(needsApprovals ? { approvals: { ...existing.approvals, enabled: true } }    : {}),
+      });
+    }
   }
 }
 
@@ -226,28 +232,26 @@ const UNIFIED_CATEGORIES_CONFIG = {
 
 /* ─── Approval state machine (demo) ─────────────────────────────── */
 //
-// Mirrors the default rules from configSchema.ts:
+// Resolves the next stage purely from action-verb semantics, so any
+// (stage, action) pair the owner-configured ApprovalActionMenu can present
+// produces a sensible transition — no dead clicks if the owner customizes
+// `config.approvals.rules[stage].allow[]`.
 //
-//   requested      ─ approve ─▶ approved      ─ finalize ─▶ finalized
-//                  ─ deny    ─▶ denied                    ─ revoke   ─▶ approved
-//                                               revoke   ─▶ requested
-//   pending_higher ─ approve ─▶ finalized      (skips second approve)
-//                  ─ deny    ─▶ denied
-//   denied         ─ revoke  ─▶ requested
-//
-// Production hosts would derive this from config.approvals.tiers + rules;
-// the demo keeps a hard-coded table so the flow is inspectable at a glance.
-const STAGE_TRANSITIONS = {
-  requested:      { approve: 'approved',  deny: 'denied' },
-  pending_higher: { approve: 'finalized', deny: 'denied' },
-  approved:       { finalize: 'finalized', revoke: 'requested' },
-  finalized:      { revoke: 'approved' },
-  denied:         { revoke: 'requested' },
-};
-
+//   approve  ─▶ pending_higher → finalized    (second-tier approval)
+//              everything else → approved     (first approval lands here)
+//   deny     ─▶ denied
+//   finalize ─▶ finalized
+//   revoke   ─▶ finalized → approved          (roll back one step)
+//              everything else → requested
 function nextStageFor(currentStage, actionId) {
-  const from = currentStage ?? 'requested';
-  return STAGE_TRANSITIONS[from]?.[actionId] ?? null;
+  const stage = currentStage ?? 'requested';
+  switch (actionId) {
+    case 'approve':  return stage === 'pending_higher' ? 'finalized' : 'approved';
+    case 'deny':     return 'denied';
+    case 'finalize': return 'finalized';
+    case 'revoke':   return stage === 'finalized'      ? 'approved'  : 'requested';
+    default:         return null;
+  }
 }
 
 function applyApprovalTransition(event, actionId, payload) {
