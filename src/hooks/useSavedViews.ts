@@ -78,6 +78,13 @@ function sanitizeZoomLevel(value) {
   return typeof value === 'string' && ASSETS_ZOOM_LEVELS.has(value) ? value : null;
 }
 
+/** Base-view selected bases: persists as string[] of base ids. */
+function sanitizeBaseIds(value) {
+  if (!Array.isArray(value)) return null;
+  const entries = value.filter(item => typeof item === 'string' && item);
+  return entries.length > 0 ? entries : null;
+}
+
 function normalizeSavedView(view) {
   if (!view || typeof view !== 'object') return null;
   if (typeof view.id !== 'string' || typeof view.name !== 'string') return null;
@@ -96,6 +103,7 @@ function normalizeSavedView(view) {
     zoomLevel:       sanitizeZoomLevel(view.zoomLevel),
     collapsedGroups: sanitizeCollapsedGroups(view.collapsedGroups),
     showAllGroups:   typeof view.showAllGroups === 'boolean' ? view.showAllGroups : null,
+    selectedBaseIds: sanitizeBaseIds(view.selectedBaseIds),
     hiddenFromStrip: view.hiddenFromStrip === true,
     filters:         view.filters,
   };
@@ -266,6 +274,7 @@ export function useSavedViews(calendarId) {
     zoomLevel,
     collapsedGroups,
     showAllGroups,
+    selectedBaseIds,
   }: {
     color?: any
     view?: any
@@ -276,6 +285,7 @@ export function useSavedViews(calendarId) {
     zoomLevel?: any
     collapsedGroups?: any
     showAllGroups?: any
+    selectedBaseIds?: any
   } = {}) => {
     const savedView = {
       id:              createId('view'),
@@ -290,6 +300,7 @@ export function useSavedViews(calendarId) {
       zoomLevel:       sanitizeZoomLevel(zoomLevel),
       collapsedGroups: sanitizeCollapsedGroups(collapsedGroups),
       showAllGroups:   typeof showAllGroups === 'boolean' ? showAllGroups : null,
+      selectedBaseIds: sanitizeBaseIds(selectedBaseIds),
       hiddenFromStrip: false,
       filters:         serializeFilters(filters),
     };
@@ -307,8 +318,9 @@ export function useSavedViews(calendarId) {
     sortBy?: any
     zoomLevel?: any
     collapsedGroups?: any
+    selectedBaseIds?: any
   } = {}) => {
-    const { sort, showAllGroups, sortBy, zoomLevel, collapsedGroups } = opts || {};
+    const { sort, showAllGroups, sortBy, zoomLevel, collapsedGroups, selectedBaseIds } = opts || {};
     setViews(prev => prev.map(v =>
       v.id === id
         ? {
@@ -324,6 +336,9 @@ export function useSavedViews(calendarId) {
               : {}),
             ...(showAllGroups !== undefined
               ? { showAllGroups: typeof showAllGroups === 'boolean' ? showAllGroups : null }
+              : {}),
+            ...(selectedBaseIds !== undefined
+              ? { selectedBaseIds: sanitizeBaseIds(selectedBaseIds) }
               : {}),
           }
         : v

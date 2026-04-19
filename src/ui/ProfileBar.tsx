@@ -5,14 +5,15 @@
  *   [All views ▾] [Customize Quick Views ▾] [Clear all filters] [+ Save view]
  *   [chip] [chip] [chip] ...   (only views where !hiddenFromStrip)
  *
- * Applying a saved view and seeing the "unsaved" dirty indicator still work
- * the same way. Renaming / recoloring / deleting / resaving now live in the
- * CustomizeQuickViewsPanel rather than behind a pencil button on each chip.
+ * Chips group under their tab (month/week/schedule/base/assets/…) with a
+ * header + divider. Chips pinned to a tab the owner has hidden in Setup are
+ * dimmed and non-clickable — they still appear so ownership of the view is
+ * preserved, they just can't be applied until the tab is re-enabled.
  */
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Plus, Bookmark, BookmarkCheck,
-  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes,
+  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes, MapPin,
 } from 'lucide-react';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import ViewsDropdown from './ViewsDropdown';
@@ -25,20 +26,29 @@ const PROFILE_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
 ];
 
-const VIEW_ICON_MAP = {
+const VIEW_ICON_MAP: Record<string, { Icon: any; label: string }> = {
   month:    { Icon: CalendarDays,  label: 'Month view' },
   week:     { Icon: Columns3,      label: 'Week view' },
   day:      { Icon: Calendar,      label: 'Day view' },
   agenda:   { Icon: List,          label: 'Agenda view' },
   schedule: { Icon: CalendarRange, label: 'Schedule view' },
+  base:     { Icon: MapPin,        label: 'Base view' },
   assets:   { Icon: Boxes,         label: 'Assets view' },
 };
+
+const GLOBAL_GROUP_KEY = '__global__';
+const DEFAULT_VIEW_ORDER = ['month','week','day','agenda','schedule','base','assets'];
+const ALWAYS_ON_VIEWS = new Set(['month', 'week']);
 
 export default function ProfileBar({
   views,
   activeId,
   isDirty,
   schema = DEFAULT_FILTER_SCHEMA,
+  currentView,
+  viewOrder = DEFAULT_VIEW_ORDER,
+  enabledViews,
+  locationLabel = 'Base',
   hasActiveFilters = false,
   onApply,
   onAdd,
@@ -51,7 +61,34 @@ export default function ProfileBar({
 }: any) {
   const [saveOpen, setSaveOpen] = useState(false);
 
+  const enabledSet = useMemo(
+    () => (Array.isArray(enabledViews) ? new Set(enabledViews) : null),
+    [enabledViews],
+  );
+  const isViewEnabled = (viewId: string | null | undefined) => {
+    if (!viewId) return true;
+    if (ALWAYS_ON_VIEWS.has(viewId)) return true;
+    if (!enabledSet) return true;
+    return enabledSet.has(viewId);
+  };
+
   const visibleViews = views.filter((v: any) => !v.hiddenFromStrip);
+
+  // Bucket visible saved views by the tab they were created on. Views with a
+  // null/unknown `view` land in the global bucket so they remain applicable
+  // from any tab (pre-feature backward compat).
+  const grouped = useMemo(() => {
+    const buckets = new Map<string, any[]>();
+    viewOrder.forEach((v: string) => buckets.set(v, []));
+    buckets.set(GLOBAL_GROUP_KEY, []);
+    visibleViews.forEach((sv: any) => {
+      const key = sv.view && buckets.has(sv.view) ? sv.view : GLOBAL_GROUP_KEY;
+      buckets.get(key)!.push(sv);
+    });
+    return buckets;
+  }, [visibleViews, viewOrder]);
+
+  const nonEmpty = [...grouped.entries()].filter(([, list]) => list.length > 0);
 
   return (
     <div className={styles.bar}>
@@ -89,17 +126,40 @@ export default function ProfileBar({
         </button>
       </div>
 
-      {visibleViews.length > 0 && (
+      {nonEmpty.length > 0 && (
         <div className={styles.strip}>
-          {visibleViews.map((savedView: any) => (
-            <ViewChip
-              key={savedView.id}
-              savedView={savedView}
-              isActive={savedView.id === activeId}
-              isDirty={isDirty && savedView.id === activeId}
-              onApply={() => { onApply(savedView); setSaveOpen(false); }}
-            />
-          ))}
+          {nonEmpty.map(([key, list], idx) => {
+            const meta = key === GLOBAL_GROUP_KEY
+              ? { Icon: Bookmark, label: 'All views' }
+              : (VIEW_ICON_MAP[key] ?? { Icon: Bookmark, label: key });
+            const headerLabel = key === 'base' ? `${locationLabel} view` : meta.label;
+            const groupEnabled = key === GLOBAL_GROUP_KEY || isViewEnabled(key);
+            const isCurrent = key === currentView;
+            return (
+              <div key={key} className={styles.group} data-active={isCurrent ? 'true' : 'false'}>
+                {idx > 0 && <span className={styles.groupDivider} aria-hidden="true" />}
+                <div
+                  className={styles.groupHeader}
+                  title={groupEnabled ? undefined : `${headerLabel} is hidden in Setup`}
+                >
+                  <meta.Icon size={11} aria-hidden="true" />
+                  <span>{headerLabel}</span>
+                </div>
+                {list.map((savedView: any) => (
+                  <ViewChip
+                    key={savedView.id}
+                    savedView={savedView}
+                    isActive={savedView.id === activeId}
+                    isDirty={isDirty && savedView.id === activeId}
+                    isEnabled={groupEnabled}
+                    onApply={groupEnabled
+                      ? () => { onApply(savedView); setSaveOpen(false); }
+                      : undefined}
+                  />
+                ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -114,15 +174,17 @@ export default function ProfileBar({
 }
 
 /* ─── View Chip ─────────────────────────────────────────────── */
-function ViewChip({ savedView, isActive, isDirty, onApply }: any) {
+function ViewChip({ savedView, isActive, isDirty, isEnabled = true, onApply }: any) {
   const color = savedView.color ?? '#64748b';
   const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
 
-  const chipClass = [styles.chip, isDirty && styles.dirty].filter(Boolean).join(' ');
+  const chipClass = [styles.chip, isDirty && styles.dirty, !isEnabled && styles.chipDimmed]
+    .filter(Boolean).join(' ');
   const wrapClass = [
     styles.chipWrap,
     isActive && styles.chipWrapActive,
     isDirty && styles.chipWrapDirty,
+    !isEnabled && styles.chipWrapDimmed,
   ].filter(Boolean).join(' ');
 
   return (
@@ -130,7 +192,15 @@ function ViewChip({ savedView, isActive, isDirty, onApply }: any) {
       className={wrapClass}
       style={{ '--chip-color': color } as React.CSSProperties}
     >
-      <button className={chipClass} onClick={onApply} title={savedView.name}>
+      <button
+        className={chipClass}
+        onClick={onApply}
+        disabled={!isEnabled}
+        aria-disabled={!isEnabled || undefined}
+        title={isEnabled
+          ? savedView.name
+          : `${savedView.name} — ${savedView.view ?? ''} tab is hidden in Setup`}
+      >
         {isActive
           ? <BookmarkCheck size={12} className={styles.chipIcon} />
           : <Bookmark size={12} className={styles.chipIcon} />
@@ -156,9 +226,8 @@ function ViewChip({ savedView, isActive, isDirty, onApply }: any) {
 
 /* ─── Save Form ────────────────────────────────────────────────── */
 function SaveForm({ onSave, onCancel }: any) {
-  const [name,     setName]     = useState('');
-  const [color,    setColor]    = useState(PROFILE_COLORS[0]);
-  const [pinView,  setPinView]  = useState(false);
+  const [name,  setName]  = useState('');
+  const [color, setColor] = useState(PROFILE_COLORS[0]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -166,7 +235,7 @@ function SaveForm({ onSave, onCancel }: any) {
   function handleSave() {
     const trimmed = name.trim();
     if (!trimmed) { inputRef.current?.focus(); return; }
-    onSave({ name: trimmed, color, pinView });
+    onSave({ name: trimmed, color });
   }
 
   return (
@@ -192,11 +261,6 @@ function SaveForm({ onSave, onCancel }: any) {
           />
         ))}
       </div>
-
-      <label className={styles.pinRow}>
-        <input type="checkbox" checked={pinView} onChange={e => setPinView(e.target.checked)} />
-        Also pin the current view (month/week/day…)
-      </label>
 
       <div className={styles.saveActions}>
         <button type="button" className={styles.btnSave} onClick={handleSave} disabled={!name.trim()}>
