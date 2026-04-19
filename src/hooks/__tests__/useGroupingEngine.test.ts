@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useGroupingEngine } from '../useGrouping.ts'
 import { normalizeGroupConfig } from '../useNormalizedConfig.ts'
-import type { NormalizedEvent } from '../../index.d.ts'
+import type { NormalizedEvent } from '../../types/events.ts'
 
 // ── Fixture helpers ────────────────────────────────────────────────────────────
 
