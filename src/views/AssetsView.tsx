@@ -285,7 +285,10 @@ export default function AssetsView({
   }, []);
 
   // Keep the current day in view for the gantt timeline by centering the
-  // selected date whenever the month/day scale changes.
+  // selected date whenever the month/day scale changes. Depend on a stable
+  // primitive (ISO string) so we don't re-run on every render due to a new
+  // monthStart Date object reference.
+  const monthStartKey = monthStart.toISOString();
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
@@ -293,10 +296,14 @@ export default function AssetsView({
       Math.max(differenceInCalendarDays(startOfDay(currentDate), monthStart), 0),
       Math.max(totalDays - 1, 0),
     );
-    const dayCenter = (todayIdx + 0.5) * pxPerDay;
-    const targetLeft = Math.max(dayCenter - wrap.clientWidth / 2, 0);
+    // Day columns start after the sticky NAME_W column, so center within
+    // the visible-days region (clientWidth - NAME_W), not the whole viewport.
+    const dayCenter = NAME_W + (todayIdx + 0.5) * pxPerDay;
+    const visibleDaysWidth = Math.max(wrap.clientWidth - NAME_W, 0);
+    const targetLeft = Math.max(dayCenter - NAME_W - visibleDaysWidth / 2, 0);
     wrap.scrollLeft = targetLeft;
-  }, [currentDate, monthStart, totalDays, pxPerDay]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate, monthStartKey, totalDays, pxPerDay]);
 
   // ── Row source ──
   // When `assets` is provided (first-class registry from owner config),
