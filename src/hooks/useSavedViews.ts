@@ -16,7 +16,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createId } from '../core/createId';
 
 function viewsKey(calendarId) { return `wc-saved-views-${calendarId}`; }
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 const MIN_READABLE_VERSION = 2;
 
 const ASSETS_ZOOM_LEVELS = new Set(['day', 'week', 'month', 'quarter']);
@@ -104,6 +104,7 @@ function normalizeSavedView(view) {
     collapsedGroups: sanitizeCollapsedGroups(view.collapsedGroups),
     showAllGroups:   typeof view.showAllGroups === 'boolean' ? view.showAllGroups : null,
     selectedBaseIds: sanitizeBaseIds(view.selectedBaseIds),
+    hiddenFromStrip: view.hiddenFromStrip === true,
     filters:         view.filters,
   };
 }
@@ -125,8 +126,9 @@ function migrateSavedViewsPayload(payload, calendarId) {
       && payload.version >= MIN_READABLE_VERSION
       && payload.version <= STORAGE_VERSION
     ) {
-      // v2 and v3 share the same on-disk shape; normalizeSavedView fills in
-      // new fields (sort, collapsedGroups, showAllGroups) as null on load.
+      // v2–v4 share a compatible on-disk shape; normalizeSavedView fills in
+      // fields added in later versions (sort, collapsedGroups, showAllGroups,
+      // hiddenFromStrip) when loading older payloads.
       return normalizeViews(payload.views);
     }
 
@@ -299,6 +301,7 @@ export function useSavedViews(calendarId) {
       collapsedGroups: sanitizeCollapsedGroups(collapsedGroups),
       showAllGroups:   typeof showAllGroups === 'boolean' ? showAllGroups : null,
       selectedBaseIds: sanitizeBaseIds(selectedBaseIds),
+      hiddenFromStrip: false,
       filters:         serializeFilters(filters),
     };
     setViews(prev => [...prev, savedView]);
@@ -346,5 +349,11 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.filter(v => v.id !== id));
   }, []);
 
-  return { views, saveView, updateView, resaveView, deleteView };
+  const toggleStripVisibility = useCallback((id) => {
+    setViews(prev => prev.map(v =>
+      v.id === id ? { ...v, hiddenFromStrip: !v.hiddenFromStrip } : v
+    ));
+  }, []);
+
+  return { views, saveView, updateView, resaveView, deleteView, toggleStripVisibility };
 }

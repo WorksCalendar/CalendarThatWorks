@@ -39,7 +39,7 @@ import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, 
 import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import type { ViewId } from './core/viewScope';
-import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState';
+import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import HoverCard              from './ui/HoverCard';
@@ -1919,6 +1919,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               updateView:  savedViews.updateView,
               resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds }),
               deleteView:  handleDeleteView,
+              toggleStripVisibility: savedViews.toggleStripVisibility,
+              clearFilters: cal.clearFilters,
+              hasActiveFilters: hasActiveFilters(cal.filters, schema),
               currentFilters: cal.filters,
               currentView:    cal.view,
               schema,
@@ -1934,6 +1937,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               viewOrder={ALL_VIEWS.map(v => v.id)}
               enabledViews={VIEWS.map(v => v.id)}
               locationLabel={locationLabel}
+              hasActiveFilters={hasActiveFilters(cal.filters, schema)}
               onApply={handleApplyView}
               onAdd={({ name, color }) =>
                 savedViews.saveView(name, cal.filters, { color, view: cal.view, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds })
@@ -1941,6 +1945,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds })}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
+              onToggleVisibility={savedViews.toggleStripVisibility}
+              onClearFilters={cal.clearFilters}
               onEditConditions={ownerCfg.isOwner ? (id) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
             />
           )
