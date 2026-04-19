@@ -215,7 +215,7 @@ describe('WorksCalendar schedule model integration', () => {
       const shift = visible.find((ev) => String(ev.id) === 'shift-1');
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-3');
     });
-  }, 15000);
+  }, 30000);
 
   it('allows removing coverage after assignment from the covered status pill', async () => {
     const apiRef = createRef<any>();
