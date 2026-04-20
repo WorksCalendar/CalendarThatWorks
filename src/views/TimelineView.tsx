@@ -672,7 +672,7 @@ export default function TimelineView({
               type="button"
               className={styles.filterEmptyClear}
               onClick={() => setBaseFilter('')}
-            >Show all locations</button>
+            >Show all bases</button>
           </div>
         )}
 

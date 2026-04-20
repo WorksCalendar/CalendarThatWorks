@@ -63,12 +63,12 @@ describe('TimelineView — base filter recovery (#192)', () => {
     expect(emptyMsg.querySelector('strong')).toHaveTextContent('West');
   });
 
-  it('exposes a Show all locations button that clears the filter', () => {
+  it('exposes a Show all bases button that clears the filter', () => {
     renderTimeline();
 
     fireEvent.click(screen.getByRole('button', { name: 'West' }));
 
-    const clearBtn = screen.getByRole('button', { name: /show all locations/i });
+    const clearBtn = screen.getByRole('button', { name: /show all bases/i });
     expect(clearBtn).toBeInTheDocument();
 
     fireEvent.click(clearBtn);

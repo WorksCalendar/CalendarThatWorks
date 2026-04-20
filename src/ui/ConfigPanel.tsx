@@ -1059,29 +1059,60 @@ export function CategoriesTab({ config, onUpdate }: any) {
  *            groupBy dropdowns added by ticket 10.
  *   meta   — free-form; sublabel appears under label in the asset cell.
  */
+const REQUIRED_ASSET_META_KEYS = ['registrationNumber', 'type', 'make', 'model'] as const;
+
+function hasAllRequiredAssetFields(asset) {
+  if (!asset) return false;
+  const meta = asset.meta ?? {};
+  return REQUIRED_ASSET_META_KEYS.every(k => String(meta[k] ?? '').trim().length > 0);
+}
+
+function createDraftAsset(nextIndex) {
+  return {
+    _key: `draft-${Date.now()}-${nextIndex}`,
+    id: `asset-${nextIndex}`,
+    label: `Asset ${nextIndex}`,
+    group: '',
+    meta: {
+      registrationNumber: '',
+      type: '',
+      make: '',
+      model: '',
+      limitations: '',
+    },
+  };
+}
+
 export function AssetsTab({ config, onUpdate, items = [] }: any) {
   const assets = Array.isArray(config.assets) ? config.assets : [];
+  // Draft row for new asset creation. Kept in local state so partially-filled
+  // rows never enter config.assets — the only entry point is saveDraft(),
+  // which requires all four of registrationNumber/type/make/model (#196).
+  const [draftAsset, setDraftAsset] = useState<any>(null);
 
   const writeAssets = (next) => onUpdate(c => ({ ...c, assets: next }));
 
   const addAsset = () => {
-    const n = assets.length + 1;
-    writeAssets([
-      ...assets,
-      {
-        _key: `${Date.now()}-${n}`,
-        id: `asset-${n}`,
-        label: `Asset ${n}`,
-        group: '',
-        meta: {
-          registrationNumber: '',
-          type: '',
-          make: '',
-          model: '',
-          limitations: '',
-        },
-      },
-    ]);
+    if (draftAsset) return;
+    setDraftAsset(createDraftAsset(assets.length + 1));
+  };
+
+  const updateDraft = (patch) => {
+    setDraftAsset(prev => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const updateDraftMeta = (metaPatch) => {
+    setDraftAsset(prev => (
+      prev ? { ...prev, meta: { ...(prev.meta ?? {}), ...metaPatch } } : prev
+    ));
+  };
+
+  const cancelDraft = () => setDraftAsset(null);
+
+  const saveDraft = () => {
+    if (!draftAsset || !hasAllRequiredAssetFields(draftAsset)) return;
+    writeAssets([...assets, draftAsset]);
+    setDraftAsset(null);
   };
 
   const updateAsset = (idx, patch) => {
@@ -1195,7 +1226,13 @@ export function AssetsTab({ config, onUpdate, items = [] }: any) {
                           required
                         />
                         {invalid && (
-                          <span id={errorId} className={styles.assetFieldError} role="alert">
+                          <span
+                            id={errorId}
+                            className={styles.assetFieldError}
+                            role="status"
+                            aria-live="polite"
+                            aria-atomic="true"
+                          >
                             {f.label} is required.
                           </span>
                         )}
@@ -1239,7 +1276,133 @@ export function AssetsTab({ config, onUpdate, items = [] }: any) {
         );
       })}
 
-      <button className={styles.addFieldBtn} onClick={addAsset}>
+      {draftAsset && (() => {
+        const regValue = draftAsset.meta?.registrationNumber ?? '';
+        const typeValue = draftAsset.meta?.type ?? '';
+        const makeValue = draftAsset.meta?.make ?? '';
+        const modelValue = draftAsset.meta?.model ?? '';
+        const limitationsValue = draftAsset.meta?.limitations ?? '';
+        const requiredFields = [
+          { key: 'registrationNumber', label: 'Registration Number', value: regValue },
+          { key: 'type',               label: 'Type',                value: typeValue },
+          { key: 'make',               label: 'Make',                value: makeValue },
+          { key: 'model',              label: 'Model',               value: modelValue },
+        ];
+        const canSave = hasAllRequiredAssetFields(draftAsset);
+        return (
+          <div
+            className={[styles.assetRow, styles.assetRowDraft].filter(Boolean).join(' ')}
+            data-asset-draft="true"
+            role="group"
+            aria-label="New asset draft"
+          >
+            <div className={styles.assetFields}>
+              <div className={styles.assetField}>
+                <span className={styles.assetFieldLabel}>Label</span>
+                <input
+                  className={styles.input}
+                  value={draftAsset.label ?? ''}
+                  onChange={e => updateDraft({ label: e.target.value })}
+                  aria-label="Label for new asset"
+                />
+              </div>
+              <div className={styles.assetField}>
+                <span className={styles.assetFieldLabel}>ID</span>
+                <input
+                  className={styles.input}
+                  value={draftAsset.id}
+                  onChange={e => updateDraft({ id: e.target.value.trim() || draftAsset.id })}
+                  aria-label="Id for new asset"
+                />
+              </div>
+              <div className={styles.assetField}>
+                <span className={styles.assetFieldLabel}>Group</span>
+                <input
+                  className={styles.input}
+                  value={draftAsset.group ?? ''}
+                  onChange={e => updateDraft({ group: e.target.value })}
+                  aria-label="Group for new asset"
+                />
+              </div>
+              <div className={styles.assetField}>
+                <span className={styles.assetFieldLabel}>Sublabel</span>
+                <input
+                  className={styles.input}
+                  value={draftAsset.meta?.sublabel ?? ''}
+                  onChange={e => updateDraftMeta({ sublabel: e.target.value })}
+                  aria-label="Sublabel for new asset"
+                />
+              </div>
+              {requiredFields.map(f => {
+                const invalid = !String(f.value).trim();
+                const errorId = `asset-draft-${f.key}-error`;
+                return (
+                  <div key={f.key} className={styles.assetField}>
+                    <span className={styles.assetFieldLabel}>
+                      {f.label} <span className={styles.assetFieldRequired} aria-hidden="true">*</span>
+                    </span>
+                    <input
+                      className={styles.input}
+                      value={f.value}
+                      onChange={e => updateDraftMeta({ [f.key]: e.target.value })}
+                      aria-label={`${f.label} for new asset`}
+                      aria-required="true"
+                      aria-invalid={invalid || undefined}
+                      aria-describedby={invalid ? errorId : undefined}
+                      required
+                    />
+                    {invalid && (
+                      <span
+                        id={errorId}
+                        className={styles.assetFieldError}
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        {f.label} is required.
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              <div className={[styles.assetField, styles.assetFieldWide].filter(Boolean).join(' ')}>
+                <span className={styles.assetFieldLabel}>Limitations</span>
+                <textarea
+                  className={styles.input}
+                  value={limitationsValue}
+                  onChange={e => updateDraftMeta({ limitations: e.target.value })}
+                  aria-label="Limitations for new asset"
+                  rows={2}
+                />
+              </div>
+            </div>
+            <div className={styles.assetActions}>
+              <button
+                type="button"
+                className={styles.assetDraftSaveBtn}
+                onClick={saveDraft}
+                disabled={!canSave}
+                aria-label="Save new asset"
+                title={canSave ? 'Save new asset' : 'Fill in required fields to save'}
+              ><Check size={13} /></button>
+              <button
+                type="button"
+                className={styles.removeBtn}
+                onClick={cancelDraft}
+                aria-label="Cancel new asset"
+              ><X size={13} /></button>
+            </div>
+          </div>
+        );
+      })()}
+
+      <button
+        className={styles.addFieldBtn}
+        onClick={addAsset}
+        disabled={!!draftAsset}
+        aria-disabled={!!draftAsset || undefined}
+        title={draftAsset ? 'Finish the draft asset first' : undefined}
+      >
         <Plus size={13} /> Add asset
       </button>
     </div>
