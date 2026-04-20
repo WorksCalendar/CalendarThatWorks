@@ -118,18 +118,32 @@ function ConditionFields({
 }): JSX.Element {
   // Debounced syntax check: store the latest draft value and run
   // `validateExpressionSyntax` only after the user pauses typing.
+  //
+  // The initial `error` is seeded synchronously so there's no "no
+  // error" flash between mount and the first effect pass.
   const [draftExpr, setDraftExpr] = useState<string>(node.expr)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    () => validateExpressionSyntax(node.expr),
+  )
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Keep the draft in sync when the parent swaps to a different node
-  // or replaces the expression from outside.
+  // Only sync on a genuine node swap (`node.id` changes). Syncing on
+  // `node.expr` would re-validate on every controlled re-render — in
+  // normal usage the parent merges each keystroke back in, which
+  // would short-circuit the 150ms debounce and badger mid-type.
+  // On swap we also flush the pending timer so a late validation
+  // from the previous node can't stomp the new node's error state.
   useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
     setDraftExpr(node.expr)
     setError(validateExpressionSyntax(node.expr))
-  }, [node.id, node.expr])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above
+  }, [node.id])
 
-  // Flush the pending timer on unmount.
+  // Safety net: cancel any pending validation on unmount.
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
   }, [])

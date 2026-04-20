@@ -173,6 +173,64 @@ describe('WorkflowNodeInspector — condition', () => {
       vi.useRealTimers()
     }
   })
+
+  // Regression: controlled parents that merge each keystroke back into `node.expr`
+  // must not bypass the 150ms debounce. A prior version synced on `[node.id, node.expr]`
+  // and validated synchronously on every re-render, badgering the user mid-type.
+  it('does not validate synchronously when a controlled parent echoes expr back', () => {
+    vi.useFakeTimers()
+    try {
+      const spy = vi.fn()
+      render(<Harness initial={makeNode('event.cost > 500')} spy={spy} />)
+      const textarea = screen.getByLabelText(/expression/i) as HTMLTextAreaElement
+      // Type a syntactically invalid fragment. The Harness merges it into state,
+      // which causes the inspector to re-render with node.expr === the bad value.
+      fireEvent.change(textarea, { target: { value: 'event.cost >' } })
+      // Pre-debounce: the textarea should NOT yet be marked invalid.
+      expect(textarea.getAttribute('aria-invalid')).toBe('false')
+      act(() => { vi.advanceTimersByTime(200) })
+      // Post-debounce: now the error surfaces.
+      expect(textarea.getAttribute('aria-invalid')).toBe('true')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // Regression: swapping to a different condition node must flush any pending
+  // validation from the previous node — otherwise a late-firing timer writes
+  // the previous node's error text into the new node's hint slot.
+  it('cancels a pending validation when the selected condition node changes', () => {
+    vi.useFakeTimers()
+    try {
+      function Swapper(): JSX.Element {
+        const [which, setWhich] = useState<'bad' | 'good'>('bad')
+        const node: WorkflowConditionNode = which === 'bad'
+          ? { id: 'bad', type: 'condition', expr: 'event.cost > 500' }
+          : { id: 'good', type: 'condition', expr: 'event.cost > 500' }
+        return (
+          <>
+            <button onClick={() => setWhich('good')}>swap</button>
+            <WorkflowNodeInspector node={node} onChange={vi.fn()} />
+          </>
+        )
+      }
+      render(<Swapper />)
+      // Type invalid expr on the 'bad' node — schedules a 150ms debounced
+      // validation that would mark the textarea invalid.
+      fireEvent.change(screen.getByLabelText(/expression/i), {
+        target: { value: 'event.cost >' },
+      })
+      // Before the debounce fires, swap to a different node. The pending
+      // timer must be flushed so it doesn't stomp the new node's error state.
+      fireEvent.click(screen.getByText('swap'))
+      act(() => { vi.advanceTimersByTime(200) })
+      const textarea = screen.getByLabelText(/expression/i) as HTMLTextAreaElement
+      expect(textarea.value).toBe('event.cost > 500')
+      expect(textarea.getAttribute('aria-invalid')).toBe('false')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe('WorkflowNodeInspector — notify', () => {
