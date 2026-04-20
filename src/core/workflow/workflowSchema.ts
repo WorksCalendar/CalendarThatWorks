@@ -137,6 +137,20 @@ export interface WorkflowInstance {
   readonly outcome?: WorkflowOutcome
 }
 
+// ─── Layout (Phase 2 visual builder — side-car, NOT part of Workflow) ─────
+
+/**
+ * Cosmetic node coordinates for the visual builder. Stored alongside a
+ * `Workflow` rather than on its nodes so the runtime contract (schema +
+ * interpreter) stays free of UI-only data. The interpreter ignores this
+ * entirely; `advance()`, `findNode`, and `resolveNextEdge` never read it.
+ */
+export interface WorkflowLayout {
+  readonly workflowId: string
+  readonly workflowVersion: number
+  readonly positions: Readonly<Record<string, { readonly x: number; readonly y: number }>>
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 /** Look up a node by id. Returns undefined when missing. */
