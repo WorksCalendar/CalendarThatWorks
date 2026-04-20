@@ -17,6 +17,8 @@ import {
 import type { EngineResource } from '../engine/schema/resourceSchema';
 import { makeAssignment, type Assignment } from '../engine/schema/assignmentSchema';
 import type { CategoryDef } from '../../types/assets';
+import type { Hold } from '../holds/holdRegistry';
+import type { AvailabilityRule } from '../availability/availabilityRule';
 
 const day = (d: number, h = 9, m = 0) => new Date(2026, 3, d, h, m);
 
@@ -681,5 +683,148 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
     });
     expect(result.severity).toBe('soft');
     expect(result.allowed).toBe(true);
+  });
+});
+
+describe('conflictEngine — hold-conflict rule (#211)', () => {
+  const rule: ConflictRule = { id: 'hc', type: 'hold-conflict' };
+  const now = new Date(Date.UTC(2026, 3, 10, 8, 0));
+  const hold: Hold = {
+    id: 'h1',
+    resourceId: 'N100',
+    holderId: 'alice',
+    window: {
+      start: new Date(Date.UTC(2026, 3, 10, 9, 30)),
+      end:   new Date(Date.UTC(2026, 3, 10, 10, 30)),
+    },
+    expiresAt: '2026-04-10T08:05:00.000Z',
+  };
+
+  it('flags an overlapping hold from a different holder as soft', () => {
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [hold], holderId: 'bob', now,
+    });
+    expect(result.allowed).toBe(true);
+    expect(result.severity).toBe('soft');
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details).toMatchObject({
+      type: 'hold-conflict',
+      holdId: 'h1',
+      holderId: 'alice',
+    });
+  });
+
+  it('does not flag the proposer\'s own hold', () => {
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [hold], holderId: 'alice', now,
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('ignores expired holds', () => {
+    const expired: Hold = { ...hold, expiresAt: '2026-04-10T07:00:00.000Z' };
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [expired], holderId: 'bob', now,
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('skips when holds[] is missing or empty', () => {
+    const empty = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [], holderId: 'bob', now,
+    });
+    const missing = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holderId: 'bob', now,
+    });
+    expect(empty.violations).toEqual([]);
+    expect(missing.violations).toEqual([]);
+  });
+
+  it('respects severity="hard" to block submits', () => {
+    const hardRule: ConflictRule = { id: 'hc-hard', type: 'hold-conflict', severity: 'hard' };
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [hardRule],
+      holds: [hold], holderId: 'bob', now,
+    });
+    expect(result.allowed).toBe(false);
+    expect(result.severity).toBe('hard');
+  });
+});
+
+describe('conflictEngine — availability-violation rule (#214)', () => {
+  const rule: ConflictRule = { id: 'av', type: 'availability-violation' };
+
+  const mkRes = (availability: AvailabilityRule[]): Map<string, EngineResource> =>
+    new Map([[ 'N100', { id: 'N100', name: 'Tower', availability, timezone: 'UTC' } as EngineResource ]]);
+
+  it('skips silently when the resource has no availability rules', () => {
+    const resources = new Map<string, EngineResource>([[ 'N100', { id: 'N100', name: 'T' } ]]);
+    const result = evaluateConflicts({ proposed: base, events: [], rules: [rule], resources });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('flags a blackout overlap as hard', () => {
+    const resources = mkRes([
+      { id: 'b', kind: 'blackout', start: '2026-04-10T08:00:00Z', end: '2026-04-10T14:00:00Z', reason: 'Maintenance' },
+    ]);
+    const proposed: ConflictEvent = {
+      ...base,
+      start: new Date(Date.UTC(2026, 3, 10, 9, 0)),
+      end:   new Date(Date.UTC(2026, 3, 10, 11, 0)),
+    };
+    const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
+    expect(result.allowed).toBe(false);
+    expect(result.violations[0].details).toMatchObject({
+      type: 'availability-violation',
+      reason: 'blackout',
+      availabilityRuleId: 'b',
+    });
+  });
+
+  it('passes a window inside the open hours', () => {
+    const resources = mkRes([
+      { id: 'o', kind: 'open', days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' },
+    ]);
+    const proposed: ConflictEvent = {
+      ...base,
+      // 2026-04-20 Monday 10:00-11:00 UTC.
+      start: new Date(Date.UTC(2026, 3, 20, 10, 0)),
+      end:   new Date(Date.UTC(2026, 3, 20, 11, 0)),
+    };
+    const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('flags a window outside open hours as hard', () => {
+    const resources = mkRes([
+      { id: 'o', kind: 'open', days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' },
+    ]);
+    const proposed: ConflictEvent = {
+      ...base,
+      start: new Date(Date.UTC(2026, 3, 20, 17, 0)),
+      end:   new Date(Date.UTC(2026, 3, 20, 19, 0)),
+    };
+    const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
+    expect(result.allowed).toBe(false);
+    expect(result.violations[0].details).toMatchObject({ reason: 'outside-open-hours' });
+  });
+
+  it('respects ignoreCategories', () => {
+    const resources = mkRes([
+      { id: 'b', kind: 'blackout', start: '2026-04-10T08:00:00Z', end: '2026-04-10T14:00:00Z' },
+    ]);
+    const ruleSkip: ConflictRule = { id: 'av', type: 'availability-violation', ignoreCategories: ['flight'] };
+    const proposed: ConflictEvent = {
+      ...base,
+      start: new Date(Date.UTC(2026, 3, 10, 9, 0)),
+      end:   new Date(Date.UTC(2026, 3, 10, 11, 0)),
+    };
+    const result = evaluateConflicts({ proposed, events: [], rules: [ruleSkip], resources });
+    expect(result.violations).toEqual([]);
   });
 });

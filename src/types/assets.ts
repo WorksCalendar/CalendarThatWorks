@@ -49,6 +49,15 @@ export interface ApprovalHistoryEntry {
   tier?: number;
   /** Free-text rationale. Required on 'deny'; optional otherwise. */
   reason?: string;
+  /**
+   * Hash-chain linkage — issue #215. `prevHash` is the hash of the
+   * previous entry (empty string for the first). `hash` is
+   * sha256(canonicalize(entry-without-hash)). Populated by
+   * `appendAuditEntry`; verified by `verifyAuditChain`. Entries without
+   * these fields predate the chain and are skipped by verification.
+   */
+  prevHash?: string;
+  hash?: string;
 }
 
 export interface ApprovalStage {
