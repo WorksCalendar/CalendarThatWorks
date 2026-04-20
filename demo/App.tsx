@@ -1,5 +1,5 @@
 // @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
-import { StrictMode, useState, useCallback, useMemo } from 'react';
+import { StrictMode, useState, useCallback, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import {
@@ -428,6 +428,15 @@ function App() {
       onOfflineReady() { console.info('[PWA] App ready to work offline.'); },
     })
   );
+
+  // Keep the public demo on the latest bundle automatically so feature
+  // updates (like the unified Filter/Group/Views sidebar) are visible
+  // without requiring users to notice and click the update toast.
+  useEffect(() => {
+    if (!needsRefresh) return;
+    void updateSW(true);
+    setNeedsRefresh(false);
+  }, [needsRefresh, updateSW]);
 
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
