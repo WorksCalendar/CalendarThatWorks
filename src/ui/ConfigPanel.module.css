@@ -458,6 +458,63 @@
   font-size: 12px;
 }
 
+.managerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px 8px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-top: none;
+  border-radius: 0 0 var(--wc-radius-sm) var(--wc-radius-sm);
+}
+
+.managerBlockLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--wc-text-muted, #666);
+  margin: 2px 0 2px;
+}
+
+.managerEntry {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.managerEntry .select {
+  flex: 1.2;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.managerEntry .input {
+  flex: 1;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.managerAddBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px dashed var(--wc-border);
+  background: transparent;
+  color: var(--wc-text-muted);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.managerAddBtn:hover {
+  color: var(--wc-text);
+  border-color: var(--wc-text-muted);
+}
+
 .inlineAddRow {
   display: flex;
   gap: 6px;

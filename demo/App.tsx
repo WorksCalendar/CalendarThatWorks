@@ -24,8 +24,8 @@ const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
 if (!stored || stored === '[]') saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
 
 /* ─── Demo config seed ──────────────────────────────────────────── */
-// Bases (airbases / regional hubs). Used by BaseView, the Assets view's
-// base column, and the approval-flow demo. Employees and assets below
+// Bases (airbases / regional hubs). Used by the Base Gantt view, the Assets
+// view's base column, and the approval-flow demo. Employees and assets below
 // reference these by id.
 const DEMO_BASES = [
   { id: 'base-phx', name: 'Phoenix HQ (KPHX)' },
@@ -76,16 +76,29 @@ const _seedConfig = loadConfig(DEMO_CALENDAR_ID);
 const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'corporate';
 
 /* ─── Employees ─────────────────────────────────────────────────── */
-// Each employee is pre-assigned to a base so BaseView renders populated
-// rows out of the box. Phoenix and LAX each host two people; Denver and
-// Chicago host one; JFK and Boston are asset-only bases.
+// Each employee is pre-assigned to a base so the Base Gantt view renders
+// populated rows out of the box. Phoenix and LAX each host two people; Denver
+// and Chicago host one; JFK and Boston are asset-only bases. A few of the
+// people carry "Accountable Manager" assignments so the base header shows the
+// one-stop contact roster (Base / Ops / Maintenance manager + phone).
 const INITIAL_EMPLOYEES = [
-  { id: 'emp-sarah',  name: 'Sarah Chen',    role: 'Senior Engineer',   color: '#3b82f6', base: 'base-phx' },
-  { id: 'emp-marcus', name: 'Marcus Webb',   role: 'On-Call Engineer',  color: '#ef4444', base: 'base-phx' },
-  { id: 'emp-priya',  name: 'Priya Sharma',  role: 'Team Lead',         color: '#10b981', base: 'base-den' },
-  { id: 'emp-james',  name: 'James Torres',  role: 'DevOps / SRE',      color: '#8b5cf6', base: 'base-lax' },
-  { id: 'emp-alex',   name: 'Alex Kim',      role: 'Software Engineer', color: '#f59e0b', base: 'base-ord' },
-  { id: 'emp-dana',   name: 'Dana Okafor',   role: 'Site Reliability',  color: '#06b6d4', base: 'base-lax' },
+  { id: 'emp-sarah',  name: 'Sarah Chen',    role: 'Senior Engineer',   color: '#3b82f6', base: 'base-phx',
+    phone: '602-555-0114',
+    accountableManagers: [{ title: 'Base Manager', phone: '602-555-0114' }] },
+  { id: 'emp-marcus', name: 'Marcus Webb',   role: 'On-Call Engineer',  color: '#ef4444', base: 'base-phx',
+    phone: '602-555-0129',
+    accountableManagers: [{ title: 'Maintenance Manager', phone: '602-555-0129' }] },
+  { id: 'emp-priya',  name: 'Priya Sharma',  role: 'Team Lead',         color: '#10b981', base: 'base-den',
+    phone: '303-555-0177',
+    accountableManagers: [{ title: 'Base Manager' }, { title: 'Ops Manager', phone: '303-555-0177' }] },
+  { id: 'emp-james',  name: 'James Torres',  role: 'DevOps / SRE',      color: '#8b5cf6', base: 'base-lax',
+    phone: '310-555-0141',
+    accountableManagers: [{ title: 'Ops Manager', phone: '310-555-0141' }] },
+  { id: 'emp-alex',   name: 'Alex Kim',      role: 'Software Engineer', color: '#f59e0b', base: 'base-ord',
+    phone: '312-555-0162' },
+  { id: 'emp-dana',   name: 'Dana Okafor',   role: 'Site Reliability',  color: '#06b6d4', base: 'base-lax',
+    phone: '310-555-0198',
+    accountableManagers: [{ title: 'Maintenance Manager', phone: '310-555-0198' }] },
 ];
 
 /* ─── Events ────────────────────────────────────────────────────── */

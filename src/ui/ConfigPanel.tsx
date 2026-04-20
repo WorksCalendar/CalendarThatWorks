@@ -15,6 +15,21 @@ import ThemeCustomizer from './ThemeCustomizer';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
 import styles from './ConfigPanel.module.css';
 
+/**
+ * Preset "Accountable Manager" titles offered in the Employees tab. Not
+ * meant to be exhaustive — owners can still leave the select on the first
+ * option if a person owns an unlisted managerial role for a base, and adding
+ * a new title later is a one-line change.
+ */
+const MANAGER_TITLES = [
+  'Base Manager',
+  'Ops Manager',
+  'Maintenance Manager',
+  'Safety Manager',
+  'Training Manager',
+  'Scheduler',
+];
+
 const TABS = [
   { id: 'setup',       label: 'Setup' },
   { id: 'hoverCard',   label: 'Hover Card' },
@@ -531,57 +546,118 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: a
 
       {/* ── Employees ── */}
       <p className={styles.fieldGroupLabel} style={{ marginTop: 16 }}>Employees</p>
-      <p className={styles.sectionDesc}>Add employee photos after your categories and Smart Views are in place.</p>
-      {teamMembers.map((member) => (
-        <div key={member.id} className={styles.memberBlock}>
-          <div className={styles.memberRow}>
-            <label className={styles.avatarPicker}>
-              <div className={styles.avatarFrame}>
-                {member.avatar ? (
-                  <img src={member.avatar} alt={`${member.name || 'Employee'} avatar`} className={styles.avatarImg} />
-                ) : (
-                  <div className={styles.avatarFallback} style={{ backgroundColor: member.color }}>
-                    {(member.name?.trim()?.[0] ?? '?').toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleProfileUpload(member.id, e)} />
-              <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
-            </label>
-            <input
-              className={styles.input}
-              value={member.name ?? ''}
-              onChange={(e) => updateMember(member.id, { name: e.target.value })}
-              placeholder="Employee name"
-            />
-            <button className={styles.removeBtn} onClick={() => removeMember(member.id)} aria-label={`Remove ${member.name || 'employee'}`}>
-              <Trash2 size={13} />
-            </button>
-          </div>
-          <div className={styles.memberMeta}>
-            <select
-              className={styles.select}
-              value={member.role ?? ''}
-              onChange={e => updateMember(member.id, { role: e.target.value || undefined })}
-              aria-label="Role"
-            >
-              <option value="">— select role —</option>
-              {roles.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            {bases.length > 0 && (
+      <p className={styles.sectionDesc}>
+        Assign a base, a phone number, and optional Accountable Manager titles
+        (Base / Ops / Maintenance, etc.). Managers surface in the Base Gantt
+        view header so every point-of-contact for a base is one tap away.
+      </p>
+      {teamMembers.map((member) => {
+        const managers: Array<{ title?: string; phone?: string }> =
+          Array.isArray(member.accountableManagers) ? member.accountableManagers : [];
+
+        const setManagers = (next) => updateMember(member.id, { accountableManagers: next });
+        const addManager = () => setManagers([...managers, { title: '', phone: '' }]);
+        const updateManager = (idx, patch) =>
+          setManagers(managers.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+        const removeManager = (idx) => setManagers(managers.filter((_, i) => i !== idx));
+
+        return (
+          <div key={member.id} className={styles.memberBlock}>
+            <div className={styles.memberRow}>
+              <label className={styles.avatarPicker}>
+                <div className={styles.avatarFrame}>
+                  {member.avatar ? (
+                    <img src={member.avatar} alt={`${member.name || 'Employee'} avatar`} className={styles.avatarImg} />
+                  ) : (
+                    <div className={styles.avatarFallback} style={{ backgroundColor: member.color }}>
+                      {(member.name?.trim()?.[0] ?? '?').toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleProfileUpload(member.id, e)} />
+                <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
+              </label>
+              <input
+                className={styles.input}
+                value={member.name ?? ''}
+                onChange={(e) => updateMember(member.id, { name: e.target.value })}
+                placeholder="Employee name"
+              />
+              <button className={styles.removeBtn} onClick={() => removeMember(member.id)} aria-label={`Remove ${member.name || 'employee'}`}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+            <div className={styles.memberMeta}>
               <select
                 className={styles.select}
-                value={member.base ?? ''}
-                onChange={e => updateMember(member.id, { base: e.target.value || undefined })}
-                aria-label="Base"
+                value={member.role ?? ''}
+                onChange={e => updateMember(member.id, { role: e.target.value || undefined })}
+                aria-label="Role"
               >
-                <option value="">— no base —</option>
-                {bases.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                <option value="">— select role —</option>
+                {roles.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
-            )}
+              {bases.length > 0 && (
+                <select
+                  className={styles.select}
+                  value={member.base ?? ''}
+                  onChange={e => updateMember(member.id, { base: e.target.value || undefined })}
+                  aria-label="Base"
+                >
+                  <option value="">— no base —</option>
+                  {bases.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              )}
+              <input
+                className={styles.input}
+                type="tel"
+                value={member.phone ?? ''}
+                onChange={e => updateMember(member.id, { phone: e.target.value || undefined })}
+                placeholder="Phone"
+                aria-label="Phone number"
+              />
+            </div>
+            <div className={styles.managerBlock}>
+              <span className={styles.managerBlockLabel}>Accountable manager titles</span>
+              {managers.map((mgr, idx) => (
+                <div key={idx} className={styles.managerEntry}>
+                  <select
+                    className={styles.select}
+                    value={mgr.title ?? ''}
+                    onChange={e => updateManager(idx, { title: e.target.value || undefined })}
+                    aria-label="Manager title"
+                  >
+                    <option value="">— select title —</option>
+                    {MANAGER_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                    {mgr.title && !MANAGER_TITLES.includes(mgr.title) && (
+                      <option value={mgr.title}>{mgr.title}</option>
+                    )}
+                  </select>
+                  <input
+                    className={styles.input}
+                    type="tel"
+                    value={mgr.phone ?? ''}
+                    onChange={e => updateManager(idx, { phone: e.target.value || undefined })}
+                    placeholder="Manager phone (optional)"
+                    aria-label="Manager phone"
+                  />
+                  <button
+                    type="button"
+                    className={styles.removeBtn}
+                    onClick={() => removeManager(idx)}
+                    aria-label="Remove manager assignment"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+              <button type="button" className={styles.managerAddBtn} onClick={addManager}>
+                <Plus size={11} /> Add manager title
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {isAdding ? (
         <div className={styles.memberRow}>
           <div className={styles.avatarPicker}>
