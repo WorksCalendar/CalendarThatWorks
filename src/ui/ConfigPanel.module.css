@@ -311,6 +311,53 @@
   user-select: none;
 }
 
+.assetFieldRequired {
+  color: var(--wc-danger, #c0392b);
+  margin-left: 2px;
+}
+
+.assetFieldError {
+  font-size: 11px;
+  color: var(--wc-danger, #c0392b);
+  line-height: 1.3;
+}
+
+.assetFieldWide {
+  flex-basis: 100%;
+  min-width: 100%;
+}
+
+.assetField input[aria-invalid="true"],
+.assetField textarea[aria-invalid="true"] {
+  border-color: var(--wc-danger, #c0392b);
+  outline-color: var(--wc-danger, #c0392b);
+}
+
+.assetRowDraft {
+  border-style: dashed;
+  border-color: var(--wc-accent, #0066cc);
+  background: color-mix(in srgb, var(--wc-accent, #0066cc) 4%, var(--wc-surface));
+}
+
+.assetDraftSaveBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--wc-radius-sm);
+  border: 1px solid var(--wc-accent, #0066cc);
+  background: var(--wc-accent, #0066cc);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.assetDraftSaveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .assetStatusBadge {
   display: inline-flex;
   align-items: center;
