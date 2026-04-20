@@ -1,0 +1,131 @@
+import { describe, it, expect } from 'vitest'
+import { layoutWorkflow, snapToGrid, NODE_WIDTH, NODE_HEIGHT } from '../layout'
+import {
+  singleApproverWorkflow,
+  twoTierApproverWorkflow,
+  conditionalByCostWorkflow,
+} from '../templates'
+import type { Workflow, WorkflowLayout } from '../workflowSchema'
+
+describe('layoutWorkflow — BFS-leveled', () => {
+  it('places startNodeId at the top row', () => {
+    const r = layoutWorkflow(singleApproverWorkflow)
+    const start = r.positions[singleApproverWorkflow.startNodeId]
+    for (const [id, p] of Object.entries(r.positions)) {
+      if (id === singleApproverWorkflow.startNodeId) continue
+      expect(p.y).toBeGreaterThanOrEqual(start.y)
+    }
+  })
+
+  it('assigns every node a position', () => {
+    const r = layoutWorkflow(twoTierApproverWorkflow)
+    for (const n of twoTierApproverWorkflow.nodes) {
+      expect(r.positions[n.id]).toBeDefined()
+    }
+  })
+
+  it('produces non-empty edge paths for every edge', () => {
+    const r = layoutWorkflow(conditionalByCostWorkflow)
+    expect(r.edgePaths.length).toBe(conditionalByCostWorkflow.edges.length)
+    for (const e of r.edgePaths) {
+      expect(e.d.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('size covers all nodes + margin', () => {
+    const r = layoutWorkflow(twoTierApproverWorkflow)
+    for (const p of Object.values(r.positions)) {
+      expect(r.size.w).toBeGreaterThanOrEqual(p.x + NODE_WIDTH)
+      expect(r.size.h).toBeGreaterThanOrEqual(p.y + NODE_HEIGHT)
+    }
+  })
+})
+
+describe('layoutWorkflow — overrides', () => {
+  it('override positions win over BFS defaults', () => {
+    const overrides: WorkflowLayout = {
+      workflowId: singleApproverWorkflow.id,
+      workflowVersion: singleApproverWorkflow.version,
+      positions: { approve: { x: 1000, y: 2000 } },
+    }
+    const r = layoutWorkflow(singleApproverWorkflow, overrides)
+    expect(r.positions.approve).toEqual({ x: 1000, y: 2000 })
+    // Other nodes fall back to BFS positions.
+    expect(r.positions.done).toBeDefined()
+    expect(r.positions.done.y).not.toBe(2000)
+  })
+})
+
+describe('layoutWorkflow — corner cases', () => {
+  it('places unreachable nodes below the main graph', () => {
+    const wf: Workflow = {
+      ...singleApproverWorkflow,
+      nodes: [
+        ...singleApproverWorkflow.nodes,
+        { id: 'orphan', type: 'terminal', outcome: 'cancelled' },
+      ],
+    }
+    const r = layoutWorkflow(wf)
+    const maxReachableY = Math.max(
+      r.positions.approve.y,
+      r.positions.done.y,
+      r.positions.denied.y,
+    )
+    expect(r.positions.orphan.y).toBeGreaterThan(maxReachableY)
+  })
+
+  it('back-edges get a detour path (different from forward L-shape)', () => {
+    // Build a trivial cycle: a → b → a
+    const wf: Workflow = {
+      id: 'cycle', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+        { id: 'b', type: 'approval', assignTo: 'role:y' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'b', when: 'approved' },
+        { from: 'a', to: 'denied', when: 'denied' },
+        { from: 'b', to: 'a', when: 'denied' },
+        { from: 'b', to: 'done', when: 'approved' },
+      ],
+    }
+    const r = layoutWorkflow(wf)
+    const backEdge = r.edgePaths.find(e => e.from === 'b' && e.to === 'a')
+    expect(backEdge).toBeDefined()
+    // Back-edge d-string includes a negative-X detour channel
+    // (channelX = min(ax, bx) - 40) so it exits left of the graph.
+    expect(backEdge!.d).toContain('L ')
+    expect(backEdge!.d.split('L').length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('self-loops render as a curve', () => {
+    const wf: Workflow = {
+      id: 'self', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'a', to: 'a', when: 'denied' },
+        { from: 'a', to: 'done', when: 'approved' },
+      ],
+    }
+    const r = layoutWorkflow(wf)
+    const loop = r.edgePaths.find(e => e.from === 'a' && e.to === 'a')
+    expect(loop?.d.startsWith('M ')).toBe(true)
+    expect(loop?.d).toContain('C ')
+  })
+})
+
+describe('snapToGrid', () => {
+  it('rounds to the nearest 20px', () => {
+    expect(snapToGrid(0)).toBe(0)
+    expect(snapToGrid(9)).toBe(0)
+    expect(snapToGrid(11)).toBe(20)
+    expect(snapToGrid(100)).toBe(100)
+    expect(snapToGrid(109)).toBe(100)
+    expect(snapToGrid(-11)).toBe(-20)
+  })
+})

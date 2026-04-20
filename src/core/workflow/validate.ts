@@ -1,0 +1,286 @@
+/**
+ * Workflow validator — Phase 2 visual builder.
+ *
+ * Pure, synchronous check that gates Save in the builder UI and surfaces
+ * inline badges per node / edge. Runs against the draft `Workflow` before
+ * the user is allowed to persist.
+ *
+ * Split into `error` (blocks save) and `warning` (surfaced but not
+ * blocking). All rules refer exclusively to Phase 1 helpers so the
+ * semantic contract cannot drift.
+ */
+import { evaluate, ExpressionError } from './expression'
+import {
+  findNode,
+  resolveNextEdge,
+  type EdgeGuard,
+  type Workflow,
+  type WorkflowNode,
+} from './workflowSchema'
+
+export type ValidationSeverity = 'error' | 'warning'
+
+export type ValidationCode =
+  | 'duplicate-node-id'
+  | 'start-node-missing'
+  | 'edge-endpoint-missing'
+  | 'no-terminal-node'
+  | 'unreachable-node'
+  | 'dead-end-node'
+  | 'multiple-default-edges'
+  | 'approval-missing-signal-coverage'
+  | 'condition-missing-signal-coverage'
+  | 'illegal-guard-for-source'
+  | 'expression-syntax'
+  | 'terminal-has-outgoing'
+
+export interface ValidationIssue {
+  readonly code: ValidationCode
+  readonly severity: ValidationSeverity
+  readonly message: string
+  readonly nodeId?: string
+  readonly edgeIndex?: number
+}
+
+export function validateWorkflow(
+  workflow: Workflow,
+): readonly ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+
+  // 1. unique node ids
+  const seen = new Set<string>()
+  for (const node of workflow.nodes) {
+    if (seen.has(node.id)) {
+      issues.push({
+        code: 'duplicate-node-id',
+        severity: 'error',
+        message: `Duplicate node id "${node.id}"`,
+        nodeId: node.id,
+      })
+    }
+    seen.add(node.id)
+  }
+
+  // 2. startNodeId exists
+  if (!findNode(workflow, workflow.startNodeId)) {
+    issues.push({
+      code: 'start-node-missing',
+      severity: 'error',
+      message: `Start node "${workflow.startNodeId}" is not in nodes`,
+    })
+  }
+
+  // 3. edge endpoints resolve
+  workflow.edges.forEach((edge, idx) => {
+    if (!findNode(workflow, edge.from)) {
+      issues.push({
+        code: 'edge-endpoint-missing',
+        severity: 'error',
+        message: `Edge #${idx} source "${edge.from}" is not a node`,
+        edgeIndex: idx,
+      })
+    }
+    if (!findNode(workflow, edge.to)) {
+      issues.push({
+        code: 'edge-endpoint-missing',
+        severity: 'error',
+        message: `Edge #${idx} target "${edge.to}" is not a node`,
+        edgeIndex: idx,
+      })
+    }
+  })
+
+  // 4. at least one terminal
+  if (!workflow.nodes.some(n => n.type === 'terminal')) {
+    issues.push({
+      code: 'no-terminal-node',
+      severity: 'error',
+      message: 'Workflow needs at least one terminal node',
+    })
+  }
+
+  // 5. reachability from startNodeId
+  const reachable = reachableNodeIds(workflow)
+  for (const node of workflow.nodes) {
+    if (!reachable.has(node.id) && node.id !== workflow.startNodeId) {
+      issues.push({
+        code: 'unreachable-node',
+        severity: 'warning',
+        message: `Node "${node.id}" is not reachable from the start`,
+        nodeId: node.id,
+      })
+    }
+  }
+
+  // 6. sink safety — non-terminal node with no outgoing edges
+  for (const node of workflow.nodes) {
+    if (node.type === 'terminal') continue
+    const hasOut = workflow.edges.some(e => e.from === node.id)
+    if (!hasOut) {
+      issues.push({
+        code: 'dead-end-node',
+        severity: 'error',
+        message: `Node "${node.id}" has no outgoing edges`,
+        nodeId: node.id,
+      })
+    }
+  }
+
+  // 7. at most one default edge per source
+  const defaultsPerSource = new Map<string, number>()
+  for (const edge of workflow.edges) {
+    if (edge.when === undefined || edge.when === 'default') {
+      defaultsPerSource.set(edge.from, (defaultsPerSource.get(edge.from) ?? 0) + 1)
+    }
+  }
+  for (const [from, count] of defaultsPerSource) {
+    if (count > 1) {
+      issues.push({
+        code: 'multiple-default-edges',
+        severity: 'error',
+        message: `Node "${from}" has ${count} default edges (max 1)`,
+        nodeId: from,
+      })
+    }
+  }
+
+  // 8 & 9. Signal coverage — every signal a node can emit must resolve
+  // via `resolveNextEdge` (exact-match OR default edge). Reusing the
+  // interpreter's resolver keeps the validator perfectly aligned with
+  // runtime semantics.
+  for (const node of workflow.nodes) {
+    const required = requiredSignalsFor(node)
+    for (const signal of required) {
+      if (!resolveNextEdge(workflow, node.id, signal)) {
+        const code: ValidationCode =
+          node.type === 'approval'
+            ? 'approval-missing-signal-coverage'
+            : 'condition-missing-signal-coverage'
+        issues.push({
+          code,
+          severity: 'error',
+          message: `${capitalize(node.type)} "${node.id}" cannot resolve "${signal}" (add an exact or default edge)`,
+          nodeId: node.id,
+        })
+      }
+    }
+  }
+
+  // 10. guard legality vs. source type
+  workflow.edges.forEach((edge, idx) => {
+    const src = findNode(workflow, edge.from)
+    if (!src) return
+    const guard = edge.when
+    if (guard === undefined || guard === 'default') return
+    if (!isGuardLegal(src, guard)) {
+      issues.push({
+        code: 'illegal-guard-for-source',
+        severity: 'error',
+        message: `Edge #${idx} from ${src.type} "${src.id}" uses illegal guard "${guard}"`,
+        edgeIndex: idx,
+        nodeId: src.id,
+      })
+    }
+  })
+
+  // 11. expression syntax on condition nodes (uses err.kind, not string prefix)
+  for (const node of workflow.nodes) {
+    if (node.type !== 'condition') continue
+    const syntaxError = validateExpressionSyntax(node.expr)
+    if (syntaxError) {
+      issues.push({
+        code: 'expression-syntax',
+        severity: 'error',
+        message: `Condition "${node.id}": ${syntaxError}`,
+        nodeId: node.id,
+      })
+    }
+  }
+
+  // 12. terminal has no outgoing edges (warning)
+  for (const node of workflow.nodes) {
+    if (node.type !== 'terminal') continue
+    const hasOut = workflow.edges.some(e => e.from === node.id)
+    if (hasOut) {
+      issues.push({
+        code: 'terminal-has-outgoing',
+        severity: 'warning',
+        message: `Terminal "${node.id}" has outgoing edges that will never fire`,
+        nodeId: node.id,
+      })
+    }
+  }
+
+  return issues
+}
+
+export function hasBlockingErrors(
+  issues: readonly ValidationIssue[],
+): boolean {
+  return issues.some(i => i.severity === 'error')
+}
+
+// ─── Internal helpers ─────────────────────────────────────────────────────
+
+function reachableNodeIds(workflow: Workflow): Set<string> {
+  const reachable = new Set<string>()
+  if (!findNode(workflow, workflow.startNodeId)) return reachable
+  const queue: string[] = [workflow.startNodeId]
+  reachable.add(workflow.startNodeId)
+  while (queue.length > 0) {
+    const id = queue.shift() as string
+    for (const edge of workflow.edges) {
+      if (edge.from !== id) continue
+      if (!reachable.has(edge.to) && findNode(workflow, edge.to)) {
+        reachable.add(edge.to)
+        queue.push(edge.to)
+      }
+    }
+  }
+  return reachable
+}
+
+function isGuardLegal(node: WorkflowNode, guard: EdgeGuard): boolean {
+  switch (node.type) {
+    case 'condition': return guard === 'true' || guard === 'false'
+    case 'approval':  return guard === 'approved' || guard === 'denied'
+    case 'notify':    return guard === 'default'
+    case 'terminal':  return false
+  }
+}
+
+function requiredSignalsFor(node: WorkflowNode): readonly EdgeGuard[] {
+  switch (node.type) {
+    case 'condition': return ['true', 'false']
+    case 'approval':  return ['approved', 'denied']
+    default:          return []
+  }
+}
+
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1)
+}
+
+/**
+ * Parse-only syntax check for condition expressions. Calls `evaluate`
+ * with an empty variable bag and surfaces only `ExpressionError` whose
+ * `kind` is a genuine shape problem — variable-binding errors expected
+ * at edit time (no variables yet) are suppressed by matching on
+ * `err.kind`, not on message prefixes.
+ */
+export function validateExpressionSyntax(expr: string): string | null {
+  if (!expr.trim()) return 'Expression is empty'
+  try {
+    evaluate(expr, {})
+    return null
+  } catch (err) {
+    if (err instanceof ExpressionError) {
+      // These kinds are purely runtime/variable-bound; ignore at edit time.
+      if (err.kind === 'undefined-variable') return null
+      if (err.kind === 'non-object') return null
+      if (err.kind === 'unsupported-value') return null
+      return err.message
+    }
+    return String(err)
+  }
+}

@@ -24,10 +24,40 @@
 
 export type ExpressionValue = number | string | boolean | null
 
+/**
+ * Classification of `ExpressionError` causes. Callers match on `kind`
+ * instead of string-sniffing `message` so validator / UI code stays
+ * decoupled from error wording.
+ */
+export type ExpressionErrorKind =
+  | 'syntax'
+  | 'undefined-variable'
+  | 'non-object'
+  | 'type'
+  | 'unknown-operator'
+  | 'unsupported-value'
+
 export class ExpressionError extends Error {
-  constructor(message: string, readonly position?: number) {
-    super(position !== undefined ? `${message} (at ${position})` : message)
+  readonly kind: ExpressionErrorKind
+  readonly position?: number
+  constructor(
+    message: string,
+    kindOrPosition?: ExpressionErrorKind | number,
+    position?: number,
+  ) {
+    // Back-compat: old signature (message, position?: number) still works.
+    let kind: ExpressionErrorKind = 'syntax'
+    let pos: number | undefined
+    if (typeof kindOrPosition === 'number') {
+      pos = kindOrPosition
+    } else if (typeof kindOrPosition === 'string') {
+      kind = kindOrPosition
+      pos = position
+    }
+    super(pos !== undefined ? `${message} (at ${pos})` : message)
     this.name = 'ExpressionError'
+    this.kind = kind
+    this.position = pos
   }
 }
 
@@ -237,22 +267,22 @@ function resolvePath(
   let cur: unknown = vars
   for (const part of path) {
     if (cur === null || typeof cur !== 'object') {
-      throw new ExpressionError(`Cannot resolve "${path.join('.')}" — non-object at "${part}"`)
+      throw new ExpressionError(`Cannot resolve "${path.join('.')}" — non-object at "${part}"`, 'non-object')
     }
     cur = (cur as Record<string, unknown>)[part]
     if (cur === undefined) {
-      throw new ExpressionError(`Undefined variable "${path.join('.')}"`)
+      throw new ExpressionError(`Undefined variable "${path.join('.')}"`, 'undefined-variable')
     }
   }
   if (cur === null) return null
   const t = typeof cur
   if (t === 'string' || t === 'number' || t === 'boolean') return cur as ExpressionValue
-  throw new ExpressionError(`Unsupported value type for "${path.join('.')}": ${t}`)
+  throw new ExpressionError(`Unsupported value type for "${path.join('.')}": ${t}`, 'unsupported-value')
 }
 
 function toNumber(v: ExpressionValue, op: string): number {
   if (typeof v === 'number') return v
-  throw new ExpressionError(`Operator "${op}" requires a number, got ${typeof v}`)
+  throw new ExpressionError(`Operator "${op}" requires a number, got ${typeof v}`, 'type')
 }
 
 function evalAst(
@@ -289,7 +319,7 @@ function evalAst(
         case '*':  return toNumber(l, '*') * toNumber(r, '*')
         case '/':  return toNumber(l, '/') / toNumber(r, '/')
       }
-      throw new ExpressionError(`Unknown operator "${node.op}"`)
+      throw new ExpressionError(`Unknown operator "${node.op}"`, 'unknown-operator')
     }
   }
 }

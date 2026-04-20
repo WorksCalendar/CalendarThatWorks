@@ -1,0 +1,244 @@
+import { describe, it, expect } from 'vitest'
+import {
+  validateWorkflow,
+  hasBlockingErrors,
+  validateExpressionSyntax,
+} from '../validate'
+import {
+  WORKFLOW_TEMPLATES,
+  singleApproverWorkflow,
+  conditionalByCostWorkflow,
+} from '../templates'
+import type { Workflow } from '../workflowSchema'
+
+describe('validateWorkflow — shipped templates', () => {
+  it('every shipped template validates clean (no errors)', () => {
+    for (const wf of WORKFLOW_TEMPLATES) {
+      const issues = validateWorkflow(wf)
+      const errors = issues.filter(i => i.severity === 'error')
+      expect(errors).toEqual([])
+    }
+  })
+})
+
+describe('validateWorkflow — rules', () => {
+  it('flags duplicate node ids', () => {
+    const wf: Workflow = {
+      ...singleApproverWorkflow,
+      nodes: [
+        ...singleApproverWorkflow.nodes,
+        { id: 'approve', type: 'terminal', outcome: 'finalized' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'duplicate-node-id')).toBe(true)
+  })
+
+  it('flags missing startNodeId', () => {
+    const wf: Workflow = { ...singleApproverWorkflow, startNodeId: 'ghost' }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'start-node-missing')).toBe(true)
+  })
+
+  it('flags edges pointing at non-existent nodes', () => {
+    const wf: Workflow = {
+      ...singleApproverWorkflow,
+      edges: [
+        ...singleApproverWorkflow.edges,
+        { from: 'approve', to: 'ghost', when: 'approved' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'edge-endpoint-missing')).toBe(true)
+  })
+
+  it('flags workflows with no terminal nodes', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+      ],
+      edges: [
+        { from: 'a', to: 'a', when: 'approved' },
+        { from: 'a', to: 'a', when: 'denied' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'no-terminal-node')).toBe(true)
+  })
+
+  it('flags unreachable nodes as warnings', () => {
+    const wf: Workflow = {
+      ...singleApproverWorkflow,
+      nodes: [
+        ...singleApproverWorkflow.nodes,
+        { id: 'orphan', type: 'terminal', outcome: 'cancelled' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    const orphan = issues.find(i => i.code === 'unreachable-node' && i.nodeId === 'orphan')
+    expect(orphan?.severity).toBe('warning')
+  })
+
+  it('flags non-terminal nodes with no outgoing edges', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [{ from: 'a', to: 'done', when: 'approved' }],
+    }
+    // Approval 'a' is missing its denied edge — but crucially it still
+    // has an outgoing edge. Add a node 'b' with no outgoing at all:
+    const wf2: Workflow = {
+      ...wf,
+      nodes: [
+        ...wf.nodes,
+        { id: 'b', type: 'notify', channel: 'slack' },
+      ],
+      edges: [
+        ...wf.edges,
+        { from: 'a', to: 'b', when: 'denied' },
+      ],
+    }
+    const issues = validateWorkflow(wf2)
+    expect(issues.some(i => i.code === 'dead-end-node' && i.nodeId === 'b')).toBe(true)
+  })
+
+  it('flags multiple default edges from the same source', () => {
+    const wf: Workflow = {
+      ...conditionalByCostWorkflow,
+      edges: [
+        ...conditionalByCostWorkflow.edges,
+        { from: 'notify-ops', to: 'done' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'multiple-default-edges')).toBe(true)
+  })
+
+  it('flags approvals missing approved or denied outgoing edges', () => {
+    const wf: Workflow = {
+      ...singleApproverWorkflow,
+      edges: singleApproverWorkflow.edges.filter(e => e.when !== 'denied'),
+    }
+    const issues = validateWorkflow(wf)
+    expect(
+      issues.some(i => i.code === 'approval-missing-signal-coverage' && i.message.includes('denied')),
+    ).toBe(true)
+  })
+
+  it('accepts approval with approved+default edges (signal coverage via default)', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+      ],
+      // No explicit 'denied' edge — default covers it.
+      edges: [
+        { from: 'a', to: 'done',   when: 'approved' },
+        { from: 'a', to: 'denied', when: 'default'  },
+      ],
+    }
+    const issues = validateWorkflow(wf).filter(i => i.severity === 'error')
+    expect(issues).toEqual([])
+  })
+
+  it('accepts condition with true+default edges (signal coverage via default)', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'c',
+      nodes: [
+        { id: 'c', type: 'condition', expr: 'event.cost > 500' },
+        { id: 'hi', type: 'terminal', outcome: 'finalized' },
+        { id: 'lo', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'c', to: 'hi', when: 'true' },
+        { from: 'c', to: 'lo' /* default */ },
+      ],
+    }
+    const issues = validateWorkflow(wf).filter(i => i.severity === 'error')
+    expect(issues).toEqual([])
+  })
+
+  it('flags conditions missing true or false outgoing edges', () => {
+    const wf: Workflow = {
+      ...conditionalByCostWorkflow,
+      edges: conditionalByCostWorkflow.edges.filter(e => e.when !== 'true'),
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'condition-missing-signal-coverage')).toBe(true)
+  })
+
+  it('flags guards that are illegal for their source node type', () => {
+    const wf: Workflow = {
+      ...singleApproverWorkflow,
+      edges: [
+        ...singleApproverWorkflow.edges,
+        { from: 'approve', to: 'done', when: 'true' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'illegal-guard-for-source')).toBe(true)
+  })
+
+  it('flags condition nodes with bad expression syntax', () => {
+    const wf: Workflow = {
+      ...conditionalByCostWorkflow,
+      nodes: conditionalByCostWorkflow.nodes.map(n =>
+        n.id === 'check-cost'
+          ? { ...n, expr: 'event.cost >' }
+          : n,
+      ),
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'expression-syntax')).toBe(true)
+  })
+
+  it('flags terminals that carry outgoing edges (warning)', () => {
+    const wf: Workflow = {
+      ...singleApproverWorkflow,
+      edges: [
+        ...singleApproverWorkflow.edges,
+        { from: 'done', to: 'denied' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    const warn = issues.find(i => i.code === 'terminal-has-outgoing')
+    expect(warn?.severity).toBe('warning')
+  })
+})
+
+describe('hasBlockingErrors', () => {
+  it('is false when only warnings exist', () => {
+    const issues = [
+      { code: 'unreachable-node' as const, severity: 'warning' as const, message: 'x' },
+    ]
+    expect(hasBlockingErrors(issues)).toBe(false)
+  })
+  it('is true when any error exists', () => {
+    const issues = [
+      { code: 'unreachable-node' as const, severity: 'warning' as const, message: 'x' },
+      { code: 'no-terminal-node' as const, severity: 'error' as const, message: 'y' },
+    ]
+    expect(hasBlockingErrors(issues)).toBe(true)
+  })
+})
+
+describe('validateExpressionSyntax', () => {
+  it('returns null for clean expressions (even with unbound vars)', () => {
+    expect(validateExpressionSyntax('event.cost > 500')).toBeNull()
+    expect(validateExpressionSyntax('1 + 2 == 3')).toBeNull()
+  })
+  it('reports empty expressions', () => {
+    expect(validateExpressionSyntax('')).toMatch(/empty/i)
+    expect(validateExpressionSyntax('   ')).toMatch(/empty/i)
+  })
+  it('reports syntax errors', () => {
+    expect(validateExpressionSyntax('event.cost >')).not.toBeNull()
+    expect(validateExpressionSyntax('(1 + 2')).not.toBeNull()
+  })
+})
