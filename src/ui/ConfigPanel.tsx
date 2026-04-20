@@ -373,6 +373,9 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: a
 
   // ── Pending new member ──────────────────────────────────────────────────────
   const [pendingName, setPendingName] = useState('');
+  const [pendingPhone, setPendingPhone] = useState('');
+  const [pendingRole, setPendingRole] = useState('');
+  const [pendingBase, setPendingBase] = useState('');
   const [isAdding,    setIsAdding]    = useState(false);
   const pendingInputRef = useRef(null);
 
@@ -428,17 +431,35 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: a
   // ── Member helpers ──────────────────────────────────────────────────────────
   const commitPending = () => {
     const trimmed = pendingName.trim();
-    if (!trimmed) { setIsAdding(false); setPendingName(''); return; }
+    const trimmedPhone = pendingPhone.trim();
+    if (!trimmed) { setIsAdding(false); setPendingName(''); setPendingPhone(''); setPendingRole(''); setPendingBase(''); return; }
+    if (!trimmedPhone) return;
+    if (roles.length > 0 && !pendingRole) return;
+    if (bases.length > 0 && !pendingBase) return;
     const nextId = Math.max(0, ...teamMembers.map((member) => Number(member.id) || 0)) + 1;
-    const newMember = { id: nextId, name: trimmed, color: '#8b5cf6', avatar: null };
+    const newMember = {
+      id: nextId,
+      name: trimmed,
+      phone: trimmedPhone,
+      role: pendingRole || undefined,
+      base: pendingBase || undefined,
+      color: '#8b5cf6',
+      avatar: null,
+    };
     updateMembers([...teamMembers, newMember]);
     onEmployeeAdd?.(newMember);
     setPendingName('');
+    setPendingPhone('');
+    setPendingRole('');
+    setPendingBase('');
     setIsAdding(false);
   };
 
   const cancelPending = () => {
     setPendingName('');
+    setPendingPhone('');
+    setPendingRole('');
+    setPendingBase('');
     setIsAdding(false);
   };
 
@@ -559,6 +580,13 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: a
             </button>
           </div>
           <div className={styles.memberMeta}>
+            <input
+              className={styles.input}
+              value={member.phone ?? ''}
+              onChange={e => updateMember(member.id, { phone: e.target.value })}
+              placeholder="Phone"
+              aria-label="Phone"
+            />
             <select
               className={styles.select}
               value={member.role ?? ''}
@@ -591,22 +619,57 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: a
               </div>
             </div>
           </div>
-          <input
-            ref={pendingInputRef}
-            className={styles.input}
-            value={pendingName}
-            onChange={(e) => setPendingName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); commitPending(); }
-              if (e.key === 'Escape') { e.preventDefault(); cancelPending(); }
-            }}
-            onBlur={commitPending}
-            placeholder="Employee name"
-          />
+          <div style={{ flex: 1, display: 'grid', gap: 8 }}>
+            <input
+              ref={pendingInputRef}
+              className={styles.input}
+              value={pendingName}
+              onChange={(e) => setPendingName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitPending(); }
+                if (e.key === 'Escape') { e.preventDefault(); cancelPending(); }
+              }}
+              placeholder="Employee name"
+            />
+            <input
+              className={styles.input}
+              value={pendingPhone}
+              onChange={(e) => setPendingPhone(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitPending(); }
+                if (e.key === 'Escape') { e.preventDefault(); cancelPending(); }
+              }}
+              placeholder="Phone number"
+              aria-label="Phone number"
+            />
+            <div className={styles.memberMeta}>
+              <select
+                className={styles.select}
+                value={pendingRole}
+                onChange={e => setPendingRole(e.target.value)}
+                aria-label="Pending role"
+              >
+                <option value="">{roles.length > 0 ? '— select role —' : '— no roles configured —'}</option>
+                {roles.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {bases.length > 0 && (
+                <select
+                  className={styles.select}
+                  value={pendingBase}
+                  onChange={e => setPendingBase(e.target.value)}
+                  aria-label="Pending base"
+                >
+                  <option value="">— select base —</option>
+                  {bases.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              )}
+            </div>
+          </div>
           <button
             className={styles.removeBtn}
             onMouseDown={(e) => e.preventDefault()}
             onClick={commitPending}
+            disabled={!pendingName.trim() || !pendingPhone.trim() || (roles.length > 0 && !pendingRole) || (bases.length > 0 && !pendingBase)}
             aria-label="Add employee"
           >
             <Check size={13} />
@@ -1028,12 +1091,12 @@ export function AssetsTab({ config, onUpdate }: any) {
         <div key={asset._key ?? i} className={styles.assetRow} data-asset-id={asset.id}>
           <div className={styles.assetFields}>
             <div className={styles.assetField}>
-              <span className={styles.assetFieldLabel}>Label</span>
+              <span className={styles.assetFieldLabel}>Registration</span>
               <input
                 className={styles.input}
                 value={asset.label ?? ''}
                 onChange={e => updateAsset(i, { label: e.target.value })}
-                aria-label={`Label for ${asset.id}`}
+                aria-label={`Registration for ${asset.id}`}
               />
             </div>
             <div className={styles.assetField}>
@@ -1061,6 +1124,42 @@ export function AssetsTab({ config, onUpdate }: any) {
                 value={asset.meta?.sublabel ?? ''}
                 onChange={e => updateAssetMeta(i, { sublabel: e.target.value })}
                 aria-label={`Sublabel for ${asset.label || asset.id}`}
+              />
+            </div>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>Type</span>
+              <input
+                className={styles.input}
+                value={asset.meta?.type ?? ''}
+                onChange={e => updateAssetMeta(i, { type: e.target.value })}
+                aria-label={`Type for ${asset.label || asset.id}`}
+              />
+            </div>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>Make</span>
+              <input
+                className={styles.input}
+                value={asset.meta?.make ?? ''}
+                onChange={e => updateAssetMeta(i, { make: e.target.value })}
+                aria-label={`Make for ${asset.label || asset.id}`}
+              />
+            </div>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>Model</span>
+              <input
+                className={styles.input}
+                value={asset.meta?.model ?? ''}
+                onChange={e => updateAssetMeta(i, { model: e.target.value })}
+                aria-label={`Model for ${asset.label || asset.id}`}
+              />
+            </div>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>Limitations (optional)</span>
+              <input
+                className={styles.input}
+                value={asset.meta?.limitations ?? ''}
+                onChange={e => updateAssetMeta(i, { limitations: e.target.value })}
+                aria-label={`Limitations for ${asset.label || asset.id}`}
               />
             </div>
           </div>

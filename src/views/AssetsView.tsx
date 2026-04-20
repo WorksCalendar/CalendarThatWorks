@@ -162,6 +162,15 @@ function approvalPrefix(stage) {
   return null;
 }
 
+function getAssetStatus(rowEvents, now) {
+  const nowTs = now.getTime();
+  const hasAssignedNow = rowEvents.some(ev => new Date(ev.start).getTime() <= nowTs && new Date(ev.end).getTime() >= nowTs);
+  if (hasAssignedNow) return 'assigned';
+  const hasRequested = rowEvents.some(ev => getApprovalStage(ev) === 'requested');
+  if (hasRequested) return 'requested';
+  return 'available';
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function AssetsView({
@@ -885,6 +894,7 @@ export default function AssetsView({
             const displayLabel = label ?? resource;
             const topOffset = rowOffsets[rowIdx];
             const locationData = locations.get(resource) ?? null;
+            const assetStatus = getAssetStatus(rowEvents, new Date());
 
             return (
               <div
@@ -914,6 +924,11 @@ export default function AssetsView({
                     {sublabel && (
                       <span className={styles.assetSublabel}>{sublabel}</span>
                     )}
+                    <span
+                      className={[styles.assetStatusBadge, styles[`assetStatus${assetStatus[0].toUpperCase()}${assetStatus.slice(1)}`]].join(' ')}
+                    >
+                      {assetStatus}
+                    </span>
                   </div>
                   <div
                     className={styles.locationBanner}

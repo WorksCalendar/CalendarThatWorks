@@ -32,15 +32,16 @@ function renderTab({ initialMembers = [], onUpdate, onEmployeeAdd, onEmployeeDel
 }
 
 describe('TeamTab bidirectional sync (issue #101)', () => {
-  it('committing a new employee (with name) patches config.team.members', () => {
+  it('committing a new employee patches config.team.members', () => {
     const { update, getConfig } = renderTab();
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
     const input = screen.getByPlaceholderText('Employee name');
     fireEvent.change(input, { target: { value: 'Nora' } });
+    fireEvent.change(screen.getByPlaceholderText('Phone number'), { target: { value: '555-0100' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(update).toHaveBeenCalledTimes(1);
     expect(getConfig().team.members).toHaveLength(1);
-    expect(getConfig().team.members[0]).toMatchObject({ id: 1, name: 'Nora' });
+    expect(getConfig().team.members[0]).toMatchObject({ id: 1, name: 'Nora', phone: '555-0100' });
   });
 
   it('committing a new employee emits onEmployeeAdd upstream', () => {
@@ -48,16 +49,16 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
     const input = screen.getByPlaceholderText('Employee name');
     fireEvent.change(input, { target: { value: 'Nora' } });
+    fireEvent.change(screen.getByPlaceholderText('Phone number'), { target: { value: '555-0100' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(add).toHaveBeenCalledTimes(1);
-    expect(add.mock.calls[0][0]).toMatchObject({ id: 1, name: 'Nora' });
+    expect(add.mock.calls[0][0]).toMatchObject({ id: 1, name: 'Nora', phone: '555-0100' });
   });
 
-  it('blank name does not add a member (prevents ghost rows in schedule)', () => {
+  it('blank name or phone does not add a member (prevents ghost rows in schedule)', () => {
     const { update, add, getConfig } = renderTab();
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
     const input = screen.getByPlaceholderText('Employee name');
-    // Submitting without typing should cancel — no add.
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(update).not.toHaveBeenCalled();
     expect(add).not.toHaveBeenCalled();
@@ -83,8 +84,8 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
     const input = screen.getByPlaceholderText('Employee name');
     fireEvent.change(input, { target: { value: 'Nora' } });
+    fireEvent.change(screen.getByPlaceholderText('Phone number'), { target: { value: '555-0100' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    // If we got here without throwing, the test passes.
     expect(true).toBe(true);
   });
 
@@ -103,11 +104,11 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
       initialMembers: [{ id: 5, name: 'Existing', color: '#111', avatar: null }],
     });
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
-    // The pending input is the newly-added one (empty value); filter it out.
     const inputs = screen.getAllByPlaceholderText('Employee name');
     const pending = inputs.find(el => (el as HTMLInputElement).value === '');
-    fireEvent.change(pending, { target: { value: 'Nora' } });
-    fireEvent.keyDown(pending, { key: 'Enter' });
+    fireEvent.change(pending!, { target: { value: 'Nora' } });
+    fireEvent.change(screen.getByPlaceholderText('Phone number'), { target: { value: '555-0100' } });
+    fireEvent.keyDown(pending!, { key: 'Enter' });
     expect(getConfig().team.members.map(m => m.id)).toEqual([5, 6]);
   });
 });

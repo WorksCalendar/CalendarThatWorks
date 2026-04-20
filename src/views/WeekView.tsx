@@ -286,6 +286,8 @@ export default function WeekView({
     const pctWidth = (1 / numCols) * 100;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
+    const eventDurationMinutes = Math.max(1, Math.round((new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000));
+    const isCompactEvent = eventDurationMinutes <= 60;
     const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
     const display   = ev.meta?._display ?? {};
 
@@ -316,10 +318,13 @@ export default function WeekView({
           aria-hidden="true" />
         {inner ?? (
           <>
-            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>Title: {ev.title}</span>
-            <span className={styles.evTime}>Start: {format(ev.start, 'h:mm a')}</span>
-            <span className={styles.evTime}>End: {format(ev.end, 'h:mm a')}</span>
-            <span className={styles.evMeta}>Resource: {pillResource(ev)}</span>
+            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>{ev.title}</span>
+            {!isCompactEvent && (
+              <>
+                <span className={styles.evTime}>{format(ev.start, 'h:mm a')} - {format(ev.end, 'h:mm a')}</span>
+                <span className={styles.evMeta}>{pillResource(ev)}</span>
+              </>
+            )}
           </>
         )}
         <div className={styles.resizeHandle}

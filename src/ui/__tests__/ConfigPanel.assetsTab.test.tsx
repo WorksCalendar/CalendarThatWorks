@@ -54,11 +54,11 @@ describe('AssetsTab — mutations', () => {
     expect(getConfig().assets[1].id).toBe('asset-2');
   });
 
-  it('editing a label writes config.assets[i].label', () => {
+  it('editing registration writes config.assets[i].label', () => {
     const { getConfig, rerender } = renderTab({
       initialConfig: { assets: [{ id: 'n100aa', label: 'N100AA', meta: {} }] },
     });
-    const input = screen.getByLabelText('Label for n100aa');
+    const input = screen.getByLabelText('Registration for n100aa');
     fireEvent.change(input, { target: { value: 'Alpha 1' } });
     rerender();
     expect(getConfig().assets[0].label).toBe('Alpha 1');
