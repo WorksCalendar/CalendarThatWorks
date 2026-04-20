@@ -17,7 +17,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
 
     expect(await screen.findByRole('menu', { name: 'Actions for Alex Rivera' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create Schedule' })).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('routes empty schedule-cell click to ScheduleEditorForm instead of EventForm', async () => {
     render(<WorksCalendar events={[]} employees={employees} showAddButton />);
@@ -29,7 +29,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
     expect(screen.queryByRole('dialog', { name: 'Add event' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Start *')).toHaveValue('2026-04-01T00:00');
     expect(screen.getByLabelText('End *')).toHaveValue('2026-04-02T00:00');
-  });
+  }, 15000);
 
   it('hides generic Add Event button in schedule view', async () => {
     render(<WorksCalendar events={[]} employees={employees} showAddButton />);

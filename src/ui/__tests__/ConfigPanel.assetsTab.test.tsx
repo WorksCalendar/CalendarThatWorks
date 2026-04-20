@@ -40,19 +40,75 @@ describe('AssetsTab — defaults', () => {
 });
 
 describe('AssetsTab — mutations', () => {
-  it('Add asset appends a new row with a unique id', () => {
+  it('Add asset opens a draft row that is not yet persisted to config', () => {
     const { getConfig, rerender } = renderTab();
     fireEvent.click(screen.getByRole('button', { name: /Add asset/i }));
     rerender();
-    const assets = getConfig().assets;
-    expect(assets).toHaveLength(1);
-    expect(assets[0].id).toBe('asset-1');
-    expect(assets[0].label).toBe('Asset 1');
+    // Draft exists in the UI but has not been written to config.assets.
+    expect(getConfig().assets).toBeUndefined();
+    expect(screen.getByRole('group', { name: /new asset draft/i })).toBeInTheDocument();
+  });
 
+  it('Save new asset is disabled until required fields are filled', () => {
+    const { getConfig, rerender } = renderTab();
     fireEvent.click(screen.getByRole('button', { name: /Add asset/i }));
     rerender();
-    expect(getConfig().assets).toHaveLength(2);
-    expect(getConfig().assets[1].id).toBe('asset-2');
+
+    const saveBtn = screen.getByRole('button', { name: /save new asset/i });
+    expect(saveBtn).toBeDisabled();
+
+    fireEvent.click(saveBtn);
+    rerender();
+    // Still nothing in config.
+    expect(getConfig().assets).toBeUndefined();
+
+    // Fill all required fields.
+    fireEvent.change(screen.getByLabelText('Registration Number for new asset'), { target: { value: 'N1' } });
+    rerender();
+    fireEvent.change(screen.getByLabelText('Type for new asset'),                { target: { value: 'Jet' } });
+    rerender();
+    fireEvent.change(screen.getByLabelText('Make for new asset'),                { target: { value: 'Cessna' } });
+    rerender();
+    fireEvent.change(screen.getByLabelText('Model for new asset'),               { target: { value: 'CJ3' } });
+    rerender();
+
+    const enabledSave = screen.getByRole('button', { name: /save new asset/i });
+    expect(enabledSave).not.toBeDisabled();
+
+    fireEvent.click(enabledSave);
+    rerender();
+
+    const persisted = getConfig().assets;
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].meta).toMatchObject({
+      registrationNumber: 'N1',
+      type: 'Jet',
+      make: 'Cessna',
+      model: 'CJ3',
+    });
+    // Draft is gone.
+    expect(screen.queryByRole('group', { name: /new asset draft/i })).not.toBeInTheDocument();
+  });
+
+  it('Cancel new asset discards the draft without writing config', () => {
+    const { getConfig, rerender } = renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /Add asset/i }));
+    rerender();
+    fireEvent.change(screen.getByLabelText('Registration Number for new asset'), { target: { value: 'N1' } });
+    rerender();
+
+    fireEvent.click(screen.getByRole('button', { name: /cancel new asset/i }));
+    rerender();
+
+    expect(getConfig().assets).toBeUndefined();
+    expect(screen.queryByRole('group', { name: /new asset draft/i })).not.toBeInTheDocument();
+  });
+
+  it('Add asset is disabled while a draft is open', () => {
+    const { rerender } = renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /Add asset/i }));
+    rerender();
+    expect(screen.getByRole('button', { name: /Add asset/i })).toBeDisabled();
   });
 
   it('editing a label writes config.assets[i].label', () => {
@@ -208,6 +264,80 @@ describe('getAssetStatus', () => {
       },
     ], now);
     expect(status).toBe('assigned');
+  });
+});
+
+describe('AssetsTab — asset detail fields (#196)', () => {
+  it('editing Registration Number writes to meta.registrationNumber', () => {
+    const { getConfig, rerender } = renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    const input = screen.getByLabelText('Registration Number for Alpha');
+    fireEvent.change(input, { target: { value: 'N12345' } });
+    rerender();
+    expect(getConfig().assets[0].meta.registrationNumber).toBe('N12345');
+  });
+
+  it('editing Type/Make/Model writes to the matching meta fields', () => {
+    const { getConfig, rerender } = renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    fireEvent.change(screen.getByLabelText('Type for Alpha'),  { target: { value: 'Jet' } });
+    rerender();
+    fireEvent.change(screen.getByLabelText('Make for Alpha'),  { target: { value: 'Cessna' } });
+    rerender();
+    fireEvent.change(screen.getByLabelText('Model for Alpha'), { target: { value: 'CJ3' } });
+    rerender();
+    expect(getConfig().assets[0].meta).toMatchObject({
+      type: 'Jet', make: 'Cessna', model: 'CJ3',
+    });
+  });
+
+  it('editing Limitations writes to meta.limitations (optional field)', () => {
+    const { getConfig, rerender } = renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    const input = screen.getByLabelText('Limitations for Alpha');
+    fireEvent.change(input, { target: { value: 'No night ops' } });
+    rerender();
+    expect(getConfig().assets[0].meta.limitations).toBe('No night ops');
+  });
+
+  it('marks empty required fields as aria-invalid with a visible error', () => {
+    renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    const reg = screen.getByLabelText('Registration Number for Alpha');
+    expect(reg).toHaveAttribute('aria-invalid', 'true');
+    expect(reg).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByText('Registration Number is required.')).toBeInTheDocument();
+  });
+
+  it('clears aria-invalid once a required field is filled in', () => {
+    const { rerender } = renderTab({
+      initialConfig: {
+        assets: [{
+          id: 'a',
+          label: 'Alpha',
+          meta: { registrationNumber: 'N1', type: 'Jet', make: 'C', model: 'CJ3' },
+        }],
+      },
+    });
+    const reg = screen.getByLabelText('Registration Number for Alpha');
+    expect(reg).not.toHaveAttribute('aria-invalid');
+    rerender();
+    expect(screen.queryByText('Registration Number is required.')).not.toBeInTheDocument();
+  });
+
+  it('legacy assets without new meta fields still render without errors', () => {
+    renderTab({
+      initialConfig: { assets: [{ id: 'legacy', label: 'Legacy', meta: { sublabel: 'old' } }] },
+    });
+    // Legacy sublabel still renders
+    expect(screen.getByLabelText('Sublabel for Legacy')).toHaveValue('old');
+    // And the required fields show up as empty (invalid) rather than crashing.
+    expect(screen.getByLabelText('Registration Number for Legacy')).toHaveValue('');
+    expect(screen.getByLabelText('Make for Legacy')).toHaveValue('');
   });
 });
 
