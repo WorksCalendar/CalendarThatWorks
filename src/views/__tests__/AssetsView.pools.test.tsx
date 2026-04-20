@@ -1,0 +1,108 @@
+// @vitest-environment happy-dom
+/**
+ * AssetsView — resource pool rows (#212).
+ *
+ * Pins the surface described in the issue: pools render as virtual
+ * rows at the top of the Assets view, the row label shows a POOL
+ * chip and hover-tooltips the member list, and a click on an empty
+ * pool cell fires `onPoolDateSelect` with the pool id (not
+ * `onDateSelect`, since the pool resolves to a concrete member
+ * downstream via the engine).
+ */
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import '@testing-library/jest-dom';
+import React from 'react';
+
+import AssetsView from '../AssetsView';
+import { CalendarContext } from '../../core/CalendarContext';
+
+const currentDate = new Date(2026, 3, 1); // April 2026
+const evOn = (day) => new Date(2026, 3, day);
+
+function renderView(props = {}) {
+  return render(
+    <CalendarContext.Provider value={null}>
+      <AssetsView
+        currentDate={currentDate}
+        events={[]}
+        onEventClick={vi.fn()}
+        {...props}
+      />
+    </CalendarContext.Provider>,
+  );
+}
+
+const basicAssets = [
+  { id: 'N121AB', label: 'N121AB', meta: {} },
+  { id: 'N505CD', label: 'N505CD', meta: {} },
+  { id: 'N88QR',  label: 'N88QR',  meta: {} },
+];
+
+describe('AssetsView — resource pools (issue #212)', () => {
+  it('renders a POOL row at the top for each pool', () => {
+    renderView({
+      assets: basicAssets,
+      pools:  [
+        { id: 'fleet-west',    name: 'West Fleet',    memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' },
+        { id: 'fleet-central', name: 'Central Fleet', memberIds: ['N88QR'],            strategy: 'first-available' },
+      ],
+    });
+    const labels = screen.getAllByRole('rowheader').map(el => el.getAttribute('aria-label'));
+    // Pool rows come first, then asset rows in declared order.
+    expect(labels.slice(0, 2)).toEqual(['Pool: West Fleet', 'Pool: Central Fleet']);
+    expect(labels.slice(2)).toEqual(['N121AB', 'N505CD', 'N88QR']);
+  });
+
+  it('tooltips member labels on the pool row label', () => {
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+    });
+    const header = screen.getByRole('rowheader', { name: 'Pool: West Fleet' });
+    expect(header.getAttribute('title')).toContain('N121AB');
+    expect(header.getAttribute('title')).toContain('N505CD');
+  });
+
+  it('clicking an empty pool cell fires onPoolDateSelect with the pool id', () => {
+    const onPoolDateSelect = vi.fn();
+    const onDateSelect     = vi.fn();
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+      onPoolDateSelect,
+      onDateSelect,
+    });
+
+    const poolRow = screen.getByRole('rowheader', { name: 'Pool: West Fleet' }).closest('[role=row]') as HTMLElement;
+    const firstCell = poolRow.querySelector('[role=gridcell]') as HTMLElement;
+    fireEvent.click(firstCell);
+
+    expect(onPoolDateSelect).toHaveBeenCalledTimes(1);
+    expect(onPoolDateSelect.mock.calls[0][2]).toBe('fleet-west');
+    expect(onDateSelect).not.toHaveBeenCalled();
+  });
+
+  it('shows member-held events on the pool row (aggregate utilization view)', () => {
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+      events: [
+        { id: 'e1', title: 'Charter',  start: evOn(3),  end: evOn(4),  resource: 'N121AB' },
+        { id: 'e2', title: 'A-check',  start: evOn(10), end: evOn(12), resource: 'N505CD' },
+        { id: 'e3', title: 'Unrelated', start: evOn(3), end: evOn(4),  resource: 'N88QR'  },
+      ],
+    });
+    const poolRow = screen.getByRole('rowheader', { name: 'Pool: West Fleet' }).closest('[role=row]') as HTMLElement;
+    // Member events appear on the pool row; non-member events don't.
+    expect(poolRow.textContent).toContain('Charter');
+    expect(poolRow.textContent).toContain('A-check');
+    expect(poolRow.textContent).not.toContain('Unrelated');
+  });
+
+  it('renders no pool rows when pools is empty or absent', () => {
+    renderView({ assets: basicAssets });
+    const labels = screen.getAllByRole('rowheader').map(el => el.getAttribute('aria-label'));
+    expect(labels.some(l => l?.startsWith('Pool:'))).toBe(false);
+  });
+});
