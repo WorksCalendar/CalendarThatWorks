@@ -372,7 +372,7 @@ export default function BaseGanttView({
             return (
               <div key={b.id} className={styles.baseGroup}>
                 {/* Base header row */}
-                <div className={styles.baseHeaderRow} style={{ height: Math.max(baseRowH, 72) }}>
+                <div className={styles.baseHeaderRow} style={{ minHeight: Math.max(baseRowH, 72) }}>
                   <div className={styles.baseHeaderName} style={{ width: NAME_W }}>
                     <div className={styles.baseTitle}>{b.name}</div>
                     <div className={styles.baseCounts}>
@@ -402,7 +402,7 @@ export default function BaseGanttView({
                       </ul>
                     )}
                   </div>
-                  <div className={styles.timelineCell} style={{ width: timelineW, height: Math.max(baseRowH, 72) }}>
+                  <div className={styles.timelineCell} style={{ width: timelineW, minHeight: Math.max(baseRowH, 72) }}>
                     {days.map((d, i) => (
                       <div
                         key={i}
@@ -423,13 +423,13 @@ export default function BaseGanttView({
                   const rowEvs = eventsByResource.get(String(a.id)) ?? [];
                   const rowH = measureRowH(rowEvs);
                   return (
-                    <div key={`asset-${a.id}`} className={styles.assetRow} style={{ height: rowH }}>
+                    <div key={`asset-${a.id}`} className={styles.assetRow} style={{ minHeight: rowH }}>
                       <div className={styles.rowName} style={{ width: NAME_W }}>
                         <span className={styles.rowKind}>Asset</span>
                         <span className={styles.rowTitle}>{a.label ?? a.id}</span>
                         {a.meta?.sublabel && <span className={styles.rowSub}>{a.meta.sublabel}</span>}
                       </div>
-                      <div className={styles.timelineCell} style={{ width: timelineW, height: rowH }}>
+                      <div className={styles.timelineCell} style={{ width: timelineW, minHeight: rowH }}>
                         {days.map((d, i) => (
                           <div
                             key={i}
@@ -455,7 +455,7 @@ export default function BaseGanttView({
                     .map(m => m?.title)
                     .filter(Boolean) as string[];
                   return (
-                    <div key={`emp-${e.id}`} className={styles.personRow} style={{ height: rowH }}>
+                    <div key={`emp-${e.id}`} className={styles.personRow} style={{ minHeight: rowH }}>
                       <div className={styles.rowName} style={{ width: NAME_W }}>
                         <span className={styles.rowKind}>Person</span>
                         <span className={styles.rowTitle}>{e.name ?? e.id}</span>
@@ -479,7 +479,7 @@ export default function BaseGanttView({
                           )}
                         </span>
                       </div>
-                      <div className={styles.timelineCell} style={{ width: timelineW, height: rowH }}>
+                      <div className={styles.timelineCell} style={{ width: timelineW, minHeight: rowH }}>
                         {days.map((d, i) => (
                           <div
                             key={i}
