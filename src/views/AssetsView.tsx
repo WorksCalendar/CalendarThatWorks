@@ -522,7 +522,11 @@ export default function AssetsView({
   const poolRows = useMemo(() => {
     if (!Array.isArray(pools) || pools.length === 0) return [];
     return pools
-      .filter(p => p && typeof p.id === 'string' && Array.isArray(p.memberIds))
+      // Disabled pools are documented as "stay in history but can't be
+      // selected for new bookings" — keep them out of the row list
+      // entirely so users don't start drafts the resolver would reject
+      // as POOL_DISABLED.
+      .filter(p => p && typeof p.id === 'string' && Array.isArray(p.memberIds) && !p.disabled)
       .map(p => {
         const memberSet = new Set(p.memberIds);
         // Scope to member-held events; use the raw events list (not the
@@ -689,7 +693,11 @@ export default function AssetsView({
       case ' ': {
         e.preventDefault();
         const hit = cellRowEvents.find(ev => ev._dayStart <= di && ev._dayEnd >= di);
-        if (hit) {
+        // On pool rows, rowEvents is the aggregate of member bookings — an
+        // occupied cell just means *some* member is busy, not that the pool
+        // itself is taken. Always route pool cells to onPoolDateSelect so
+        // the resolver can pick a free member at submit time.
+        if (hit && !isPoolRow) {
           const hitStage = getApprovalStage(hit);
           if (AUDIT_STAGES.has(hitStage)) openAudit(hit, e.currentTarget);
           else onEventClick?.(hit);
@@ -1024,7 +1032,17 @@ export default function AssetsView({
                         role="gridcell"
                         tabIndex={isFocused ? 0 : -1}
                         data-cell={`${rowIdx}-${di}`}
-                        aria-label={`${resource}, ${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}${cellHasEvent ? '' : ', empty — click to create'}`}
+                        aria-label={(() => {
+                          const datePart = `${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}`;
+                          if (isPool) {
+                            // Pool cells are always bookable — the resolver
+                            // picks a free member at submit time — so skip
+                            // the "empty" qualifier that would lie when the
+                            // aggregate row shows a member event.
+                            return `${displayLabel}, ${datePart}, click to book any available member`;
+                          }
+                          return `${resource}, ${datePart}${cellHasEvent ? '' : ', empty — click to create'}`;
+                        })()}
                         aria-rowindex={rowIdx + 2}
                         aria-colindex={di + 2}
                         className={styles.kbCell}
@@ -1032,7 +1050,10 @@ export default function AssetsView({
                         onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents, resourceId, isPool)}
                         onClick={() => {
                           setFocusedCell({ rowIdx, dayIdx: di });
-                          if (cellHasEvent) return;
+                          // Pool rows aggregate member bookings, so a "busy"
+                          // cell still has free members the resolver can
+                          // assign. Only the asset-row path short-circuits.
+                          if (cellHasEvent && !isPool) return;
                           const from = startOfDay(day);
                           const to   = addDays(startOfDay(day), 1);
                           if (isPool) {

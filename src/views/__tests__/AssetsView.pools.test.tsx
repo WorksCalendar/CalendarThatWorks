@@ -105,4 +105,46 @@ describe('AssetsView — resource pools (issue #212)', () => {
     const labels = screen.getAllByRole('rowheader').map(el => el.getAttribute('aria-label'));
     expect(labels.some(l => l?.startsWith('Pool:'))).toBe(false);
   });
+
+  it('still books via onPoolDateSelect when a member event occupies the cell', () => {
+    // Regression for the P1 review: the pool row aggregates member events,
+    // so clicking a "busy" cell must still create a pool booking — the
+    // resolver picks whichever member is actually free at submit time.
+    const onPoolDateSelect = vi.fn();
+    const onEventClick     = vi.fn();
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+      events: [
+        // Member N121AB is busy on the 3rd; N505CD is still free.
+        { id: 'e1', title: 'Charter', start: evOn(3), end: evOn(4), resource: 'N121AB' },
+      ],
+      onPoolDateSelect,
+      onEventClick,
+    });
+    const poolRow = screen.getByRole('rowheader', { name: 'Pool: West Fleet' }).closest('[role=row]') as HTMLElement;
+    const cells = poolRow.querySelectorAll('[role=gridcell]');
+    // Day index 2 → April 3rd (month starts on the 1st).
+    fireEvent.click(cells[2] as HTMLElement);
+
+    expect(onPoolDateSelect).toHaveBeenCalledTimes(1);
+    expect(onPoolDateSelect.mock.calls[0][2]).toBe('fleet-west');
+    expect(onEventClick).not.toHaveBeenCalled();
+  });
+
+  it('does not render disabled pools as rows', () => {
+    // Disabled pools stay in history but can't accept new bookings — the
+    // resolver rejects them as POOL_DISABLED — so they must not render as
+    // interactive rows either.
+    renderView({
+      assets: basicAssets,
+      pools: [
+        { id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB'], strategy: 'round-robin' },
+        { id: 'fleet-old',  name: 'Retired Fleet', memberIds: ['N505CD'], strategy: 'round-robin', disabled: true },
+      ],
+    });
+    const labels = screen.getAllByRole('rowheader').map(el => el.getAttribute('aria-label'));
+    expect(labels).toContain('Pool: West Fleet');
+    expect(labels).not.toContain('Pool: Retired Fleet');
+  });
 });
