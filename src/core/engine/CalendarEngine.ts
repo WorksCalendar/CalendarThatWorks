@@ -486,13 +486,17 @@ export class CalendarEngine {
    * Use rollbackTo(handle) to restore this snapshot.
    */
   snapshot(label?: string): TransactionHandle {
-    return beginTransaction(this._state.events, label);
+    return beginTransaction(this._state.events, { pools: this._state.pools, label });
   }
 
   /** Restore state to a previous snapshot. Notifies subscribers. */
   rollbackTo(handle: TransactionHandle): void {
     const restored = rollbackTransaction(handle);
-    this._state = { ...this._state, events: restored };
+    this._state = {
+      ...this._state,
+      events: restored.events,
+      ...(restored.pools ? { pools: restored.pools } : {}),
+    };
     this._notify();
   }
 

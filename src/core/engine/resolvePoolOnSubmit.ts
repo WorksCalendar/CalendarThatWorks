@@ -18,6 +18,7 @@
 import type { EngineOperation } from './schema/operationSchema';
 import type { EngineResource } from './schema/resourceSchema';
 import type { Assignment } from './schema/assignmentSchema';
+import { assignmentsForEvent } from './schema/assignmentSchema';
 import type { ResourcePool } from '../pools/resourcePoolSchema';
 import type { ConflictEvent, ConflictRule } from '../conflictEngine';
 import type { Violation } from './validation/validationTypes';
@@ -90,13 +91,26 @@ export function resolvePoolForOp(
 
   const events: ConflictEvent[] = [];
   for (const ev of ctx.events.values()) {
-    events.push({
-      id:       ev.id,
-      start:    ev.start,
-      end:      ev.end,
-      resource: ev.resourceId,
-      category: ev.category,
-    });
+    // Assignment-backed occupancy: an event may have resourceId=null but
+    // hold one or more resources via Assignment records. Emit one
+    // ConflictEvent per effective resource so the resolver's conflict
+    // check matches what the assignment-aware overlap validator will do
+    // downstream.
+    const assigned = ctx.assignments
+      ? assignmentsForEvent(ctx.assignments, ev.id).map(a => a.resourceId)
+      : [];
+    const resources = assigned.length > 0
+      ? assigned
+      : [ev.resourceId];
+    for (const resource of resources) {
+      events.push({
+        id:       ev.id,
+        start:    ev.start,
+        end:      ev.end,
+        resource,
+        category: ev.category,
+      });
+    }
   }
 
   const rules = [DEFAULT_HARD_OVERLAP, ...(ctx.rules ?? [])];

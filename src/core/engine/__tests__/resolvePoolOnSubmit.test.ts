@@ -13,9 +13,11 @@
  */
 import { describe, it, expect } from 'vitest';
 import { CalendarEngine } from '../CalendarEngine';
+import { UndoRedoManager } from '../UndoRedoManager';
 import type { ResourcePool } from '../../pools/resourcePoolSchema';
 import type { EngineOperation } from '../schema/operationSchema';
 import { makeEvent } from '../schema/eventSchema';
+import { makeAssignment } from '../schema/assignmentSchema';
 
 const START = new Date('2026-04-20T09:00:00Z');
 const END   = new Date('2026-04-20T10:00:00Z');
@@ -155,5 +157,61 @@ describe('applyMutation — pool resolve on submit', () => {
 
     engine.applyMutation(createOp({ resourcePoolId: 'agents' }));
     expect(notifications).toBe(1);
+  });
+
+  it('treats assignment-backed occupancy as a pool-member conflict', () => {
+    // d1 is not on the raw event (resourceId=null) but is assigned via an
+    // Assignment record — the resolver must still skip it.
+    const engine = new CalendarEngine({
+      events: [makeEvent('blocker', {
+        title: 'blocker', start: START, end: END, resourceId: null,
+      })],
+      assignments: [makeAssignment('a1', { eventId: 'blocker', resourceId: 'd1' })],
+      pools:       [pool({ id: 'drivers', memberIds: ['d1', 'd2'] })],
+    });
+
+    const result = engine.applyMutation(createOp({ resourcePoolId: 'drivers' }));
+    expect(result.status).toBe('accepted');
+
+    const saved = Array.from(engine.state.events.values()).find(e => e.id !== 'blocker')!;
+    expect(saved.resourceId).toBe('d2');
+    expect(saved.meta.poolEvaluated).toEqual(['d1', 'd2']);
+  });
+
+  it('undo reverts the round-robin cursor alongside the event', () => {
+    const engine  = new CalendarEngine({
+      pools: [pool({ id: 'agents', memberIds: ['a', 'b', 'c'], strategy: 'round-robin' })],
+    });
+    const manager = new UndoRedoManager(engine);
+
+    manager.push('book-1');
+    engine.applyMutation(createOp({ resourcePoolId: 'agents' }));
+    expect(engine.getPool('agents')?.rrCursor).toBe(0);
+
+    manager.undo();
+    expect(engine.state.events.size).toBe(0);
+    // Without pool-snapshot plumbing the cursor would stay at 0 and the
+    // next booking would skip 'a' — pin that it truly rewinds.
+    expect(engine.getPool('agents')?.rrCursor).toBeUndefined();
+
+    const retry = engine.applyMutation(createOp({ resourcePoolId: 'agents' }));
+    expect(retry.status).toBe('accepted');
+    const savedAfter = Array.from(engine.state.events.values())[0];
+    expect(savedAfter.resourceId).toBe('a');
+    expect(engine.getPool('agents')?.rrCursor).toBe(0);
+  });
+
+  it('rollbackTo(snapshot) restores pool cursor state', () => {
+    const engine = new CalendarEngine({
+      pools: [pool({ id: 'agents', memberIds: ['a', 'b'], strategy: 'round-robin' })],
+    });
+
+    const handle = engine.snapshot('pre-book');
+    engine.applyMutation(createOp({ resourcePoolId: 'agents' }));
+    expect(engine.getPool('agents')?.rrCursor).toBe(0);
+
+    engine.rollbackTo(handle);
+    expect(engine.state.events.size).toBe(0);
+    expect(engine.getPool('agents')?.rrCursor).toBeUndefined();
   });
 });
