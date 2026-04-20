@@ -7,7 +7,7 @@ import {
 } from 'react';
 import type { ForwardedRef, ReactNode } from 'react';
 import {
-  format, startOfMonth, endOfMonth,
+  format, startOfMonth, endOfMonth, startOfDay,
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Download, Plus, Sparkles, Upload } from 'lucide-react';
@@ -77,7 +77,7 @@ import DayView                from './views/DayView';
 import AgendaView             from './views/AgendaView';
 import TimelineView           from './views/TimelineView';
 import AssetsView             from './views/AssetsView';
-import BaseView               from './views/BaseView';
+import BaseGanttView          from './views/BaseGanttView';
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
@@ -300,6 +300,11 @@ function viewRange(view, date, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
     case 'day':
       return { start: date, end: addDays(date, 1) };
+    case 'base':
+      // Base Gantt view defaults to 14 days and can expand to 90. Always
+      // materialize the 90-day window so toggling in-view doesn't require
+      // a re-fetch and occurrences at the end of the span aren't missing.
+      return { start: startOfDay(date), end: addDays(startOfDay(date), 90) };
     default: // month, agenda, schedule (timeline), assets
       return { start: startOfMonth(date), end: endOfMonth(date) };
   }
@@ -2025,7 +2030,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 />
               )}
               {cal.view === 'base' && (
-                <BaseView
+                <BaseGanttView
                   currentDate={cal.currentDate}
                   events={visibleEvents}
                   onEventClick={handleEventClick}
