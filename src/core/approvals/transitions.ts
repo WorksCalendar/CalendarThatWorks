@@ -17,6 +17,7 @@ import type {
   ApprovalStageId,
   ApprovalHistoryEntry,
 } from '../../types/assets'
+import { appendAuditEntry } from './auditChain'
 
 // ─── Errors ───────────────────────────────────────────────────────────────
 
@@ -176,7 +177,7 @@ export function transitionApproval(
   }
 
   const at = input.at ?? new Date().toISOString()
-  const entry: ApprovalHistoryEntry = {
+  const entrySeed: Omit<ApprovalHistoryEntry, 'hash' | 'prevHash'> = {
     action: input.action,
     at,
     ...(input.actor !== undefined ? { actor: input.actor } : {}),
@@ -206,7 +207,7 @@ export function transitionApproval(
   const nextStageObj: ApprovalStage = {
     stage: nextStage,
     updatedAt: at,
-    history: [...(current?.history ?? []), entry],
+    history: appendAuditEntry(current?.history ?? [], entrySeed),
     ...(counts ? { counts } : {}),
   }
 
