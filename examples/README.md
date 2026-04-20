@@ -28,8 +28,15 @@ npm run examples
 - `external-form.jsx` — standalone `CalendarExternalForm`
 - `basic-usage.jsx` — compact docs/tutorial starter
 
+## Feature demos
+
+- `../demo/App.tsx` — unified calendar demo; wires resource pools with
+  `localStorage` persistence (see
+  [docs/ResourcePools.md](../docs/ResourcePools.md)).
+
 ## Related docs
 
 - [Workflow map](./WORKFLOWS.md)
 - [Documentation index](../docs/README.md)
+- [Resource pools](../docs/ResourcePools.md)
 - [Microsoft 365 adapter notes](./microsoft-365/README.md)
