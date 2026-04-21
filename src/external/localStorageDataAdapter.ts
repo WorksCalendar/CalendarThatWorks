@@ -3,7 +3,7 @@
  */
 export function createLocalStorageDataAdapter({ key = 'works-calendar:external-events' } = {}) {
   return {
-    async submitEvent(payload) {
+    async submitEvent(payload: Record<string, unknown>) {
       const events = readEvents(key);
       const record = {
         id: `ext-${Date.now().toString(36)}`,
@@ -17,7 +17,7 @@ export function createLocalStorageDataAdapter({ key = 'works-calendar:external-e
   };
 }
 
-function readEvents(key) {
+function readEvents(key: string) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return [];

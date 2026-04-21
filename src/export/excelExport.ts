@@ -2,8 +2,11 @@
  * excelExport.js — Export visible events to Excel (SheetJS) with CSV fallback.
  */
 import { format } from 'date-fns';
+import type { NormalizedEvent } from '../types/events';
 
-function eventsToRows(events) {
+type Row = Record<string, unknown>;
+
+function eventsToRows(events: NormalizedEvent[]): Row[] {
   return events.map(ev => ({
     Title:    ev.title,
     Start:    format(ev.start, 'yyyy-MM-dd HH:mm'),
@@ -15,17 +18,17 @@ function eventsToRows(events) {
   }));
 }
 
-function toCSV(rows) {
+function toCSV(rows: Row[]): string {
   if (rows.length === 0) return '';
   const headers = Object.keys(rows[0]);
-  const escape  = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const escape  = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   return [
     headers.join(','),
     ...rows.map(r => headers.map(h => escape(r[h])).join(',')),
   ].join('\n');
 }
 
-function downloadFile(content, filename, mime) {
+function downloadFile(content: string, filename: string, mime: string): void {
   const blob = new Blob([content], { type: mime });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
@@ -35,7 +38,7 @@ function downloadFile(content, filename, mime) {
   URL.revokeObjectURL(url);
 }
 
-export async function exportToExcel(events, filename = 'calendar-events') {
+export async function exportToExcel(events: NormalizedEvent[], filename = 'calendar-events'): Promise<void> {
   const rows = eventsToRows(events);
 
   try {
