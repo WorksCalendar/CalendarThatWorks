@@ -10,11 +10,19 @@
  * detects the SLA boundary. Idle when the workflow has no SLA, the
  * instance isn't awaiting, or the interval hasn't fired yet.
  *
+ * Dedupe: each (currentNodeId, enteredAt) tuple is emitted at most
+ * once. If host persistence is slow (or the host ignores the result)
+ * the interval won't re-fire for the same boundary — the callback
+ * only runs again after `instance` changes, which happens when the
+ * host persists the advance and re-renders with the new workflow
+ * state.
+ *
  * Typical wiring:
  *
  *     useWorkflowTicker({
  *       workflow,
  *       instance: event.meta?.workflowInstance,
+ *       variables: { event },
  *       onTimeout: (next, emit) => persist(event.id, next, emit),
  *     })
  */
@@ -34,6 +42,12 @@ export interface UseWorkflowTickerOptions {
     result: AdvanceResult,
     emit: readonly WorkflowEmitEvent[],
   ) => void
+  /**
+   * Variables forwarded to `advance()` so condition nodes downstream of
+   * the timeout edge can resolve runtime data. Pass the same object you
+   * use for normal actor-driven actions.
+   */
+  readonly variables?: Readonly<Record<string, unknown>>
   /** Polling interval in ms. Default: 30s. */
   readonly intervalMs?: number
   /** Set false to pause the ticker (e.g. during modal edits). Default: true. */
@@ -41,21 +55,40 @@ export interface UseWorkflowTickerOptions {
 }
 
 export function useWorkflowTicker(opts: UseWorkflowTickerOptions): void {
-  const { workflow, instance, onTimeout, intervalMs = 30_000, enabled = true } = opts
+  const { workflow, instance, onTimeout, variables, intervalMs = 30_000, enabled = true } = opts
 
-  // Hold the latest onTimeout in a ref so the interval doesn't need to
-  // restart when the host passes a fresh callback every render.
+  // Hold the latest onTimeout + variables in refs so the interval
+  // doesn't need to restart when the host passes a fresh callback or
+  // variables object every render.
   const cbRef = useRef(onTimeout)
   cbRef.current = onTimeout
+  const varsRef = useRef(variables)
+  varsRef.current = variables
+
+  // Keyed by `${currentNodeId}:${enteredAt}` — the SLA boundary
+  // identity for the currently-awaited approval. Once onTimeout fires
+  // for a given key, we don't fire again until the instance prop
+  // changes (i.e. the host persisted our advance) and the effect
+  // re-runs with a fresh closure.
+  const firedKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!enabled) return
     if (!workflow || !instance) return
     if (instance.status !== 'awaiting') return
 
+    const nodeId = instance.currentNodeId
+    if (!nodeId) return
+    const enteredAt = findEnteredAt(instance, nodeId)
+    if (!enteredAt) return
+    const boundaryKey = `${nodeId}:${enteredAt}`
+    firedKeyRef.current = null
+
     const check = (): void => {
-      const result = tick(workflow, instance, new Date().toISOString())
+      if (firedKeyRef.current === boundaryKey) return
+      const result = tick(workflow, instance, new Date().toISOString(), varsRef.current)
       if (!result) return
+      firedKeyRef.current = boundaryKey
       cbRef.current(result, result.emit)
     }
 
@@ -65,6 +98,16 @@ export function useWorkflowTicker(opts: UseWorkflowTickerOptions): void {
     const id = setInterval(check, intervalMs)
     return () => clearInterval(id)
   }, [workflow, instance, intervalMs, enabled])
+}
+
+function findEnteredAt(instance: WorkflowInstance, nodeId: string): string | null {
+  for (let i = instance.history.length - 1; i >= 0; i--) {
+    const entry = instance.history[i]
+    if (entry.nodeId !== nodeId) continue
+    if (entry.exitedAt !== undefined) continue
+    return entry.enteredAt
+  }
+  return null
 }
 
 export default useWorkflowTicker

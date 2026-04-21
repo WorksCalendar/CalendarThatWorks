@@ -158,6 +158,44 @@ describe('tick — inapplicable cases return null', () => {
   })
 })
 
+describe('tick — variables forwarded to advance', () => {
+  it('timeout auto-advance through a condition reads variables', () => {
+    // Timeout routes into a cost-gated branch: cost>500 → denied,
+    // otherwise → ok. Without variables the condition throws and the
+    // workflow fails. With variables it resolves to a terminal.
+    const wf: Workflow = {
+      id: 'sla-cond', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:m', slaMinutes: 5, onTimeout: 'escalate' },
+        { id: 'cost', type: 'condition', expr: 'event.cost > 500' },
+        { id: 'ok', type: 'terminal', outcome: 'finalized' },
+        { id: 'no', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'ok', when: 'approved' },
+        { from: 'a', to: 'no', when: 'denied' },
+        { from: 'a', to: 'cost', when: 'timeout' },
+        { from: 'cost', to: 'no', when: 'true' },
+        { from: 'cost', to: 'ok', when: 'false' },
+      ],
+    }
+    const s = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: T0 })
+    if (!s.ok) throw new Error('start')
+
+    const rNoVars = tick(wf, s.instance, minutesAfter(T0, 10))
+    if (!rNoVars) throw new Error('expected result')
+    expect(rNoVars.instance.status).toBe('failed')
+
+    const rWithVars = tick(wf, s.instance, minutesAfter(T0, 10), { event: { cost: 1000 } })
+    if (!rWithVars || !rWithVars.ok) throw new Error('expected ok')
+    expect(rWithVars.instance.outcome).toBe('denied')
+
+    const rCheap = tick(wf, s.instance, minutesAfter(T0, 10), { event: { cost: 100 } })
+    if (!rCheap || !rCheap.ok) throw new Error('expected ok')
+    expect(rCheap.instance.outcome).toBe('finalized')
+  })
+})
+
 describe('tick — purity', () => {
   it('does not mutate the input instance', () => {
     const wf = build('escalate')

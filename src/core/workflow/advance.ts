@@ -327,6 +327,11 @@ function finalize(
  * minutes. Returns `null` in every other case — not awaiting, no
  * `slaMinutes`, no `enteredAt`, or the SLA hasn't elapsed yet.
  *
+ * `variables` are forwarded to `advance()` so condition nodes that the
+ * timeout edge auto-advances into can resolve runtime data (e.g. cost-
+ * based escalation). Callers driving tick from a scheduler should pass
+ * whatever variables they use for normal actor-driven actions.
+ *
  * Pure + side-effect-free: the host drives it with a scheduler
  * (`setInterval`, cron, server-side tick). Two consecutive calls with
  * the same `nowIso` produce the same result.
@@ -335,6 +340,7 @@ export function tick(
   workflow: Workflow,
   instance: WorkflowInstance,
   nowIso: string,
+  variables?: Readonly<Record<string, unknown>>,
 ): AdvanceResult | null {
   const node = activeApprovalNode(workflow, instance)
   if (!node) return null
@@ -354,6 +360,7 @@ export function tick(
     instance,
     action: { type: 'timeout' },
     at: nowIso,
+    ...(variables !== undefined ? { variables } : {}),
   })
 }
 

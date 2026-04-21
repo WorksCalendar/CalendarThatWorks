@@ -91,4 +91,77 @@ describe('useWorkflowTicker', () => {
     )
     expect(onTimeout).not.toHaveBeenCalled()
   })
+
+  it('forwards variables to tick so condition auto-advance can resolve', () => {
+    // Manager approval (5m SLA) → on timeout routes into a condition
+    // node that requires `event.cost`. Without variables the auto-
+    // advance fails; with them it resolves.
+    const condWf: Workflow = {
+      id: 'sla-cond', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:m', slaMinutes: 5, onTimeout: 'escalate' },
+        { id: 'cost', type: 'condition', expr: 'event.cost > 500' },
+        { id: 'ok', type: 'terminal', outcome: 'finalized' },
+        { id: 'no', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'ok', when: 'approved' },
+        { from: 'a', to: 'no', when: 'denied' },
+        { from: 'a', to: 'cost', when: 'timeout' },
+        { from: 'cost', to: 'no', when: 'true' },
+        { from: 'cost', to: 'ok', when: 'false' },
+      ],
+    }
+    const start = advance({ workflow: condWf, instance: null, action: { type: 'start' }, at: '2026-04-20T09:00:00.000Z' })
+    if (!start.ok) throw new Error('start')
+    vi.setSystemTime(new Date('2026-04-20T10:00:00.000Z'))
+    const onTimeout = vi.fn()
+    renderHook(() =>
+      useWorkflowTicker({
+        workflow: condWf,
+        instance: start.instance,
+        onTimeout,
+        variables: { event: { cost: 1000 } },
+      }),
+    )
+    expect(onTimeout).toHaveBeenCalledTimes(1)
+    const [result] = onTimeout.mock.calls[0]
+    expect(result.ok).toBe(true)
+    expect(result.instance.outcome).toBe('denied')
+  })
+
+  it('dedupes: fires at most once per SLA boundary while instance is stable', () => {
+    const instance = startAt('2026-04-20T09:00:00.000Z')
+    vi.setSystemTime(new Date('2026-04-20T10:30:00.000Z'))
+    const onTimeout = vi.fn()
+    renderHook(() =>
+      useWorkflowTicker({ workflow: wf, instance, onTimeout, intervalMs: 1000 }),
+    )
+    expect(onTimeout).toHaveBeenCalledTimes(1)
+    // Host hasn't persisted yet — the instance prop is still the same.
+    // Subsequent interval ticks must not re-fire the callback.
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+    expect(onTimeout).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-arms after the instance prop changes to a new SLA boundary', () => {
+    const first = startAt('2026-04-20T09:00:00.000Z')
+    vi.setSystemTime(new Date('2026-04-20T10:30:00.000Z'))
+    const onTimeout = vi.fn()
+    const { rerender } = renderHook(
+      ({ instance }: { instance: WorkflowInstance }) =>
+        useWorkflowTicker({ workflow: wf, instance, onTimeout, intervalMs: 1000 }),
+      { initialProps: { instance: first } },
+    )
+    expect(onTimeout).toHaveBeenCalledTimes(1)
+
+    // Simulate host persisting: advance into the escalated node 'b'
+    // (also has no SLA — tick should now do nothing regardless).
+    const escalated = onTimeout.mock.calls[0][0].instance as WorkflowInstance
+    rerender({ instance: escalated })
+    act(() => { vi.advanceTimersByTime(5000) })
+    expect(onTimeout).toHaveBeenCalledTimes(1)
+  })
 })
