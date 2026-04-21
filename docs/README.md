@@ -26,6 +26,7 @@ This index is the canonical docs entrypoint for the package.
 ## Release, roadmap, and migration docs
 
 - [Roadmap](./Roadmap.md)
+- [TypeScript strict migration](./TypeScriptStrictMigration.md)
 - [Release readiness checklist](./release-readiness.md)
 - [Release notes: v0.1.0 draft](./releases/v0.1.0.md)
 
