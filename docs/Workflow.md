@@ -16,8 +16,9 @@ it in lockstep with the existing approval state machine.
   inspector, guard picker, validator, simulator, persistence.
   Accessible at ConfigPanel → Approval Flows.
 - **Phase 3 (#222)** — SLA timers on approval nodes with
-  `onTimeout: 'escalate' | 'deny' | 'approve'` behavior, driven by a
-  host-side `tickWorkflow()` call (see `useWorkflowTicker`).
+  `onTimeout: 'escalate' | 'auto-approve' | 'auto-deny'` behavior,
+  driven by a host-side `tickWorkflow()` call (see
+  `useWorkflowTicker`).
 - **Phase 4 (#223)** — `parallel` + `join` nodes with
   `requireAll` / `requireAny` / `requireN` quorum modes, plus a
   pluggable channel registry (`createChannelRegistry`) with built-in
