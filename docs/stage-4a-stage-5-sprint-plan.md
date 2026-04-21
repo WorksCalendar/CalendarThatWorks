@@ -112,6 +112,20 @@ Goal: Easy wins, stabilize patterns
 
 Goal: Structured data typing
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Added explicit tab-local domain types for Data tabs in `ConfigPanel.tsx`:
+  - Template visibility union (`private | team | org`)
+  - Event field draft + field type aliases for safer `eventFields` edits
+  - Category/config patch types for `CategoriesTab` mutators
+  - Asset draft/meta patch types for `AssetsTab` local state + updaters
+- Removed implicit `any` from Data-tab mutators by typing update helpers:
+  - `EventFieldsTab`: `updateField` / `removeField` and field-type casts
+  - `CategoriesTab`: `patchConfig` / `patchCats` / `updateCat` / `removeCat`
+  - `AssetsTab`: draft/meta update paths, list mutation helpers, and required-field guard
+- Tightened select-change handlers to constrained unions (template visibility and category pill style) instead of broad `string`.
+
 ---
 
 ### PR 6 — ConfigPanel (Workflow Tabs)
