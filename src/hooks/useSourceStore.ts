@@ -19,18 +19,55 @@
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { createId } from '../core/createId';
+import type { WorksCalendarEvent } from '../types/events';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 
 const SOURCE_PREFIX = 'wc-sources-';
 const LEGACY_PREFIX = 'wc-feeds-';
 
-function sourceKey(calendarId) { return `${SOURCE_PREFIX}${calendarId}`; }
-function legacyKey(calendarId) { return `${LEGACY_PREFIX}${calendarId}`; }
+type IcsSource = {
+  id: string;
+  type: 'ics';
+  label: string;
+  color: string;
+  enabled: boolean;
+  addedAt: string;
+  url: string;
+  refreshInterval: number;
+};
+type CsvSource = {
+  id: string;
+  type: 'csv';
+  label: string;
+  color: string;
+  enabled: boolean;
+  addedAt: string;
+  events: WorksCalendarEvent[];
+  importedAt?: string;
+};
+type CalendarSource = {
+  id: string;
+  type: string;
+  label?: string;
+  color?: string;
+  enabled?: boolean;
+  addedAt?: string;
+  url?: string;
+  refreshInterval?: number;
+  events?: WorksCalendarEvent[];
+  importedAt?: string;
+};
+type SourcePatch = Partial<Omit<CalendarSource, 'id'>>;
+type NewSource = Partial<CalendarSource> & { type?: string };
+type ActiveIcsSource = Pick<IcsSource, 'url' | 'label' | 'refreshInterval'>;
+
+function sourceKey(calendarId: string): string { return `${SOURCE_PREFIX}${calendarId}`; }
+function legacyKey(calendarId: string): string { return `${LEGACY_PREFIX}${calendarId}`; }
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
 
-export function loadSources(calendarId) {
+export function loadSources(calendarId: string): CalendarSource[] {
   try {
     const raw = localStorage.getItem(sourceKey(calendarId));
     if (raw) return JSON.parse(raw);
@@ -38,7 +75,7 @@ export function loadSources(calendarId) {
     // One-time migration: convert legacy wc-feeds- entries to typed sources
     const legacy = localStorage.getItem(legacyKey(calendarId));
     if (legacy) {
-      const migrated = JSON.parse(legacy).map(f => ({ ...f, type: 'ics' }));
+      const migrated = (JSON.parse(legacy) as Array<Omit<IcsSource, 'type'>>).map((f) => ({ ...f, type: 'ics' as const }));
       persistSources(calendarId, migrated);
       return migrated;
     }
@@ -46,7 +83,7 @@ export function loadSources(calendarId) {
   return [];
 }
 
-export function persistSources(calendarId, sources) {
+export function persistSources(calendarId: string, sources: CalendarSource[]): void {
   try {
     localStorage.setItem(sourceKey(calendarId), JSON.stringify(sources));
   } catch {}
@@ -54,8 +91,8 @@ export function persistSources(calendarId, sources) {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useSourceStore(calendarId) {
-  const [sources, setSources] = useState(() => loadSources(calendarId));
+export function useSourceStore(calendarId: string) {
+  const [sources, setSources] = useState<CalendarSource[]>(() => loadSources(calendarId));
 
   // Re-load when calendarId changes (multiple embedded calendar instances)
   useEffect(() => {
@@ -67,10 +104,10 @@ export function useSourceStore(calendarId) {
     persistSources(calendarId, sources);
   }, [calendarId, sources]);
 
-  const addSource = useCallback((partial) => {
-    const source = {
+  const addSource = useCallback((partial: NewSource): CalendarSource => {
+    const source: CalendarSource = {
       id:              createId('src'),
-      type:            'ics',
+      type:            partial.type ?? 'ics',
       label:           '',
       color:           '#3b82f6',
       enabled:         true,
@@ -79,7 +116,7 @@ export function useSourceStore(calendarId) {
       url:             '',
       refreshInterval: 300_000,
       // CSV defaults (overridden by partial)
-      events:          undefined,
+      events:          [],
       importedAt:      undefined,
       ...partial,
     };
@@ -87,30 +124,30 @@ export function useSourceStore(calendarId) {
     return source;
   }, []);
 
-  const removeSource = useCallback((id) => {
+  const removeSource = useCallback((id: string) => {
     setSources(prev => prev.filter(s => s.id !== id));
   }, []);
 
-  const updateSource = useCallback((id, patch) => {
+  const updateSource = useCallback((id: string, patch: SourcePatch) => {
     setSources(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   }, []);
 
-  const toggleSource = useCallback((id) => {
+  const toggleSource = useCallback((id: string) => {
     setSources(prev => prev.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
   }, []);
 
   // ICS feeds ready for useFeedEvents
-  const activeIcsSources = useMemo(
+  const activeIcsSources = useMemo<ActiveIcsSource[]>(
     () =>
       sources
-        .filter(s => s.type === 'ics' && s.enabled && s.url)
+        .filter((s): s is IcsSource => s.type === 'ics' && s.enabled && !!s.url)
         .map(({ url, label, refreshInterval }) => ({ url, label, refreshInterval })),
     [sources],
   );
 
   // CSV datasets with at least one event
-  const activeCsvSources = useMemo(
-    () => sources.filter(s => s.type === 'csv' && s.enabled && s.events?.length),
+  const activeCsvSources = useMemo<CsvSource[]>(
+    () => sources.filter((s): s is CsvSource => s.type === 'csv' && s.enabled && (s.events?.length ?? 0) > 0),
     [sources],
   );
 

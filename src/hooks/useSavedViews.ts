@@ -14,14 +14,47 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { createId } from '../core/createId';
+type GroupByInput = any;
+type SavedView = {
+  id: string;
+  name: string;
+  createdAt: string;
+  color: string | null;
+  view: string | null;
+  conditions: unknown[] | null;
+  groupBy: string | string[] | Array<{ field: string; label?: string; showEmpty?: boolean }> | null;
+  sort: unknown[] | null;
+  sortBy: unknown[] | null;
+  zoomLevel: string | null;
+  collapsedGroups: string[] | null;
+  showAllGroups: boolean | null;
+  selectedBaseIds: string[] | null;
+  hiddenFromStrip: boolean;
+  filters: Record<string, unknown>;
+};
+type SaveViewOptions = {
+  color?: string | null;
+  view?: string | null;
+  conditions?: unknown[] | null;
+  groupBy?: unknown;
+  sort?: unknown;
+  sortBy?: unknown;
+  zoomLevel?: unknown;
+  collapsedGroups?: unknown;
+  showAllGroups?: unknown;
+  selectedBaseIds?: unknown;
+};
 
-function viewsKey(calendarId) { return `wc-saved-views-${calendarId}`; }
+function viewsKey(calendarId: string): string { return `wc-saved-views-${calendarId}`; }
 const STORAGE_VERSION = 4;
 const MIN_READABLE_VERSION = 2;
 
 const ASSETS_ZOOM_LEVELS = new Set(['day', 'week', 'month', 'quarter']);
 
-function isValidDate(value) {
+function isValidDate(value: unknown): boolean {
+  if (!(typeof value === 'string' || typeof value === 'number' || value instanceof Date)) {
+    return false;
+  }
   const date = new Date(value);
   return !Number.isNaN(date.getTime());
 }
@@ -31,7 +64,7 @@ function isValidDate(value) {
  * stripping any non-serialisable fields (e.g. getKey/getLabel functions) so
  * the value survives JSON.stringify/parse.
  */
-function sanitizeGroupBy(value) {
+function sanitizeGroupBy(value: any): any {
   if (typeof value === 'string' && value) return value;
   if (!Array.isArray(value) || value.length === 0) return null;
 
@@ -40,9 +73,9 @@ function sanitizeGroupBy(value) {
   }
 
   const objects = value
-    .filter(item => item && typeof item === 'object' && typeof item.field === 'string' && item.field)
+    .filter((item: any) => !!item && typeof item === 'object' && typeof item.field === 'string' && !!item.field)
     .map(item => {
-      const out: { field: any; label?: string; showEmpty?: boolean } = { field: item.field };
+      const out: { field: string; label?: string; showEmpty?: boolean } = { field: item.field };
       if (typeof item.label === 'string') out.label = item.label;
       if (typeof item.showEmpty === 'boolean') out.showEmpty = item.showEmpty;
       return out;
@@ -51,7 +84,7 @@ function sanitizeGroupBy(value) {
 }
 
 /** Accept SortConfig[] with serialisable fields only. */
-function sanitizeSort(value) {
+function sanitizeSort(value: unknown): Array<{ field: string; direction: 'asc' | 'desc' }> | null {
   if (!Array.isArray(value) || value.length === 0) return null;
   const entries = value
     .filter(item =>
@@ -66,7 +99,7 @@ function sanitizeSort(value) {
 }
 
 /** Accept Set<string> | string[]; persist as string[]. */
-function sanitizeCollapsedGroups(value) {
+function sanitizeCollapsedGroups(value: unknown): string[] | null {
   if (value instanceof Set) value = [...value];
   if (!Array.isArray(value)) return null;
   const entries = value.filter(item => typeof item === 'string' && item);
@@ -74,66 +107,68 @@ function sanitizeCollapsedGroups(value) {
 }
 
 /** Assets-view zoom level: one of 'day' | 'week' | 'month' | 'quarter', else null. */
-function sanitizeZoomLevel(value) {
+function sanitizeZoomLevel(value: unknown): string | null {
   return typeof value === 'string' && ASSETS_ZOOM_LEVELS.has(value) ? value : null;
 }
 
 /** Base-view selected bases: persists as string[] of base ids. */
-function sanitizeBaseIds(value) {
+function sanitizeBaseIds(value: unknown): string[] | null {
   if (!Array.isArray(value)) return null;
   const entries = value.filter(item => typeof item === 'string' && item);
   return entries.length > 0 ? entries : null;
 }
 
-function normalizeSavedView(view) {
+function normalizeSavedView(view: unknown): SavedView | null {
   if (!view || typeof view !== 'object') return null;
-  if (typeof view.id !== 'string' || typeof view.name !== 'string') return null;
-  if (!view.filters || typeof view.filters !== 'object') return null;
+  const v = view as Record<string, unknown>;
+  if (typeof v.id !== 'string' || typeof v.name !== 'string') return null;
+  if (!v.filters || typeof v.filters !== 'object') return null;
 
   return {
-    id:              view.id,
-    name:            view.name,
-    createdAt:       typeof view.createdAt === 'string' ? view.createdAt : new Date().toISOString(),
-    color:           view.color ?? null,
-    view:            view.view ?? null,
-    conditions:      Array.isArray(view.conditions) ? view.conditions : null,
-    groupBy:         sanitizeGroupBy(view.groupBy),
-    sort:            sanitizeSort(view.sort),
-    sortBy:          sanitizeSort(view.sortBy),
-    zoomLevel:       sanitizeZoomLevel(view.zoomLevel),
-    collapsedGroups: sanitizeCollapsedGroups(view.collapsedGroups),
-    showAllGroups:   typeof view.showAllGroups === 'boolean' ? view.showAllGroups : null,
-    selectedBaseIds: sanitizeBaseIds(view.selectedBaseIds),
-    hiddenFromStrip: view.hiddenFromStrip === true,
-    filters:         view.filters,
+    id:              v.id,
+    name:            v.name,
+    createdAt:       typeof v.createdAt === 'string' ? v.createdAt : new Date().toISOString(),
+    color:           (v.color as string | null | undefined) ?? null,
+    view:            (v.view as string | null | undefined) ?? null,
+    conditions:      Array.isArray(v.conditions) ? v.conditions : null,
+    groupBy:         sanitizeGroupBy((v.groupBy as GroupByInput | undefined) ?? null),
+    sort:            sanitizeSort(v.sort),
+    sortBy:          sanitizeSort(v.sortBy),
+    zoomLevel:       sanitizeZoomLevel(v.zoomLevel),
+    collapsedGroups: sanitizeCollapsedGroups(v.collapsedGroups),
+    showAllGroups:   typeof v.showAllGroups === 'boolean' ? v.showAllGroups : null,
+    selectedBaseIds: sanitizeBaseIds(v.selectedBaseIds),
+    hiddenFromStrip: v.hiddenFromStrip === true,
+    filters:         v.filters as Record<string, unknown>,
   };
 }
 
-function normalizeViews(views) {
+function normalizeViews(views: unknown): SavedView[] {
   if (!Array.isArray(views)) return [];
   return views.map(normalizeSavedView).filter(Boolean);
 }
 
-function migrateSavedViewsPayload(payload, calendarId) {
+function migrateSavedViewsPayload(payload: unknown, calendarId: string): SavedView[] {
   if (Array.isArray(payload)) {
     // v1 shape: direct array
     return normalizeViews(payload);
   }
 
   if (payload && typeof payload === 'object') {
+    const p = payload as Record<string, unknown>;
     if (
-      typeof payload.version === 'number'
-      && payload.version >= MIN_READABLE_VERSION
-      && payload.version <= STORAGE_VERSION
+      typeof p.version === 'number'
+      && p.version >= MIN_READABLE_VERSION
+      && p.version <= STORAGE_VERSION
     ) {
       // v2–v4 share a compatible on-disk shape; normalizeSavedView fills in
       // fields added in later versions (sort, collapsedGroups, showAllGroups,
       // hiddenFromStrip) when loading older payloads.
-      return normalizeViews(payload.views);
+      return normalizeViews(p.views);
     }
 
     // Future explicit migration path by version number.
-    if (typeof payload.version === 'number' && payload.version > STORAGE_VERSION) {
+    if (typeof p.version === 'number' && p.version > STORAGE_VERSION) {
       return [];
     }
   }
@@ -142,14 +177,14 @@ function migrateSavedViewsPayload(payload, calendarId) {
   return migrateProfiles(calendarId);
 }
 
-function migrateProfiles(calendarId) {
+function migrateProfiles(calendarId: string): SavedView[] {
   try {
     const legacyKey = `wc-profiles-${calendarId}`;
     const raw = localStorage.getItem(legacyKey);
     if (!raw) return [];
     const profiles = JSON.parse(raw);
     // Convert profile shape to saved view shape
-    return normalizeViews(profiles.map(p => ({
+    return normalizeViews((profiles as Array<Record<string, unknown>>).map((p) => ({
       id:        p.id,
       name:      p.name,
       createdAt: p.createdAt ?? new Date().toISOString(),
@@ -160,7 +195,7 @@ function migrateProfiles(calendarId) {
   } catch { return []; }
 }
 
-function loadViews(calendarId) {
+function loadViews(calendarId: string): SavedView[] {
   try {
     const raw = localStorage.getItem(viewsKey(calendarId));
     if (raw) {
@@ -174,7 +209,7 @@ function loadViews(calendarId) {
   return [];
 }
 
-function persistViews(calendarId, views) {
+function persistViews(calendarId: string, views: SavedView[]): void {
   try {
     localStorage.setItem(viewsKey(calendarId), JSON.stringify({
       version: STORAGE_VERSION,
@@ -190,7 +225,7 @@ function persistViews(calendarId, views) {
  * @param {object} filters — live filter state (may contain Sets)
  * @returns {object} JSON-safe serialized filters
  */
-export function serializeFilters(filters) {
+export function serializeFilters<T extends Record<string, unknown>>(filters: T): Record<string, any> {
   return JSON.parse(
     JSON.stringify(filters, (_key, value) => {
       if (value instanceof Set) return [...value];
@@ -208,15 +243,15 @@ export function serializeFilters(filters) {
  * @param {import('../filters/filterSchema.js').FilterField[]} [schema]
  * @returns {object} live filter state
  */
-export function deserializeFilters(saved, schema?: any[]) {
+export function deserializeFilters(saved: Record<string, any> | null | undefined, schema?: Array<{ type: string; key: string }>): Record<string, any> {
   if (!saved) return {};
 
-  const result = { ...saved };
+  const result: Record<string, any> = { ...saved };
 
   // Determine which keys should be restored as Sets
-  let setKeys;
+  let setKeys: string[];
   if (schema) {
-    setKeys = schema.filter(f => f.type === 'multi-select').map(f => f.key);
+    setKeys = schema.filter((f) => f.type === 'multi-select').map((f) => f.key);
   } else {
     // Fallback for callers that don't pass a schema
     setKeys = ['categories', 'resources', 'sources'];
@@ -251,8 +286,8 @@ export function deserializeFilters(saved, schema?: any[]) {
  * @param {string} calendarId
  * @returns {{ views, saveView, updateView, resaveView, deleteView }}
  */
-export function useSavedViews(calendarId) {
-  const [views, setViews] = useState(() => loadViews(calendarId));
+export function useSavedViews(calendarId: string) {
+  const [views, setViews] = useState<SavedView[]>(() => loadViews(calendarId));
 
   // Re-load when calendarId changes
   useEffect(() => {
@@ -264,7 +299,7 @@ export function useSavedViews(calendarId) {
     persistViews(calendarId, views);
   }, [calendarId, views]);
 
-  const saveView = useCallback((name, filters, {
+  const saveView = useCallback((name: string, filters: Record<string, unknown>, {
     color,
     view,
     conditions,
@@ -275,18 +310,7 @@ export function useSavedViews(calendarId) {
     collapsedGroups,
     showAllGroups,
     selectedBaseIds,
-  }: {
-    color?: any
-    view?: any
-    conditions?: any
-    groupBy?: any
-    sort?: any
-    sortBy?: any
-    zoomLevel?: any
-    collapsedGroups?: any
-    showAllGroups?: any
-    selectedBaseIds?: any
-  } = {}) => {
+  }: SaveViewOptions = {}) => {
     const savedView = {
       id:              createId('view'),
       name,
@@ -308,17 +332,17 @@ export function useSavedViews(calendarId) {
     return savedView;
   }, []);
 
-  const updateView = useCallback((id, patch) => {
-    setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
+  const updateView = useCallback((id: string, patch: Partial<SavedView>) => {
+    setViews(prev => prev.map(v => (v.id === id ? { ...v, ...patch } : v)));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName?, groupBy?, opts: {
-    sort?: any
-    showAllGroups?: any
-    sortBy?: any
-    zoomLevel?: any
-    collapsedGroups?: any
-    selectedBaseIds?: any
+  const resaveView = useCallback((id: string, filters: Record<string, unknown>, viewName?: string | null, groupBy?: GroupByInput, opts: {
+    sort?: unknown
+    showAllGroups?: unknown
+    sortBy?: unknown
+    zoomLevel?: unknown
+    collapsedGroups?: unknown
+    selectedBaseIds?: unknown
   } = {}) => {
     const { sort, showAllGroups, sortBy, zoomLevel, collapsedGroups, selectedBaseIds } = opts || {};
     setViews(prev => prev.map(v =>
@@ -345,11 +369,11 @@ export function useSavedViews(calendarId) {
     ));
   }, []);
 
-  const deleteView = useCallback((id) => {
+  const deleteView = useCallback((id: string) => {
     setViews(prev => prev.filter(v => v.id !== id));
   }, []);
 
-  const toggleStripVisibility = useCallback((id) => {
+  const toggleStripVisibility = useCallback((id: string) => {
     setViews(prev => prev.map(v =>
       v.id === id ? { ...v, hiddenFromStrip: !v.hiddenFromStrip } : v
     ));

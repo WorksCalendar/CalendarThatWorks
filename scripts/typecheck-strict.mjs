@@ -38,6 +38,10 @@ const MIGRATED_PATHS = [
   'src/hooks/useOwnerConfig.ts',
   'src/hooks/useSourceAggregator.ts',
   'src/hooks/useTouchSwipe.ts',
+  // Stage 3 (Sprint 3)
+  'src/hooks/useDrag.ts',
+  'src/hooks/useSavedViews.ts',
+  'src/hooks/useSourceStore.ts',
 ];
 
 // Implicit-any diagnostic codes. See:

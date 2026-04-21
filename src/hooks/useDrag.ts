@@ -31,23 +31,60 @@ import { getHours, getMinutes, isSameDay } from 'date-fns';
 const SNAP_MIN    = 15;
 const MIN_DRAG_PX = 4;
 
-function snap(m) { return Math.round(m / SNAP_MIN) * SNAP_MIN; }
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+type DragEventItem = any;
+type DragGhost = { ev: DragEventItem | null; start: Date; end: Date } | null;
+type DragMode = 'move' | 'resize' | 'resize-top' | 'create';
+type DragResult =
+  | { type: 'create'; ev: null; newStart: Date; newEnd: Date }
+  | { type: Exclude<DragMode, 'create'>; ev: DragEventItem; newStart: Date; newEnd: Date };
+type DragPointer = {
+  clientX: number;
+  clientY: number;
+  button: number;
+  pointerId: number;
+  preventDefault(): void;
+  stopPropagation(): void;
+};
+type DragGridElement = {
+  getBoundingClientRect(): { top: number; left: number; width: number };
+  setPointerCapture(pointerId: number): void;
+};
+type DragState = {
+  type: DragMode;
+  ev: DragEventItem | null;
+  gridEl: DragGridElement;
+  days: Date[];
+  gutterWidth: number;
+  colWidth: number;
+  startClientY: number;
+  startClientX: number;
+  moved: boolean;
+  offsetY?: number;
+  durationMs?: number;
+  dayIndex?: number;
+  startMin?: number;
+  endMin?: number;
+  anchorMin?: number;
+  anchorDay?: Date;
+};
+
+function snap(m: number) { return Math.round(m / SNAP_MIN) * SNAP_MIN; }
+function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
 /** Build a Date from a day + total minutes-from-midnight. */
-function dateFromDayAndMinutes(day, minutes) {
+function dateFromDayAndMinutes(day: Date, minutes: number): Date {
   const d = new Date(day);
   d.setHours(0, 0, 0, 0);
   d.setMinutes(minutes); // JS auto-overflows into hours
   return d;
 }
 
-export function useDrag({ pxPerHour, dayStart, dayEnd }) {
-  const ghostRef = useRef(null);
-  const [ghost, setDisplayGhost] = useState(null);
-  const s = useRef(null); // mutable drag state
+export function useDrag({ pxPerHour, dayStart, dayEnd }: { pxPerHour: number; dayStart: number; dayEnd: number }) {
+  const ghostRef = useRef<DragGhost>(null);
+  const [ghost, setDisplayGhost] = useState<DragGhost>(null);
+  const s = useRef<DragState | null>(null); // mutable drag state
 
-  function updateGhost(next) {
+  function updateGhost(next: DragGhost): void {
     ghostRef.current = next;
     setDisplayGhost(prev => {
       if (!next && !prev) return prev;
@@ -61,7 +98,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
     });
   }
 
-  function yToMinutes(relY) {
+  function yToMinutes(relY: number): number {
     return clamp(
       snap((relY / pxPerHour) * 60 + dayStart * 60),
       dayStart * 60,
@@ -70,7 +107,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
   }
 
   // ── startMove ─────────────────────────────────────────────────────────────
-  const startMove = useCallback((ev, e, gridEl, days, gutterWidth) => {
+  const startMove = useCallback((ev: DragEventItem, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
     const rect       = gridEl.getBoundingClientRect();
@@ -88,12 +125,12 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
   }, [pxPerHour, dayStart]);
 
   // ── startResize (bottom edge — end time) ──────────────────────────────────
-  const startResize = useCallback((ev, e, gridEl, days, gutterWidth) => {
+  const startResize = useCallback((ev: DragEventItem, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
     const rect     = gridEl.getBoundingClientRect();
     const colWidth = (rect.width - gutterWidth) / days.length;
-    const dayIndex = Math.max(0, days.findIndex(d => isSameDay(d, ev.start)));
+    const dayIndex = Math.max(0, days.findIndex((d: Date) => isSameDay(d, ev.start)));
     s.current = {
       type: 'resize', ev, gridEl, days, gutterWidth, colWidth, dayIndex,
       startMin:     getHours(ev.start) * 60 + getMinutes(ev.start),
@@ -104,12 +141,12 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
   }, []);
 
   // ── startResizeTop (top edge — start time) ────────────────────────────────
-  const startResizeTop = useCallback((ev, e, gridEl, days, gutterWidth) => {
+  const startResizeTop = useCallback((ev: DragEventItem, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
     const rect     = gridEl.getBoundingClientRect();
     const colWidth = (rect.width - gutterWidth) / days.length;
-    const dayIndex = Math.max(0, days.findIndex(d => isSameDay(d, ev.start)));
+    const dayIndex = Math.max(0, days.findIndex((d: Date) => isSameDay(d, ev.start)));
     s.current = {
       type: 'resize-top', ev, gridEl, days, gutterWidth, colWidth, dayIndex,
       endMin:       getHours(ev.end) * 60 + getMinutes(ev.end),
@@ -120,7 +157,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
   }, []);
 
   // ── startCreate (pointer-down on empty grid area) ─────────────────────────
-  const startCreate = useCallback((e, gridEl, days, gutterWidth) => {
+  const startCreate = useCallback((e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
     if (e.button !== 0) return;
     const rect     = gridEl.getBoundingClientRect();
     const colWidth = (rect.width - gutterWidth) / days.length;
@@ -141,7 +178,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
   }, [pxPerHour, dayStart, dayEnd]);
 
   // ── onPointerMove ─────────────────────────────────────────────────────────
-  const onPointerMove = useCallback((e) => {
+  const onPointerMove = useCallback((e: DragPointer) => {
     if (!s.current) return;
 
     const dx = Math.abs(e.clientX - s.current.startClientX);
@@ -164,28 +201,28 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
 
     } else if (type === 'resize') {
       const snappedEnd = yToMinutes(relY);
-      const clamped    = Math.max(s.current.startMin + SNAP_MIN, snappedEnd);
-      const newEnd     = dateFromDayAndMinutes(days[s.current.dayIndex], clamped);
+      const clamped    = Math.max((s.current.startMin ?? 0) + SNAP_MIN, snappedEnd);
+      const newEnd     = dateFromDayAndMinutes(days[s.current.dayIndex ?? 0], clamped);
       updateGhost({ ev, start: ev.start, end: newEnd });
 
     } else if (type === 'resize-top') {
       const snappedStart = yToMinutes(relY);
-      const clamped      = Math.min(s.current.endMin - SNAP_MIN, snappedStart);
-      const newStart     = dateFromDayAndMinutes(days[s.current.dayIndex], clamped);
+      const clamped      = Math.min((s.current.endMin ?? dayEnd * 60) - SNAP_MIN, snappedStart);
+      const newStart     = dateFromDayAndMinutes(days[s.current.dayIndex ?? 0], clamped);
       updateGhost({ ev, start: newStart, end: ev.end });
 
     } else if (type === 'create') {
       const currentMin = yToMinutes(relY);
-      const rawStart   = Math.min(s.current.anchorMin, currentMin);
-      const rawEnd     = Math.max(s.current.anchorMin + SNAP_MIN, currentMin);
-      const newStart   = dateFromDayAndMinutes(s.current.anchorDay, rawStart);
-      const newEnd     = dateFromDayAndMinutes(s.current.anchorDay, rawEnd);
+      const rawStart   = Math.min(s.current.anchorMin ?? currentMin, currentMin);
+      const rawEnd     = Math.max((s.current.anchorMin ?? currentMin) + SNAP_MIN, currentMin);
+      const newStart   = dateFromDayAndMinutes(s.current.anchorDay ?? days[0], rawStart);
+      const newEnd     = dateFromDayAndMinutes(s.current.anchorDay ?? days[0], rawEnd);
       updateGhost({ ev: null, start: newStart, end: newEnd });
     }
   }, [pxPerHour, dayStart, dayEnd]);
 
   // ── onPointerUp ───────────────────────────────────────────────────────────
-  const onPointerUp = useCallback(() => {
+  const onPointerUp = useCallback((): DragResult | null => {
     const drag       = s.current;
     const finalGhost = ghostRef.current;
     s.current        = null;
@@ -198,6 +235,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
       return { type: 'create', ev: null, newStart: finalGhost.start, newEnd: finalGhost.end };
     }
 
+    if (!drag.ev) return null;
     const startMoved = finalGhost.start.getTime() !== drag.ev.start.getTime();
     const endMoved   = finalGhost.end.getTime()   !== drag.ev.end.getTime();
     if (!startMoved && !endMoved) return null;
