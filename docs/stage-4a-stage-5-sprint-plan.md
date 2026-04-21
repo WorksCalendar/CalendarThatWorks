@@ -71,7 +71,7 @@ without the ratchet update is tracked as **Partially complete**.
 - UI data shapes
 - Loose but intentional boundary types
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Added shared UI boundary types in `src/types/ui.ts`:
@@ -81,9 +81,6 @@ without the ratchet update is tracked as **Partially complete**.
   - Shared event/update handler aliases (`UpdateConfig`, `InputChangeHandler`, `ToggleHandler`)
 - Switched `ConfigPanel` from file-level props `: any` to `ConfigPanelProps`.
 - Re-exported shared UI types from `src/index.ts` for downstream consumers.
-
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
 
 ### PR 3 — ConfigPanel Seam
 - Create `ConfigPanelProps`
