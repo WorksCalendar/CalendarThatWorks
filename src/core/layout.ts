@@ -10,7 +10,7 @@ type LayoutEvent = {
   start: Date;
   end: Date;
   allDay?: boolean;
-  [k: string]: unknown;
+  [k: string]: any;
 };
 
 // ─── Timed event overlap layout (week / day view) ──────────────────────────
@@ -21,9 +21,9 @@ type LayoutEvent = {
  * @param {LayoutEvent[]} events
  * @returns {Array<LayoutEvent & { _col: number; _numCols: number }>}
  */
-export function layoutOverlaps(
-  events: LayoutEvent[],
-): Array<LayoutEvent & { _col: number; _numCols: number }> {
+export function layoutOverlaps<T extends LayoutEvent>(
+  events: T[],
+): Array<T & { _col: number; _numCols: number }> {
   if (!events.length) return [];
 
   // Sort by start time, then longer events first for visual stability
@@ -83,8 +83,8 @@ export function displayEndDay(ev: LayoutEvent): Date {
  *   continuesAfter: boolean;
  * }>}
  */
-export type LayoutSpanItem = {
-  ev: LayoutEvent;
+export type LayoutSpanItem<T extends LayoutEvent = LayoutEvent> = {
+  ev: T;
   evStartDay: Date;
   evEndDay: Date;
   startCol: number;
@@ -94,11 +94,11 @@ export type LayoutSpanItem = {
   lane: number;
 };
 
-export function layoutSpans(
-  events: LayoutEvent[],
+export function layoutSpans<T extends LayoutEvent>(
+  events: T[],
   weekStart: Date,
   weekEnd: Date,
-): LayoutSpanItem[] {
+): LayoutSpanItem<T>[] {
   const items = events
     .map(ev => {
       const evStartDay = startOfDay(ev.start);

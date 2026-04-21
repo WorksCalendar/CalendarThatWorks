@@ -72,7 +72,7 @@ export const SCHEDULE_WORKFLOW_CATEGORIES = Object.freeze(new Set([
   'pto', 'PTO', 'availability', 'Availability', 'unavailable', 'Unavailable',
 ]));
 
-const SCHEDULE_WORKFLOW_KINDS = new Set([
+const SCHEDULE_WORKFLOW_KINDS = new Set<string>([
   SCHEDULE_KINDS.SHIFT, SCHEDULE_KINDS.ON_CALL,
   SCHEDULE_KINDS.OPEN_SHIFT, SCHEDULE_KINDS.COVERING,
 ]);

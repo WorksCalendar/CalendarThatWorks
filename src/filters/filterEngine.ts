@@ -26,12 +26,12 @@ import { isEmptyFilterValue }    from './filterState';
 type FilterItem = Record<string, any>;
 type FilterState = Record<string, any>;
 
-export function applyFilters(
-  items: FilterItem[],
+export function applyFilters<T extends FilterItem = FilterItem>(
+  items: T[],
   filters: FilterState = {},
   schema: any[] = DEFAULT_FILTER_SCHEMA,
-): FilterItem[] {
-  return items.filter((item: FilterItem) =>
+): T[] {
+  return items.filter((item: T) =>
     schema.every(field => {
       const value = filters[field.key];
       if (isEmptyFilterValue(value)) return true;

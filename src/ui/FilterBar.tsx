@@ -306,7 +306,7 @@ export default function FilterBar({
             const schemaField = schema.find(f => f.key === pill.key);
             return (
               <span key={`${pill.key}-${i}`} className={styles.activePill}>
-                {pill.fieldLabel}: {pill.displayValue ?? pill.value}
+                {pill.fieldLabel}: {pill.displayValue ?? String(pill.value)}
                 <button
                   className={styles.pillRemove}
                   onClick={() => {

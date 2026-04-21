@@ -34,7 +34,7 @@ describe('isEmptyFilterValue', () => {
 describe('clearFilterValue', () => {
   it('multi-select → empty Set', () => {
     expect(clearFilterValue({ type: 'multi-select' })).toBeInstanceOf(Set);
-    expect(clearFilterValue({ type: 'multi-select' }).size).toBe(0);
+    expect((clearFilterValue({ type: 'multi-select' }) as Set<unknown>).size).toBe(0);
   });
 
   it('text → empty string', () => {

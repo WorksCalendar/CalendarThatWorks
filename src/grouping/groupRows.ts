@@ -1,7 +1,7 @@
 const UNGROUPED = '(Ungrouped)';
 
-type Accessor = (item: unknown) => unknown;
-type Row = Record<string, unknown>;
+type Accessor = (item: any) => any;
+type Row = Record<string, any>;
 
 function bucketize(items: Row[], accessor: Accessor): { map: Map<string, Row[]>; order: string[] } {
   const map = new Map<string, Row[]>();

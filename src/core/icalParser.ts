@@ -294,7 +294,7 @@ function isDateOnly(props: ICSProps, key: string): boolean {
  * @param {Date}   [options.rangeEnd]   - End of expansion window   (default: 2 years from now)
  * @returns {import('../index.d.ts').WorksCalendarEvent[]}
  */
-export function parseICS(text: string, options: { rangeStart?: Date; rangeEnd?: Date } = {}): Record<string, unknown>[] {
+export function parseICS(text: string, options: { rangeStart?: Date; rangeEnd?: Date } = {}): Record<string, any>[] {
   const today = new Date();
   const rangeStart = options.rangeStart ?? new Date(today.getFullYear() - 1, 0, 1);
   const rangeEnd   = options.rangeEnd   ?? new Date(today.getFullYear() + 2, 11, 31);
@@ -302,7 +302,7 @@ export function parseICS(text: string, options: { rangeStart?: Date; rangeEnd?: 
   const unfolded = unfold(text);
   const lines    = unfolded.split(/\r?\n/).filter(l => l.trim());
 
-  const events: Record<string, unknown>[] = [];
+  const events: Record<string, any>[] = [];
   let inEvent   = false;
   let evLines: string[] = [];
 
@@ -325,7 +325,7 @@ function parseVEvent(
   lines: string[],
   rangeStart: Date,
   rangeEnd: Date,
-): Record<string, unknown>[] | null {
+): Record<string, any>[] | null {
   const props = parseBlock(lines);
 
   const uid        = val(props, 'UID') || `ical-${Math.random().toString(36).slice(2)}`;

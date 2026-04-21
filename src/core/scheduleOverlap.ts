@@ -127,7 +127,7 @@ export function buildOpenShiftEvent({
   shiftEvent: OverlapEventLike;
   reason: string;
   openShiftCategory?: string;
-}): Record<string, unknown> {
+}): Record<string, any> {
   const sourceShiftId = String(shiftEvent._eventId ?? shiftEvent.id ?? 'shift');
   const id = createId(`open-${sourceShiftId}`);
   return {

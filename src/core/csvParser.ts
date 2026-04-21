@@ -255,7 +255,7 @@ function _parseDMY(v: string): Date {
 
 const PRESETS_KEY = 'wc-csv-presets';
 
-type Preset = { id: string; [key: string]: unknown };
+type Preset = { id: string; [key: string]: any };
 
 export function loadPresets(): Preset[] {
   try {

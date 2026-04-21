@@ -72,7 +72,7 @@ export function buildOpenShiftPatch(
   existingOpenShift: ShiftEventLike,
   shiftEvent: ShiftEventLike,
   reason: string,
-): Record<string, unknown> {
+): Record<string, any> {
   const shiftId = resolveEventId(shiftEvent);
   return {
     title: `Open: ${shiftEvent?.title ?? 'Shift'}`,

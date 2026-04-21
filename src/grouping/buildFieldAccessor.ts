@@ -29,6 +29,9 @@ function buildSingleAccessor(fieldName: string, mode: string): FieldAccessor {
  *   "role"                 → single accessor fn
  *   ["role", "shift"]      → array of accessor fns (one per grouping level)
  */
+export function buildFieldAccessor(fieldName: string, mode: string): FieldAccessor;
+export function buildFieldAccessor(fieldName: string[], mode: string): FieldAccessor[];
+export function buildFieldAccessor(fieldName: string | string[], mode: string): FieldAccessor | FieldAccessor[];
 export function buildFieldAccessor(fieldName: string | string[], mode: string): FieldAccessor | FieldAccessor[] {
   if (Array.isArray(fieldName)) {
     return fieldName.map(f => buildSingleAccessor(f, mode));

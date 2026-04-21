@@ -29,7 +29,7 @@ export const DEFAULT_CUSTOM_THEME = {
   },
 };
 
-type ThemeObject = Record<string, unknown>;
+type ThemeObject = Record<string, any>;
 
 export function mergeTheme(base: ThemeObject, patch: ThemeObject | null | undefined): ThemeObject {
   const next: ThemeObject = { ...base };
