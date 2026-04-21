@@ -70,13 +70,15 @@ export type {
   Workflow, WorkflowNode, WorkflowEdge, WorkflowInstance, WorkflowInstanceStatus,
   WorkflowHistoryEntry, WorkflowOutcome, WorkflowTrigger, EdgeGuard,
   WorkflowConditionNode, WorkflowApprovalNode, WorkflowNotifyNode, WorkflowTerminalNode,
+  WorkflowParallelNode, WorkflowJoinNode, ParallelMode,
+  ParallelBranchState, WorkflowParallelFrame,
   TimeoutBehavior,
 } from './core/workflow/workflowSchema';
 export { findNode as findWorkflowNode, resolveNextEdge as resolveWorkflowEdge } from './core/workflow/workflowSchema';
 export {
   WORKFLOW_TEMPLATES,
   singleApproverWorkflow, twoTierApproverWorkflow, conditionalByCostWorkflow,
-  slaEscalationWorkflow,
+  slaEscalationWorkflow, parallelSecurityAndFinanceApproval,
 } from './core/workflow/templates';
 
 // ── Booking holds (#211) ────────────────────────────────────────────────────

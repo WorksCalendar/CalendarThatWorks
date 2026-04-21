@@ -41,6 +41,7 @@ import type {
   WorkflowLayout,
   WorkflowNode,
 } from '../core/workflow/workflowSchema'
+import { NODE_HEIGHT } from '../core/workflow/layout'
 import { WorkflowCanvas } from './WorkflowCanvas'
 import { WorkflowNodeInspector } from './WorkflowNodeInspector'
 import { WorkflowEdgeGuardPicker } from './WorkflowEdgeGuardPicker'
@@ -104,6 +105,10 @@ export function WorkflowBuilderModal(
   const selectedNode: WorkflowNode | undefined = selectedNodeId
     ? draftWorkflow.nodes.find(n => n.id === selectedNodeId)
     : undefined
+  const parallelNodeIds = useMemo(
+    () => draftWorkflow.nodes.filter(n => n.type === 'parallel').map(n => n.id),
+    [draftWorkflow.nodes],
+  )
 
   // ─── Snapshot helper: cleared on non-delete mutations ────────────────────
   const clearUndo = useCallback(() => setUndoSnap(null), [])
@@ -166,6 +171,27 @@ export function WorkflowBuilderModal(
     setDraftLayout(undoSnap.layout)
     setUndoSnap(null)
   }, [undoSnap])
+
+  const handleAddNode = useCallback(
+    (type: WorkflowNode['type']) => {
+      const id = nextNodeId(draftWorkflow, type)
+      const node = seedNode(id, type)
+      // Drop the new node just below the lowest existing row so it's
+      // visible without overlapping. If the layout is empty, use (0, 0).
+      const existing = Object.values(draftLayout.positions)
+      const maxY = existing.reduce((m, p) => Math.max(m, p.y), -NODE_HEIGHT)
+      const pos = { x: 0, y: maxY + NODE_HEIGHT + 24 }
+      setDraftWorkflow(prev => ({ ...prev, nodes: [...prev.nodes, node] }))
+      setDraftLayout(prev => ({
+        ...prev,
+        positions: { ...prev.positions, [id]: pos },
+      }))
+      setSelectedNodeId(id)
+      setSidePane('inspector')
+      clearUndo()
+    },
+    [draftWorkflow, draftLayout, clearUndo],
+  )
 
   // ─── Edge creation → guard picker → commit ───────────────────────────────
 
@@ -259,6 +285,20 @@ export function WorkflowBuilderModal(
 
         <div className={styles.body}>
           <div className={styles.canvasPane}>
+            <div className={styles.palette} role="toolbar" aria-label="Add node">
+              <span className={styles.paletteLabel}>Add node</span>
+              {NODE_PALETTE.map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  className={styles.paletteButton}
+                  data-testid={`wb-add-${type}`}
+                  onClick={() => handleAddNode(type)}
+                >
+                  + {type}
+                </button>
+              ))}
+            </div>
             <WorkflowCanvas
               workflow={draftWorkflow}
               layout={draftLayout}
@@ -311,6 +351,7 @@ export function WorkflowBuilderModal(
                   <WorkflowNodeInspector
                     node={selectedNode}
                     onChange={handleNodeChange}
+                    parallelNodeIds={parallelNodeIds}
                   />
                 )
                 : (
@@ -388,4 +429,50 @@ function groupIssuesByNode(
     acc[i.nodeId].push(i)
   }
   return acc
+}
+
+// ─── Palette helpers ─────────────────────────────────────────────────────
+
+const NODE_PALETTE: readonly WorkflowNode['type'][] = [
+  'approval',
+  'condition',
+  'notify',
+  'parallel',
+  'join',
+  'terminal',
+]
+
+/**
+ * Mint a fresh node id that doesn't collide with existing nodes.
+ * Format: `<type>-<n>` with `n` bumped until unique. Kept simple so
+ * authors can immediately see which kind of node they just added.
+ */
+function nextNodeId(
+  workflow: Workflow,
+  type: WorkflowNode['type'],
+): string {
+  const taken = new Set(workflow.nodes.map(n => n.id))
+  for (let i = 1; i < 1_000; i++) {
+    const candidate = `${type}-${i}`
+    if (!taken.has(candidate)) return candidate
+  }
+  // Unreachable for any realistic workflow; keep TS happy.
+  return `${type}-${workflow.nodes.length + 1}`
+}
+
+function seedNode(id: string, type: WorkflowNode['type']): WorkflowNode {
+  switch (type) {
+    case 'approval':
+      return { id, type, assignTo: 'role:approver' }
+    case 'condition':
+      return { id, type, expr: 'true' }
+    case 'notify':
+      return { id, type, channel: 'slack' }
+    case 'parallel':
+      return { id, type, branches: [], mode: 'requireAll' }
+    case 'join':
+      return { id, type, pairedWith: '' }
+    case 'terminal':
+      return { id, type, outcome: 'finalized' }
+  }
 }

@@ -39,6 +39,10 @@ export type ValidationCode =
   | 'template-syntax'
   | 'unknown-channel'
   | 'empty-channel'
+  | 'parallel-join-unpaired'
+  | 'parallel-branches-rejoin'
+  | 'parallel-require-n-bounds'
+  | 'parallel-branches-empty'
 
 export interface ValidationIssue {
   readonly code: ValidationCode
@@ -131,9 +135,12 @@ export function validateWorkflow(
     }
   }
 
-  // 6. sink safety — non-terminal node with no outgoing edges
+  // 6. sink safety — non-terminal node with no outgoing edges.
+  //    Parallels are exempt: they fan out via the `branches` array,
+  //    not via edges, so "no outgoing edge" is the expected shape.
   for (const node of workflow.nodes) {
     if (node.type === 'terminal') continue
+    if (node.type === 'parallel') continue
     const hasOut = workflow.edges.some(e => e.from === node.id)
     if (!hasOut) {
       issues.push({
@@ -262,7 +269,98 @@ export function validateWorkflow(
     }
   }
 
-  // 14. notify templates + channels (issue #223)
+  // 14. parallel / join pairing, branch bounds, rejoin reachability (issue #223)
+  const parallels = workflow.nodes.filter(
+    (n): n is Extract<WorkflowNode, { type: 'parallel' }> => n.type === 'parallel',
+  )
+  const joins = workflow.nodes.filter(
+    (n): n is Extract<WorkflowNode, { type: 'join' }> => n.type === 'join',
+  )
+
+  for (const par of parallels) {
+    const paired = joins.filter(j => j.pairedWith === par.id)
+    if (paired.length === 0) {
+      issues.push({
+        code: 'parallel-join-unpaired',
+        severity: 'error',
+        message: `Parallel "${par.id}" has no paired join (need a join with pairedWith="${par.id}")`,
+        nodeId: par.id,
+      })
+    } else if (paired.length > 1) {
+      issues.push({
+        code: 'parallel-join-unpaired',
+        severity: 'error',
+        message: `Parallel "${par.id}" is paired with ${paired.length} joins (need exactly one)`,
+        nodeId: par.id,
+      })
+    }
+
+    if (par.branches.length === 0) {
+      issues.push({
+        code: 'parallel-branches-empty',
+        severity: 'error',
+        message: `Parallel "${par.id}" declares no branches`,
+        nodeId: par.id,
+      })
+    } else {
+      for (const entryId of par.branches) {
+        if (!findNode(workflow, entryId)) {
+          issues.push({
+            code: 'parallel-branches-rejoin',
+            severity: 'error',
+            message: `Parallel "${par.id}" branch entry "${entryId}" is not a node`,
+            nodeId: par.id,
+          })
+        }
+      }
+    }
+
+    if (par.mode === 'requireN') {
+      const n = par.n
+      if (typeof n !== 'number' || n < 1 || n > par.branches.length) {
+        issues.push({
+          code: 'parallel-require-n-bounds',
+          severity: 'error',
+          message: `Parallel "${par.id}" mode 'requireN' needs 1 ≤ n ≤ ${par.branches.length}; got ${String(n)}`,
+          nodeId: par.id,
+        })
+      }
+    }
+
+    // Every branch must eventually reach the paired join (not a
+    // terminal or dead end). Use forward BFS along outgoing edges from
+    // each branch entry, stopping at the join. Treat nested parallels
+    // as opaque — they're already flagged as unsupported elsewhere.
+    const pairedJoin = paired[0]
+    if (pairedJoin) {
+      const targetJoinId = pairedJoin.id
+      for (const entryId of par.branches) {
+        if (!findNode(workflow, entryId)) continue
+        if (!branchReachesJoin(workflow, entryId, targetJoinId)) {
+          issues.push({
+            code: 'parallel-branches-rejoin',
+            severity: 'error',
+            message: `Parallel "${par.id}" branch "${entryId}" does not rejoin at "${targetJoinId}"`,
+            nodeId: par.id,
+          })
+        }
+      }
+    }
+  }
+
+  for (const j of joins) {
+    const paired = parallels.find(p => p.id === j.pairedWith)
+    if (!paired) {
+      issues.push({
+        code: 'parallel-join-unpaired',
+        severity: 'error',
+        message: `Join "${j.id}" references missing parallel "${j.pairedWith}"`,
+        nodeId: j.id,
+      })
+    }
+  }
+
+  // 15. notify templates + channels (issue #223)
   for (const node of workflow.nodes) {
     if (node.type !== 'notify') continue
 
@@ -339,19 +437,55 @@ function reachableNodeIds(workflow: Workflow): Set<string> {
   return reachable
 }
 
+/**
+ * Forward reachability check: from `entryId` can we reach `joinId`
+ * without passing through a terminal? Used to gate
+ * `parallel-branches-rejoin`. Limits depth to the node count so cycles
+ * don't hang the validator.
+ */
+function branchReachesJoin(
+  workflow: Workflow,
+  entryId: string,
+  joinId: string,
+): boolean {
+  const visited = new Set<string>()
+  const queue: string[] = [entryId]
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (visited.has(id)) continue
+    visited.add(id)
+    if (id === joinId) return true
+    const node = findNode(workflow, id)
+    // Terminals and nested parallels are dead ends for rejoin purposes.
+    if (!node || node.type === 'terminal') continue
+    for (const e of workflow.edges) {
+      if (e.from !== id) continue
+      if (!visited.has(e.to)) queue.push(e.to)
+    }
+  }
+  return false
+}
+
 function isGuardLegal(node: WorkflowNode, guard: EdgeGuard): boolean {
   switch (node.type) {
     case 'condition': return guard === 'true' || guard === 'false'
     case 'approval':
       if (guard === 'approved' || guard === 'denied') return true
+      if (guard === 'branch-completed') return true
       // `timeout` is only legal when the approval declares an SLA —
       // without one, the interpreter can never fire a timeout from
       // this node, so the edge would be dead code.
       return guard === 'timeout'
         && typeof node.slaMinutes === 'number'
         && node.slaMinutes > 0
-    case 'notify':    return guard === 'default'
+    case 'notify':    return guard === 'default' || guard === 'branch-completed'
     case 'terminal':  return false
+    // `parallel` only branches via `branches: string[]`; outgoing edges
+    // if any are treated as post-join fallbacks, which isn't how the
+    // schema is meant to be used. Enforce default-only here; branches
+    // are authored inside the node, not via edges.
+    case 'parallel':  return guard === 'default'
+    case 'join':      return guard === 'default'
   }
 }
 

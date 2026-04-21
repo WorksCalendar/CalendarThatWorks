@@ -11,6 +11,7 @@ import {
   twoTierApproverWorkflow,
   conditionalByCostWorkflow,
   slaEscalationWorkflow,
+  parallelSecurityAndFinanceApproval,
   WORKFLOW_TEMPLATES,
 } from '../templates'
 
@@ -182,6 +183,51 @@ describe('slaEscalationWorkflow', () => {
   })
 })
 
+describe('parallelSecurityAndFinanceApproval', () => {
+  it('fans out to two approvals and finalizes when both approve', () => {
+    const s = advance({ workflow: parallelSecurityAndFinanceApproval, instance: null, action: { type: 'start' }, at: AT })
+    expect(s.ok).toBe(true)
+    if (!s.ok) return
+    expect(s.instance.status).toBe('awaiting')
+    expect(s.instance.parallelFrames?.[0].branches.map(b => b.activeNodeId))
+      .toEqual(['security-approval', 'finance-approval'])
+
+    const s2 = advance({
+      workflow: parallelSecurityAndFinanceApproval,
+      instance: s.instance,
+      action: { type: 'approve', targetNodeId: 'security-approval', actor: 'sec' },
+      at: AT,
+    })
+    if (!s2.ok) throw new Error('security approve')
+    expect(s2.instance.status).toBe('awaiting')
+
+    const final = advance({
+      workflow: parallelSecurityAndFinanceApproval,
+      instance: s2.instance,
+      action: { type: 'approve', targetNodeId: 'finance-approval', actor: 'fin' },
+      at: AT,
+    })
+    expect(final.ok).toBe(true)
+    if (!final.ok) return
+    expect(final.instance.outcome).toBe('finalized')
+    expect(final.emit.map(e => e.type)).toContain('notify')
+  })
+
+  it('fails when a branch denies (requireAll)', () => {
+    const s = advance({ workflow: parallelSecurityAndFinanceApproval, instance: null, action: { type: 'start' }, at: AT })
+    if (!s.ok) throw new Error('start')
+    const r = advance({
+      workflow: parallelSecurityAndFinanceApproval,
+      instance: s.instance,
+      action: { type: 'deny', targetNodeId: 'security-approval', reason: 'policy' },
+      at: AT,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+  })
+})
+
 describe('WORKFLOW_TEMPLATES registry', () => {
   it('includes all shipped templates in the expected order', () => {
     expect(WORKFLOW_TEMPLATES).toEqual([
@@ -189,6 +235,7 @@ describe('WORKFLOW_TEMPLATES registry', () => {
       twoTierApproverWorkflow,
       conditionalByCostWorkflow,
       slaEscalationWorkflow,
+      parallelSecurityAndFinanceApproval,
     ])
   })
 

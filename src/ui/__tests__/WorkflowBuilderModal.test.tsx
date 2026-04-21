@@ -189,6 +189,43 @@ describe('WorkflowBuilderModal — edge creation → guard picker', () => {
   })
 })
 
+describe('WorkflowBuilderModal — add node palette', () => {
+  it('renders a button for every node type', () => {
+    renderModal()
+    for (const t of ['approval', 'condition', 'notify', 'parallel', 'join', 'terminal']) {
+      expect(screen.getByTestId(`wb-add-${t}`)).toBeInTheDocument()
+    }
+  })
+
+  it('clicking + parallel adds a parallel node and selects it', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-parallel'))
+    const added = document.querySelector('[data-node-id="parallel-1"]')
+    expect(added).toBeInTheDocument()
+    expect(added?.className).toMatch(/nodeKindParallel/)
+    // Inspector shows the parallel form (mode dropdown).
+    expect(screen.getByLabelText(/mode/i)).toBeInTheDocument()
+  })
+
+  it('clicking + join adds a join node and the paired-parallel dropdown lists existing parallels', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-parallel'))
+    fireEvent.click(screen.getByTestId('wb-add-join'))
+    const select = screen.getByLabelText(/paired parallel/i) as HTMLSelectElement
+    expect(select.tagName).toBe('SELECT')
+    const ids = [...select.options].map(o => o.value)
+    expect(ids).toContain('parallel-1')
+  })
+
+  it('id minting avoids colliding with existing ids', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-approval'))
+    fireEvent.click(screen.getByTestId('wb-add-approval'))
+    expect(document.querySelector('[data-node-id="approval-1"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-node-id="approval-2"]')).toBeInTheDocument()
+  })
+})
+
 describe('WorkflowBuilderModal — delete + undo', () => {
   it('Delete removes the node; Undo restores it exactly', () => {
     const { onSave } = renderModal(conditionalByCostWorkflow)
