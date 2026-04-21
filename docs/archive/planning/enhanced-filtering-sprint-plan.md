@@ -2,7 +2,7 @@
 
 ## Context
 
-WorksCalendar already has a solid schema-driven filtering system (filterSchema.ts, filterEngine.js, filterState.js, FilterBar.jsx, AdvancedFilterBuilder.jsx, useSavedViews.js). A prior viability analysis (docs/INFINITE_GROUPING_VIABILITY_ANALYSIS.md) recommended **Option B: Enhanced Filtering** as the safest, highest-value next step -- building on the existing solid infrastructure rather than attempting risky grouping work.
+WorksCalendar already has a solid schema-driven filtering system (filterSchema.ts, filterEngine.js, filterState.js, FilterBar.jsx, AdvancedFilterBuilder.jsx, useSavedViews.js). A prior viability analysis (../analysis/INFINITE_GROUPING_VIABILITY_ANALYSIS.md) recommended **Option B: Enhanced Filtering** as the safest, highest-value next step -- building on the existing solid infrastructure rather than attempting risky grouping work.
 
 **Problem**: The filtering system has key gaps that limit power-user workflows:
 - AdvancedFilterBuilder is hard-coded to 3 fields (Category, Person, Title) instead of being schema-driven
