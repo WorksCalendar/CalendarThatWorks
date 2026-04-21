@@ -189,6 +189,105 @@ describe('WorkflowBuilderModal — edge creation → guard picker', () => {
   })
 })
 
+describe('WorkflowBuilderModal — add node palette', () => {
+  it('renders a button for every node type', () => {
+    renderModal()
+    for (const t of ['approval', 'condition', 'notify', 'parallel', 'join', 'terminal']) {
+      expect(screen.getByTestId(`wb-add-${t}`)).toBeInTheDocument()
+    }
+  })
+
+  it('clicking + parallel adds a parallel node and selects it', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-parallel'))
+    const added = document.querySelector('[data-node-id="parallel-1"]')
+    expect(added).toBeInTheDocument()
+    expect(added?.className).toMatch(/nodeKindParallel/)
+    // Inspector shows the parallel form (mode dropdown).
+    expect(screen.getByLabelText(/mode/i)).toBeInTheDocument()
+  })
+
+  it('clicking + join adds a join node and the paired-parallel dropdown lists existing parallels', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-parallel'))
+    fireEvent.click(screen.getByTestId('wb-add-join'))
+    const select = screen.getByLabelText(/paired parallel/i) as HTMLSelectElement
+    expect(select.tagName).toBe('SELECT')
+    const ids = [...select.options].map(o => o.value)
+    expect(ids).toContain('parallel-1')
+  })
+
+  it('id minting avoids colliding with existing ids', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-approval'))
+    fireEvent.click(screen.getByTestId('wb-add-approval'))
+    expect(document.querySelector('[data-node-id="approval-1"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-node-id="approval-2"]')).toBeInTheDocument()
+  })
+
+  // Regression: drawing an edge from a parallel source must persist
+  // the target into the source's `branches` array — the runtime's
+  // `enterParallel` reads only `branches` and ignores outgoing edges,
+  // so a normal-edge append would leave the parallel stuck on
+  // `parallel-branches-empty` even after the user "wired" it.
+  it('drawing an edge from a parallel source persists the target into node.branches (no edge appended, no picker)', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-parallel'))
+    // Select the new parallel so the inspector renders its branches list.
+    fireEvent.pointerDown(
+      document.querySelector('[data-node-id="parallel-1"]')!,
+      { pointerId: 0, clientX: 0, clientY: 0 },
+    )
+    expect(screen.getByTestId('wc-parallel-branches').textContent ?? '').not.toContain('done')
+    // Source = the new parallel, Target = the existing 'done' terminal.
+    fireEvent.pointerDown(
+      document.querySelector('[data-handle-for="parallel-1"]')!,
+      { pointerId: 1 },
+    )
+    fireEvent.pointerDown(
+      document.querySelector('[data-node-id="done"]')!,
+      { pointerId: 2, clientX: 0, clientY: 0 },
+    )
+    // No picker should appear — parallel has no edge guards to choose.
+    expect(screen.queryByTestId('workflow-edge-guard-picker')).toBeNull()
+    // Re-select the parallel and verify the inspector now lists 'done'
+    // in its branches panel — i.e. the target was persisted into
+    // node.branches, not appended as a dead outgoing edge.
+    fireEvent.pointerDown(
+      document.querySelector('[data-node-id="parallel-1"]')!,
+      { pointerId: 3, clientX: 0, clientY: 0 },
+    )
+    expect(screen.getByTestId('wc-parallel-branches').textContent).toContain('done')
+    // And the canvas has NOT drawn a parallel→done edge path.
+    expect(
+      document.querySelector('[data-edge-from="parallel-1"][data-edge-to="done"]'),
+    ).toBeNull()
+  })
+
+  it('redrawing the same parallel→target edge does not duplicate the branch entry', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('wb-add-parallel'))
+    for (let i = 0; i < 2; i++) {
+      fireEvent.pointerDown(
+        document.querySelector('[data-handle-for="parallel-1"]')!,
+        { pointerId: 1 },
+      )
+      fireEvent.pointerDown(
+        document.querySelector('[data-node-id="done"]')!,
+        { pointerId: 2, clientX: 0, clientY: 0 },
+      )
+    }
+    fireEvent.pointerDown(
+      document.querySelector('[data-node-id="parallel-1"]')!,
+      { pointerId: 3, clientX: 0, clientY: 0 },
+    )
+    const branches = screen.getByTestId('wc-parallel-branches')
+    const entries = branches.querySelectorAll('li')
+    const doneCount = [...entries].filter(li => (li.textContent ?? '').includes('done')).length
+    expect(doneCount).toBe(1)
+  })
+})
+
 describe('WorkflowBuilderModal — delete + undo', () => {
   it('Delete removes the node; Undo restores it exactly', () => {
     const { onSave } = renderModal(conditionalByCostWorkflow)

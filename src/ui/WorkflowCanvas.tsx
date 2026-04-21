@@ -76,6 +76,8 @@ function displayLabel(node: WorkflowNode): string {
     case 'condition': return node.expr
     case 'notify':    return node.channel
     case 'terminal':  return node.outcome
+    case 'parallel':  return `parallel (${node.mode}${node.n !== undefined ? `, n=${node.n}` : ''})`
+    case 'join':      return `join → ${node.pairedWith}`
   }
 }
 
@@ -386,6 +388,8 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
             node.type === 'approval'  ? styles.nodeKindApproval  :
             node.type === 'condition' ? styles.nodeKindCondition :
             node.type === 'notify'    ? styles.nodeKindNotify    :
+            node.type === 'parallel'  ? styles.nodeKindParallel  :
+            node.type === 'join'      ? styles.nodeKindJoin      :
                                         styles.nodeKindTerminal
           const classes = [
             styles.node,

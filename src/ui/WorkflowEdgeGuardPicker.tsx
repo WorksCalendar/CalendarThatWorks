@@ -6,8 +6,13 @@
  * Options are filtered to just those the source node can legally emit:
  *
  *   - `condition`  → true / false / default
- *   - `approval`   → approved / denied / default (+ `timeout` when slaMinutes set)
- *   - `notify`     → default
+ *   - `approval`   → approved / denied / branch-completed / default
+ *                     (+ `timeout` when slaMinutes set)
+ *   - `notify`     → default (notify nodes always exit on the default
+ *                     edge; `branch-completed` only resolves for
+ *                     approved/denied/timeout signals at runtime)
+ *   - `parallel`   → default (fan-out is authored via `branches`, not edges)
+ *   - `join`       → default (joins always continue along the single post-join edge)
  *   - `terminal`   → (no outgoing edges; picker should not be invoked)
  *
  * Dismissal: Escape or click-outside calls `onCancel`. Picking an
@@ -43,6 +48,7 @@ const GUARD_LABELS: Readonly<Record<EdgeGuard, string>> = {
   'approved': 'approved',
   'denied': 'denied',
   'timeout': 'timeout (SLA)',
+  'branch-completed': 'branch-completed',
   'default': 'default (fallback)',
 }
 
@@ -60,9 +66,11 @@ export function guardsForSource(
     case 'condition': return ['true', 'false', 'default']
     case 'approval':
       return options?.hasSla
-        ? ['approved', 'denied', 'timeout', 'default']
-        : ['approved', 'denied', 'default']
+        ? ['approved', 'denied', 'timeout', 'branch-completed', 'default']
+        : ['approved', 'denied', 'branch-completed', 'default']
     case 'notify':    return ['default']
+    case 'parallel':  return ['default']
+    case 'join':      return ['default']
     case 'terminal':  return []
   }
 }

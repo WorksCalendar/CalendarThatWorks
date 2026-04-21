@@ -13,12 +13,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { validateExpressionSyntax } from '../core/workflow/validate'
 import type {
+  ParallelMode,
   TimeoutBehavior,
   WorkflowApprovalNode,
   WorkflowConditionNode,
+  WorkflowJoinNode,
   WorkflowNode,
   WorkflowNotifyNode,
   WorkflowOutcome,
+  WorkflowParallelNode,
   WorkflowTerminalNode,
 } from '../core/workflow/workflowSchema'
 import styles from './WorkflowNodeInspector.module.css'
@@ -31,17 +34,30 @@ const TIMEOUT_BEHAVIORS: readonly TimeoutBehavior[] = [
   'auto-deny',
 ]
 
+const PARALLEL_MODES: readonly ParallelMode[] = [
+  'requireAll',
+  'requireAny',
+  'requireN',
+]
+
 const OUTCOMES: readonly WorkflowOutcome[] = ['finalized', 'denied', 'cancelled']
 
 export interface WorkflowNodeInspectorProps {
   readonly node: WorkflowNode
   readonly onChange: (patch: Partial<WorkflowNode>) => void
+  /**
+   * Ids of every `parallel` node in the workflow, for the join
+   * inspector's `pairedWith` dropdown. Optional: when absent, the
+   * dropdown falls back to a free-text input so the inspector can still
+   * be used in isolation (tests, storybook, etc.).
+   */
+  readonly parallelNodeIds?: readonly string[]
 }
 
 export function WorkflowNodeInspector(
   props: WorkflowNodeInspectorProps,
 ): JSX.Element {
-  const { node, onChange } = props
+  const { node, onChange, parallelNodeIds } = props
   return (
     <section
       className={styles.panel}
@@ -65,6 +81,16 @@ export function WorkflowNodeInspector(
       )}
       {node.type === 'terminal' && (
         <TerminalFields node={node} onChange={onChange} />
+      )}
+      {node.type === 'parallel' && (
+        <ParallelFields node={node} onChange={onChange} />
+      )}
+      {node.type === 'join' && (
+        <JoinFields
+          node={node}
+          onChange={onChange}
+          parallelNodeIds={parallelNodeIds}
+        />
       )}
     </section>
   )
@@ -292,6 +318,118 @@ function TerminalFields({
       >
         {OUTCOMES.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
+    </div>
+  )
+}
+
+function ParallelFields({
+  node,
+  onChange,
+}: {
+  node: WorkflowParallelNode
+  onChange: (patch: Partial<WorkflowParallelNode>) => void
+}): JSX.Element {
+  return (
+    <>
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="wc-node-mode">Mode</label>
+        <select
+          id="wc-node-mode"
+          className={styles.select}
+          value={node.mode}
+          onChange={e => {
+            const mode = e.target.value as ParallelMode
+            // Drop `n` unless we're in requireN — keeps persisted
+            // graphs free of stale quorum counts after a mode swap.
+            onChange(mode === 'requireN' ? { mode } : { mode, n: undefined })
+          }}
+        >
+          {PARALLEL_MODES.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+
+      {node.mode === 'requireN' && (
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="wc-node-n">N (required approvals)</label>
+          <input
+            id="wc-node-n"
+            className={styles.input}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={node.n ?? ''}
+            onChange={e => {
+              const raw = e.target.value
+              if (raw === '') return onChange({ n: undefined })
+              if (!/^\d+$/.test(raw)) return
+              const parsed = Number(raw)
+              if (Number.isFinite(parsed) && parsed >= 1) {
+                onChange({ n: parsed })
+              }
+            }}
+          />
+          <span className={styles.hint}>
+            Must be between 1 and the number of branches.
+          </span>
+        </div>
+      )}
+
+      <div className={styles.field}>
+        <label className={styles.label}>Branches</label>
+        <ul className={styles.list} data-testid="wc-parallel-branches">
+          {node.branches.length === 0
+            ? <li className={styles.hint}>No branches yet.</li>
+            : node.branches.map(b => (
+              <li key={b} className={styles.listItem}>{b}</li>
+            ))}
+        </ul>
+        <span className={styles.hint}>
+          Branches are authored by picking entry nodes on the canvas.
+        </span>
+      </div>
+    </>
+  )
+}
+
+function JoinFields({
+  node,
+  onChange,
+  parallelNodeIds,
+}: {
+  node: WorkflowJoinNode
+  onChange: (patch: Partial<WorkflowJoinNode>) => void
+  parallelNodeIds?: readonly string[]
+}): JSX.Element {
+  const useDropdown = parallelNodeIds !== undefined
+  return (
+    <div className={styles.field}>
+      <label className={styles.label} htmlFor="wc-node-paired">Paired parallel</label>
+      {useDropdown ? (
+        <select
+          id="wc-node-paired"
+          className={styles.select}
+          value={node.pairedWith}
+          onChange={e => onChange({ pairedWith: e.target.value })}
+        >
+          {/* Show the current value first so a stale pairing still renders. */}
+          {!parallelNodeIds!.includes(node.pairedWith) && (
+            <option value={node.pairedWith}>{node.pairedWith} (missing)</option>
+          )}
+          {parallelNodeIds!.map(id => (
+            <option key={id} value={id}>{id}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id="wc-node-paired"
+          className={styles.input}
+          value={node.pairedWith}
+          onChange={e => onChange({ pairedWith: e.target.value })}
+        />
+      )}
+      <span className={styles.hint}>
+        Join releases once the paired parallel's quorum is met.
+      </span>
     </div>
   )
 }

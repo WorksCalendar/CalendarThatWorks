@@ -398,6 +398,191 @@ describe('validateTemplateSyntax', () => {
   })
 })
 
+describe('validateWorkflow — parallel / join (issue #223)', () => {
+  function parallelWf(overrides: {
+    parallelBranches?: readonly string[]
+    mode?: 'requireAll' | 'requireAny' | 'requireN'
+    n?: number
+    pairedJoinId?: string
+    edgeOverrides?: readonly { readonly from: string; readonly to: string; readonly when?: string }[]
+    removeJoin?: boolean
+    extraJoins?: readonly { id: string; pairedWith: string }[]
+  } = {}): Workflow {
+    const pairedJoinId = overrides.pairedJoinId ?? 'join'
+    const base: Workflow = {
+      id: 'par', version: 1, trigger: 'on_submit', startNodeId: 'fan',
+      nodes: [
+        {
+          id: 'fan', type: 'parallel',
+          branches: overrides.parallelBranches ?? ['a', 'b'],
+          mode: overrides.mode ?? 'requireAll',
+          ...(overrides.n !== undefined ? { n: overrides.n } : {}),
+        },
+        { id: 'a', type: 'approval', assignTo: 'role:a' },
+        { id: 'b', type: 'approval', assignTo: 'role:b' },
+        ...(overrides.removeJoin ? [] : [{ id: pairedJoinId, type: 'join' as const, pairedWith: 'fan' }]),
+        ...(overrides.extraJoins ?? []).map(j => ({ ...j, type: 'join' as const })),
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: (overrides.edgeOverrides as readonly { from: string; to: string; when?: string }[] | undefined) ?? [
+        { from: 'a', to: pairedJoinId, when: 'branch-completed' },
+        { from: 'b', to: pairedJoinId, when: 'branch-completed' },
+        { from: pairedJoinId, to: 'done' },
+      ],
+    } as Workflow
+    return base
+  }
+
+  it('accepts a simple parallel + join template', () => {
+    const issues = validateWorkflow(parallelWf())
+    const errors = issues.filter(i => i.severity === 'error')
+    expect(errors).toEqual([])
+  })
+
+  it('flags parallel with no paired join', () => {
+    const issues = validateWorkflow(parallelWf({
+      removeJoin: true,
+      edgeOverrides: [
+        { from: 'a', to: 'done' },
+        { from: 'b', to: 'done' },
+      ],
+    }))
+    expect(issues.some(i => i.code === 'parallel-join-unpaired')).toBe(true)
+  })
+
+  it('flags parallel paired with two joins', () => {
+    const issues = validateWorkflow(parallelWf({
+      extraJoins: [{ id: 'join2', pairedWith: 'fan' }],
+    }))
+    expect(issues.some(
+      i => i.code === 'parallel-join-unpaired' && /2 joins/i.test(i.message),
+    )).toBe(true)
+  })
+
+  it('flags a join pointing at a non-existent parallel', () => {
+    const wf: Workflow = {
+      ...parallelWf(),
+      nodes: [
+        ...parallelWf().nodes,
+        { id: 'orphan-join', type: 'join', pairedWith: 'ghost' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(
+      i => i.code === 'parallel-join-unpaired' && i.nodeId === 'orphan-join',
+    )).toBe(true)
+  })
+
+  it('flags branches that do not rejoin at the paired join', () => {
+    const wf: Workflow = parallelWf({
+      // Branch "a" exits to a terminal instead of rejoining.
+      edgeOverrides: [
+        { from: 'a', to: 'done', when: 'approved' },
+        { from: 'a', to: 'done', when: 'denied' },
+        { from: 'b', to: 'join', when: 'branch-completed' },
+        { from: 'join', to: 'done' },
+      ],
+    })
+    const issues = validateWorkflow(wf)
+    expect(issues.some(
+      i => i.code === 'parallel-branches-rejoin' && /branch "a"/.test(i.message),
+    )).toBe(true)
+  })
+
+  it('flags requireN without a valid n', () => {
+    const tooLow = validateWorkflow(parallelWf({ mode: 'requireN', n: 0 }))
+    expect(tooLow.some(i => i.code === 'parallel-require-n-bounds')).toBe(true)
+    const tooHigh = validateWorkflow(parallelWf({ mode: 'requireN', n: 5 }))
+    expect(tooHigh.some(i => i.code === 'parallel-require-n-bounds')).toBe(true)
+    const missing = validateWorkflow(parallelWf({ mode: 'requireN' }))
+    expect(missing.some(i => i.code === 'parallel-require-n-bounds')).toBe(true)
+  })
+
+  it('accepts requireN with n within branch count', () => {
+    const issues = validateWorkflow(parallelWf({ mode: 'requireN', n: 2 }))
+    const errors = issues.filter(i => i.severity === 'error')
+    expect(errors).toEqual([])
+  })
+
+  it('flags a parallel with zero declared branches', () => {
+    const issues = validateWorkflow(parallelWf({ parallelBranches: [] }))
+    expect(issues.some(i => i.code === 'parallel-branches-empty')).toBe(true)
+  })
+
+  it('flags a parallel branch entry that is not a node', () => {
+    const issues = validateWorkflow(parallelWf({ parallelBranches: ['a', 'ghost'] }))
+    expect(issues.some(
+      i => i.code === 'parallel-branches-rejoin' && /ghost/.test(i.message),
+    )).toBe(true)
+  })
+
+  it('does not flag a parallel node as a dead-end (no outgoing edges)', () => {
+    const issues = validateWorkflow(parallelWf())
+    expect(issues.some(i => i.code === 'dead-end-node' && i.nodeId === 'fan')).toBe(false)
+  })
+
+  // Regression: reachability should treat foreign parallel/join nodes
+  // as dead ends, matching walkBranchForward's runtime behavior —
+  // otherwise a branch can appear to rejoin at validation time yet
+  // deterministically fail at runtime once it enters the nested
+  // parallel path.
+  it('treats a foreign parallel node inside a branch as a dead-end for rejoin', () => {
+    // Branch "a"'s only forward path goes through `inner-fan`, a
+    // foreign parallel. Runtime would fail on entry to inner-fan, so
+    // validation must agree that this branch never reaches the paired
+    // join — even though `inner-fan → join` looks reachable on paper.
+    const wf: Workflow = {
+      id: 'nested', version: 1, trigger: 'on_submit', startNodeId: 'fan',
+      nodes: [
+        { id: 'fan', type: 'parallel', branches: ['a', 'b'], mode: 'requireAll' },
+        // Branch "a": notify whose only outgoing edge enters the foreign parallel.
+        { id: 'a', type: 'notify', channel: 'slack' },
+        { id: 'inner-fan', type: 'parallel', branches: ['x'], mode: 'requireAll' },
+        { id: 'x', type: 'approval', assignTo: 'role:x' },
+        { id: 'inner-join', type: 'join', pairedWith: 'inner-fan' },
+        // Branch "b": clean rejoin so we know the rejoin error is about "a".
+        { id: 'b', type: 'approval', assignTo: 'role:b' },
+        { id: 'join', type: 'join', pairedWith: 'fan' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'a', to: 'inner-fan' },
+        { from: 'inner-fan', to: 'join' },
+        { from: 'x', to: 'inner-join', when: 'branch-completed' },
+        { from: 'inner-join', to: 'join' },
+        { from: 'b', to: 'join', when: 'branch-completed' },
+        { from: 'join', to: 'done' },
+      ],
+    } as Workflow
+    const issues = validateWorkflow(wf)
+    expect(issues.some(
+      i => i.code === 'parallel-branches-rejoin' && /branch "a"/.test(i.message),
+    )).toBe(true)
+  })
+
+  // Regression: notify nodes exit with `default` at runtime;
+  // `resolveNextEdge` only falls back to a `branch-completed` edge for
+  // approved/denied/timeout signals. A notify → branch-completed edge
+  // would pass validation but deadlock at runtime — the guard must be
+  // illegal on notify sources.
+  it('flags a notify edge guarded by branch-completed as illegal', () => {
+    const wf: Workflow = {
+      id: 'bad-notify', version: 1, trigger: 'on_submit', startNodeId: 'n',
+      nodes: [
+        { id: 'n', type: 'notify', channel: 'slack' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'n', to: 'done', when: 'branch-completed' },
+      ],
+    } as Workflow
+    const issues = validateWorkflow(wf)
+    expect(issues.some(
+      i => i.code === 'illegal-guard-for-source' && i.nodeId === 'n',
+    )).toBe(true)
+  })
+})
+
 describe('validateExpressionSyntax', () => {
   it('returns null for clean expressions (even with unbound vars)', () => {
     expect(validateExpressionSyntax('event.cost > 500')).toBeNull()

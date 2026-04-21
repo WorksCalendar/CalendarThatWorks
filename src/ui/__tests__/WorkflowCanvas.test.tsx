@@ -8,6 +8,7 @@ import { GRID_SNAP } from '../../core/workflow/layout'
 import {
   singleApproverWorkflow,
   conditionalByCostWorkflow,
+  parallelSecurityAndFinanceApproval,
 } from '../../core/workflow/templates'
 import type { Workflow, WorkflowLayout } from '../../core/workflow/workflowSchema'
 
@@ -188,6 +189,28 @@ describe('WorkflowCanvas — keyboard', () => {
     expect(nodes[0]).toBe('check-cost')
     // director + notify-ops are both rank-1 children.
     expect(nodes.slice(1, 3).sort()).toEqual(['director', 'notify-ops'])
+  })
+})
+
+describe('WorkflowCanvas — parallel + join rendering', () => {
+  it('renders the parallel fan-out node with its mode in the label', () => {
+    renderCanvas(parallelSecurityAndFinanceApproval)
+    const fan = document.querySelector('[data-node-id="fanout"]')!
+    expect(fan.getAttribute('aria-label')).toMatch(/parallel node/i)
+    expect(fan.className).toMatch(/nodeKindParallel/)
+  })
+
+  it('renders the join node with a join kind class', () => {
+    renderCanvas(parallelSecurityAndFinanceApproval)
+    const join = document.querySelector('[data-node-id="rejoin"]')!
+    expect(join.className).toMatch(/nodeKindJoin/)
+    expect(join.getAttribute('aria-label')).toMatch(/join node/i)
+  })
+
+  it('both parallel and join expose a source handle for edge-draw', () => {
+    renderCanvas(parallelSecurityAndFinanceApproval)
+    expect(document.querySelector('[data-handle-for="fanout"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-handle-for="rejoin"]')).toBeInTheDocument()
   })
 })
 

@@ -110,10 +110,46 @@ export const slaEscalationWorkflow: Workflow = {
   ],
 }
 
+/**
+ * Fires security + finance approvals in parallel and only finalizes
+ * when both return. Demonstrates Phase-4 parallel/join nodes (issue
+ * #223): the `fanout` node spawns two branches whose `branch-completed`
+ * edges converge on the paired `rejoin` node, which then notifies and
+ * terminates. A single denial on either branch flips the quorum and
+ * fails the workflow.
+ */
+export const parallelSecurityAndFinanceApproval: Workflow = {
+  id: 'parallel-security-and-finance',
+  version: 1,
+  trigger: 'on_submit',
+  startNodeId: 'fanout',
+  nodes: [
+    {
+      id: 'fanout',
+      type: 'parallel',
+      branches: ['security-approval', 'finance-approval'],
+      mode: 'requireAll',
+      label: 'Security + Finance approvals',
+    },
+    { id: 'security-approval', type: 'approval', assignTo: 'role:security', label: 'Security review' },
+    { id: 'finance-approval',  type: 'approval', assignTo: 'role:finance',  label: 'Finance review'  },
+    { id: 'rejoin', type: 'join', pairedWith: 'fanout', label: 'Join approvals' },
+    { id: 'notify-ops', type: 'notify', channel: 'slack', template: 'Booking approved by security + finance' },
+    { id: 'done',   type: 'terminal', outcome: 'finalized' },
+  ],
+  edges: [
+    { from: 'security-approval', to: 'rejoin', when: 'branch-completed' },
+    { from: 'finance-approval',  to: 'rejoin', when: 'branch-completed' },
+    { from: 'rejoin', to: 'notify-ops' },
+    { from: 'notify-ops', to: 'done' },
+  ],
+}
+
 /** Ordered list of all shipped templates — drives the ConfigPanel picker. */
 export const WORKFLOW_TEMPLATES: readonly Workflow[] = [
   singleApproverWorkflow,
   twoTierApproverWorkflow,
   conditionalByCostWorkflow,
   slaEscalationWorkflow,
+  parallelSecurityAndFinanceApproval,
 ]

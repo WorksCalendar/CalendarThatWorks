@@ -8,8 +8,10 @@ import { WorkflowNodeInspector } from '../WorkflowNodeInspector'
 import type {
   WorkflowApprovalNode,
   WorkflowConditionNode,
+  WorkflowJoinNode,
   WorkflowNode,
   WorkflowNotifyNode,
+  WorkflowParallelNode,
   WorkflowTerminalNode,
 } from '../../core/workflow/workflowSchema'
 
@@ -267,5 +269,102 @@ describe('WorkflowNodeInspector — terminal', () => {
     render(<WorkflowNodeInspector node={node} onChange={onChange} />)
     fireEvent.change(screen.getByLabelText(/outcome/i), { target: { value: 'cancelled' } })
     expect(onChange).toHaveBeenLastCalledWith({ outcome: 'cancelled' })
+  })
+})
+
+describe('WorkflowNodeInspector — parallel', () => {
+  const baseNode: WorkflowParallelNode = {
+    id: 'fan',
+    type: 'parallel',
+    branches: ['a', 'b'],
+    mode: 'requireAll',
+  }
+
+  it('edits mode', () => {
+    const onChange = vi.fn()
+    render(<WorkflowNodeInspector node={baseNode} onChange={onChange} />)
+    fireEvent.change(screen.getByLabelText(/mode/i), { target: { value: 'requireAny' } })
+    expect(onChange).toHaveBeenLastCalledWith({ mode: 'requireAny', n: undefined })
+  })
+
+  it('does not render the N input outside requireN', () => {
+    render(<WorkflowNodeInspector node={baseNode} onChange={vi.fn()} />)
+    expect(screen.queryByLabelText(/n \(required/i)).toBeNull()
+  })
+
+  it('renders the N input and parses valid digits when mode is requireN', () => {
+    const node: WorkflowParallelNode = { ...baseNode, mode: 'requireN', n: 1 }
+    const spy = vi.fn()
+    render(<Harness initial={node} spy={spy} />)
+    fireEvent.change(screen.getByLabelText(/n \(required/i), { target: { value: '2' } })
+    expect(spy).toHaveBeenLastCalledWith({ n: 2 })
+  })
+
+  it('clears N when emptied', () => {
+    const node: WorkflowParallelNode = { ...baseNode, mode: 'requireN', n: 2 }
+    const spy = vi.fn()
+    render(<Harness initial={node} spy={spy} />)
+    fireEvent.change(screen.getByLabelText(/n \(required/i), { target: { value: '' } })
+    expect(spy).toHaveBeenLastCalledWith({ n: undefined })
+  })
+
+  it('ignores n < 1', () => {
+    const node: WorkflowParallelNode = { ...baseNode, mode: 'requireN', n: 2 }
+    const spy = vi.fn()
+    render(<Harness initial={node} spy={spy} />)
+    fireEvent.change(screen.getByLabelText(/n \(required/i), { target: { value: '0' } })
+    expect(spy).not.toHaveBeenCalledWith(expect.objectContaining({ n: 0 }))
+  })
+
+  it('lists each declared branch entry id', () => {
+    render(<WorkflowNodeInspector node={baseNode} onChange={vi.fn()} />)
+    const list = screen.getByTestId('wc-parallel-branches')
+    expect(list.textContent).toContain('a')
+    expect(list.textContent).toContain('b')
+  })
+})
+
+describe('WorkflowNodeInspector — join', () => {
+  const baseNode: WorkflowJoinNode = {
+    id: 'rejoin',
+    type: 'join',
+    pairedWith: 'fan',
+  }
+
+  it('renders a free-text input when no parallelNodeIds are supplied', () => {
+    const onChange = vi.fn()
+    render(<WorkflowNodeInspector node={baseNode} onChange={onChange} />)
+    const input = screen.getByLabelText(/paired parallel/i) as HTMLInputElement
+    expect(input.tagName).toBe('INPUT')
+    fireEvent.change(input, { target: { value: 'other' } })
+    expect(onChange).toHaveBeenLastCalledWith({ pairedWith: 'other' })
+  })
+
+  it('renders a dropdown when parallelNodeIds are supplied', () => {
+    const onChange = vi.fn()
+    render(
+      <WorkflowNodeInspector
+        node={baseNode}
+        onChange={onChange}
+        parallelNodeIds={['fan', 'other']}
+      />,
+    )
+    const select = screen.getByLabelText(/paired parallel/i) as HTMLSelectElement
+    expect(select.tagName).toBe('SELECT')
+    fireEvent.change(select, { target: { value: 'other' } })
+    expect(onChange).toHaveBeenLastCalledWith({ pairedWith: 'other' })
+  })
+
+  it('preserves a stale pairedWith as a disabled-looking missing option', () => {
+    render(
+      <WorkflowNodeInspector
+        node={{ ...baseNode, pairedWith: 'gone' }}
+        onChange={vi.fn()}
+        parallelNodeIds={['fan']}
+      />,
+    )
+    const select = screen.getByLabelText(/paired parallel/i) as HTMLSelectElement
+    expect(select.value).toBe('gone')
+    expect(select.textContent).toContain('(missing)')
   })
 })

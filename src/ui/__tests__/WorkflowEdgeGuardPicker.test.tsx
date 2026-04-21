@@ -12,23 +12,31 @@ describe('guardsForSource', () => {
   it('condition → true / false / default', () => {
     expect(guardsForSource('condition')).toEqual(['true', 'false', 'default'])
   })
-  it('approval → approved / denied / default', () => {
-    expect(guardsForSource('approval')).toEqual(['approved', 'denied', 'default'])
+  it('approval → approved / denied / branch-completed / default', () => {
+    expect(guardsForSource('approval')).toEqual([
+      'approved', 'denied', 'branch-completed', 'default',
+    ])
   })
-  it('notify → default only', () => {
+  it('notify → default only (notify always exits via default at runtime)', () => {
     expect(guardsForSource('notify')).toEqual(['default'])
+  })
+  it('parallel → default only (branches author via the node, not edges)', () => {
+    expect(guardsForSource('parallel')).toEqual(['default'])
+  })
+  it('join → default only', () => {
+    expect(guardsForSource('join')).toEqual(['default'])
   })
   it('terminal → empty list', () => {
     expect(guardsForSource('terminal')).toEqual([])
   })
   it('approval with SLA → includes timeout', () => {
     expect(guardsForSource('approval', { hasSla: true })).toEqual([
-      'approved', 'denied', 'timeout', 'default',
+      'approved', 'denied', 'timeout', 'branch-completed', 'default',
     ])
   })
   it('approval without SLA → no timeout', () => {
     expect(guardsForSource('approval', { hasSla: false })).toEqual([
-      'approved', 'denied', 'default',
+      'approved', 'denied', 'branch-completed', 'default',
     ])
   })
   it('hasSla only affects approval sources', () => {
@@ -77,7 +85,7 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
     expect(document.querySelector('[data-guard="approved"]')).toBeNull()
   })
 
-  it('renders approved/denied/default for an approval source', () => {
+  it('renders approved/denied/branch-completed/default for an approval source', () => {
     render(
       <WorkflowEdgeGuardPicker
         sourceType="approval"
@@ -87,6 +95,7 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
     )
     expect(document.querySelector('[data-guard="approved"]')).toBeInTheDocument()
     expect(document.querySelector('[data-guard="denied"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-guard="branch-completed"]')).toBeInTheDocument()
     expect(document.querySelector('[data-guard="default"]')).toBeInTheDocument()
     expect(document.querySelector('[data-guard="true"]')).toBeNull()
   })
@@ -95,6 +104,32 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
     render(
       <WorkflowEdgeGuardPicker
         sourceType="notify"
+        onPick={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    const buttons = document.querySelectorAll('[data-guard]')
+    expect(buttons.length).toBe(1)
+    expect(buttons[0].getAttribute('data-guard')).toBe('default')
+  })
+
+  it('renders only default for a parallel source', () => {
+    render(
+      <WorkflowEdgeGuardPicker
+        sourceType="parallel"
+        onPick={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    const buttons = document.querySelectorAll('[data-guard]')
+    expect(buttons.length).toBe(1)
+    expect(buttons[0].getAttribute('data-guard')).toBe('default')
+  })
+
+  it('renders only default for a join source', () => {
+    render(
+      <WorkflowEdgeGuardPicker
+        sourceType="join"
         onPick={vi.fn()}
         onCancel={vi.fn()}
       />,

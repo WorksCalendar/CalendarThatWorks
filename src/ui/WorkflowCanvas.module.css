@@ -56,6 +56,8 @@
 .nodeKindCondition .nodeRect { fill: #fefce8; }
 .nodeKindNotify .nodeRect { fill: #f3e8ff; }
 .nodeKindTerminal .nodeRect { fill: #f3f4f6; }
+.nodeKindParallel .nodeRect { fill: #ecfeff; stroke-dasharray: 6 3; }
+.nodeKindJoin     .nodeRect { fill: #cffafe; stroke-dasharray: 6 3; }
 
 .nodeKind {
   font: 10px var(--wc-font, system-ui, sans-serif);
