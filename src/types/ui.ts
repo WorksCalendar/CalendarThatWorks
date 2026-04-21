@@ -23,7 +23,7 @@ export type SavedViewDraft = {
   hiddenFromStrip?: boolean;
 };
 
-export type SaveViewOptions = Omit<SavedViewDraft, 'id' | 'name' | 'filters'>;
+export type SaveViewOptions = Omit<SavedViewDraft, 'id' | 'name' | 'filters' | 'hiddenFromStrip'>;
 
 export type SaveViewHandler = (
   name: string,
