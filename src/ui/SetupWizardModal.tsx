@@ -18,7 +18,7 @@
  */
 import { useState } from 'react';
 import { X, ChevronRight, Check, Sparkles, Camera } from 'lucide-react';
-import { THEMES } from '../styles/themes';
+import { THEMES, THEME_META } from '../styles/themes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
 import styles from './SetupWizardModal.module.css';
@@ -207,31 +207,34 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
         <fieldset className={styles.fieldset}>
           <legend className={styles.fieldLabel}>Theme</legend>
           <div className={styles.themeGrid}>
-          {THEMES.map(theme => (
-            <button
-              key={theme.id}
-              className={[styles.themeCard, selectedTheme === theme.id && styles.themeCardSelected].filter(Boolean).join(' ')}
-              onClick={() => onThemeChange(theme.id)}
-              title={theme.description}
-              aria-pressed={selectedTheme === theme.id}
-            >
-              {/* Mini preview swatch */}
-              <div
-                className={styles.themeSwatch}
-                style={{ background: theme.preview.bg, borderColor: theme.preview.border }}
+          {THEMES.map(id => {
+            const theme = THEME_META[id];
+            return (
+              <button
+                key={theme.id}
+                className={[styles.themeCard, selectedTheme === theme.id && styles.themeCardSelected].filter(Boolean).join(' ')}
+                onClick={() => onThemeChange(theme.id)}
+                title={theme.description}
+                aria-pressed={selectedTheme === theme.id}
               >
-                <div className={styles.swatchAccent} style={{ background: theme.preview.accent }} />
-                <div className={styles.swatchLines}>
-                  <span style={{ background: theme.preview.text }} />
-                  <span style={{ background: theme.preview.text, width: '60%' }} />
+                {/* Mini preview swatch */}
+                <div
+                  className={styles.themeSwatch}
+                  style={{ background: theme.preview.bg, borderColor: theme.preview.border }}
+                >
+                  <div className={styles.swatchAccent} style={{ background: theme.preview.accent }} />
+                  <div className={styles.swatchLines}>
+                    <span style={{ background: theme.preview.text }} />
+                    <span style={{ background: theme.preview.text, width: '60%' }} />
+                  </div>
                 </div>
-              </div>
-              <span className={styles.themeLabel}>{theme.label}</span>
-              {selectedTheme === theme.id && (
-                <span className={styles.themeCheck}><Check size={10} /></span>
-              )}
-            </button>
-          ))}
+                <span className={styles.themeLabel}>{theme.label}</span>
+                {selectedTheme === theme.id && (
+                  <span className={styles.themeCheck}><Check size={10} /></span>
+                )}
+              </button>
+            );
+          })}
           </div>
         </fieldset>
       </div>
@@ -332,7 +335,9 @@ function Step2({ categories, resources, createdViews, onSaveView }: any) {
 // ─── Step 4: Done ─────────────────────────────────────────────────────────────
 
 function Step3({ calendarName, selectedTheme, teamMembers, createdViews }: any) {
-  const theme = THEMES.find(t => t.id === selectedTheme);
+  const theme = selectedTheme && (THEMES as string[]).includes(selectedTheme)
+    ? THEME_META[selectedTheme as keyof typeof THEME_META]
+    : undefined;
 
   return (
     <div className={[styles.step, styles.stepDone].join(' ')}>

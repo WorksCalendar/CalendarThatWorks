@@ -11,7 +11,7 @@
  */
 import { useMemo, useState } from 'react';
 import { ChevronRight, ChevronLeft, Check, Sparkles, Rocket, Users, Palette, LayoutGrid, Wand2, MapPin } from 'lucide-react';
-import { THEMES } from '../styles/themes';
+import { THEMES, THEME_META } from '../styles/themes';
 import styles from './SetupLanding.module.css';
 import {
   IllustrationTheme,
@@ -326,7 +326,8 @@ function StepTheme({ current, onChange }: { current: string; onChange: (id: stri
       </p>
 
       <div className={styles.themeGrid}>
-        {THEMES.map(t => {
+        {THEMES.map(id => {
+          const t = THEME_META[id];
           const selected = current === t.id;
           return (
             <button

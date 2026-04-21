@@ -7,44 +7,48 @@ import {
   DEFAULT_CATEGORIES,
   createManualLocationProvider,
 } from '../src/index.ts';
-import { THEMES } from '../src/styles/themes';
 import { saveProfiles } from '../src/core/profileStore';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema';
 import { loadPools, savePools } from '../src/core/pools/poolStore';
+import {
+  regions,
+  bases,
+  assets as EMS_ASSETS,
+  crew,
+  medicalCrew,
+  mechanics,
+  dispatchShifts,
+  pilotShifts,
+  medicalShifts,
+  mechanicOnCall,
+  maintenanceEvents,
+  requests,
+  mission,
+} from './emsData';
 
-/* ─── Demo profiles ─────────────────────────────────────────────── */
-const DEMO_CALENDAR_ID = 'ihc-oncall-demo';
+/* ─── Demo identity ─────────────────────────────────────────────── */
+// Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
+// through. Returning users see a clean slate with Air EMS defaults.
+const DEMO_CALENDAR_ID = 'air-ems-demo';
+
+/* ─── Profiles (saved filter sets in the profile bar) ──────────── */
 const DEMO_PROFILES = [
-  { id:'p1', name:'Full Schedule',       color:'#10b981', filters:{ categories:[],              resources:[], search:'' }, view:'schedule' },
-  { id:'p2', name:'On-Call Only',        color:'#ef4444', filters:{ categories:['on-call'],      resources:[], search:'' }, view:'schedule' },
-  { id:'p3', name:'Incidents',           color:'#f59e0b', filters:{ categories:['Incident'],     resources:[], search:'' }, view:'agenda'   },
-  { id:'p4', name:'Sarah\'s Week',       color:'#3b82f6', filters:{ categories:[],              resources:['emp-sarah'], search:'' }, view:'week' },
-  { id:'p5', name:'Month Overview',      color:'#8b5cf6', filters:{ categories:[],              resources:[], search:'' }, view:'month'    },
+  { id: 'p1', name: 'Full Ops',          color: '#0ea5e9', filters: { categories: [],            resources: [], search: '' }, view: 'schedule' },
+  { id: 'p2', name: 'Pilots',            color: '#3b82f6', filters: { categories: ['shift'],     resources: [], search: '' }, view: 'schedule' },
+  { id: 'p3', name: 'Medical Crew',      color: '#10b981', filters: { categories: ['shift'],     resources: [], search: '' }, view: 'schedule' },
+  { id: 'p4', name: 'Mechanics On-Call', color: '#f97316', filters: { categories: ['on-call'],   resources: [], search: '' }, view: 'schedule' },
+  { id: 'p5', name: 'Fleet',             color: '#8b5cf6', filters: { categories: [],            resources: [], search: '' }, view: 'assets'   },
 ];
 const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
 if (!stored || stored === '[]') saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
 
-/* ─── Demo config seed ──────────────────────────────────────────── */
-// Bases (airbases / regional hubs). Used by the Base Gantt view, the Assets
-// view's base column, and the approval-flow demo. Employees and assets below
-// reference these by id.
-const DEMO_BASES = [
-  { id: 'base-phx', name: 'Phoenix HQ (KPHX)' },
-  { id: 'base-lax', name: 'Los Angeles (KLAX)' },
-  { id: 'base-den', name: 'Denver (KDEN)' },
-  { id: 'base-ord', name: 'Chicago (KORD)' },
-  { id: 'base-jfk', name: 'New York (KJFK)' },
-  { id: 'base-bos', name: 'Boston (KBOS)' },
-];
+/* ─── Bases ─────────────────────────────────────────────────────── */
+const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 
-// Pre-seed config with demo-appropriate defaults. Uses a per-version seed
-// marker so we can re-apply the demo-defaults block once per version bump
-// when we want returning users to pick up new demo features (e.g. the
-// approval workflow), without clobbering arbitrary owner edits every reload.
-//
-// Bump DEMO_SEED_VERSION whenever a new block is added to the seed below
-// so existing demo visitors get the update on their next page load.
-const DEMO_SEED_VERSION = 2;
+/* ─── Config seed ───────────────────────────────────────────────── */
+// Bumped for the Air EMS identity change. Existing visitors on the IHC seed
+// see the new defaults on their next load without a manual storage wipe.
+const DEMO_SEED_VERSION = 3;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
@@ -52,207 +56,184 @@ const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
 if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
     ...DEFAULT_CONFIG,
-    title: 'IHC Fleet On-Call',
-    setup: { completed: true, preferredTheme: 'corporate' },
+    title: 'Air EMS Operations',
+    setup: { completed: true, preferredTheme: 'ops-dark' },
     display: { ...DEFAULT_CONFIG.display, defaultView: 'schedule' },
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 } else if (storedSeedVer < DEMO_SEED_VERSION) {
-  // Returning user predating the current seed version — re-apply the demo
-  // defaults for bases + approvals so the Assets-view approval flow is
-  // visible without requiring a manual localStorage wipe. Preserves
-  // everything else on the config (title, theme, per-user settings).
   const existing = loadConfig(DEMO_CALENDAR_ID);
   saveConfig(DEMO_CALENDAR_ID, {
     ...existing,
-    team:      { ...existing.team,      bases: existing.team?.bases?.length ? existing.team.bases : DEMO_BASES },
+    title:     existing.title ?? 'Air EMS Operations',
+    setup:     { ...existing.setup, preferredTheme: existing.setup?.preferredTheme ?? 'ops-dark' },
+    team:      { ...existing.team, bases: existing.team?.bases?.length ? existing.team.bases : DEMO_BASES },
     approvals: { ...existing.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 }
 
-// Read the stored (or just-seeded) preferred theme so the ThemePicker
-// starts in sync with whatever the config says.
-const _seedConfig = loadConfig(DEMO_CALENDAR_ID);
-const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'corporate';
+const _seedConfig  = loadConfig(DEMO_CALENDAR_ID);
+const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'ops-dark';
 
-/* ─── Employees ─────────────────────────────────────────────────── */
-// Each employee is pre-assigned to a base so the Base Gantt view renders
-// populated rows out of the box. Phoenix and LAX each host two people; Denver
-// and Chicago host one; JFK and Boston are asset-only bases. A few of the
-// people carry "Accountable Manager" assignments so the base header shows the
-// one-stop contact roster (Base / Ops / Maintenance manager + phone).
+/* ─── Employees ────────────────────────────────────────────────── */
+// Pilots + medical crew + mechanics rendered as the people roster. Each
+// gets a role-coded color so the schedule view makes shift type obvious at
+// a glance.
+const PILOT_COLOR    = '#3b82f6';
+const MEDICAL_COLOR  = '#10b981';
+const SPECIAL_COLOR  = '#a855f7'; // ECMO specialist
+const MECHANIC_COLOR = '#f97316';
+
 const INITIAL_EMPLOYEES = [
-  { id: 'emp-sarah',  name: 'Sarah Chen',    role: 'Senior Engineer',   color: '#3b82f6', base: 'base-phx',
-    phone: '602-555-0114',
-    accountableManagers: [{ title: 'Base Manager', phone: '602-555-0114' }] },
-  { id: 'emp-marcus', name: 'Marcus Webb',   role: 'On-Call Engineer',  color: '#ef4444', base: 'base-phx',
-    phone: '602-555-0129',
-    accountableManagers: [{ title: 'Maintenance Manager', phone: '602-555-0129' }] },
-  { id: 'emp-priya',  name: 'Priya Sharma',  role: 'Team Lead',         color: '#10b981', base: 'base-den',
-    phone: '303-555-0177',
-    accountableManagers: [{ title: 'Base Manager' }, { title: 'Ops Manager', phone: '303-555-0177' }] },
-  { id: 'emp-james',  name: 'James Torres',  role: 'DevOps / SRE',      color: '#8b5cf6', base: 'base-lax',
-    phone: '310-555-0141',
-    accountableManagers: [{ title: 'Ops Manager', phone: '310-555-0141' }] },
-  { id: 'emp-alex',   name: 'Alex Kim',      role: 'Software Engineer', color: '#f59e0b', base: 'base-ord',
-    phone: '312-555-0162' },
-  { id: 'emp-dana',   name: 'Dana Okafor',   role: 'Site Reliability',  color: '#06b6d4', base: 'base-lax',
-    phone: '310-555-0198',
-    accountableManagers: [{ title: 'Maintenance Manager', phone: '310-555-0198' }] },
+  ...crew.map(c => ({
+    id:    c.id,
+    name:  c.name,
+    role:  `Pilot (${c.certifications.join(', ')})`,
+    color: PILOT_COLOR,
+    base:  c.baseId,
+  })),
+  ...medicalCrew.map(m => ({
+    id:    m.id,
+    name:  m.name,
+    role:  m.certifications.join(' · '),
+    color: m.certifications.includes('ECMO') ? SPECIAL_COLOR : MEDICAL_COLOR,
+    base:  m.baseId,
+  })),
+  ...mechanics.map(m => ({
+    id:    m.id,
+    name:  m.name,
+    role:  'Mechanic',
+    color: MECHANIC_COLOR,
+    base:  m.baseId,
+  })),
 ];
 
-/* ─── Events ────────────────────────────────────────────────────── */
-const today = new Date();
-today.setHours(0, 0, 0, 0);
+/* ─── Assets ───────────────────────────────────────────────────── */
+// Fleet rows rendered by the Assets view. `group` is the region so the
+// assets view can pivot by region; `meta.base` ties into the base column.
+const REGION_BY_BASE = Object.fromEntries(bases.map(b => [b.id, regions.find(r => r.id === b.regionId)?.name ?? '']));
 
-// Shift an ISO date by `days` days
-function shift(date, days) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
+const AIRCRAFT_RESOURCES = EMS_ASSETS.map(a => ({
+  id:    a.id,
+  label: a.name,
+  group: REGION_BY_BASE[a.baseId] || 'Fleet',
+  meta: {
+    sublabel: a.capability.join(' · '),
+    model:    a.type === 'helicopter' ? 'Helicopter' : 'Fixed-wing',
+    base:     a.baseId,
+    status:   a.status,
+    location: { text: bases.find(b => b.id === a.baseId)?.name ?? '—', status: 'live', asOf: new Date().toISOString() },
+  },
+}));
 
-// Start of the current month
-const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+/* ─── Events ───────────────────────────────────────────────────── */
+// Convert the Air EMS dataset into WorksCalendar's event shape
+// ({ id, title, start, end, category, resource, color }).
 
-// Build on-call rotation: each engineer covers 7 days in round-robin order
-function buildOnCallRotation(employees, monthStart) {
-  const shifts = [];
-  let id = 100;
-  // 6 rotation slots across the month (some may overlap month boundary)
-  for (let slot = 0; slot < 5; slot++) {
-    const emp = employees[slot % employees.length];
-    const start = shift(monthStart, slot * 7);
-    const end   = shift(start, 7);     // exclusive end
-    shifts.push({
-      id: String(id++),
-      title: 'On Call',
-      start: start.toISOString(),
-      end:   end.toISOString(),
-      category: 'on-call',
-      resource: emp.id,
-      color: emp.color,
-    });
-  }
-  return shifts;
-}
+const DISPATCH_COLOR    = '#0ea5e9';
+const SHIFT_PILOT_COLOR = PILOT_COLOR;
+const SHIFT_MED_COLOR   = MEDICAL_COLOR;
+const ONCALL_COLOR      = MECHANIC_COLOR;
+const MAINT_COLOR       = '#ef4444';
+const REQUEST_COLOR     = '#64748b';
+const MISSION_COLOR     = '#a855f7';
 
-// Regular events
-function d(offsetDays, hour = 9) {
-  const dt = new Date(today);
-  dt.setDate(dt.getDate() + offsetDays);
-  dt.setHours(hour, 0, 0, 0);
-  return dt.toISOString();
-}
-function dEnd(offsetDays, hour = 9, durH = 1) {
-  const dt = new Date(today);
-  dt.setDate(dt.getDate() + offsetDays);
-  dt.setHours(hour + durH, 0, 0, 0);
-  return dt.toISOString();
-}
+const DISPATCH_EVENTS = dispatchShifts.map(s => ({
+  id: s.id, title: s.title, start: s.start, end: s.end,
+  category: 'dispatch', resource: null, color: DISPATCH_COLOR,
+}));
 
-const REGULAR_EVENTS = [
-  // Team standup — daily (not recurring in this demo, just a few instances)
-  { id:'m1',  title:'Daily Standup',        start:d(0,9),   end:dEnd(0,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
-  { id:'m2',  title:'Daily Standup',        start:d(1,9),   end:dEnd(1,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
-  { id:'m3',  title:'Daily Standup',        start:d(2,9),   end:dEnd(2,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
-  { id:'m4',  title:'Daily Standup',        start:d(3,9),   end:dEnd(3,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
-  { id:'m5',  title:'Daily Standup',        start:d(4,9),   end:dEnd(4,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
+const PILOT_SHIFT_EVENTS = pilotShifts.map(s => ({
+  id: s.id, title: s.title, start: s.start, end: s.end,
+  category: 'shift', resource: s.crewId, color: SHIFT_PILOT_COLOR,
+}));
 
-  // 1-on-1s
-  { id:'o1',  title:'1-on-1 w/ Sarah',      start:d(1,10),  end:dEnd(1,10),      category:'Meeting',  resource:'emp-sarah',  color:'#3b82f6' },
-  { id:'o2',  title:'1-on-1 w/ Marcus',     start:d(2,10),  end:dEnd(2,10),      category:'Meeting',  resource:'emp-marcus', color:'#ef4444' },
-  { id:'o3',  title:'1-on-1 w/ Alex',       start:d(3,11),  end:dEnd(3,11),      category:'Meeting',  resource:'emp-alex',   color:'#f59e0b' },
-  { id:'o4',  title:'1-on-1 w/ Dana',       start:d(5,14),  end:dEnd(5,14),      category:'Meeting',  resource:'emp-dana',   color:'#06b6d4' },
+const MEDICAL_SHIFT_EVENTS = medicalShifts.map(s => ({
+  id: s.id, title: s.title, start: s.start, end: s.end,
+  category: 'shift', resource: s.crewId, color: SHIFT_MED_COLOR,
+}));
 
-  // Incidents
-  { id:'i1',  title:'P1 Incident — API timeout',  start:d(-1,2),  end:dEnd(-1,2,3),  category:'Incident', resource:'emp-marcus', color:'#ef4444', status:'confirmed' },
-  { id:'i2',  title:'P2 Incident — DB slow query', start:d(2,14), end:dEnd(2,14,2),  category:'Incident', resource:'emp-james',  color:'#f97316' },
+const ONCALL_EVENTS = mechanicOnCall.map(s => ({
+  id: s.id, title: s.title, start: s.start, end: s.end,
+  category: 'on-call', resource: s.crewId, color: ONCALL_COLOR, allDay: true,
+}));
 
-  // Code reviews / deploys
-  { id:'d1',  title:'Prod Deploy — v2.4.1',  start:d(4,15),  end:dEnd(4,15,1),   category:'Deploy',   resource:'emp-james',  color:'#8b5cf6' },
-  { id:'d2',  title:'Staging Deploy',        start:d(1,16),  end:dEnd(1,16,1),   category:'Deploy',   resource:'emp-james',  color:'#8b5cf6' },
+const MAINT_EVENTS = maintenanceEvents.map(m => ({
+  id: m.id, title: m.title, start: m.start, end: m.end,
+  category: 'maintenance', resource: m.assetId, color: MAINT_COLOR,
+  meta: { approvalStage: { stage: 'approved', updatedAt: m.start } },
+}));
 
-  // Sprint events
-  { id:'s1',  title:'Sprint Planning',       start:d(7,9),   end:dEnd(7,9,3),    category:'Meeting',  resource:null,         color:'#64748b' },
-  { id:'s2',  title:'Sprint Retrospective',  start:d(-3,14), end:dEnd(-3,14,2),  category:'Meeting',  resource:null,         color:'#64748b' },
-  { id:'s3',  title:'Sprint Demo',           start:d(-1,15), end:dEnd(-1,15,1),  category:'Meeting',  resource:null,         color:'#64748b' },
+const REQUEST_EVENTS = requests.map(r => ({
+  id: r.id, title: r.title, start: r.start, end: r.end,
+  category: 'request', resource: r.assetId, color: REQUEST_COLOR,
+  meta: { approvalStage: { stage: r.status === 'pending' ? 'requested' : 'approved', updatedAt: r.start } },
+}));
 
-  // PTO
-  { id:'v1',  title:'PTO — Priya',           start:d(8),     end:dEnd(11),       category:'PTO',      resource:'emp-priya',  color:'#10b981', allDay:true },
-
-  // Training
-  { id:'t1',  title:'AWS Security Training', start:d(5,10),  end:dEnd(5,10,4),   category:'Training', resource:'emp-alex',   color:'#f59e0b' },
-  { id:'t2',  title:'K8s Workshop',          start:d(6,9),   end:dEnd(6,9,3),    category:'Training', resource:'emp-dana',   color:'#06b6d4' },
-];
+// Flight legs — rendered on the Jet 1 row so the mission is visible on the
+// assets view.  Pilot and medical crew assignments are exposed as additional
+// events on the respective people rows for the same leg windows.
+const MISSION_LEG_EVENTS = mission.legs.flatMap(leg => {
+  const flightTitle = `${mission.name} — ${leg.from} → ${leg.to}`;
+  const pilotAssignment   = mission.assignments.pilots.find(a => a.legId === leg.id);
+  const medicalAssignment = mission.assignments.medical.find(a => a.legId === leg.id);
+  return [
+    {
+      id: `mission-${leg.id}-jet`,
+      title: flightTitle, start: leg.start, end: leg.end,
+      category: 'mission', resource: 'a3', color: MISSION_COLOR,
+      meta: { sublabel: `Leg ${leg.id}` },
+    },
+    pilotAssignment && {
+      id: `mission-${leg.id}-pilot`,
+      title: `Flight: ${leg.from} → ${leg.to}`,
+      start: leg.start, end: leg.end,
+      category: 'mission', resource: pilotAssignment.crewId, color: MISSION_COLOR,
+    },
+    medicalAssignment && {
+      id: `mission-${leg.id}-medical`,
+      title: `Flight: ${leg.from} → ${leg.to}`,
+      start: leg.start, end: leg.end,
+      category: 'mission', resource: medicalAssignment.crewId, color: MISSION_COLOR,
+    },
+  ].filter(Boolean);
+});
 
 const INITIAL_EVENTS = [
-  ...buildOnCallRotation(INITIAL_EMPLOYEES, monthStart),
-  ...REGULAR_EVENTS,
-];
-
-/* ─── Assets (aircraft, trucks, equipment…) ───────────────────────
- *
- * Assets are first-class rows in the Assets view (distinct from people,
- * who live on the Schedule view). The demo ships a small fleet of
- * aircraft; the library accepts any resource kind the user defines.
- */
-const AIRCRAFT_RESOURCES = [
-  { id: 'N121AB', label: 'N121AB', group: 'West',    meta: { sublabel: 'Citation CJ3',    model: 'Citation CJ3',     base: 'base-phx', location: { text: 'KPHX', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N505CD', label: 'N505CD', group: 'West',    meta: { sublabel: 'Phenom 300',      model: 'Phenom 300',       base: 'base-lax', location: { text: 'KLAX', status: 'stale', asOf: new Date().toISOString() } } },
-  { id: 'N88QR',  label: 'N88QR',  group: 'Central', meta: { sublabel: 'King Air 350',    model: 'King Air 350',     base: 'base-den', location: { text: 'KDEN', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N733XY', label: 'N733XY', group: 'Central', meta: { sublabel: 'Challenger 350',  model: 'Challenger 350',   base: 'base-ord', location: { text: 'KORD', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N901JT', label: 'N901JT', group: 'East',    meta: { sublabel: 'Gulfstream G280', model: 'Gulfstream G280',  base: 'base-jfk', location: { text: 'KJFK', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N245LM', label: 'N245LM', group: 'East',    meta: { sublabel: 'Pilatus PC-24',   model: 'Pilatus PC-24',    base: 'base-bos', location: { text: 'KBOS', status: 'live',  asOf: new Date().toISOString() } } },
-];
-const FLEET_EVENTS = [
-  { id: 'f1',  title: 'Recurrent training',   start: d(0, 9),   end: dEnd(0, 9, 6),  category: 'training',    resource: 'N121AB', meta: { sublabel: 'Citation CJ3',  region: 'West' } },
-  { id: 'f2',  title: 'VIP lift to KTEB',     start: d(2, 6),   end: dEnd(2, 6, 8),  category: 'pr',          resource: 'N121AB', meta: { sublabel: 'Citation CJ3',  region: 'West' } },
-  { id: 'f3',  title: 'A-check',              start: d(5),      end: dEnd(8),        category: 'maintenance', resource: 'N505CD', meta: { sublabel: 'Phenom 300',    region: 'West',  approvalStage: { stage: 'approved', updatedAt: d(-1) } }, allDay: true },
-  { id: 'f4',  title: 'Charter: Aspen',       start: d(3, 10),  end: dEnd(4, 16),    category: 'pr',          resource: 'N88QR',  meta: { sublabel: 'King Air 350',  region: 'Central' } },
-  { id: 'f5',  title: 'Brake inspection',     start: d(1),      end: dEnd(1),        category: 'maintenance', resource: 'N88QR',  meta: { sublabel: 'King Air 350',  region: 'Central', approvalStage: { stage: 'finalized', updatedAt: d(-2) } }, allDay: true },
-  { id: 'f6',  title: 'Type rating',          start: d(6, 9),   end: dEnd(6, 9, 6),  category: 'training',    resource: 'N733XY', meta: { sublabel: 'Challenger 350', region: 'Central' } },
-  { id: 'f7',  title: 'Avionics upgrade',     start: d(9),      end: dEnd(12),       category: 'maintenance', resource: 'N733XY', meta: { sublabel: 'Challenger 350', region: 'Central', approvalStage: { stage: 'pending_higher', updatedAt: d(-1) } }, allDay: true },
-  { id: 'f8',  title: 'Charter: Cabo',        start: d(4, 8),   end: dEnd(6, 18),    category: 'pr',          resource: 'N901JT', meta: { sublabel: 'Gulfstream G280', region: 'East' } },
-  { id: 'f9',  title: 'Coverage block',       start: d(7, 7),   end: dEnd(7, 7, 10), category: 'coverage',    resource: 'N901JT', meta: { sublabel: 'Gulfstream G280', region: 'East' } },
-  { id: 'f10', title: 'Dispatch ferry',       start: d(2, 14),  end: dEnd(2, 14, 4), category: 'pr',          resource: 'N245LM', meta: { sublabel: 'Pilatus PC-24', region: 'East',  approvalStage: { stage: 'requested', updatedAt: d(-1) } } },
-  { id: 'f11', title: 'Paint refresh',        start: d(10),     end: dEnd(15),       category: 'maintenance', resource: 'N245LM', meta: { sublabel: 'Pilatus PC-24', region: 'East',  approvalStage: { stage: 'denied', updatedAt: d(-1), history: [{ action: 'deny', at: d(-1), actor: 'chief-pilot', tier: 2, reason: 'Conflicts with higher-priority dispatch.' }] } }, allDay: true },
-  { id: 'f12', title: 'SIM session',          start: d(11, 9),  end: dEnd(11, 9, 4), category: 'training',    resource: 'N505CD', meta: { sublabel: 'Phenom 300',    region: 'West' } },
+  ...DISPATCH_EVENTS,
+  ...PILOT_SHIFT_EVENTS,
+  ...MEDICAL_SHIFT_EVENTS,
+  ...ONCALL_EVENTS,
+  ...MAINT_EVENTS,
+  ...REQUEST_EVENTS,
+  ...MISSION_LEG_EVENTS,
 ];
 
 /* ─── Resource pools (#212) ─────────────────────────────────────── */
-// Demo pools group aircraft by region. Bookings that target a pool id
-// (via event.resourcePoolId) resolve to a concrete tail number at
-// submit time; the round-robin cursor persists in localStorage so a
-// refresh doesn't reset the rotation.
+// Group aircraft by region so bookings can target a pool instead of a tail
+// number; the round-robin cursor persists in localStorage.
 const DEMO_POOLS_DEFAULT = [
-  { id: 'fleet-west',    name: 'West Fleet',    memberIds: ['N121AB', 'N505CD'],          strategy: 'round-robin'    },
-  { id: 'fleet-central', name: 'Central Fleet', memberIds: ['N88QR',  'N733XY'],          strategy: 'round-robin'    },
-  { id: 'fleet-east',    name: 'East Fleet',    memberIds: ['N901JT', 'N245LM'],          strategy: 'first-available' },
+  { id: 'pool-mountain',  name: 'Mountain Fleet',  memberIds: ['a1', 'a3'], strategy: 'round-robin'     },
+  { id: 'pool-southwest', name: 'Southwest Fleet', memberIds: [],           strategy: 'first-available' },
 ];
-// Seed once — on subsequent loads we read the persisted pools so a
-// cursor advance from the previous session survives the reload.
 const _storedPools = loadPools(DEMO_CALENDAR_ID);
 if (_storedPools.length === 0) savePools(DEMO_CALENDAR_ID, DEMO_POOLS_DEFAULT);
 
-// Unified category palette — engineering ops + fleet ops. The calendar
-// uses a single category set across views; each event references whichever
-// category suits it (on-call / Incident / Deploy for people, training /
-// maintenance / pr / coverage for aircraft).
+/* ─── Categories ────────────────────────────────────────────────── */
 const UNIFIED_CATEGORIES = [
-  // Engineering
-  { id: 'on-call',  label: 'On Call',    color: '#ef4444' },
-  { id: 'Incident', label: 'Incident',   color: '#f97316' },
-  { id: 'Deploy',   label: 'Deploy',     color: '#8b5cf6' },
-  { id: 'Meeting',  label: 'Meeting',    color: '#64748b' },
-  { id: 'PTO',      label: 'PTO',        color: '#10b981' },
-  // Fleet (from DEFAULT_CATEGORIES, spread here so both sets share the palette)
+  // Operations
+  { id: 'dispatch',    label: 'Dispatch',    color: DISPATCH_COLOR },
+  { id: 'shift',       label: 'Shift',       color: PILOT_COLOR    },
+  { id: 'on-call',     label: 'On Call',     color: ONCALL_COLOR   },
+  { id: 'mission',     label: 'Mission',     color: MISSION_COLOR  },
+  // Fleet
+  { id: 'maintenance', label: 'Maintenance', color: MAINT_COLOR    },
+  { id: 'request',     label: 'Request',     color: REQUEST_COLOR  },
+  { id: 'training',    label: 'Training',    color: '#f59e0b'      },
   ...DEFAULT_CATEGORIES,
-  // Demo-only: asset movement requests route through the approvals workflow.
-  { id: 'aircraft-movement', label: 'Aircraft Movement', color: '#06b6d4' },
 ];
 
 const UNIFIED_CATEGORIES_CONFIG = {
@@ -262,18 +243,6 @@ const UNIFIED_CATEGORIES_CONFIG = {
 };
 
 /* ─── Approval state machine (demo) ─────────────────────────────── */
-//
-// Resolves the next stage purely from action-verb semantics, so any
-// (stage, action) pair the owner-configured ApprovalActionMenu can present
-// produces a sensible transition — no dead clicks if the owner customizes
-// `config.approvals.rules[stage].allow[]`.
-//
-//   approve  ─▶ pending_higher → finalized    (second-tier approval)
-//              everything else → approved     (first approval lands here)
-//   deny     ─▶ denied
-//   finalize ─▶ finalized
-//   revoke   ─▶ finalized → approved          (roll back one step)
-//              everything else → requested
 function nextStageFor(currentStage, actionId) {
   const stage = currentStage ?? 'requested';
   switch (actionId) {
@@ -293,9 +262,7 @@ function applyApprovalTransition(event, actionId, payload) {
 
   const now = new Date().toISOString();
   const historyEntry = {
-    action: actionId,
-    at:     now,
-    actor:  payload?.actor ?? 'demo-user',
+    action: actionId, at: now, actor: payload?.actor ?? 'demo-user',
     ...(payload?.tier   !== undefined ? { tier:   payload.tier   } : {}),
     ...(payload?.reason !== undefined ? { reason: payload.reason } : {}),
   };
@@ -310,82 +277,6 @@ function applyApprovalTransition(event, actionId, payload) {
       },
     },
   };
-}
-
-/* ─── Theme picker ──────────────────────────────────────────────── */
-function ThemePicker({ current, onChange }) {
-  const [open, setOpen] = useState(false);
-  const active = THEMES.find(t => t.id === current) ?? THEMES[0];
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '6px 10px',
-          background: active.preview.bg,
-          border: `2px solid ${active.preview.accent}`,
-          borderRadius: 8, cursor: 'pointer', fontSize: 12,
-          color: active.preview.text, fontWeight: 600,
-          boxShadow: '0 1px 4px rgba(0,0,0,.12)',
-        }}
-        title="Change theme"
-      >
-        <span style={{ display:'flex', gap:3 }}>
-          {[active.preview.accent, active.preview.bg, active.preview.surface].map((c, i) => (
-            <span key={i} style={{ width:12, height:12, borderRadius:'50%', background:c, border:'1px solid rgba(0,0,0,.15)', display:'inline-block' }} />
-          ))}
-        </span>
-        {active.label}
-        <span style={{ opacity:0.6 }}>{open ? '▲' : '▼'}</span>
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-          background: '#fff', border: '1px solid #e2e8f0',
-          borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,.15)',
-          padding: 10, display: 'flex', flexDirection: 'column', gap: 4,
-          zIndex: 1000, minWidth: 220,
-        }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', padding: '2px 6px 6px' }}>
-            Choose a theme
-          </div>
-          {THEMES.map(t => (
-            <button
-              key={t.id}
-              onClick={() => { onChange(t.id); setOpen(false); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 10px', border: 'none', borderRadius: 8,
-                background: t.id === current ? t.preview.accent + '18' : 'transparent',
-                cursor: 'pointer', textAlign: 'left',
-                outline: t.id === current ? `2px solid ${t.preview.accent}` : 'none',
-                outlineOffset: -2,
-              }}
-            >
-              <div style={{
-                width: 36, height: 28, borderRadius: 5, flexShrink: 0,
-                background: t.preview.bg, border: `1px solid ${t.preview.border}`,
-                overflow: 'hidden', position: 'relative',
-              }}>
-                <div style={{ height: 8, background: t.preview.surface, borderBottom: `1px solid ${t.preview.border}` }} />
-                <div style={{ position:'absolute', bottom:4, left:4, right:4, height:6, borderRadius:2, background: t.preview.accent, opacity:0.85 }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', display:'flex', alignItems:'center', gap:5 }}>
-                  {t.label}
-                  {t.dark && <span style={{ fontSize:9, background:'#334155', color:'#94a3b8', padding:'1px 5px', borderRadius:3, fontWeight:600 }}>DARK</span>}
-                </div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{t.description.slice(0, 48)}{t.description.length > 48 ? '…' : ''}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /* ─── PWA update toast ──────────────────────────────────────────── */
@@ -424,24 +315,17 @@ function UpdateToast({ onUpdate, onDismiss }) {
 
 /* ─── Demo App ──────────────────────────────────────────────────── */
 function App() {
-  // A single events array holds both people-events (resource = emp-*) and
-  // asset-events (resource = aircraft registration). Schedule view picks up
-  // the people subset via the employees prop; Assets view picks up the
-  // aircraft subset via the assets prop + strictAssetFiltering.
-  const [events,       setEvents]       = useState([...INITIAL_EVENTS, ...FLEET_EVENTS]);
+  const [events,       setEvents]       = useState(INITIAL_EVENTS);
   const [notes,        setNotes]        = useState({});
   const [theme,        setTheme]        = useState(INITIAL_THEME);
   const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
   const [eventLog,     setEventLog]     = useState([]);
   const [needsRefresh, setNeedsRefresh] = useState(false);
-  // Resource pools (#212). Hydrated from localStorage so the round-robin
-  // cursor persists across reloads. WorksCalendar calls onPoolsChange
-  // after each cursor advance; we push that back to storage and state so
-  // the next mutation (or reload) sees the updated cursor.
   const [pools, setPools] = useState(() => {
     const persisted = loadPools(DEMO_CALENDAR_ID);
     return persisted.length > 0 ? persisted : DEMO_POOLS_DEFAULT;
   });
+
   const handlePoolsChange = useCallback((next) => {
     setPools(next);
     savePools(DEMO_CALENDAR_ID, next);
@@ -454,15 +338,8 @@ function App() {
 
   const [updateSW] = useState(() =>
     registerSW({
-      onNeedRefresh() { setNeedsRefresh(true); },
+      onNeedRefresh()  { setNeedsRefresh(true); },
       onOfflineReady() { console.info('[PWA] App ready to work offline.'); },
-      // Probe for a new bundle on registration and whenever the tab regains
-      // focus. Without this, a visitor with a stale SW would only pick up
-      // new bundles on the next fresh navigation. Combined with the
-      // onNeedRefresh auto-apply below this means a user who already had
-      // the pre-sidebar build cached will get bumped to the latest UI
-      // (e.g. the unified Filter/Group/Views sidebar) within seconds of
-      // re-opening the demo tab.
       onRegisteredSW(_swUrl, r) {
         if (!r) return;
         void r.update();
@@ -473,9 +350,6 @@ function App() {
     })
   );
 
-  // Keep the public demo on the latest bundle automatically so feature
-  // updates (like the unified Filter/Group/Views sidebar) are visible
-  // without requiring users to notice and click the update toast.
   useEffect(() => {
     if (!needsRefresh) return;
     void updateSW(true);
@@ -484,18 +358,11 @@ function App() {
 
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
-  // When the owner saves config (e.g. changes preferred theme in Settings > Setup),
-  // sync the demo's ThemePicker so both stay in agreement.
   const handleConfigSave = useCallback((cfg) => {
     log('Config saved');
     const newTheme = cfg.setup?.preferredTheme;
     if (newTheme) setTheme(newTheme);
   }, []);
-
-  const isDark       = THEMES.find(t => t.id === theme)?.dark ?? false;
-  const headerBg     = isDark ? '#0f172a' : '#fff';
-  const headerBorder = isDark ? '#1e293b' : '#e2e8f0';
-  const pageBg       = isDark ? '#060d1a' : '#f1f5f9';
 
   const handleEventSave = useCallback((ev) => {
     setEvents(prev => {
@@ -547,9 +414,7 @@ function App() {
   }, []);
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: pageBg }}>
-
-      {/* ── Calendar ── */}
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#060d1a' }}>
       <div style={{ flex: 1, padding: 0, minHeight: 0 }}>
         <div style={{ height: '100%', width: '100%' }}>
           <WorksCalendar
@@ -559,7 +424,7 @@ function App() {
             pools={pools}
             onPoolsChange={handlePoolsChange}
             strictAssetFiltering={true}
-            assetRequestCategories={['maintenance', 'pr', 'training', 'aircraft-movement']}
+            assetRequestCategories={['maintenance', 'request', 'training', 'mission']}
             onEmployeeAdd={handleEmployeeAdd}
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
@@ -583,7 +448,6 @@ function App() {
           />
         </div>
       </div>
-
 
       {/* Demo hint: owner password floats below the gear icon */}
       <div style={{
