@@ -125,8 +125,8 @@ export default function WeekView({
   const overflowTrapRef = useFocusTrap(() => setAllDayOverflowOpen(false), allDayOverflowOpen);
 
   const { allDayEvents, timedEvents } = useMemo(() => {
-    const allDay = [];
-    const timed  = [];
+    const allDay: WeekViewEvent[] = [];
+    const timed: WeekViewEvent[] = [];
     events.forEach(ev => (isMultiDay(ev) ? allDay : timed).push(ev));
     return { allDayEvents: allDay, timedEvents: timed };
   }, [events]);
@@ -150,7 +150,7 @@ export default function WeekView({
     return map;
   }, [days, timedEvents]);
 
-  const hours = [];
+  const hours: number[] = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
   function isBizHour(h: number, day: Date) {
