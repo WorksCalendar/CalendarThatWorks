@@ -43,7 +43,7 @@ function DropStep({ onFile, onClose }: any) {
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const { headers, rows } = parseCSV(e.target.result);
+        const { headers, rows } = parseCSV(e.target.result as string);
         if (!headers.length) { setError('No columns detected in this file.'); return; }
         if (!rows.length)    { setError('No data rows found (file has headers but no data).'); return; }
         onFile({ filename: file.name, headers, rows });

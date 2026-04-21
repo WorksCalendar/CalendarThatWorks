@@ -801,7 +801,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // Skip clear() when the change was triggered by our own onEventSave so the
   // undo stack survives the controlled-events prop round-trip.
   useEffect(() => {
-    engineRef.current.setEvents(fromLegacyEvents(allNormalized));
+    engineRef.current.setEvents(fromLegacyEvents(allNormalized as any));
     if (engineMutationPendingRef.current > 0) {
       engineMutationPendingRef.current -= 1;
     } else {

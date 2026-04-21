@@ -40,7 +40,7 @@ export default function ImportZone({ onImport, onClose }: any) {
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const events = parseICS(e.target.result);
+        const events = parseICS(e.target.result as string);
         if (!events.length) { setError('No events found in this file.'); return; }
         setParsed(events);
       } catch (err: any) {

@@ -11,7 +11,7 @@ export function useGrouping(rows, options: {
 
   const { flatRows, groupOrder } = useMemo(() => {
     if (!groupBy) return { flatRows: rows, groupOrder: [] };
-    return groupRows(rows, { groupBy, fieldAccessor, collapsedGroups, groupHeaderHeight });
+    return groupRows(rows, { groupBy, fieldAccessor: fieldAccessor as any, collapsedGroups, groupHeaderHeight });
   }, [rows, groupBy, fieldAccessor, collapsedGroups, groupHeaderHeight]);
 
   const toggleGroup = useCallback((key) => {
