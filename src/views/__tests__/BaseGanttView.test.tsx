@@ -115,7 +115,8 @@ describe('BaseGanttView — base groups', () => {
 
   it('renders the base name in the header', () => {
     wrap({ bases });
-    expect(screen.getByText('Alpha Base')).toBeInTheDocument();
+    // 'Alpha Base' appears in both the picker chip and the base header title.
+    expect(screen.getAllByText('Alpha Base').length).toBeGreaterThanOrEqual(2);
   });
 
   it('shows asset and people counts in the base header', () => {
@@ -187,7 +188,9 @@ describe('BaseGanttView — person rows', () => {
   it('renders a tel: link for an employee phone number', () => {
     const employees = [{ id: 'e1', name: 'Carol', base: 'b1', phone: '5550001234' }];
     wrap({ bases, employees });
-    const link = screen.getByRole('link', { name: /Call Carol/i });
+    // Accessible name comes from visible text "(555) 000-1234"; title="Call Carol"
+    // is advisory only. Query by the formatted number text content.
+    const link = screen.getByRole('link', { name: /555.*000.*1234/ });
     expect(link).toHaveAttribute('href', 'tel:5550001234');
   });
 
@@ -228,7 +231,10 @@ describe('BaseGanttView — event bars', () => {
     wrap({ bases, employees, events, onEventClick }, minCtx);
     fireEvent.click(screen.getByRole('button', { name: /Scheduled Shift/i }));
     expect(onEventClick).toHaveBeenCalledOnce();
-    expect(onEventClick).toHaveBeenCalledWith(events[0]);
+    // assignLanes enriches the event with _lane/_dayStart/_dayEnd; use objectContaining.
+    expect(onEventClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'ev1', title: 'Scheduled Shift', resource: 'e1' }),
+    );
   });
 
   it('renders a base-wide event bar for an event tagged to a base', () => {
