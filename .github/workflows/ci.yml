@@ -10,10 +10,10 @@ jobs:
   type-check:
     name: TypeScript Type Check
     runs-on: ubuntu-latest
-    # Advisory during the JS→TS migration (Phase 0 landed 2026-04-18).
-    # Flip this to a required check once pre-existing type errors in
-    # src/WorksCalendar.tsx and src/core/engine/** are cleaned up.
-    continue-on-error: true
+    # Blocking check: root advisory tsc is now enforced so Stage 4a/5 PRs
+    # cannot merge unless both the migration ratchet and repo-wide typecheck
+    # stay green. This mirrors the strict Definition of Done in the sprint
+    # plan and PR template.
     steps:
       - uses: actions/checkout@v4
 
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     # Blocking check that grows with the noImplicitAny migration.
     # Only files/dirs listed in tsconfig.strict.json are enforced;
-    # everything else stays under the advisory "type-check" job above.
+    # everything else stays under the root repo-wide type-check job above.
     # See docs/TypeScriptStrictMigration.md for the staged plan.
     steps:
       - uses: actions/checkout@v4
