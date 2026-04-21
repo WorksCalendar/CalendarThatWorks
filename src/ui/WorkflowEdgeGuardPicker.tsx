@@ -8,7 +8,9 @@
  *   - `condition`  → true / false / default
  *   - `approval`   → approved / denied / branch-completed / default
  *                     (+ `timeout` when slaMinutes set)
- *   - `notify`     → branch-completed / default
+ *   - `notify`     → default (notify nodes always exit on the default
+ *                     edge; `branch-completed` only resolves for
+ *                     approved/denied/timeout signals at runtime)
  *   - `parallel`   → default (fan-out is authored via `branches`, not edges)
  *   - `join`       → default (joins always continue along the single post-join edge)
  *   - `terminal`   → (no outgoing edges; picker should not be invoked)
@@ -66,7 +68,7 @@ export function guardsForSource(
       return options?.hasSla
         ? ['approved', 'denied', 'timeout', 'branch-completed', 'default']
         : ['approved', 'denied', 'branch-completed', 'default']
-    case 'notify':    return ['branch-completed', 'default']
+    case 'notify':    return ['default']
     case 'parallel':  return ['default']
     case 'join':      return ['default']
     case 'terminal':  return []

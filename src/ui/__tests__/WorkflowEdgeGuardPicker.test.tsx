@@ -17,8 +17,8 @@ describe('guardsForSource', () => {
       'approved', 'denied', 'branch-completed', 'default',
     ])
   })
-  it('notify → branch-completed / default', () => {
-    expect(guardsForSource('notify')).toEqual(['branch-completed', 'default'])
+  it('notify → default only (notify always exits via default at runtime)', () => {
+    expect(guardsForSource('notify')).toEqual(['default'])
   })
   it('parallel → default only (branches author via the node, not edges)', () => {
     expect(guardsForSource('parallel')).toEqual(['default'])
@@ -41,7 +41,7 @@ describe('guardsForSource', () => {
   })
   it('hasSla only affects approval sources', () => {
     expect(guardsForSource('condition', { hasSla: true })).toEqual(['true', 'false', 'default'])
-    expect(guardsForSource('notify',    { hasSla: true })).toEqual(['branch-completed', 'default'])
+    expect(guardsForSource('notify',    { hasSla: true })).toEqual(['default'])
   })
 })
 
@@ -100,7 +100,7 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
     expect(document.querySelector('[data-guard="true"]')).toBeNull()
   })
 
-  it('renders branch-completed + default for a notify source', () => {
+  it('renders only default for a notify source', () => {
     render(
       <WorkflowEdgeGuardPicker
         sourceType="notify"
@@ -108,9 +108,9 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
         onCancel={vi.fn()}
       />,
     )
-    const guards = [...document.querySelectorAll('[data-guard]')]
-      .map(b => b.getAttribute('data-guard'))
-    expect(guards).toEqual(['branch-completed', 'default'])
+    const buttons = document.querySelectorAll('[data-guard]')
+    expect(buttons.length).toBe(1)
+    expect(buttons[0].getAttribute('data-guard')).toBe('default')
   })
 
   it('renders only default for a parallel source', () => {

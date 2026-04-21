@@ -456,8 +456,13 @@ function branchReachesJoin(
     visited.add(id)
     if (id === joinId) return true
     const node = findNode(workflow, id)
-    // Terminals and nested parallels are dead ends for rejoin purposes.
+    // Terminals and (foreign) parallel/join nodes are dead ends for
+    // rejoin purposes — `walkBranchForward` fails the workflow if a
+    // branch lands on any of these, so a path through one cannot
+    // legitimately reach the paired join. The `id === joinId` check
+    // above already excludes the paired join itself.
     if (!node || node.type === 'terminal') continue
+    if (node.type === 'parallel' || node.type === 'join') continue
     for (const e of workflow.edges) {
       if (e.from !== id) continue
       if (!visited.has(e.to)) queue.push(e.to)
@@ -478,7 +483,7 @@ function isGuardLegal(node: WorkflowNode, guard: EdgeGuard): boolean {
       return guard === 'timeout'
         && typeof node.slaMinutes === 'number'
         && node.slaMinutes > 0
-    case 'notify':    return guard === 'default' || guard === 'branch-completed'
+    case 'notify':    return guard === 'default'
     case 'terminal':  return false
     // `parallel` only branches via `branches: string[]`; outgoing edges
     // if any are treated as post-join fallbacks, which isn't how the

@@ -520,6 +520,67 @@ describe('validateWorkflow — parallel / join (issue #223)', () => {
     const issues = validateWorkflow(parallelWf())
     expect(issues.some(i => i.code === 'dead-end-node' && i.nodeId === 'fan')).toBe(false)
   })
+
+  // Regression: reachability should treat foreign parallel/join nodes
+  // as dead ends, matching walkBranchForward's runtime behavior —
+  // otherwise a branch can appear to rejoin at validation time yet
+  // deterministically fail at runtime once it enters the nested
+  // parallel path.
+  it('treats a foreign parallel node inside a branch as a dead-end for rejoin', () => {
+    // Branch "a"'s only forward path goes through `inner-fan`, a
+    // foreign parallel. Runtime would fail on entry to inner-fan, so
+    // validation must agree that this branch never reaches the paired
+    // join — even though `inner-fan → join` looks reachable on paper.
+    const wf: Workflow = {
+      id: 'nested', version: 1, trigger: 'on_submit', startNodeId: 'fan',
+      nodes: [
+        { id: 'fan', type: 'parallel', branches: ['a', 'b'], mode: 'requireAll' },
+        // Branch "a": notify whose only outgoing edge enters the foreign parallel.
+        { id: 'a', type: 'notify', channel: 'slack' },
+        { id: 'inner-fan', type: 'parallel', branches: ['x'], mode: 'requireAll' },
+        { id: 'x', type: 'approval', assignTo: 'role:x' },
+        { id: 'inner-join', type: 'join', pairedWith: 'inner-fan' },
+        // Branch "b": clean rejoin so we know the rejoin error is about "a".
+        { id: 'b', type: 'approval', assignTo: 'role:b' },
+        { id: 'join', type: 'join', pairedWith: 'fan' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'a', to: 'inner-fan' },
+        { from: 'inner-fan', to: 'join' },
+        { from: 'x', to: 'inner-join', when: 'branch-completed' },
+        { from: 'inner-join', to: 'join' },
+        { from: 'b', to: 'join', when: 'branch-completed' },
+        { from: 'join', to: 'done' },
+      ],
+    } as Workflow
+    const issues = validateWorkflow(wf)
+    expect(issues.some(
+      i => i.code === 'parallel-branches-rejoin' && /branch "a"/.test(i.message),
+    )).toBe(true)
+  })
+
+  // Regression: notify nodes exit with `default` at runtime;
+  // `resolveNextEdge` only falls back to a `branch-completed` edge for
+  // approved/denied/timeout signals. A notify → branch-completed edge
+  // would pass validation but deadlock at runtime — the guard must be
+  // illegal on notify sources.
+  it('flags a notify edge guarded by branch-completed as illegal', () => {
+    const wf: Workflow = {
+      id: 'bad-notify', version: 1, trigger: 'on_submit', startNodeId: 'n',
+      nodes: [
+        { id: 'n', type: 'notify', channel: 'slack' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'n', to: 'done', when: 'branch-completed' },
+      ],
+    } as Workflow
+    const issues = validateWorkflow(wf)
+    expect(issues.some(
+      i => i.code === 'illegal-guard-for-source' && i.nodeId === 'n',
+    )).toBe(true)
+  })
 })
 
 describe('validateExpressionSyntax', () => {

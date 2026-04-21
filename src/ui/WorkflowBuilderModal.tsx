@@ -196,8 +196,30 @@ export function WorkflowBuilderModal(
   // ─── Edge creation → guard picker → commit ───────────────────────────────
 
   const handleCreateEdge = useCallback(
-    (from: string, to: string) => setPendingEdge({ from, to }),
-    [],
+    (from: string, to: string) => {
+      // Parallel nodes fan out via `node.branches`, NOT outgoing edges
+      // (the runtime's `enterParallel` reads only `branches` and
+      // ignores edges from a parallel source). Mutate the source's
+      // branches array directly instead of opening the guard picker —
+      // any edge appended here would be dead at runtime and would
+      // leave the parallel stuck on `parallel-branches-empty`.
+      const src = draftWorkflow.nodes.find(n => n.id === from)
+      if (src?.type === 'parallel') {
+        if (src.branches.includes(to)) return
+        setDraftWorkflow(prev => ({
+          ...prev,
+          nodes: prev.nodes.map(n =>
+            n.id === from && n.type === 'parallel'
+              ? { ...n, branches: [...n.branches, to] }
+              : n,
+          ),
+        }))
+        clearUndo()
+        return
+      }
+      setPendingEdge({ from, to })
+    },
+    [draftWorkflow, clearUndo],
   )
 
   const commitPendingEdge = useCallback(
