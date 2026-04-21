@@ -19,6 +19,7 @@ import type {
 } from '../types/ui';
 import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
+import type { CategoryDef, CategoriesConfig } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { serializeFilters } from '../hooks/useSavedViews';
 import { THEMES, THEME_META, normalizeTheme } from '../styles/themes';
@@ -110,6 +111,35 @@ type TemplateTabProps = {
 type AssetsTabProps = ConfigPanelSectionProps & {
   items?: AnyRecord[];
 };
+
+type TemplateVisibility = 'private' | 'team' | 'org';
+type EventFieldType = (typeof FIELD_TYPES)[number]['value'];
+type EventFieldDraft = {
+  name: string;
+  type: EventFieldType;
+  required: boolean;
+  options?: string;
+};
+type EventFieldsByCategory = Record<string, EventFieldDraft[]>;
+type CategoriesPatch = Partial<CategoriesConfig>;
+type CategoryPatch = Partial<CategoryDef>;
+type AssetMeta = {
+  sublabel?: string;
+  registrationNumber?: string;
+  type?: string;
+  make?: string;
+  model?: string;
+  limitations?: string;
+};
+type AssetDraft = {
+  _key?: string;
+  id: string;
+  label: string;
+  group?: string;
+  meta?: AssetMeta;
+};
+type AssetPatch = Partial<Omit<AssetDraft, 'meta'>>;
+type AssetMetaPatch = Partial<AssetMeta>;
 
 export default function ConfigPanel({
   config, categories, resources, schema, items, onUpdate, onClose, onSaveView,
@@ -771,7 +801,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
 
 function TemplateTab({ templates, onCreate, onDelete, error }: TemplateTabProps) {
   const [name, setName] = useState('');
-  const [visibility, setVisibility] = useState('team');
+  const [visibility, setVisibility] = useState<TemplateVisibility>('team');
   const [title, setTitle] = useState('');
   const [startOffsetMinutes, setStartOffsetMinutes] = useState<number | string>(0);
   const [durationMinutes, setDurationMinutes] = useState<number | string>(60);
@@ -816,7 +846,7 @@ function TemplateTab({ templates, onCreate, onDelete, error }: TemplateTabProps)
       </label>
       <div className={styles.formRow}>
         <span>Visibility</span>
-        <select className={styles.select} value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+        <select className={styles.select} value={visibility} onChange={(e) => setVisibility(e.target.value as TemplateVisibility)}>
           <option value="private">Private</option>
           <option value="team">Team</option>
           <option value="org">Org</option>
@@ -892,7 +922,8 @@ function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProp
   const [selCat, setSelCat] = useState(categories[0] || '');
   const [newCat, setNewCat] = useState('');
 
-  const fields = config.eventFields?.[selCat] || [];
+  const eventFields = (config.eventFields ?? {}) as EventFieldsByCategory;
+  const fields = eventFields[selCat] || [];
 
   function addField() {
     onUpdate(c => ({
@@ -904,15 +935,15 @@ function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProp
     }));
   }
 
-  function updateField(idx, patch) {
+  function updateField(idx: number, patch: Partial<EventFieldDraft>) {
     onUpdate(c => {
-      const arr = [...(c.eventFields?.[selCat] || [])];
+      const arr = [...(((c.eventFields ?? {}) as EventFieldsByCategory)[selCat] || [])];
       arr[idx] = { ...arr[idx], ...patch };
       return { ...c, eventFields: { ...c.eventFields, [selCat]: arr } };
     });
   }
 
-  function removeField(idx) {
+  function removeField(idx: number) {
     onUpdate(c => {
       const arr = (c.eventFields?.[selCat] || []).filter((_, i) => i !== idx);
       return { ...c, eventFields: { ...c.eventFields, [selCat]: arr } };
@@ -927,7 +958,7 @@ function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProp
     onUpdate(c => ({ ...c, eventFields: { ...c.eventFields, [cat]: [] } }));
   }
 
-  const allCats = Array.from(new Set([...categories, ...Object.keys(config.eventFields || {})]));
+  const allCats = Array.from(new Set([...categories, ...Object.keys(eventFields)]));
 
   return (
     <div className={styles.section}>
@@ -949,7 +980,7 @@ function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProp
               <input className={styles.input} value={f.name}
                 onChange={e => updateField(i, { name: e.target.value })} placeholder="Field name" />
               <select className={styles.select} value={f.type}
-                onChange={e => updateField(i, { type: e.target.value })}>
+                onChange={e => updateField(i, { type: e.target.value as EventFieldType })}>
                 {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
               {f.type === 'select' && (
@@ -979,7 +1010,7 @@ function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProp
  * color; id is the key referenced by event.category.
  */
 export function CategoriesTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  const current = config.categoriesConfig ?? { categories: DEFAULT_CATEGORIES };
+  const current = (config.categoriesConfig ?? { categories: DEFAULT_CATEGORIES }) as CategoriesConfig;
   const cats = current.categories ?? [];
   const pillStyle = current.pillStyle ?? 'hue';
   const defaultId = current.defaultCategoryId ?? cats[0]?.id ?? '';
@@ -990,20 +1021,20 @@ export function CategoriesTab({ config, onUpdate }: ConfigPanelSectionProps) {
    * set it. Every other mutator in this tab funnels through here so the
    * baseline shape is always preserved.
    */
-  const patchConfig = (patch) => onUpdate(c => ({
+  const patchConfig = (patch: CategoriesPatch) => onUpdate(c => ({
     ...c,
     categoriesConfig: { ...(c.categoriesConfig ?? { categories: DEFAULT_CATEGORIES }), ...patch },
   }));
 
   /** Replaces the full `categories` array; convenience wrapper over `patchConfig`. */
-  const patchCats = (next) => patchConfig({ categories: next });
+  const patchCats = (next: CategoryDef[]) => patchConfig({ categories: next });
 
   /**
    * Patches a single category at `idx` by index. Unknown indices are a
    * no-op because `.map` simply yields an identical array. Callers use
    * this for color / label / id / disabled edits.
    */
-  const updateCat = (idx, patch) => {
+  const updateCat = (idx: number, patch: CategoryPatch) => {
     const next = cats.map((cat, i) => (i === idx ? { ...cat, ...patch } : cat));
     patchCats(next);
   };
@@ -1019,7 +1050,7 @@ export function CategoriesTab({ config, onUpdate }: ConfigPanelSectionProps) {
   };
 
   /** Removes the category at `idx`; history events keep their original category id. */
-  const removeCat = (idx) => patchCats(cats.filter((_, i) => i !== idx));
+  const removeCat = (idx: number) => patchCats(cats.filter((_, i) => i !== idx));
 
   /**
    * Restores the DEFAULT_CATEGORIES seed + default pillStyle + default
@@ -1044,7 +1075,7 @@ export function CategoriesTab({ config, onUpdate }: ConfigPanelSectionProps) {
         <select
           className={styles.select}
           value={pillStyle}
-          onChange={e => patchConfig({ pillStyle: e.target.value })}
+          onChange={e => patchConfig({ pillStyle: e.target.value as CategoriesConfig['pillStyle'] })}
           aria-label="Pill style"
         >
           <option value="hue">Hue (full fill)</option>
@@ -1134,13 +1165,13 @@ export function CategoriesTab({ config, onUpdate }: ConfigPanelSectionProps) {
  */
 const REQUIRED_ASSET_META_KEYS = ['registrationNumber', 'type', 'make', 'model'] as const;
 
-function hasAllRequiredAssetFields(asset) {
+function hasAllRequiredAssetFields(asset: AssetDraft | null | undefined) {
   if (!asset) return false;
   const meta = asset.meta ?? {};
   return REQUIRED_ASSET_META_KEYS.every(k => String(meta[k] ?? '').trim().length > 0);
 }
 
-function createDraftAsset(nextIndex) {
+function createDraftAsset(nextIndex: number): AssetDraft {
   return {
     _key: `draft-${Date.now()}-${nextIndex}`,
     id: `asset-${nextIndex}`,
@@ -1157,24 +1188,24 @@ function createDraftAsset(nextIndex) {
 }
 
 export function AssetsTab({ config, onUpdate, items = [] }: AssetsTabProps) {
-  const assets = Array.isArray(config.assets) ? config.assets : [];
+  const assets = (Array.isArray(config.assets) ? config.assets : []) as AssetDraft[];
   // Draft row for new asset creation. Kept in local state so partially-filled
   // rows never enter config.assets — the only entry point is saveDraft(),
   // which requires all four of registrationNumber/type/make/model (#196).
-  const [draftAsset, setDraftAsset] = useState<AnyRecord | null>(null);
+  const [draftAsset, setDraftAsset] = useState<AssetDraft | null>(null);
 
-  const writeAssets = (next) => onUpdate(c => ({ ...c, assets: next }));
+  const writeAssets = (next: AssetDraft[]) => onUpdate(c => ({ ...c, assets: next }));
 
   const addAsset = () => {
     if (draftAsset) return;
     setDraftAsset(createDraftAsset(assets.length + 1));
   };
 
-  const updateDraft = (patch) => {
+  const updateDraft = (patch: AssetPatch) => {
     setDraftAsset(prev => (prev ? { ...prev, ...patch } : prev));
   };
 
-  const updateDraftMeta = (metaPatch) => {
+  const updateDraftMeta = (metaPatch: AssetMetaPatch) => {
     setDraftAsset(prev => (
       prev ? { ...prev, meta: { ...(prev.meta ?? {}), ...metaPatch } } : prev
     ));
@@ -1188,19 +1219,19 @@ export function AssetsTab({ config, onUpdate, items = [] }: AssetsTabProps) {
     setDraftAsset(null);
   };
 
-  const updateAsset = (idx, patch) => {
+  const updateAsset = (idx: number, patch: AssetPatch) => {
     writeAssets(assets.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
   };
 
-  const updateAssetMeta = (idx, metaPatch) => {
+  const updateAssetMeta = (idx: number, metaPatch: AssetMetaPatch) => {
     writeAssets(assets.map((a, i) => (
       i === idx ? { ...a, meta: { ...(a.meta ?? {}), ...metaPatch } } : a
     )));
   };
 
-  const removeAsset = (idx) => writeAssets(assets.filter((_, i) => i !== idx));
+  const removeAsset = (idx: number) => writeAssets(assets.filter((_, i) => i !== idx));
 
-  const moveAsset = (idx, delta) => {
+  const moveAsset = (idx: number, delta: number) => {
     const target = idx + delta;
     if (target < 0 || target >= assets.length) return;
     const next = [...assets];
