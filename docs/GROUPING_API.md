@@ -154,7 +154,7 @@ The returned `OperationResult` carries one of:
 
 Saved views persist `groupBy`, `sort`, and `showAllGroups` alongside the
 filter state (schema v3).  The `useSavedViews` hook round-trips these through
-JSON — see [`v0.2-to-v0.3-MIGRATION.md`](./v0.2-to-v0.3-MIGRATION.md) for the
+JSON — see [`v0.2-to-v0.3-MIGRATION.md`](./archive/planning/v0.2-to-v0.3-MIGRATION.md) for the
 schema change.
 
 ---
