@@ -3,8 +3,9 @@
  *
  * Mental model: "Focus" is a first-class, always-visible row of one-tap
  * filter chips. No panel-opening required. Each chip maps to a set of
- * category ids; clicking toggles the full set on/off in the calendar's
- * `category` filter.
+ * category ids; clicking atomically toggles the full set on/off in the
+ * calendar's `categories` filter (which is the default schema key used
+ * by buildDefaultFilterSchema).
  *
  * When nothing is active, all events show (normal calendar behavior).
  * When any chip is active, only events in the union of active chips'
@@ -18,7 +19,7 @@ export type FocusChipDef = {
   id: string;
   /** Short label, e.g. "Dispatch". */
   label: string;
-  /** Categories this chip toggles on the `category` filter. */
+  /** Categories this chip toggles on the `categories` filter. */
   categories: string[];
   /** Optional icon name (bundled set). Falls back to no icon. */
   icon?: 'radio' | 'plane' | 'wrench' | 'file';
@@ -44,21 +45,37 @@ const ICON_MAP = {
 
 export type FocusChipsProps = {
   chips?: FocusChipDef[];
-  /** Current active category set (from cal.filters.category). */
+  /** Current active categories Set (from cal.filters.categories). */
   activeCategories: Set<string> | undefined | null;
-  /** Toggle a category on/off. */
-  onToggleCategory: (category: string) => void;
+  /** Replace the active-categories set. */
+  onCategoriesChange: (next: Set<string>) => void;
 };
 
+/** A chip is "active" only when every one of its categories is in the set. */
 function chipIsActive(chip: FocusChipDef, active: Set<string> | null | undefined): boolean {
   if (!active || active.size === 0) return false;
   return chip.categories.every(c => active.has(c));
 }
 
+/**
+ * Atomically toggle a chip's categories:
+ *   - fully active → remove all of them
+ *   - partial or inactive → add any missing ones (treat the chip as one unit)
+ */
+function toggleChip(chip: FocusChipDef, active: Set<string> | null | undefined): Set<string> {
+  const next = new Set(active ?? []);
+  if (chipIsActive(chip, next)) {
+    chip.categories.forEach(c => next.delete(c));
+  } else {
+    chip.categories.forEach(c => next.add(c));
+  }
+  return next;
+}
+
 export default function FocusChips({
   chips = DEFAULT_FOCUS_CHIPS,
   activeCategories,
-  onToggleCategory,
+  onCategoriesChange,
 }: FocusChipsProps) {
   if (chips.length === 0) return null;
 
@@ -73,7 +90,7 @@ export default function FocusChips({
             key={chip.id}
             type="button"
             className={[styles.chip, active && styles.chipActive].filter(Boolean).join(' ')}
-            onClick={() => chip.categories.forEach(onToggleCategory)}
+            onClick={() => onCategoriesChange(toggleChip(chip, activeCategories))}
             aria-pressed={active}
             title={`Focus on ${chip.label.toLowerCase()}`}
           >

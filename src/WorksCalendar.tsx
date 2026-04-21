@@ -2124,8 +2124,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {focusChips && (
           <FocusChips
             chips={Array.isArray(focusChips) ? focusChips : DEFAULT_FOCUS_CHIPS}
-            activeCategories={cal.filters?.category as Set<string> | undefined}
-            onToggleCategory={(category) => cal.toggleFilter('category', category)}
+            activeCategories={cal.filters?.categories as Set<string> | undefined}
+            onCategoriesChange={(next) => cal.setFilter('categories', next)}
           />
         )}
 
