@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WorksCalendar — IHC Fleet Demo</title>
+  <title>WorksCalendar — Air EMS Operations Demo</title>
 
   <!-- PWA / theme metadata -->
-  <meta name="theme-color" content="#4f46e5" />
-  <meta name="description" content="WorksCalendar IHC Fleet Demo — embeddable React calendar with filters and scheduling" />
+  <meta name="theme-color" content="#00d4ff" />
+  <meta name="description" content="WorksCalendar Air EMS Operations Demo — flight coordination, medical staffing, and maintenance coverage in one view" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -26,8 +26,10 @@
     body {
       margin: 0;
       font-family: 'Inter', system-ui, sans-serif;
-      background: #f1f5f9;
-      color: #0f172a;
+      /* Match the default ops-dark theme so the initial paint doesn't
+         flash light before React mounts. */
+      background: #060d1a;
+      color: #c8e8f0;
     }
     /* Let the calendar sit flush with the viewport edges in the demo. */
     #root > div > [data-testid="works-calendar"] {

@@ -18,7 +18,7 @@
  */
 import { useState } from 'react';
 import { X, ChevronRight, Check, Sparkles, Camera } from 'lucide-react';
-import { THEMES } from '../styles/themes';
+import { THEMES, THEME_META, normalizeTheme } from '../styles/themes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
 import styles from './SetupWizardModal.module.css';
@@ -183,6 +183,9 @@ export default function SetupWizardModal({
 // ─── Step 1: Basic info ───────────────────────────────────────────────────────
 
 function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChange }: any) {
+  // The wizard seeds `selectedTheme` with a legacy id ('corporate'); normalize
+  // so the matching theme-family card shows as selected on first render.
+  const normalizedSelected = normalizeTheme(selectedTheme);
   return (
     <div className={styles.step}>
       <div className={styles.stepHeader}>
@@ -207,31 +210,35 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
         <fieldset className={styles.fieldset}>
           <legend className={styles.fieldLabel}>Theme</legend>
           <div className={styles.themeGrid}>
-          {THEMES.map(theme => (
-            <button
-              key={theme.id}
-              className={[styles.themeCard, selectedTheme === theme.id && styles.themeCardSelected].filter(Boolean).join(' ')}
-              onClick={() => onThemeChange(theme.id)}
-              title={theme.description}
-              aria-pressed={selectedTheme === theme.id}
-            >
-              {/* Mini preview swatch */}
-              <div
-                className={styles.themeSwatch}
-                style={{ background: theme.preview.bg, borderColor: theme.preview.border }}
+          {THEMES.map(id => {
+            const theme = THEME_META[id];
+            const selected = normalizedSelected === theme.id;
+            return (
+              <button
+                key={theme.id}
+                className={[styles.themeCard, selected && styles.themeCardSelected].filter(Boolean).join(' ')}
+                onClick={() => onThemeChange(theme.id)}
+                title={theme.description}
+                aria-pressed={selected}
               >
-                <div className={styles.swatchAccent} style={{ background: theme.preview.accent }} />
-                <div className={styles.swatchLines}>
-                  <span style={{ background: theme.preview.text }} />
-                  <span style={{ background: theme.preview.text, width: '60%' }} />
+                {/* Mini preview swatch */}
+                <div
+                  className={styles.themeSwatch}
+                  style={{ background: theme.preview.bg, borderColor: theme.preview.border }}
+                >
+                  <div className={styles.swatchAccent} style={{ background: theme.preview.accent }} />
+                  <div className={styles.swatchLines}>
+                    <span style={{ background: theme.preview.text }} />
+                    <span style={{ background: theme.preview.text, width: '60%' }} />
+                  </div>
                 </div>
-              </div>
-              <span className={styles.themeLabel}>{theme.label}</span>
-              {selectedTheme === theme.id && (
-                <span className={styles.themeCheck}><Check size={10} /></span>
-              )}
-            </button>
-          ))}
+                <span className={styles.themeLabel}>{theme.label}</span>
+                {selected && (
+                  <span className={styles.themeCheck}><Check size={10} /></span>
+                )}
+              </button>
+            );
+          })}
           </div>
         </fieldset>
       </div>
@@ -332,7 +339,11 @@ function Step2({ categories, resources, createdViews, onSaveView }: any) {
 // ─── Step 4: Done ─────────────────────────────────────────────────────────────
 
 function Step3({ calendarName, selectedTheme, teamMembers, createdViews }: any) {
-  const theme = THEMES.find(t => t.id === selectedTheme);
+  // Summary card lookup — normalize so legacy ids still resolve to metadata.
+  const normalizedSelected = selectedTheme ? normalizeTheme(selectedTheme) : undefined;
+  const theme = normalizedSelected
+    ? THEME_META[normalizedSelected]
+    : undefined;
 
   return (
     <div className={[styles.step, styles.stepDone].join(' ')}>

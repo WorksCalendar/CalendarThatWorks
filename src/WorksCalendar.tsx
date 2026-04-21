@@ -36,6 +36,7 @@ import { validateOperation } from './core/engine/validation/validateOperation.ts
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
 import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
+import { resolveCssTheme } from './styles/themes';
 import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
 import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
@@ -439,7 +440,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
-  const effectiveTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'light';
+  // The raw theme value (from props, owner config, or default). The new theme
+  // system uses `family-mode` IDs (see src/styles/themes.ts); the CSS runtime
+  // still matches the historical single-word selectors, so we resolve the
+  // user-facing ID to a CSS selector via resolveCssTheme().
+  const rawTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'canvas-light';
+  const effectiveTheme = resolveCssTheme(rawTheme);
   const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
   // Merge parent's employees prop with owner-config team.members so edits
   // made from the Settings → Employees tab (e.g. renaming a member) are
@@ -1931,7 +1937,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onSkip={handleSetupSkip}
             onFinish={handleSetupFinish}
             initialName={ownerCfg.config?.title}
-            initialTheme={ownerCfg.config?.setup?.preferredTheme ?? effectiveTheme}
+            initialTheme={ownerCfg.config?.setup?.preferredTheme ?? rawTheme}
           />
         </div>
       </CalendarErrorBoundary>

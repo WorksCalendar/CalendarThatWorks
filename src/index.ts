@@ -22,7 +22,18 @@ export {
   statusField, priorityField, ownerField, tagsField, metaSelectField,
 } from './filters/filterSchema';
 export { createInitialFilters, buildActiveFilterPills, isEmptyFilterValue } from './filters/filterState';
-export { THEMES, THEMES_BY_ID, THEME_IDS } from './styles/themes';
+export {
+  THEMES,
+  THEMES_BY_ID,
+  THEME_IDS,
+  THEME_FAMILIES,
+  THEME_META,
+  DEFAULT_THEME,
+  buildThemeId,
+  normalizeTheme,
+  resolveCssTheme,
+} from './styles/themes';
+export type { ThemeId, ThemeFamily, ThemeMode, ThemeMeta, ThemePreview } from './styles/themes';
 export {
   default as CalendarExternalForm,
   SUPPORTED_EXTERNAL_FORM_FIELD_TYPES,

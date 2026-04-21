@@ -14,7 +14,7 @@ import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { serializeFilters } from '../hooks/useSavedViews';
-import { THEMES } from '../styles/themes';
+import { THEMES, THEME_META, normalizeTheme } from '../styles/themes';
 import SourcePanel from './SourcePanel';
 import ThemeCustomizer from './ThemeCustomizer';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
@@ -250,7 +250,10 @@ export default function ConfigPanel({
 }
 
 function SetupTab({ config, onUpdate }: any) {
-  const selectedTheme = config.setup?.preferredTheme ?? 'corporate';
+  // Stored `preferredTheme` may be a legacy id (e.g. 'corporate', 'ocean')
+  // for upgraded calendars. Normalize for the aria-pressed/selected match
+  // so the active card still highlights after the theme-system rewrite.
+  const selectedTheme = normalizeTheme(config.setup?.preferredTheme ?? 'corporate');
   const calendarName = config.title ?? 'My WorksCalendar';
 
   const setCalendarName = (name) => onUpdate(c => ({
@@ -277,27 +280,30 @@ function SetupTab({ config, onUpdate }: any) {
         />
       </label>
       <div className={styles.themeGrid}>
-        {THEMES.map((theme) => (
-          <button
-            key={theme.id}
-            className={[styles.themeCard, selectedTheme === theme.id && styles.themeCardSelected].filter(Boolean).join(' ')}
-            onClick={() => setPreferredTheme(theme.id)}
-            title={theme.description}
-            aria-pressed={selectedTheme === theme.id}
-          >
-            <div className={styles.themeCardPreview} style={{ background: theme.preview.bg, borderColor: theme.preview.border }}>
-              <div className={styles.themeCardAccent} style={{ background: theme.preview.accent }} />
-              <div className={styles.themeCardLines}>
-                <span style={{ background: theme.preview.text }} />
-                <span style={{ background: theme.preview.text, width: '65%' }} />
+        {THEMES.map((id) => {
+          const theme = THEME_META[id];
+          return (
+            <button
+              key={theme.id}
+              className={[styles.themeCard, selectedTheme === theme.id && styles.themeCardSelected].filter(Boolean).join(' ')}
+              onClick={() => setPreferredTheme(theme.id)}
+              title={theme.description}
+              aria-pressed={selectedTheme === theme.id}
+            >
+              <div className={styles.themeCardPreview} style={{ background: theme.preview.bg, borderColor: theme.preview.border }}>
+                <div className={styles.themeCardAccent} style={{ background: theme.preview.accent }} />
+                <div className={styles.themeCardLines}>
+                  <span style={{ background: theme.preview.text }} />
+                  <span style={{ background: theme.preview.text, width: '65%' }} />
+                </div>
               </div>
-            </div>
-            <div className={styles.themeCardTop}>
-              <span>{theme.label}</span>
-              {selectedTheme === theme.id && <Check size={12} />}
-            </div>
-          </button>
-        ))}
+              <div className={styles.themeCardTop}>
+                <span>{theme.label}</span>
+                {selectedTheme === theme.id && <Check size={12} />}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
