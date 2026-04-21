@@ -1,7 +1,7 @@
 # Sprint Roadmap: Grouping, Filtering & Sorting — Phased Implementation
 
 **Created:** 2026-04-16
-**Based on:** [Executive Summary](./GROUPING_SPRINT_EXECUTIVE_SUMMARY.md) | [Viability Analysis](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
+**Based on:** [Executive Summary](./GROUPING_SPRINT_EXECUTIVE_SUMMARY.md) | [Viability Analysis](../analysis/INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
 **Approach:** Option C — Phased (7-9 weeks, 9 sprints)
 **Sprint Cadence:** 1-week sprints (5 working days)
 

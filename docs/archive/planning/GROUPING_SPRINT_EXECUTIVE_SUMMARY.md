@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-16 (initial review) · **Updated:** 2026-04-18 (Phase A+B delivery)
 **Status:** ✅ Phases A + B shipped — original scope reshaped; see **Delivery Update** at bottom.
-**Full Analysis:** [INFINITE_GROUPING_VIABILITY_ANALYSIS.md](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
+**Full Analysis:** [INFINITE_GROUPING_VIABILITY_ANALYSIS.md](../analysis/INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
 
 > **If you only read one thing, skip to the [Delivery Update](#delivery-update--2026-04-sprint) section.** The body below is preserved as the original pre-implementation risk analysis. It correctly flagged that the 5-day scope was unrealistic; the sprint reshaped into phased delivery (A/B) under GitHub issue #134.
 
@@ -256,7 +256,7 @@ The calendar is a valuable product. Let's build grouping features properly, not 
 ---
 
 **Reviewed by:** Claude Code Agent
-**Full Analysis:** [INFINITE_GROUPING_VIABILITY_ANALYSIS.md](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
+**Full Analysis:** [INFINITE_GROUPING_VIABILITY_ANALYSIS.md](../analysis/INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
 **Next Steps:** Stakeholder review + scope decision
 
 ---
@@ -333,7 +333,7 @@ not the default path.**
 
 ### Where to look for the work
 
-- **API surface:** [`GROUPING_API.md`](./GROUPING_API.md) — now includes the
+- **API surface:** [`GROUPING_API.md`](../../GROUPING_API.md) — now includes the
   AssetsView / Assets tab section covering the `assets[]` prop shape, the
   ConfigPanel deep-link, and the cross-group keyboard contract.
 - **Engine:** `src/grouping/groupRows.ts`, `src/hooks/useGrouping.ts`,

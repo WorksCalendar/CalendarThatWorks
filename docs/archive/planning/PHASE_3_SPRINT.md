@@ -1,7 +1,7 @@
 # Phase 3 Sprint Plan — Multi-Level Grouping (with Phase 2 Catch-up)
 
 **Created:** 2026-04-17
-**Based on:** [Viability Analysis](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md), [Sprint Roadmap](./SPRINT_ROADMAP.md)
+**Based on:** [Viability Analysis](../analysis/INFINITE_GROUPING_VIABILITY_ANALYSIS.md), [Sprint Roadmap](./SPRINT_ROADMAP.md)
 **Branch:** `claude/create-phase-3-sprint-KCf36`
 **Duration:** 7 one-week sprints (Phase 2 catch-up: 3 weeks; Phase 3: 4 weeks)
 **Version target:** `v0.3.0`
@@ -10,7 +10,7 @@
 
 ## Context
 
-The [viability analysis](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md) rejected the original 5-day "unlimited grouping" sprint as unrealistic and recommended Option C — a phased rollout over 7-9 weeks. The [sprint roadmap](./SPRINT_ROADMAP.md) split that vision into Phases 1-3.
+The [viability analysis](../analysis/INFINITE_GROUPING_VIABILITY_ANALYSIS.md) rejected the original 5-day "unlimited grouping" sprint as unrealistic and recommended Option C — a phased rollout over 7-9 weeks. The [sprint roadmap](./SPRINT_ROADMAP.md) split that vision into Phases 1-3.
 
 Current state (verified against `main` on 2026-04-17):
 
