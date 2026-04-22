@@ -156,7 +156,7 @@ describe('useSavedViews', () => {
 
   it('saveView returns the created view object', () => {
     const { result } = renderHook(() => useSavedViews(CAL_ID));
-    let created: any;
+    let created: { name: string; id: string };
     act(() => {
       created = result.current.saveView('Return Test', {
         categories: new Set(),

@@ -6,11 +6,11 @@ import { WorksCalendar } from '../WorksCalendar.tsx';
 import type { WorksCalendarEvent } from '../types/events';
 
 function getKinds(events: WorksCalendarEvent[]) {
-  return events.map((ev: WorksCalendarEvent) => String(ev?.meta?.kind ?? '').toLowerCase());
+  return events.map((ev) => String(ev?.meta?.kind ?? '').toLowerCase());
 }
 
 function getByKind(events: WorksCalendarEvent[], kind: string) {
-  return events.filter((ev: WorksCalendarEvent) => String(ev?.meta?.kind ?? '').toLowerCase() === kind);
+  return events.filter((ev) => String(ev?.meta?.kind ?? '').toLowerCase() === kind);
 }
 
 describe('WorksCalendar schedule model integration', () => {
