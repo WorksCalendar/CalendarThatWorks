@@ -228,3 +228,112 @@ Top error codes:
 - A recurring failure pattern is state initialized as `null` (or inferred as `never`) and later consumed as non-null objects, causing large `TS2339`/`TS2345` cascades.
 - Ref-centric code paths (`engineRef.current`, `undoManagerRef.current`) contribute many `possibly 'null'` diagnostics and should be handled with explicit guards or narrowed helper APIs.
 - Tests continue to fail on nullable query/indexing assumptions (`Object is possibly 'undefined'`), indicating production + test migration must proceed together.
+
+---
+
+## Root strictNullChecks Checkpoint (latest CI run)
+
+Date: 2026-04-22
+
+### Validation command
+
+```bash
+npm run type-check
+```
+
+which runs:
+
+```bash
+tsc --noEmit
+```
+
+with root `strictNullChecks` enabled.
+
+### Result summary
+
+- Exit code: `2` (type-check failed under strict nullability)
+- The latest root run supersedes the earlier 386-count trial and confirms that the repository is **still not ready** for a root `strictNullChecks` flip.
+- The newest failures remain dominated by the same high-cascade hotspots rather than newly-discovered edge files.
+
+### Current blocker clusters
+
+#### 1. Root composition remains the primary blocker
+
+`src/WorksCalendar.tsx` still dominates the run and shows the same broad cascade patterns:
+
+- state inferred as `null` and later assigned objects
+- refs (`engineRef`, `undoManagerRef`) consumed without null guards
+- follow-on `never` collapses causing `TS2339` and `TS2353`
+- object-literal state updates being rejected because state was inferred as `null`
+
+Representative failure families from the latest CI run:
+
+- `SetStateAction<null>` / `Type ... is not assignable to type 'null'`
+- `Property ... does not exist on type 'never'`
+- `'engineRef.current' is possibly 'null'`
+- `'undoManagerRef.current' is possibly 'null'`
+
+#### 2. View-layer nullability is still the second major blocker
+
+The latest run confirms the same high-risk view files remain concentrated:
+
+- `src/views/TimelineView.tsx`
+- `src/views/WeekView.tsx`
+- `src/views/DayView.tsx`
+- `src/views/AssetsView.tsx`
+- `src/views/MonthView.tsx`
+
+Recurring patterns:
+
+- context values collapsing to `never`
+- DOM refs passed as `HTMLDivElement | null` where non-null drag/grid types are expected
+- optional render/context hooks used as if always present
+- hover/selection state inferred too narrowly and later treated as objects
+
+#### 3. Test debt is still a large mechanical bucket
+
+The current run still shows broad test fallout across:
+
+- `src/__tests__/**`
+- `src/api/v1/__tests__/sync.test.ts`
+- `src/hooks/__tests__/**`
+- `src/ui/__tests__/**`
+- `src/views/__tests__/**`
+
+Most of these remain mechanical:
+
+- `Element | null` passed into event helpers
+- `Object is possibly 'undefined'`
+- array indexing / `.find()` assumptions
+- nullable fixture fields being treated as always present
+
+#### 4. Mid-sized UI seams remain high-value next targets
+
+The latest CI run confirms that several non-view UI files still have concentrated, reviewable strict-null debt:
+
+- `src/ui/ICSFeedPanel.tsx`
+- `src/ui/SourcePanel.tsx`
+- `src/ui/CSVImportDialog.tsx`
+- `src/ui/AvailabilityForm.tsx`
+- `src/ui/CalendarExternalForm.tsx`
+
+Recurring patterns:
+
+- state inferred as `null`, later used as structured objects
+- `Record<string, string>` error maps being updated with `undefined`
+- nullable file inputs and booleans not normalized before use
+
+### Updated interpretation
+
+The latest CI checkpoint changes the strategy in one important way:
+
+- the repository **has improved from the 440 baseline**, but
+- the remaining debt is still concentrated in the exact areas expected to cause the largest cascades,
+- which means the shortest path to `strictNullChecks: true` is **not** a direct root-fix sprint on `WorksCalendar.tsx` yet.
+
+The current best path remains:
+
+1. remove more mid-sized UI/runtime debt
+2. remove another chunk of mechanical test debt
+3. begin view micro-slices
+4. leave `src/WorksCalendar.tsx` for a later dedicated root-composition sprint once downstream noise is lower
