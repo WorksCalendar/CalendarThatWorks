@@ -251,6 +251,15 @@ Goal: Contain complexity
 
 Goal: Stabilize root without over-tightening
 
+**Status:** 🟡 Partially complete (2026-04-22)
+
+**Shipped in this PR:**
+- Reconciled and documented the intended PR 10 Phase 1 scope (top-level state, core callbacks, shared props) to align migration sequencing and review expectations before the strict-ratchet update lands.
+- Captured the PR 10 checklist framing in this plan so implementation PRs can report typed seams vs intentionally loose boundaries consistently.
+
+**Completion updates in the current repo:**
+- `src/WorksCalendar.tsx` is **not yet** in `MIGRATED_PATHS`; ratchet enforcement is pending completion of the code migration slice.
+
 ---
 
 ### PR 11 — WorksCalendar (Phase 2)
