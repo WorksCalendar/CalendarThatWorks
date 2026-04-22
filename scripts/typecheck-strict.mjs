@@ -82,13 +82,18 @@ const MIGRATED_PATHS = [
 // Implicit-any diagnostic codes. See:
 // https://github.com/microsoft/TypeScript/blob/main/src/compiler/diagnosticMessages.json
 const IMPLICIT_ANY_CODES = new Set([
+  'TS2683', // 'this' implicitly has type 'any'.
   'TS7005', // Variable implicitly has an 'any' type.
   'TS7006', // Parameter implicitly has an 'any' type.
   'TS7011', // Function expression, which lacks return-type annotation, implicitly has an 'any' return type.
   'TS7018', // Object literal's property implicitly has an 'any' type.
+  'TS7019', // Rest parameter implicitly has an 'any[]' type.
+  'TS7022', // Implicitly has type 'any' because self-referenced in initializer.
   'TS7023', // Implicitly has return type 'any'.
+  'TS7024', // Function implicitly has return type 'any'.
   'TS7031', // Binding element implicitly has an 'any' type.
   'TS7034', // Variable implicitly has type 'any' in some locations.
+  'TS7044', // Parameter has an implied 'any' type in JSDoc.
   'TS7053', // Element implicitly has an 'any' type because expression of type can't be used to index type.
 ]);
 
@@ -113,12 +118,21 @@ if (tscResult.error) {
 const output = `${tscResult.stdout ?? ''}${tscResult.stderr ?? ''}`;
 const diagRegex = /^([^(]+)\((\d+),(\d+)\):\s+error\s+(TS\d+):\s+(.*)$/;
 
+const repoWideImplicitAny = [];
 const offending = [];
 for (const line of output.split('\n')) {
   const match = line.match(diagRegex);
   if (!match) continue;
-  const [, file, , , code] = match;
-  if (!IMPLICIT_ANY_CODES.has(code)) continue;
+  const [, file, , , code, message] = match;
+  const isImplicitAny =
+    IMPLICIT_ANY_CODES.has(code) ||
+    /implicitly has (an )?'any' type/i.test(message) ||
+    /implicitly has type 'any'/i.test(message) ||
+    /implicitly has an 'any' return type/i.test(message);
+
+  if (!isImplicitAny) continue;
+
+  repoWideImplicitAny.push(line);
   if (isMigrated(file)) offending.push(line);
 }
 
@@ -133,6 +147,7 @@ if (offending.length > 0) {
 }
 
 console.log('Strict type check GREEN.');
+console.log(`Repo-wide implicit-any diagnostics found: ${repoWideImplicitAny.length}`);
 console.log(`Migrated paths (${MIGRATED_PATHS.length}):`);
 for (const p of MIGRATED_PATHS) console.log(`  - ${p}`);
 process.exit(0);
