@@ -258,32 +258,77 @@ Top implicit-any diagnostic codes:
 | `src/ui/AdvancedFilterBuilder.tsx` | 20 |
 | `src/ui/RequestForm.tsx` | 17 |
 | `src/ui/ThemeCustomizer.tsx` | 14 |
-| `src/__tests__/WorksCalendar.scheduleModel.integration.test.tsx` | 13 |
-| `src/hooks/__tests__/useSourceStore.test.ts` | 13 |
-| `src/ui/CalendarExternalForm.tsx` | 13 |
-| `src/ui/ScheduleEditorForm.tsx` | 12 |
 
-### 5) Remaining Work Classification
+---
 
-- `src/ui/*` hotspot: **Mechanical + Boundary**
-  - Mechanical: untyped callback parameters and object literal fields.
-  - Boundary: several props/forms interact with shared models, raising caller-surface risk.
-- `src/hooks/*` hotspot: **Mechanical**
-  - Largely callback/test utility annotation work; relatively local.
-- `src/views/*` hotspot: **Mechanical + Cascade risk**
-  - View logic annotations may ripple into view helpers and test fixtures.
-- `src/**/__tests__/*` hotspot: **Mechanical**
-  - Mostly helper signatures and callback argument typing.
+## Audit Rerun — Post Stage 5b PR5 (2026-04-22)
 
-### 6) One-PR Fit Assessment
+This section captures the required full rerun after Stage 5b PRs 4–5.
 
-- **Assessment:** Does **not** fit safely in one isolated Stage 6 PR.
-- **Reasoning:** 413 implicit-any diagnostics across 67 files and multiple unrelated areas (`ui`, `hooks`, `views`, root tests). The debt is too broad for a low-risk config flip PR.
+### Commands Run
 
-### Stage 6 Decision
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+```
 
-- **Decision:** **NOT READY**
-- **Required next action:** Keep ratchet model, create at least one intermediate cleanup stage (preferably by directory hotspot), and rerun this audit after reductions.
+### 1) Current Root Baseline (`tsconfig.json`)
+
+- **Result:** Pass
+- **TypeScript diagnostics:** 0
+- **Notes:** Root config still uses advisory `noImplicitAny: false`.
+
+### 2) Repo-wide Implicit-any Debt (`tsconfig.strict.json`)
+
+- **Result:** Fail (`exit 2`)
+- **Total diagnostics:** 213
+- **Implicit-any diagnostics (TS7005/7006/7011/7018/7023/7031/7034/7053):** 212
+- **Unique files with implicit-any diagnostics:** 52
+
+Top implicit-any diagnostic codes:
+
+- `TS7006`: 156
+- `TS7018`: 21
+- `TS7005`: 9
+- `TS7031`: 9
+- `TS7053`: 9
+- `TS7034`: 8
+
+### 3) Migrated vs Non-migrated (`MIGRATED_PATHS`) Debt Split
+
+- **Implicit-any diagnostics in migrated paths:** 0
+- **Implicit-any diagnostics outside migrated paths:** 212
+- **Conclusion:** Ratchet remains green for migrated files; Stage 6 root flip would still surface non-ratcheted debt.
+
+### 4) Remaining Debt by Directory
+
+| Directory | Error Count | Notes |
+|---|---:|---|
+| `src/ui` | 126 | Still largest hotspot; mostly callback parameter and local state/indexing annotations. |
+| `src/views` | 60 | View logic and view test helpers remain a concentrated block. |
+| `src/hooks` | 26 | Mostly hook test/helper typing cleanup. |
+
+### Top Offending Files
+
+| File | Error Count |
+|---|---:|
+| `src/ui/ScheduleTemplateDialog.tsx` | 12 |
+| `src/ui/SetupWizardModal.tsx` | 12 |
+| `src/hooks/__tests__/useRealtimeEvents.test.ts` | 11 |
+| `src/ui/SourcePanel.tsx` | 11 |
+| `src/ui/ImportPreview.tsx` | 10 |
+| `src/hooks/__tests__/useTouchDnd.test.tsx` | 9 |
+| `src/ui/__tests__/ProfileBar.redesign.test.tsx` | 9 |
+| `src/views/AuditDrawer.tsx` | 9 |
+
+### 5) Non-implicit-any diagnostics
+
+- `TS2345` remains in `src/WorksCalendar.tsx` (legacy-event assignment mismatch), outside the implicit-any metric.
+
+### 6) Stage 6 readiness decision
+
+- **Decision:** **NOT READY**.
+- **Rationale:** Implicit-any debt is down substantially from the earlier 413/67 baseline, but **212 diagnostics across 52 files** remains too broad for a single isolated Stage 6 root-flip PR.
 
 ---
 

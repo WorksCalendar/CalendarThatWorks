@@ -226,6 +226,24 @@ After PRs 4–5 land, rerun the full Stage 6 readiness audit in:
 
 This is the decision point for whether a dedicated Stage 6 PR is now realistic.
 
+#### Checkpoint run recorded — 2026-04-22 (post-PR5)
+
+Commands run:
+
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+```
+
+Results:
+- **212** implicit-any diagnostics (down from 253 after PR3; down from 413 at Stage 5b start)
+- **52** unique files with implicit-any diagnostics (down from 55 after PR3; down from 67 at Stage 5b start)
+- Remaining debt is **still dominated by `src/ui`** (126 / 212 diagnostics, ~59%)
+- Full rerun details are captured in `docs/stage-6-readiness-audit.md` under the post-PR5 rerun section.
+
+Decision:
+- Stage 6 remains **not ready**; remaining debt is still too broad for a single isolated root-flip PR.
+
 ---
 
 ## Stage 6 Re-entry Criteria
@@ -251,7 +269,7 @@ Status reconciled against merged PRs and current `MIGRATED_PATHS` on `main` as o
 | 2 | Root/integration tests | **Complete** (PR #296 merged) | **Yes** | No |
 | 3 | Small UI forms/dialogs | **Complete** (PR #297 merged) | **Yes** | **Checkpoint recorded below** |
 | 4 | Medium UI utilities | **Complete** (this PR) | **Yes** | No |
-| 5 | Shared UI filtering | **Complete** (PR #299 merged) | **Yes** | **Full audit rerun still needed** |
+| 5 | Shared UI filtering | **Complete** (PR #299 merged) | **Yes** | **Checkpoint recorded below** |
 | 6 | Remaining non-ratcheted views | Planned | No | Maybe |
 
 ### Current status notes
@@ -262,7 +280,7 @@ Status reconciled against merged PRs and current `MIGRATED_PATHS` on `main` as o
 - No merged Stage 5b PR was found yet for the planned **PR 4** (`ThemeCustomizer` / `CSVImportDialog`) slice.
 - No merged Stage 5b PR was found yet for the planned **PR 6** remaining-views slice.
 - The required post-PR3 checkpoint audit **is recorded in this file** and shows meaningful reduction, but remaining debt is still heavily concentrated in `src/ui`.
-- The required post-PR5 full Stage 6 readiness rerun has not yet been recorded in `docs/stage-6-readiness-audit.md` from this plan's perspective.
+- The required post-PR5 full Stage 6 readiness rerun is now recorded in `docs/stage-6-readiness-audit.md`.
 
 ---
 
