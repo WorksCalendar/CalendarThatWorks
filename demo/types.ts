@@ -1,53 +1,128 @@
-// TypeScript type definitions for the demo application
+type EmployeeId = string;
 
-// Type representing an employee
-export type Employee = {
-    id: string;
+interface DemoEmployee {
+    id: EmployeeId;
     name: string;
-    email: string;
     position: string;
-    hireDate: Date;
     department: string;
-};
+}
 
-// Type representing an event
-export type Event = {
-    id: string;
-    title: string;
-    description?: string;
-    startDate: Date;
-    endDate: Date;
-    location: string;
-    attendees: Employee[];
-};
+interface DemoAssetResource {
+    assetId: string;
+    type: string;
+    status: string;
+}
 
-// Type representing a category for events
-export type Category = {
-    id: string;
-    name: string;
-    color?: string;
-};
+type ApprovalStage = 'pending' | 'approved' | 'rejected';
 
-// Type representing a pool of resources or events
-export type Pool = {
-    id: string;
-    name: string;
-    events: Event[];
-};
+interface ApprovalActionPayload {
+    action: 'approve' | 'reject';
+    comment?: string;
+}
 
-// Type representing a user profile
-export type Profile = {
-    userId: string;
-    employee: Employee;
-    preferences: { [key: string]: any };
-};
-
-// Type representing EMS data record
-export type EMSDataRecord = {
-    recordId: string;
-    employeeId: string;
+interface DemoEvent {
     eventId: string;
-    timestamp: Date;
-    status: 'approved' | 'pending' | 'denied';
-    notes?: string;
-};
+    title: string;
+    date: Date;
+    attendees: DemoEmployee[];
+}
+
+interface DemoNote {
+    noteId: string;
+    content: string;
+    createdAt: Date;
+    author: DemoEmployee;
+}
+
+interface DemoNotesMap {
+    [key: string]: DemoNote;
+}
+
+interface DemoCategory {
+    categoryId: string;
+    name: string;
+}
+
+interface DemoPool {
+    poolId: string;
+    name: string;
+    members: DemoEmployee[];
+}
+
+interface DemoProfile {
+    profileId: string;
+    employee: DemoEmployee;
+    skills: string[];
+}
+
+interface RegionRecord {
+    regionId: string;
+    name: string;
+}
+
+interface BaseRecord {
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+interface AssetRecord extends BaseRecord {
+    assetResource: DemoAssetResource;
+    allocations: any[];
+}
+
+interface PilotRecord extends BaseRecord {
+    licenseNumber: string;
+    experienceYears: number;
+}
+
+interface MedicalRecord extends BaseRecord {
+    patientId: string;
+    condition: string;
+    treatment: string;
+}
+
+interface MechanicRecord extends BaseRecord {
+    specialties: string[];
+}
+
+interface ShiftRecord extends BaseRecord {
+    startTime: Date;
+    endTime: Date;
+    assignedEmployees: DemoEmployee[];
+}
+
+interface MaintenanceRecord extends BaseRecord {
+    assetId: string;
+    description: string;
+    scheduledDate: Date;
+}
+
+interface RequestRecord extends BaseRecord {
+    requester: DemoEmployee;
+    status: string;
+}
+
+interface MissionLeg {
+    legId: string;
+    start: Date;
+    end: Date;
+}
+
+interface CrewAssignment {
+    assignmentId: string;
+    missionLeg: MissionLeg;
+    crew: DemoEmployee[];
+}
+
+interface ComplianceItem {
+    itemId: string;
+    requirement: string;
+    status: string;
+}
+
+interface MissionRecord extends BaseRecord {
+    missionId: string;
+    legs: MissionLeg[];
+    crewAssignments: CrewAssignment[];
+}
