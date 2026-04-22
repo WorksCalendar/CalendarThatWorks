@@ -95,7 +95,12 @@ const IMPLICIT_ANY_CODES = new Set([
 const isMigrated = (file) => {
   const normalized = file.split(sep).join('/');
   return MIGRATED_PATHS.some((p) =>
-    p.endsWith('/') ? normalized.startsWith(p) : normalized === p,
+    p.endsWith('/')
+      ? (() => {
+          const directory = p.slice(0, -1);
+          return normalized === directory || normalized.startsWith(`${directory}/`);
+        })()
+      : normalized === p,
   );
 };
 
