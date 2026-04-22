@@ -340,6 +340,49 @@ Stage 6 should only happen when the repository is ready for repo-wide enforcemen
 
 ---
 
+## Audit Rerun — Sprint 5 Final pre-Stage-6 cleanup (2026-04-22)
+
+This section captures the strict rerun after the Sprint 5 final cleanup pass.
+
+### Commands Run
+
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+npm run type-check:strict
+```
+
+### 1) Current Root Baseline (`tsconfig.json`)
+
+- **Result:** Pass
+- **TypeScript diagnostics:** 0
+
+### 2) Repo-wide Implicit-any Debt (`tsconfig.strict.json`)
+
+- **Result:** Fail (`exit 2`) due to non-implicit-any diagnostics
+- **Implicit-any diagnostics (TS7005/7006/7011/7018/7023/7031/7034/7053):** **0**
+- **Unique files with implicit-any diagnostics:** **0**
+
+### 3) Remaining blockers under strict config
+
+Only two non-implicit-any diagnostics remain, both in `src/WorksCalendar.tsx`:
+
+- `TS2345` at line 1773 (legacy event assignment mismatch: `start/end` allow `number` in source shape)
+- `TS2322` at line 2353 (instantiate preview return contract mismatch: readonly vs mutable array shape)
+
+### 4) Migrated-path ratchet status
+
+- `npm run type-check:strict`: **GREEN**
+- Implicit-any diagnostics in migrated paths: **0**
+- Implicit-any diagnostics outside migrated paths: **0**
+
+### 5) Stage 6 readiness decision update
+
+- **Decision:** **NEAR-READY (BLOCKED)**
+- **Rationale:** The previously broad implicit-any debt is now eliminated. The only strict blockers left are two concrete, reviewable `src/WorksCalendar.tsx` type-contract mismatches, which are Stage 6-sized and suitable for a dedicated final blocker PR.
+
+---
+
 ## Audit Rerun — Post PR3 (2026-04-22)
 
 This section captures the requested post-PR3 full rerun.

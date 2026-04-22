@@ -115,7 +115,7 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
     const pending = inputs.find(el => (el as HTMLInputElement).value === '');
     fireEvent.change(pending, { target: { value: 'Nora' } });
     fireEvent.keyDown(pending, { key: 'Enter' });
-    expect(getConfig().team.members.map(m => m.id)).toEqual([5, 6]);
+    expect(getConfig().team.members.map((m: { id: number }) => m.id)).toEqual([5, 6]);
   });
 
   it('keeps role/base optional when roles and bases exist', () => {

@@ -31,8 +31,8 @@ const seededConfig = {
   approvals: {
     enabled: false,
     tiers: [
-      { id: 'tier-1', label: 'Supervisor', requires: 'any', roles: [] },
-      { id: 'tier-2', label: 'Director',   requires: 'any', roles: [] },
+      { id: 'tier-1', label: 'Supervisor', requires: 'any', roles: [] as string[] },
+      { id: 'tier-2', label: 'Director',   requires: 'any', roles: [] as string[] },
     ],
     rules: {
       requested:      { allow: ['approve', 'deny'], prefix: 'Req' },
@@ -110,7 +110,7 @@ describe('ApprovalsTab — tiers', () => {
     const { getConfig, rerender } = renderTab({ initialConfig: seededConfig });
     fireEvent.click(screen.getByLabelText('Move Supervisor down'));
     rerender();
-    expect(getConfig().approvals.tiers.map(t => t.id)).toEqual(['tier-2', 'tier-1']);
+    expect(getConfig().approvals.tiers.map((t: { id: string }) => t.id)).toEqual(['tier-2', 'tier-1']);
   });
 
   it('Move tier up on the topmost row is a no-op (button disabled)', () => {

@@ -49,7 +49,7 @@ describe('CategoriesTab — mutations', () => {
     fireEvent.change(labelInput, { target: { value: 'Pilot Training' } });
 
     const cats = getConfig().categoriesConfig.categories;
-    const training = cats.find(c => c.id === 'training');
+    const training = cats.find((c: { id: string; label: string }) => c.id === 'training');
     expect(training.label).toBe('Pilot Training');
   });
 
@@ -59,7 +59,7 @@ describe('CategoriesTab — mutations', () => {
     fireEvent.change(colorInput, { target: { value: '#ff0000' } });
 
     const cats = getConfig().categoriesConfig.categories;
-    expect(cats.find(c => c.id === 'training').color).toBe('#ff0000');
+    expect(cats.find((c: { id: string; color: string }) => c.id === 'training')?.color).toBe('#ff0000');
   });
 
   it('toggling disabled flag persists', () => {
@@ -81,7 +81,7 @@ describe('CategoriesTab — mutations', () => {
     const { getConfig } = renderTab();
     fireEvent.click(screen.getByRole('button', { name: 'Remove Training' }));
     const cats = getConfig().categoriesConfig.categories;
-    expect(cats.find(c => c.id === 'training')).toBeUndefined();
+    expect(cats.find((c: { id: string }) => c.id === 'training')).toBeUndefined();
     expect(cats).toHaveLength(DEFAULT_CATEGORIES.length - 1);
   });
 
