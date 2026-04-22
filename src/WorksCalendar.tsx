@@ -108,14 +108,10 @@ type ScheduleTemplateAdapter = {
   deleteScheduleTemplate?: (templateId: string) => Promise<unknown>;
   [key: string]: unknown;
 };
-type EmployeeRecord = { id: string; name?: string; [key: string]: unknown };
+type EmployeeId = string | number;
+type EmployeeRecord = { id: EmployeeId; name?: string; [key: string]: unknown };
 type EmployeeActionInput = { type?: string; [key: string]: unknown };
 type EventGroupPatch = Record<string, unknown>;
-type RenderEventArgs = {
-  event: WorksCalendarEvent;
-  view: CalendarView;
-  isSelected: boolean;
-};
 type AssetLocationData = LocationData | null;
 type AvailabilitySavePayload = {
   status?: string;
@@ -167,15 +163,15 @@ export type WorksCalendarProps = {
   role?: CalendarRole;
   employees?: EmployeeRecord[];
   onEmployeeAdd?: (member: EmployeeRecord) => void;
-  onEmployeeDelete?: (employeeId: string) => void;
-  onEmployeeAction?: (employeeId: string, action: EmployeeActionInput) => void;
+  onEmployeeDelete?: (employeeId: EmployeeId) => void;
+  onEmployeeAction?: (employeeId: EmployeeId, action: EmployeeActionInput) => void;
   onAvailabilitySave?: (payload: AvailabilitySavePayload) => void;
   onScheduleSave?: (payload: WorksCalendarEvent) => void;
   blockedWindows?: UnknownRecord[];
   theme?: string;
   colorRules?: UnknownRecord[];
   businessHours?: UnknownRecord;
-  renderEvent?: (args: RenderEventArgs) => ReactNode;
+  renderEvent?: (event: WorksCalendarEvent, context?: UnknownRecord) => ReactNode;
   renderHoverCard?: (event: WorksCalendarEvent, onClose: () => void) => ReactNode;
   renderToolbar?: (api: CalendarApi) => ReactNode;
   renderFilterBar?: (args: UnknownRecord) => ReactNode;
