@@ -31,6 +31,7 @@ import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
 import { UndoRedoManager }   from './core/engine/UndoRedoManager.ts';
 import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
+import type { LegacyEvent } from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
@@ -87,11 +88,12 @@ import BaseGanttView          from './views/BaseGanttView';
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
+import type { CalendarEventV1 } from './api/v1/types.ts';
 
 import styles from './WorksCalendar.module.css';
 import { customThemeToCssVars } from './core/themeSchema';
 
-import type { WorksCalendarEvent } from './types/events';
+import type { EventStatus, WorksCalendarEvent } from './types/events';
 export type { WorksCalendarEvent };
 export type CalendarView = ViewId;
 export type CalendarRole = 'admin' | 'user' | 'readonly';
@@ -117,6 +119,37 @@ type AvailabilitySavePayload = {
   status?: string;
   coveredBy?: string | null;
   [key: string]: unknown;
+};
+type ScheduleDialogRequest = {
+  templateId?: string;
+  anchor: Date;
+  resource?: string;
+  category?: string;
+};
+type SchedulePreviewConflict = {
+  index: number;
+  title: string;
+  severity: string;
+  violations: Array<{ rule?: string; message?: string }>;
+};
+type SchedulePreviewResult = {
+  generated: Array<{
+    id?: string;
+    title?: string;
+    start?: string | number | Date;
+    end?: string | Date;
+    startOffsetMinutes?: number;
+    durationMinutes?: number;
+    category?: string | null;
+    resource?: string | null;
+    status?: EventStatus;
+    color?: string | null;
+    rrule?: string;
+    exdates?: Array<string | Date>;
+    meta?: Record<string, unknown>;
+  }>;
+  conflicts: SchedulePreviewConflict[];
+  error: string;
 };
 
 export type CalendarApi = {
@@ -1641,7 +1674,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setImportOpen(false);
   }, [onImport, sourceStore]);
 
-  const handleScheduleInstantiate = useCallback((request: LooseValue) => {
+  const handleScheduleInstantiate = useCallback((request: ScheduleDialogRequest) => {
     const startedAt = Date.now();
     const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template || !Array.isArray(template.entries) || template.entries.length === 0) {
@@ -1713,7 +1746,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setScheduleOpen(false);
   }, [applyEngineOp, getSavedEventPayload, onEventSave, resolvedScheduleLimits.createMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
 
-  const buildSchedulePreview = useCallback((request: LooseValue) => {
+  const buildSchedulePreview = useCallback((request: ScheduleDialogRequest): SchedulePreviewResult => {
     const startedAt = Date.now();
     const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template) return { generated: [], conflicts: [], error: 'Selected template was not found.' };
@@ -1726,9 +1759,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       return { generated: [], conflicts: [], error: 'Enter a valid anchor date/time.' };
     }
 
-    let generated;
+    let generated: CalendarEventV1[];
     try {
-      generated = instantiateScheduleTemplate(template, { ...request, anchor }).generated;
+      generated = [...instantiateScheduleTemplate(template, { ...request, anchor }).generated];
     } catch {
       trackScheduleTemplateAnalytics('schedule_preview_failed', {
         reason: 'instantiate-throw',
@@ -1753,22 +1786,28 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     const ctx = opCtxRef.current;
     const seededEvents = [...engineRef.current.state.events.values()];
-    const conflicts: LooseValue[] = [];
+    const conflicts: SchedulePreviewConflict[] = [];
 
     generated.forEach((ev, index) => {
-      const legacy = [{
+      const start = ev.start instanceof Date || typeof ev.start === 'string'
+        ? ev.start
+        : new Date(ev.start as number);
+      const end = ev.end instanceof Date || typeof ev.end === 'string'
+        ? ev.end
+        : new Date(ev.end as number);
+      const legacy: LegacyEvent[] = [{
         id: `preview:${template.id}:${index}`,
-        title: ev.title ?? '(untitled)',
-        start: ev.start,
-        end: ev.end,
+        title: typeof ev.title === 'string' ? ev.title : '(untitled)',
+        start,
+        end,
         allDay: ev.allDay ?? false,
-        resource: ev.resource ?? null,
-        category: ev.category ?? null,
-        color: ev.color ?? null,
-        status: ev.status ?? 'confirmed',
-        rrule: ev.rrule ?? null,
-        exdates: ev.exdates ?? [],
-        meta: ev.meta ?? {},
+        resource: typeof ev.resource === 'string' ? ev.resource : null,
+        category: typeof ev.category === 'string' ? ev.category : null,
+        color: typeof ev.color === 'string' ? ev.color : null,
+        status: typeof ev.status === 'string' ? ev.status : 'confirmed',
+        rrule: typeof ev.rrule === 'string' ? ev.rrule : null,
+        exdates: Array.isArray(ev.exdates) ? ev.exdates : [],
+        meta: typeof ev.meta === 'object' && ev.meta ? ev.meta as Record<string, unknown> : {},
       }];
       const previewEvent = fromLegacyEvents(legacy)[0];
       const op = { type: 'create' as const, event: previewEvent };
@@ -1778,7 +1817,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           index,
           title: ev.title ?? '(untitled)',
           severity: validation.severity,
-          violations: validation.violations,
+          violations: validation.violations.map((violation) => ({
+            rule: typeof violation.rule === 'string' ? violation.rule : undefined,
+            message: typeof violation.message === 'string' ? violation.message : undefined,
+          })),
         });
       }
       seededEvents.push(previewEvent);
@@ -1790,7 +1832,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       conflictCount: conflicts.length,
       elapsedMs: Date.now() - startedAt,
     });
-    return { generated, conflicts, error: '' };
+    const normalizedPreview = generated.map((ev) => ({
+      ...ev,
+      end: ev.end instanceof Date || typeof ev.end === 'string'
+        ? ev.end
+        : new Date(ev.end),
+    }));
+    return { generated: normalizedPreview, conflicts, error: '' };
   }, [resolvedScheduleLimits.previewMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
 
   const handleCreateScheduleTemplate = useCallback(async (template: LooseValue) => {
