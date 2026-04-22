@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import fs from 'node:fs';
 
 const STRICT_NULL_ERROR_CODES = new Set([
   'TS18047',
@@ -20,6 +21,8 @@ const MIGRATED_PATHS = [
   'src/grouping/groupRows.ts',
   'src/grouping/__tests__/groupRows.test.ts',
 ];
+
+const BASELINE_PATH = path.resolve(process.cwd(), 'scripts/strict-null-baseline.json');
 
 const tscResult = spawnSync(
   'npx',
@@ -49,10 +52,34 @@ const diagnostics = output
   })
   .filter((entry) => entry !== null);
 
+// === GLOBAL COUNTER RATchet ===
+const strictNullDiagnostics = diagnostics.filter((entry) =>
+  STRICT_NULL_ERROR_CODES.has(entry.code),
+);
+
+let baselineTotal = null;
+
+if (fs.existsSync(BASELINE_PATH)) {
+  const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'));
+  baselineTotal = baseline.baselineTotal;
+}
+
+console.log(`📊 strict-null diagnostics (total): ${strictNullDiagnostics.length}`);
+
+if (baselineTotal !== null) {
+  console.log(`📊 baseline: ${baselineTotal}`);
+
+  if (strictNullDiagnostics.length > baselineTotal) {
+    console.error('❌ strict-null regression detected (global counter exceeded baseline)');
+    process.exit(1);
+  }
+}
+
+// === MIGRATED PATH ENFORCEMENT ===
 const migratedPathSet = new Set(MIGRATED_PATHS.map((filePath) => path.resolve(repoRoot, filePath)));
-const strictNullFailures = diagnostics.filter((entry) =>
-  STRICT_NULL_ERROR_CODES.has(entry.code)
-  && migratedPathSet.has(entry.filePath),
+
+const strictNullFailures = strictNullDiagnostics.filter((entry) =>
+  migratedPathSet.has(entry.filePath),
 );
 
 if (strictNullFailures.length > 0) {
@@ -63,5 +90,5 @@ if (strictNullFailures.length > 0) {
   process.exit(1);
 }
 
-console.log('✅ Stage 7 strict-null ratchet passed for migrated paths.');
+console.log('✅ strict-null ratchet passed');
 console.log(`Checked migrated paths: ${MIGRATED_PATHS.join(', ')}`);
