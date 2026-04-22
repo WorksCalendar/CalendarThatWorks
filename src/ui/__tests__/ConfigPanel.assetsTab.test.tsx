@@ -163,7 +163,7 @@ describe('AssetsTab — mutations', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Remove Bravo' }));
     rerender();
-    const ids = getConfig().assets.map(a => a.id);
+    const ids = getConfig().assets.map((a: { id: string }) => a.id);
     expect(ids).toEqual(['a', 'c']);
   });
 });
@@ -181,14 +181,14 @@ describe('AssetsTab — reorder', () => {
     const { getConfig, rerender } = renderTab({ initialConfig });
     fireEvent.click(screen.getByRole('button', { name: 'Move Alpha down' }));
     rerender();
-    expect(getConfig().assets.map(a => a.id)).toEqual(['b', 'a', 'c']);
+    expect(getConfig().assets.map((a: { id: string }) => a.id)).toEqual(['b', 'a', 'c']);
   });
 
   it('Move up swaps with the previous entry', () => {
     const { getConfig, rerender } = renderTab({ initialConfig });
     fireEvent.click(screen.getByRole('button', { name: 'Move Charlie up' }));
     rerender();
-    expect(getConfig().assets.map(a => a.id)).toEqual(['a', 'c', 'b']);
+    expect(getConfig().assets.map((a: { id: string }) => a.id)).toEqual(['a', 'c', 'b']);
   });
 
   it('Move up is disabled on the first row', () => {

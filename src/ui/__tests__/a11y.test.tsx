@@ -27,11 +27,19 @@ import { CalendarContext } from '../../core/CalendarContext';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function d(y, mo, day, h = 9, m = 0) {
+function d(y: number, mo: number, day: number, h = 9, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);
 }
 
-function makeEvent(id, overrides: any = {}) {
+type A11yEventOverrides = Partial<{
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  color: string;
+}> & Record<string, unknown>;
+
+function makeEvent(id: string, overrides: A11yEventOverrides = {}) {
   return {
     id,
     title: overrides.title ?? `Event ${id}`,
@@ -43,9 +51,9 @@ function makeEvent(id, overrides: any = {}) {
   };
 }
 
-const calCtx = null; // CalendarContext.Provider value (null = default)
+const calCtx: React.ContextType<typeof CalendarContext> = null; // CalendarContext.Provider value (null = default)
 
-function CalCtxWrap({ children }: any) {
+function CalCtxWrap({ children }: { children: React.ReactNode }) {
   return (
     <CalendarContext.Provider value={calCtx}>
       {children}
@@ -140,7 +148,7 @@ describe('ScreenReaderAnnouncer', () => {
 // ─── useFocusTrap ─────────────────────────────────────────────────────────────
 
 describe('useFocusTrap', () => {
-  function TrapFixture({ onEscape }) {
+  function TrapFixture({ onEscape }: { onEscape: () => void }) {
     const trapRef = useFocusTrap(onEscape);
     return (
       <div ref={trapRef} data-testid="trap">

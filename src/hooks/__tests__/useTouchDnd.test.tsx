@@ -60,8 +60,8 @@ function fireTouch(
 }
 
 describe('useTouchDnd', () => {
-  let origElementFromPoint;
-  let pointTarget = null;
+  let origElementFromPoint: Document['elementFromPoint'];
+  let pointTarget: Element | null = null;
 
   beforeEach(() => {
     vi.useFakeTimers();

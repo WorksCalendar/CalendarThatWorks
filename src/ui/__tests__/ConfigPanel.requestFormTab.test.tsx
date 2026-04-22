@@ -99,7 +99,7 @@ describe('RequestFormTab — CRUD', () => {
     const { getConfig, rerender } = renderTab({ initialConfig: seededConfig });
     fireEvent.click(screen.getByLabelText('Move Title down'));
     rerender();
-    expect(getConfig().requestForm.fields.map(f => f.key)).toEqual([
+    expect(getConfig().requestForm.fields.map((f: { key: string }) => f.key)).toEqual([
       'start', 'title', 'notes',
     ]);
   });
@@ -115,6 +115,6 @@ describe('RequestFormTab — CRUD', () => {
     rerender();
     const { fields } = getConfig().requestForm;
     expect(fields).toHaveLength(2);
-    expect(fields.map(f => f.key)).toEqual(['title', 'start']);
+    expect(fields.map((f: { key: string }) => f.key)).toEqual(['title', 'start']);
   });
 });
