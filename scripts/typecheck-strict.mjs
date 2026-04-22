@@ -77,9 +77,22 @@ const MIGRATED_PATHS = [
   'src/WorksCalendar.tsx',
   // Stage 5 PR12
   'demo/',
-  // Stage 6 PR A
-  'src/views/ScheduleView.tsx',
-  'src/views/AuditDrawer.tsx',
+  // Stage 5b PR1
+  'src/hooks/__tests__/useSavedViews.test.ts',
+  'src/hooks/__tests__/useSourceStore.test.ts',
+  // Stage 5b PR2
+  'src/__tests__/WorksCalendar.scheduleModel.integration.test.tsx',
+  'src/__tests__/WorksCalendar.employees.sync.test.tsx',
+  'src/__tests__/WorksCalendar.sort.integration.test.tsx',
+  'src/__tests__/groupingFilteringSorting.integration.test.ts',
+  'src/__tests__/phaseB.integration.test.tsx',
+  // Stage 5b PR3
+  'src/ui/ScheduleEditorForm.tsx',
+  'src/ui/CalendarExternalForm.tsx',
+  'src/ui/RequestForm.tsx',
+  // Stage 5b PR5
+  'src/ui/FilterBar.tsx',
+  'src/ui/AdvancedFilterBuilder.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:

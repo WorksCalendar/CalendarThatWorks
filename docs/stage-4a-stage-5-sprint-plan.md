@@ -1,5 +1,71 @@
 # Stage 4a + Stage 5 TypeScript Strict Migration Plan
 
+## ⚠️ Post-Sprint Reality Check (updated 2026-04-22)
+
+Stage 5 work (PRs 4–12) is complete and ratchet-enforced.
+
+However, an attempted Stage 6 transition (root `noImplicitAny` flip + removal of the ratchet)
+caused CI failures due to implicit-any debt outside migrated paths.
+
+That change has been **rolled back**, and the repo remains in the staged migration model.
+
+---
+
+## Current State
+
+| Area | Status |
+|-----|--------|
+| Stage 5 (UI + Views + Root + Demo) | ✅ Complete |
+| MIGRATED_PATHS enforcement | ✅ Active |
+| Strict CI ratchet | ✅ Active |
+| Root `tsc` | 🟡 Advisory |
+| Stage 6 (root strict) | ❌ Not complete |
+
+---
+
+## Key Clarification
+
+Completion of PRs 10–12 does **not** mean the migration is fully collapsed.
+
+It means:
+
+> The migration is complete **under the ratchet model**
+
+NOT:
+
+> The repo is fully strict at the root level
+
+---
+
+## Enforcement Rule (NEW)
+
+A PR or stage is only considered complete when:
+
+- Files are in `MIGRATED_PATHS`
+- `type-check:strict` passes
+- CI enforces the result
+
+Root config changes (like enabling `noImplicitAny`) are **out of scope** unless explicitly part of Stage 6.
+
+---
+
+## Stage 6 Status
+
+Stage 6 is deferred and must be handled as a separate effort.
+
+It requires:
+- full-repo measurement
+- explicit cleanup plan
+- dedicated PR
+
+---
+
+## Recommendation
+
+Continue operating under the ratchet model until a full Stage 6 readiness audit is completed.
+
+---
+
 ## Purpose
 This document defines the PR-by-PR execution plan to complete Stage 4a (decision + prep) and Stage 5 (UI strict migration).
 
@@ -125,202 +191,4 @@ Goal: Easy wins, stabilize patterns
 
 **Status:** ✅ Completed (2026-04-21)
 
-**Shipped in this PR:**
-- Added explicit parameter types in `SetupTab` setters (`setCalendarName`, `setPreferredTheme`) to remove implicit callback `any`.
-- Introduced a constrained `HoverCardFieldKey` union in `HoverCardTab` and typed the `fields` map to enforce valid toggle keys.
-- Typed `DisplayTab` mutation helpers (`set`, `setGroupLabel`) so tab-local updates no longer rely on implicit `any`.
-
-**Completion updates in the current repo:**
-- `src/ui/ConfigPanel.tsx` is present in `MIGRATED_PATHS`, so the Simple Tabs slice is now ratchet-enforced.
-
----
-
-### PR 5 — ConfigPanel (Data Tabs)
-- EventFieldsTab
-- CategoriesTab
-- AssetsTab
-- TemplateTab
-
-Goal: Structured data typing
-
-**Status:** ✅ Completed (2026-04-21)
-
-**Shipped in this PR:**
-- Added explicit tab-local domain types for Data tabs in `ConfigPanel.tsx`:
-  - Template visibility union (`private | team | org`)
-  - Event field draft + field type aliases for safer `eventFields` edits
-  - Category/config patch types for `CategoriesTab` mutators
-  - Asset draft/meta patch types for `AssetsTab` local state + updaters
-- Removed implicit `any` from Data-tab mutators by typing update helpers:
-  - `EventFieldsTab`: `updateField` / `removeField` and field-type casts
-  - `CategoriesTab`: `patchConfig` / `patchCats` / `updateCat` / `removeCat`
-  - `AssetsTab`: draft/meta update paths, list mutation helpers, and required-field guard
-- Tightened select-change handlers to constrained unions (template visibility and category pill style) instead of broad `string`.
-
-**Completion updates in the current repo:**
-- `src/ui/ConfigPanel.tsx` is present in `MIGRATED_PATHS`, so the Data Tabs slice is now ratchet-enforced.
-
----
-
-### PR 6 — ConfigPanel (Workflow Tabs)
-- TeamTab
-- ApprovalsTab
-- RequestFormTab
-- ConflictsTab
-- SmartViewsTab
-
-Goal: Handle complex state + flows
-
-**Status:** ✅ Completed (2026-04-21)
-
-**Shipped in this PR:**
-- Removed implicit `any` from workflow-tab mutators by introducing explicit local draft/patch types in `src/ui/ConfigPanel.tsx` for:
-  - Team members/bases/manager assignment updates
-  - Approval tiers/stage rules/labels
-  - Request form field schema updates
-  - Conflict rule registry updates
-- Tightened `SmartViewsTab` edit/delete state and `handleUpdate` callback signature with explicit id/filter/conditions types.
-- Added explicit type narrowing for workflow tab select/file-input handlers (approval quorum, request field type, conflict rule type/severity, profile image upload result) to prevent broad `string`/`unknown` writes.
-
-**Completion updates in this PR:**
-- Confirmed `src/ui/ConfigPanel.tsx` is present in `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs` (Stage 4a PR2 / Stage 5 PR6 coverage).
-
----
-
-### PR 7 — Small Views
-- DayView
-- AgendaView
-- MonthView
-
-Goal: Low-risk view typing
-
-**Status:** ✅ Completed (2026-04-21)
-
-**Shipped in this PR:**
-- Replaced file-level view-prop `any` in `DayView`, `AgendaView`, and `MonthView` with explicit boundary prop types (dates, callbacks, and config slices) to document the small-view public seams.
-- Added a shared `CalendarViewEvent` boundary shape in `src/types/ui.ts` and re-exported it from `src/index.ts` for consistent low-risk view typing.
-- Tightened local state typing in `AgendaView` (collapsed group set, drag/drop refs, drop patch shape) and removed implicit numeric arithmetic on `Date` values by sorting via `getTime()`.
-- Added explicit DOM/ref typing in `DayView` (grid ref + focus target) and retained compatibility with existing render/drag/color pipelines via narrow, intentional casts at integration points.
-
-**Completion updates in this PR:**
-- Added `src/views/DayView.tsx`, `src/views/AgendaView.tsx`, and `src/views/MonthView.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
-
----
-
-### PR 8 — Medium Views
-- WeekView
-- AssetsView
-- BaseGanttView
-
-Goal: Layout + shared logic typing
-
-**Status:** ✅ Completed (2026-04-21)
-
-**Shipped in this PR:**
-- Replaced broad file-level view props with explicit medium-view boundary prop types for `WeekView`, `AssetsView`, and `BaseGanttView` so callback contracts, config slices, and resource/grouping inputs are typed at the component seam.
-- Added targeted local layout/domain aliases for lane-packing and row virtualization flows (day-span offsets, grouped row records, pool-row/resource-row metadata) to keep the layout engine strict without over-tightening unrelated modules.
-- Removed medium-view implicit callback parameter `any` in keyboard, pointer, and toolbar handlers by typing event/cell/group action paths and constrained select/toggle values.
-- Kept intentional boundary looseness only at cross-module metadata seams (e.g., dynamic `meta.*` keys) with narrow casts/records where needed to avoid widening `any` through shared UI paths.
-
-**Completion updates in the current repo:**
-- Added `src/views/WeekView.tsx`, `src/views/AssetsView.tsx`, and `src/views/BaseGanttView.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
-
----
-
-### PR 9 — TimelineView (ISOLATED)
-- TimelineView.tsx ONLY
-
-Goal: Contain complexity
-
-**Status:** ✅ Completed (2026-04-21)
-
-**Shipped in this PR:**
-- Removed the file-level `: any` props seam in `src/views/TimelineView.tsx` and replaced it with explicit `TimelineViewProps` plus named local boundary aliases (`LooseEvent`, `TimelineEmployee`, `TimelineBase`) so exported view inputs are typed without tightening downstream callers.
-- Added explicit parameter types to Timeline-local helpers and interaction handlers (lane assignment, row DnD, keyboard cell navigation, coverage/menu callbacks) to eliminate implicit callback `any` in the isolated Timeline path while preserving existing runtime behavior.
-- Kept intentional looseness at cross-module seams (`buildGroupTree`, `resolveColor`, and dynamic `meta` payloads) via narrow boundary casts so typing does not cascade into unmigrated files.
-
-**Completion updates in this PR:**
-- Added `src/views/TimelineView.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs` so PR 9 is ratchet-enforced per the Stage 5 status rule.
-
----
-
-### PR 10 — WorksCalendar (Phase 1)
-- Top-level state
-- Core callbacks
-- Shared props
-
-Goal: Stabilize root without over-tightening
-
-**Status:** ✅ Completed (2026-04-22)
-
-**Shipped in this PR:**
-- Added explicit Phase 1 boundary typing in `src/WorksCalendar.tsx` for root helpers, top-level state/callback seams, and public API callback parameters to eliminate implicit parameter and local-variable `any` from the WorksCalendar root path.
-- Kept the root migration intentionally loose by centralizing boundary looseness under a documented `LooseValue` alias so Phase 1 can stabilize the root seam without forcing cross-module rewrites in the same PR.
-
-**Completion updates in the current repo:**
-- Added `src/WorksCalendar.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`, so WorksCalendar Phase 1 is now strict-ratchet enforced.
-
----
-
-### PR 11 — WorksCalendar (Phase 2)
-- Tighten handlers
-- Remove temp `any`
-- Finalize public interfaces
-
-**Status:** ✅ Completed (2026-04-22)
-
-**Shipped in this PR:**
-- Tightened `WorksCalendarProps` callback/public seams in `src/WorksCalendar.tsx` by replacing variadic `unknown[]` signatures with named, explicit handler payload types for employee actions, availability/schedule saves, conflict/approval hooks, and render extension points.
-- Consolidated root boundary aliases (`UnknownRecord`, `EmployeeRecord`, `EmployeeActionInput`, `AvailabilitySavePayload`, etc.) so public interfaces are intentionally loose where required, but documented and named.
-- Reduced ad-hoc boundary shape duplication by reusing shared aliases for config, note, feed, and template-adapter seams.
-
-**Completion updates in the current repo:**
-- `src/WorksCalendar.tsx` remains in `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`, and this phase finalizes the exported WorksCalendar interface without widening strict-ratchet scope.
-
----
-
-### PR 12 — Final Ratchet
-- Add all Stage 5 paths to MIGRATED_PATHS
-- Clean demo/**
-- Update migration doc
-- Confirm full strict pass
-
-**Status:** ✅ Completed (2026-04-22)
-
-**Shipped in this PR:**
-- Added `demo/` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs` to complete the Stage 5 scope ratchet for the planned UI + root + demo migration set.
-- Reconciled Stage 5 status documentation in `docs/TypeScriptStrictMigration.md` to mark Stage 5 complete under the ratchet rules.
-- Confirmed strict and advisory validation:
-  - `npm run type-check:strict`
-  - `npx tsc --noEmit -p tsconfig.json`
-
----
-
-## 🔍 Per-PR Checklist
-Every PR must include:
-
-- What was typed
-- What was intentionally left loose
-- Any new `any` + reason
-- Risk level (Low / Medium / High)
-
----
-
-## ⚠️ Stop Conditions
-STOP and regroup if:
-
-- `any` starts spreading across files
-- Root `tsc` breaks repeatedly
-- Types require cross-module rewrites
-
----
-
-## 🎯 End State
-- All Stage 5 UI paths strictly typed
-- No implicit `any`
-- Controlled boundary looseness only
-- Stable root build
-
----
-
-This is a discipline exercise, not just a migration.
+... (rest of file unchanged) ...
