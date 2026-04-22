@@ -26,14 +26,56 @@ import {
 import styles from './ImportZone.module.css';
 import pStyles from './ImportPreview.module.css';
 
+type CsvRow = Record<string, string>;
+type CsvFileData = { filename: string; headers: string[]; rows: CsvRow[] };
+type Mapping = Record<string, string>;
+type CsvEvent = {
+  id: string;
+  title: string;
+  start: Date | string;
+  end?: Date | string;
+  category?: string;
+  resource?: string;
+  status?: string;
+  color?: string;
+  allDay?: boolean;
+};
+type CsvError = { row: CsvRow; index: number; message: string };
+type MappedData = { events: CsvEvent[]; errors: CsvError[]; mapping: Mapping; dateFormat: string };
+type CsvPreset = { id: string; name: string; mapping: Mapping; dateFormat?: string };
+type Step = 'drop' | 'map' | 'preview';
+
+type DropStepProps = {
+  onFile: (fileData: CsvFileData) => void;
+  onClose: () => void;
+};
+
+type MapStepProps = CsvFileData & {
+  onBack: () => void;
+  onNext: (mappedData: MappedData) => void;
+};
+
+type PreviewStepProps = {
+  events: CsvEvent[];
+  errors: CsvError[];
+  onBack: () => void;
+  onImport: (events: CsvEvent[]) => void;
+  onClose: () => void;
+};
+
+type CSVImportDialogProps = {
+  onImport: (events: CsvEvent[], metadata?: { label?: string }) => void;
+  onClose: () => void;
+};
+
 // ── Step 1: Drop zone ─────────────────────────────────────────────────────────
 
-function DropStep({ onFile, onClose }: any) {
+function DropStep({ onFile, onClose }: DropStepProps) {
   const [dragging, setDragging] = useState(false);
-  const [error,    setError]    = useState(null);
-  const inputRef = useRef(null);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  function processFile(file) {
+  function processFile(file: File | null | undefined): void {
     if (!file) return;
     if (!file.name?.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
       setError('Please choose a .csv file.');
@@ -41,14 +83,16 @@ function DropStep({ onFile, onClose }: any) {
     }
     setError(null);
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = (e: ProgressEvent<FileReader>) => {
       try {
-        const { headers, rows } = parseCSV(e.target.result as string);
+        const text = typeof e.target?.result === 'string' ? e.target.result : '';
+        const { headers, rows } = parseCSV(text);
         if (!headers.length) { setError('No columns detected in this file.'); return; }
         if (!rows.length)    { setError('No data rows found (file has headers but no data).'); return; }
         onFile({ filename: file.name, headers, rows });
-      } catch (err: any) {
-        setError(`Could not read file: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(`Could not read file: ${message}`);
       }
     };
     reader.onerror = () => setError('Could not read file.');
@@ -92,18 +136,18 @@ function DropStep({ onFile, onClose }: any) {
 
 const SKIP = '';
 
-function MapStep({ filename, headers, rows, onBack, onNext }: any) {
-  const [mapping,     setMapping]     = useState(() => suggestMapping(headers));
-  const [dateFormat,  setDateFormat]  = useState('auto');
-  const [presets,     setPresets]     = useState(() => loadPresets());
-  const [presetName,  setPresetName]  = useState('');
+function MapStep({ filename, headers, rows, onBack, onNext }: MapStepProps) {
+  const [mapping, setMapping] = useState<Mapping>(() => suggestMapping(headers));
+  const [dateFormat, setDateFormat] = useState('auto');
+  const [presets, setPresets] = useState<CsvPreset[]>(() => loadPresets() as CsvPreset[]);
+  const [presetName, setPresetName] = useState('');
   const [savingPreset, setSavingPreset] = useState(false);
 
-  function setField(field, header) {
-    setMapping(m => ({ ...m, [field]: header }));
+  function setField(field: string, header: string): void {
+    setMapping((m) => ({ ...m, [field]: header }));
   }
 
-  function applyPreset(preset) {
+  function applyPreset(preset: CsvPreset): void {
     setMapping(preset.mapping);
     setDateFormat(preset.dateFormat ?? 'auto');
   }
@@ -118,14 +162,14 @@ function MapStep({ filename, headers, rows, onBack, onNext }: any) {
       dateFormat,
     };
     savePreset(preset);
-    setPresets(loadPresets());
+    setPresets(loadPresets() as CsvPreset[]);
     setPresetName('');
     setSavingPreset(false);
   }
 
-  function handleDeletePreset(id) {
+  function handleDeletePreset(id: string): void {
     deletePreset(id);
-    setPresets(loadPresets());
+    setPresets(loadPresets() as CsvPreset[]);
   }
 
   function handleNext() {
@@ -246,7 +290,7 @@ function MapStep({ filename, headers, rows, onBack, onNext }: any) {
                     }}
                   >
                     <option value={SKIP}>── skip ──</option>
-                    {headers.map(h => <option key={h} value={h}>{h}</option>)}
+                    {headers.map((h: string) => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
               ))}
@@ -278,7 +322,7 @@ function MapStep({ filename, headers, rows, onBack, onNext }: any) {
               <table style={{ fontSize: 11, borderCollapse: 'collapse', width: '100%' }}>
                 <thead>
                   <tr style={{ background: 'var(--wc-surface)' }}>
-                    {headers.map(h => (
+                    {headers.map((h: string) => (
                       <th key={h} style={{
                         padding: '6px 10px', textAlign: 'left', fontWeight: 600,
                         color: Object.values(mapping).includes(h) ? 'var(--wc-accent)' : 'var(--wc-text-muted)',
@@ -288,9 +332,9 @@ function MapStep({ filename, headers, rows, onBack, onNext }: any) {
                   </tr>
                 </thead>
                 <tbody>
-                  {previewRows.map((row, i) => (
+                  {previewRows.map((row: CsvRow, i: number) => (
                     <tr key={i} style={{ borderBottom: '1px solid var(--wc-border)' }}>
-                      {headers.map(h => (
+                      {headers.map((h: string) => (
                         <td key={h} style={{
                           padding: '5px 10px', color: 'var(--wc-text)',
                           maxWidth: 160, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -358,11 +402,11 @@ function MapStep({ filename, headers, rows, onBack, onNext }: any) {
 
 // ── Step 3: Preview & import ──────────────────────────────────────────────────
 
-function PreviewStep({ events, errors, onBack, onImport, onClose }: any) {
-  const [selected, setSelected] = useState(() => new Set(events.map((_, i) => i)));
+function PreviewStep({ events, errors, onBack, onImport, onClose }: PreviewStepProps) {
+  const [selected, setSelected] = useState<Set<number>>(() => new Set(events.map((_, i: number) => i)));
 
-  function toggle(i) {
-    setSelected(prev => {
+  function toggle(i: number): void {
+    setSelected((prev) => {
       const next = new Set(prev);
       next.has(i) ? next.delete(i) : next.add(i);
       return next;
@@ -371,11 +415,11 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: any) {
 
   function toggleAll() {
     if (selected.size === events.length) setSelected(new Set());
-    else setSelected(new Set(events.map((_, i) => i)));
+    else setSelected(new Set(events.map((_, i: number) => i)));
   }
 
   function handleImport() {
-    const toImport = events.filter((_, i) => selected.has(i));
+    const toImport = events.filter((_, i: number) => selected.has(i));
     onImport(toImport);
     onClose();
   }
@@ -408,7 +452,7 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: any) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#991b1b' }}>
               <AlertCircle size={13} /> {errors.length} row{errors.length > 1 ? 's' : ''} could not be parsed
             </div>
-            {errors.slice(0, 3).map((e, i) => (
+            {errors.slice(0, 3).map((e: CsvError, i: number) => (
               <div key={i} style={{ fontSize: 11, color: '#7f1d1d' }}>
                 Row {e.index}: {e.message}
               </div>
@@ -426,7 +470,7 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: any) {
         </div>
 
         <div className={pStyles.list}>
-          {events.map((ev, i) => {
+          {events.map((ev: CsvEvent, i: number) => {
             const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
             return (
               <label key={i} className={[pStyles.item, selected.has(i) && pStyles.itemSelected].filter(Boolean).join(' ')}>
@@ -462,15 +506,15 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: any) {
 
 // ── Main dialog ───────────────────────────────────────────────────────────────
 
-export default function CSVImportDialog({ onImport, onClose }: any) {
-  const [step, setStep] = useState('drop'); // 'drop' | 'map' | 'preview'
-  const [fileData, setFileData]     = useState(null); // { filename, headers, rows }
-  const [mappedData, setMappedData] = useState(null); // { events, errors }
+export default function CSVImportDialog({ onImport, onClose }: CSVImportDialogProps) {
+  const [step, setStep] = useState<Step>('drop');
+  const [fileData, setFileData] = useState<CsvFileData | null>(null);
+  const [mappedData, setMappedData] = useState<MappedData | null>(null);
 
   if (step === 'drop') {
     return (
       <DropStep
-        onFile={data => { setFileData(data); setStep('map'); }}
+        onFile={(data: CsvFileData) => { setFileData(data); setStep('map'); }}
         onClose={onClose}
       />
     );
@@ -478,31 +522,35 @@ export default function CSVImportDialog({ onImport, onClose }: any) {
 
   if (step === 'map') {
     return (
-      <MapStep
-        {...fileData}
-        onBack={() => setStep('drop')}
-        onNext={data => { setMappedData(data); setStep('preview'); }}
-      />
+      fileData && (
+        <MapStep
+          {...fileData}
+          onBack={() => setStep('drop')}
+          onNext={(data: MappedData) => { setMappedData(data); setStep('preview'); }}
+        />
+      )
     );
   }
 
   return (
-    <PreviewStep
-      {...mappedData}
-      onBack={() => setStep('map')}
-      onImport={(events) => onImport(events, { label: fileData?.filename })}
-      onClose={onClose}
-    />
+    mappedData && (
+      <PreviewStep
+        {...mappedData}
+        onBack={() => setStep('map')}
+        onImport={(events: CsvEvent[]) => onImport(events, { label: fileData?.filename })}
+        onClose={onClose}
+      />
+    )
   );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function _fmtDate(d) {
+function _fmtDate(d: Date): string {
   try { return format(d, 'MMM d, yyyy'); } catch { return '—'; }
 }
 
-function btnStyle(bg) {
+function btnStyle(bg: string): React.CSSProperties {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 5,
     padding: '7px 14px', fontSize: 12, fontWeight: 600,

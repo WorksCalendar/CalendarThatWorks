@@ -250,13 +250,14 @@ Status reconciled against merged PRs and current `MIGRATED_PATHS` on `main` as o
 | 1 | Hook test helpers | **Complete** (PR #295 merged) | **Yes** | No |
 | 2 | Root/integration tests | **Complete** (PR #296 merged) | **Yes** | No |
 | 3 | Small UI forms/dialogs | **Complete** (PR #297 merged) | **Yes** | **Checkpoint recorded below** |
-| 4 | Medium UI utilities | Planned | No | No |
+| 4 | Medium UI utilities | **Complete** (this PR) | **Yes** | No |
 | 5 | Shared UI filtering | **Complete** (PR #299 merged) | **Yes** | **Full audit rerun still needed** |
 | 6 | Remaining non-ratcheted views | Planned | No | Maybe |
 
 ### Current status notes
 
 - PRs **1, 2, 3, and 5** have landed on `main`.
+- PR **4** is completed in this branch (`ThemeCustomizer` + `CSVImportDialog`) and adds both files to `MIGRATED_PATHS`.
 - The corresponding files are present in `scripts/typecheck-strict.mjs` under `MIGRATED_PATHS`.
 - No merged Stage 5b PR was found yet for the planned **PR 4** (`ThemeCustomizer` / `CSVImportDialog`) slice.
 - No merged Stage 5b PR was found yet for the planned **PR 6** remaining-views slice.

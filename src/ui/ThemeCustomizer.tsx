@@ -2,7 +2,30 @@ import { normalizeCustomTheme, customThemeToCssVars } from '../core/themeSchema'
 import styles from './ThemeCustomizer.module.css';
 import { useMemo, useState } from 'react';
 
-const COLOR_CONTROLS = [
+type ThemeGroupKey = 'colors' | 'typography' | 'spacing' | 'borders' | 'shadows';
+type ColorKey = 'accent' | 'accentDim' | 'bg' | 'surface' | 'surface2' | 'border' | 'borderDark' | 'text' | 'textMuted';
+type TypographyKey = 'fontFamily' | 'headingFontFamily' | 'monoFontFamily' | 'baseSize';
+type SpacingKey = 'density';
+type BordersKey = 'radius' | 'radiusSm' | 'borderWidth';
+type ShadowsKey = 'elevation';
+type ThemePath = [ThemeGroupKey, ColorKey | TypographyKey | SpacingKey | BordersKey | ShadowsKey];
+
+type ThemeConfig = {
+  customTheme?: Record<string, unknown>;
+};
+
+type ThemeCustomizerProps = {
+  theme: Record<string, unknown> | null | undefined;
+  onChange: (updater: (config: ThemeConfig) => ThemeConfig) => void;
+};
+
+type PresetTheme = {
+  id: string;
+  label: string;
+  customTheme: Record<string, unknown>;
+};
+
+const COLOR_CONTROLS: Array<[ColorKey, string]> = [
   ['accent', 'Accent'],
   ['accentDim', 'Accent Soft'],
   ['bg', 'Background'],
@@ -14,7 +37,7 @@ const COLOR_CONTROLS = [
   ['textMuted', 'Muted Text'],
 ];
 
-const TOKEN_SLIDERS = [
+const TOKEN_SLIDERS: Array<[ThemeGroupKey, TypographyKey | SpacingKey | BordersKey | ShadowsKey, string, number, number, number, string]> = [
   ['typography', 'baseSize', 'Base Font Size', 12, 20, 1, 'px'],
   ['spacing', 'density', 'Density', 0.8, 1.2, 0.05, 'x'],
   ['borders', 'radius', 'Radius', 0, 24, 1, 'px'],
@@ -23,7 +46,7 @@ const TOKEN_SLIDERS = [
   ['shadows', 'elevation', 'Shadow', 0, 32, 1, ''],
 ];
 
-const PRESET_THEMES = [
+const PRESET_THEMES: PresetTheme[] = [
   {
     id: 'default',
     label: 'Default',
@@ -79,7 +102,13 @@ const FONT_STACK_OPTIONS = [
   { label: 'JetBrains Mono', value: "'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace" },
 ];
 
-const FONT_ROLE_CONTROLS = [
+type FontRoleKey = Exclude<TypographyKey, 'baseSize'>;
+
+const FONT_ROLE_CONTROLS: Array<{
+  key: FontRoleKey;
+  label: string;
+  customPlaceholder: string;
+}> = [
   {
     key: 'fontFamily',
     label: 'Body Font',
@@ -97,13 +126,13 @@ const FONT_ROLE_CONTROLS = [
   },
 ];
 
-function valueLabel(value, suffix) {
+function valueLabel(value: string | number, suffix: string): string {
   if (suffix === 'x') return `${Number(value).toFixed(2)}x`;
   if (!suffix) return String(value);
   return `${value}${suffix}`;
 }
 
-function hexToRgb(hex) {
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const normalized = String(hex || '').trim().replace('#', '');
   if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
   const int = Number.parseInt(normalized, 16);
@@ -114,7 +143,7 @@ function hexToRgb(hex) {
   };
 }
 
-function relativeLuminance(hex) {
+function relativeLuminance(hex: string): number | null {
   const rgb = hexToRgb(hex);
   if (!rgb) return null;
   const map = [rgb.r, rgb.g, rgb.b].map((channel) => {
@@ -124,7 +153,7 @@ function relativeLuminance(hex) {
   return 0.2126 * map[0] + 0.7152 * map[1] + 0.0722 * map[2];
 }
 
-function contrastRatio(hexA, hexB) {
+function contrastRatio(hexA: string, hexB: string): number | null {
   const lumA = relativeLuminance(hexA);
   const lumB = relativeLuminance(hexB);
   if (lumA === null || lumB === null) return null;
@@ -133,7 +162,7 @@ function contrastRatio(hexA, hexB) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function wcagRating(ratio) {
+function wcagRating(ratio: number | null): { label: string; tone: 'good' | 'warn' | 'bad' } {
   if (ratio === null) return { label: 'Invalid color', tone: 'bad' };
   if (ratio >= 7) return { label: 'AAA', tone: 'good' };
   if (ratio >= 4.5) return { label: 'AA', tone: 'good' };
@@ -141,7 +170,7 @@ function wcagRating(ratio) {
   return { label: 'Fail', tone: 'bad' };
 }
 
-export default function ThemeCustomizer({ theme, onChange }: any) {
+export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProps) {
   const [draftImport, setDraftImport] = useState('');
   const [importError, setImportError] = useState('');
   const [importMode, setImportMode] = useState('merge');
@@ -175,9 +204,9 @@ export default function ThemeCustomizer({ theme, onChange }: any) {
     };
   })), [merged]);
 
-  function update(path, value) {
-    onChange((config) => {
-      const current = normalizeCustomTheme(config.customTheme);
+  function update(path: ThemePath, value: string | number) {
+    onChange((config: ThemeConfig) => {
+      const current = normalizeCustomTheme(config.customTheme) as Record<string, Record<string, unknown>>;
       const [group, key] = path;
       return {
         ...config,
@@ -192,8 +221,8 @@ export default function ThemeCustomizer({ theme, onChange }: any) {
     });
   }
 
-  function applyPreset(preset) {
-    onChange((config) => ({ ...config, customTheme: preset.customTheme }));
+  function applyPreset(preset: PresetTheme) {
+    onChange((config: ThemeConfig) => ({ ...config, customTheme: preset.customTheme }));
   }
 
   function applyImport() {
@@ -206,8 +235,8 @@ export default function ThemeCustomizer({ theme, onChange }: any) {
       }
       setImportError('');
       setImportSuccess(importMode === 'merge' ? 'Imported and merged into current theme.' : 'Imported and replaced current theme.');
-      onChange((config) => {
-        const current = normalizeCustomTheme(config.customTheme);
+      onChange((config: ThemeConfig) => {
+        const current = normalizeCustomTheme(config.customTheme) as Record<string, Record<string, unknown>>;
         const nextCustomTheme = importMode === 'replace'
           ? parsed
           : {
@@ -324,7 +353,7 @@ export default function ThemeCustomizer({ theme, onChange }: any) {
       </div>
 
       <div className={styles.actions}>
-        <button className={styles.btn} onClick={() => onChange((c) => ({ ...c, customTheme: {} }))}>Reset to default</button>
+        <button className={styles.btn} onClick={() => onChange((c: ThemeConfig) => ({ ...c, customTheme: {} }))}>Reset to default</button>
       </div>
 
       <div className={styles.ioSection}>
