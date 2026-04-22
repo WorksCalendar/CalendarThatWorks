@@ -24,6 +24,18 @@ export type ThemeMode = 'light' | 'dark';
 
 export type ThemeId = `${ThemeFamily}-${ThemeMode}`;
 
+export interface ThemeFamilyMeta {
+  id: ThemeFamily;
+  label: string;
+  description: string;
+}
+
+export interface ThemeDefinition {
+  id: ThemeId;
+  family: ThemeFamily;
+  mode: ThemeMode;
+}
+
 // ── Families ─────────────────────────────────────────────────────────────────
 
 export const THEME_FAMILIES = [
@@ -94,16 +106,13 @@ export type ThemePreview = {
   border: string;
 };
 
-export type ThemeMeta = {
-  id: ThemeId;
-  family: ThemeFamily;
-  mode: ThemeMode;
+export interface ThemeMeta extends ThemeDefinition {
   label: string;
   description: string;
   dark: boolean;
   preview: ThemePreview;
   cssTheme: string;
-};
+}
 
 export const THEME_META: Record<ThemeId, ThemeMeta> = {
   'canvas-light': {
