@@ -48,7 +48,7 @@ type RequestSchema = {
   fields?: RequestFormFieldDraft[];
 } | null | undefined;
 
-type RequestFormValues = Record<string, string | boolean>;
+type RequestFormValues = Record<string, string | number | boolean | Date>;
 
 function normalizeField(field: RequestFormFieldDraft, idx: number): RequestFormField {
   const key = typeof field?.key === 'string' && field.key.trim()
@@ -116,8 +116,10 @@ export default function RequestForm({
     return seed;
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const toInputValue = (value: string | boolean | undefined): string =>
-    typeof value === 'string' ? value : '';
+  const toInputValue = (value: string | number | boolean | Date | undefined): string => {
+    if (typeof value === 'boolean' || value == null) return '';
+    return String(value);
+  };
 
   const setValue = (key: string, next: string | boolean) => setValues(prev => ({ ...prev, [key]: next }));
 
