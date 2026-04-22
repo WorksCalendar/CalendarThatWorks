@@ -92,6 +92,16 @@ describe('RequestForm — rendering', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Hello');
     expect(screen.getByLabelText('Notes')).toHaveValue('World');
   });
+
+  it('preserves non-string seeded values for text-like inputs', () => {
+    renderForm({
+      schema: {
+        fields: [{ key: 'count', label: 'Count', type: 'number' }],
+      },
+      initialValues: { count: 42 },
+    });
+    expect(screen.getByLabelText('Count')).toHaveValue(42);
+  });
 });
 
 describe('RequestForm — validation + submit', () => {

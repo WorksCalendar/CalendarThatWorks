@@ -19,7 +19,7 @@ type ExternalFormField = {
   options?: ExternalFormOption[];
 };
 
-type ExternalFormValues = Record<string, string | boolean | null | undefined>;
+type ExternalFormValues = Record<string, string | number | boolean | Date | null | undefined>;
 
 type ExternalFormSubmitContext = {
   values: ExternalFormValues;
@@ -89,8 +89,19 @@ function defaultValidate(values: ExternalFormValues, fields: ExternalFormField[]
     }
   });
 
-  if (typeof values.start === 'string' && typeof values.end === 'string' && values.start && values.end
-      && new Date(values.start) > new Date(values.end)) {
+  const toDate = (value: ExternalFormValues[string]): Date | null => {
+    if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+    if (typeof value === 'string' || typeof value === 'number') {
+      if (value === '') return null;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    return null;
+  };
+
+  const start = toDate(values.start);
+  const end = toDate(values.end);
+  if (start && end && start > end) {
     errors.end = 'End must be after start.';
   }
 
@@ -140,8 +151,10 @@ export default function CalendarExternalForm({
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const toInputValue = (value: string | boolean | null | undefined): string =>
-    typeof value === 'string' ? value : '';
+  const toInputValue = (value: string | number | boolean | Date | null | undefined): string => {
+    if (typeof value === 'boolean' || value == null) return '';
+    return String(value);
+  };
 
   function setValue(name: string, value: string | boolean) {
     setValues((prev) => ({ ...prev, [name]: value }));

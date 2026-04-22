@@ -34,6 +34,25 @@ describe('CalendarExternalForm', () => {
     expect(submitEvent).not.toHaveBeenCalled();
   });
 
+  it('validates date ordering when prefilled with Date instances', async () => {
+    const submitEvent = vi.fn();
+    render(
+      <CalendarExternalForm
+        adapter={{ submitEvent }}
+        initialValues={{
+          title: 'Seeded event',
+          start: new Date('2026-04-13T10:00:00.000Z'),
+          end: new Date('2026-04-13T09:00:00.000Z'),
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit event' }));
+
+    expect(await screen.findByText('End must be after start.')).toBeInTheDocument();
+    expect(submitEvent).not.toHaveBeenCalled();
+  });
+
   it('surfaces adapter/network failures', async () => {
     const submitEvent = vi.fn(async () => {
       throw new Error('network failed');
