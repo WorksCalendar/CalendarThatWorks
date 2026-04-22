@@ -3,24 +3,48 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
-import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
+import { DEFAULT_FILTER_SCHEMA, type FilterField, type FilterOption } from '../filters/filterSchema';
 import { buildActiveFilterPills, clearFilterValue, hasActiveFilters as computeHasActiveFilters } from '../filters/filterState';
 import styles from './FilterBar.module.css';
 
-function formatDateInput(date) {
+type FilterValue = unknown;
+type FilterMap = Record<string, FilterValue>;
+
+type SourceOption = {
+  id: string | number;
+  color?: string;
+  type?: string;
+};
+
+type GroupedFields = Record<'categories' | 'resources' | 'sources' | 'more', FilterField[]>;
+
+type FilterBarProps = {
+  schema?: FilterField[];
+  filters?: FilterMap;
+  items?: unknown[];
+  onChange?: (fieldKey: string, value: FilterValue) => void;
+  onClear?: (fieldKey: string) => void;
+  onClearAll?: () => void;
+  sources?: SourceOption[];
+  groupLabels?: Record<string, string>;
+  pillHoverTitle?: boolean;
+  onPillHoverTitleToggle?: (() => void) | undefined;
+};
+
+function formatDateInput(date: string | number | Date | null | undefined): string {
   if (!date) return '';
   const d = date instanceof Date ? date : new Date(date);
   return d.toISOString().slice(0, 10);
 }
 
-function getGroupKey(fieldKey) {
+function getGroupKey(fieldKey: string): keyof GroupedFields {
   if (fieldKey === 'categories') return 'categories';
   if (fieldKey === 'resources') return 'resources';
   if (fieldKey === 'sources') return 'sources';
   return 'more';
 }
 
-const DEFAULT_GROUP_LABELS = {
+const DEFAULT_GROUP_LABELS: Record<string, string> = {
   categories: 'Categories',
   resources: 'People',
   sources: 'Sources',
@@ -38,11 +62,11 @@ export default function FilterBar({
   groupLabels = {},
   pillHoverTitle = false,
   onPillHoverTitleToggle = undefined,
-}: any) {
-  const [openGroup, setOpenGroup] = useState(null);
-  const dropdownRefs = useRef({});
+}: FilterBarProps) {
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  function handleToggle(fieldKey, value) {
+  function handleToggle(fieldKey: string, value: FilterOption['value']) {
     const current = filters[fieldKey];
     const next = current instanceof Set ? new Set(current) : new Set();
     next.has(value) ? next.delete(value) : next.add(value);
@@ -50,9 +74,9 @@ export default function FilterBar({
   }
 
   useEffect(() => {
-    function onDocClick(e) {
+    function onDocClick(e: MouseEvent) {
       const currentRef = openGroup ? dropdownRefs.current[openGroup] : null;
-      if (currentRef && !currentRef.contains(e.target)) {
+      if (currentRef && e.target instanceof Node && !currentRef.contains(e.target)) {
         setOpenGroup(null);
       }
     }
@@ -61,7 +85,7 @@ export default function FilterBar({
   }, [openGroup]);
 
   const visibleMultiSelectFields = useMemo(() => {
-    return schema.filter(field => {
+    return schema.filter((field: FilterField) => {
       if (field.type !== 'multi-select') return false;
 
       if (typeof field.hidden === 'function') {
@@ -76,7 +100,7 @@ export default function FilterBar({
   }, [schema, items, filters]);
 
   const groupedFields = useMemo(() => {
-    const groups = {
+    const groups: GroupedFields = {
       categories: [],
       resources: [],
       sources: [],
@@ -98,8 +122,8 @@ export default function FilterBar({
   const hasActiveFilters = computeHasActiveFilters(filters, schema);
   const activePills = buildActiveFilterPills(filters, schema);
 
-  function selectedCountForGroup(groupKey) {
-    return groupedFields[groupKey].reduce((count, field) => {
+  function selectedCountForGroup(groupKey: keyof GroupedFields): number {
+    return groupedFields[groupKey].reduce((count: number, field: FilterField) => {
       const value = filters[field.key];
       if (value instanceof Set) return count + value.size;
       if (Array.isArray(value)) return count + value.length;
@@ -107,14 +131,15 @@ export default function FilterBar({
     }, 0);
   }
 
-  function renderOption(field, opt) {
+  function renderOption(field: FilterField, opt: FilterOption) {
     const activeValues = filters[field.key] ?? new Set();
+    const activeList = Array.isArray(activeValues) ? activeValues : [];
     const active = activeValues instanceof Set
       ? activeValues.has(opt.value)
-      : (activeValues ?? []).includes(opt.value);
+      : activeList.includes(opt.value);
 
     const isSourceField = field.key === 'sources';
-    const src = isSourceField ? sources.find(s => s.id === opt.value) : null;
+    const src = isSourceField ? sources.find((s: SourceOption) => s.id === opt.value) : null;
 
     return (
       <button
@@ -146,27 +171,28 @@ export default function FilterBar({
       {Object.entries(groupedFields).map(([groupKey, fields]) => {
         if (!fields.length) return null;
 
-        const count = selectedCountForGroup(groupKey);
+        const resolvedGroupKey = groupKey as keyof GroupedFields;
+        const count = selectedCountForGroup(resolvedGroupKey);
 
         return (
           <div
             key={groupKey}
             className={styles.dropdownWrap}
-            ref={el => { dropdownRefs.current[groupKey] = el; }}
+            ref={el => { dropdownRefs.current[resolvedGroupKey] = el; }}
           >
             <button
               type="button"
-              className={[styles.dropdownBtn, openGroup === groupKey && styles.dropdownBtnOpen].filter(Boolean).join(' ')}
-              onClick={() => setOpenGroup(openGroup === groupKey ? null : groupKey)}
+              className={[styles.dropdownBtn, openGroup === resolvedGroupKey && styles.dropdownBtnOpen].filter(Boolean).join(' ')}
+              onClick={() => setOpenGroup(openGroup === resolvedGroupKey ? null : resolvedGroupKey)}
             >
-              <span>{mergedGroupLabels[groupKey] ?? DEFAULT_GROUP_LABELS[groupKey] ?? groupKey}</span>
+              <span>{mergedGroupLabels[resolvedGroupKey] ?? DEFAULT_GROUP_LABELS[resolvedGroupKey] ?? resolvedGroupKey}</span>
               {count > 0 && <span className={styles.countBadge}>{count}</span>}
               <span className={styles.chevronIcon}><ChevronDown size={14} /></span>
             </button>
 
-            {openGroup === groupKey && (
+            {openGroup === resolvedGroupKey && (
               <div className={styles.dropdownMenu}>
-                {fields.map(field => {
+                {fields.map((field: FilterField) => {
                   const options = field.getOptions ? field.getOptions(items) : (field.options ?? []);
                   if (!options.length) return null;
 
@@ -174,7 +200,7 @@ export default function FilterBar({
                     <div key={field.key} className={styles.menuSection}>
                       <div className={styles.menuHead}>{field.label ?? field.key}</div>
                       <div className={styles.menuOptions}>
-                        {options.map(opt => renderOption(field, opt))}
+                        {options.map((opt: FilterOption) => renderOption(field, opt))}
                       </div>
                     </div>
                   );
@@ -186,9 +212,9 @@ export default function FilterBar({
       })}
 
       {schema
-        .filter(field => field.type === 'text' && !field.hidden)
-        .map(field => {
-          const value = filters[field.key] ?? '';
+        .filter((field: FilterField) => field.type === 'text' && !field.hidden)
+        .map((field: FilterField) => {
+          const value = (filters[field.key] ?? '') as string;
           return (
             <div key={field.key} className={styles.searchWrap}>
               <Search size={14} className={styles.searchIcon} />
@@ -213,9 +239,9 @@ export default function FilterBar({
           );
         })}
 
-      {schema.filter(f => f.type === 'select' && !f.hidden).map(field => {
+      {schema.filter((f: FilterField) => f.type === 'select' && !f.hidden).map((field: FilterField) => {
         const options = field.getOptions ? field.getOptions(items) : (field.options ?? []);
-        const value = filters[field.key] ?? '';
+        const value = (filters[field.key] ?? '') as string | number | readonly string[];
         return (
           <select
             key={field.key}
@@ -224,7 +250,7 @@ export default function FilterBar({
             onChange={e => onChange?.(field.key, e.target.value || null)}
           >
             <option value="">{field.placeholder ?? `All ${field.label ?? field.key}`}</option>
-            {options.map(opt => (
+            {options.map((opt: FilterOption) => (
               <option key={String(opt.value)} value={opt.value as string | number | readonly string[]}>
                 {opt.label}
               </option>
@@ -233,7 +259,7 @@ export default function FilterBar({
         );
       })}
 
-      {schema.filter(f => f.type === 'boolean' && !f.hidden).map(field => {
+      {schema.filter((f: FilterField) => f.type === 'boolean' && !f.hidden).map((field: FilterField) => {
         const value = filters[field.key];
         return (
           <label
@@ -251,10 +277,13 @@ export default function FilterBar({
         );
       })}
 
-      {schema.filter(f => f.type === 'date-range' && !f.hidden).map(field => {
+      {schema.filter((f: FilterField) => f.type === 'date-range' && !f.hidden).map((field: FilterField) => {
         const range = filters[field.key];
-        const startVal = range?.start ? formatDateInput(range.start) : '';
-        const endVal   = range?.end   ? formatDateInput(range.end)   : '';
+        const rangeValue = (range && typeof range === 'object' && !(range instanceof Date))
+          ? (range as { start?: string | number | Date | null; end?: string | number | Date | null })
+          : null;
+        const startVal = rangeValue?.start ? formatDateInput(rangeValue.start) : '';
+        const endVal   = rangeValue?.end   ? formatDateInput(rangeValue.end)   : '';
 
         return (
           <div key={field.key} className={styles.dateRange}>
@@ -266,7 +295,7 @@ export default function FilterBar({
               aria-label={`${field.label ?? 'Date'} from`}
               onChange={e => {
                 const d = e.target.value ? new Date(e.target.value + 'T00:00:00') : null;
-                onChange?.(field.key, d || range?.end ? { start: d, end: range?.end ?? null } : null);
+                onChange?.(field.key, d || rangeValue?.end ? { start: d, end: rangeValue?.end ?? null } : null);
               }}
             />
             <span className={styles.dateSep}>–</span>
@@ -277,7 +306,7 @@ export default function FilterBar({
               aria-label={`${field.label ?? 'Date'} to`}
               onChange={e => {
                 const d = e.target.value ? new Date(e.target.value + 'T23:59:59') : null;
-                onChange?.(field.key, d || range?.start ? { start: range?.start ?? null, end: d } : null);
+                onChange?.(field.key, d || rangeValue?.start ? { start: rangeValue?.start ?? null, end: d } : null);
               }}
             />
             {(startVal || endVal) && (
@@ -302,8 +331,8 @@ export default function FilterBar({
 
       {activePills.length > 0 && (
         <div className={styles.activePills}>
-          {activePills.map((pill, i) => {
-            const schemaField = schema.find(f => f.key === pill.key);
+          {activePills.map((pill, i: number) => {
+            const schemaField = schema.find((f: FilterField) => f.key === pill.key);
             return (
               <span key={`${pill.key}-${i}`} className={styles.activePill}>
                 {pill.fieldLabel}: {pill.displayValue ?? String(pill.value)}

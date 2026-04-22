@@ -29,14 +29,55 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 import { createId } from '../core/createId';
-import { DEFAULT_FILTER_SCHEMA, defaultOperatorsForType } from '../filters/filterSchema';
+import {
+  DEFAULT_FILTER_SCHEMA,
+  defaultOperatorsForType,
+  type FilterField,
+  type FilterOperator,
+  type FilterOption,
+} from '../filters/filterSchema';
 import { conditionsToFilters } from '../filters/conditionEngine';
 import styles from './AdvancedFilterBuilder.module.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeCondition(logic = 'AND', firstFieldKey = 'categories') {
+type ConditionLogic = 'AND' | 'OR';
+type ConditionValue = string | number | boolean;
+
+type BuilderCondition = {
+  id: string;
+  field: string;
+  operator: string;
+  value: ConditionValue;
+  logic: ConditionLogic;
+};
+
+type AdvancedFilterBuilderProps = {
+  schema?: FilterField[];
+  items?: unknown[];
+  onSave?: (name: string, filters: Record<string, unknown>, conditions: BuilderCondition[]) => void;
+  categories?: string[];
+  resources?: string[];
+  initialName?: string;
+  initialConditions?: Array<Partial<BuilderCondition>> | null;
+  editingId?: string | null;
+  onUpdate?: (id: string, name: string, filters: Record<string, unknown>, conditions: BuilderCondition[]) => void;
+  onCancelEdit?: (() => void) | undefined;
+};
+
+function makeCondition(logic: ConditionLogic = 'AND', firstFieldKey = 'categories'): BuilderCondition {
   return { id: createId('cond'), field: firstFieldKey, operator: 'is', value: '', logic };
+}
+
+function normalizeConditionValue(value: unknown): ConditionValue {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  return '';
+}
+
+function parseOptionValue(rawValue: string, options: FilterOption[] | null): ConditionValue {
+  if (!options) return rawValue;
+  const match = options.find((opt: FilterOption) => String(opt.value) === rawValue);
+  return match ? (match.value as ConditionValue) : rawValue;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -52,16 +93,16 @@ export default function AdvancedFilterBuilder({
   editingId = null,
   onUpdate,
   onCancelEdit,
-}: any) {
+}: AdvancedFilterBuilderProps) {
   // Exclude date-range fields from the condition builder field list
   const fieldOptions = useMemo(
-    () => schema.filter(f => f.type !== 'date-range'),
+    () => schema.filter((f: FilterField) => f.type !== 'date-range'),
     [schema]
   );
 
   // Operator map keyed by field.key — falls back to defaultOperatorsForType
   const operatorMap = useMemo(() => {
-    const map = {};
+    const map: Record<string, FilterOperator[]> = {};
     for (const f of fieldOptions) {
       map[f.key] = f.operators ?? defaultOperatorsForType(f.type);
     }
@@ -70,17 +111,23 @@ export default function AdvancedFilterBuilder({
 
   const firstFieldKey = fieldOptions[0]?.key ?? 'categories';
 
-  const [conditions, setConditions] = useState(() =>
+  const [conditions, setConditions] = useState<BuilderCondition[]>(() =>
     initialConditions && initialConditions.length > 0
-      ? initialConditions.map(c => ({ ...c, id: createId('cond') }))
+      ? initialConditions.map((c) => ({
+          id: createId('cond'),
+          field: c.field ?? firstFieldKey,
+          operator: c.operator ?? 'is',
+          value: normalizeConditionValue(c.value),
+          logic: c.logic === 'OR' ? 'OR' : 'AND',
+        }))
       : [makeCondition('AND', firstFieldKey)]
   );
   const [viewName,   setViewName]   = useState(initialName);
   const [nameError,  setNameError]  = useState('');
   const [saved,      setSaved]      = useState(false);
-  const savedTimerRef = useRef(null);
-  const rootRef       = useRef(null);
-  const nameInputRef  = useRef(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rootRef       = useRef<HTMLDivElement | null>(null);
+  const nameInputRef  = useRef<HTMLInputElement | null>(null);
 
   // Clear the "Saved!" feedback timeout on unmount to avoid state updates on
   // an unmounted component (can happen in edit mode when the parent unmounts
@@ -101,11 +148,11 @@ export default function AdvancedFilterBuilder({
 
   // ── Condition mutations ─────────────────────────────────────────────────
 
-  const addCondition = (logic) => {
+  const addCondition = (logic: ConditionLogic) => {
     setConditions(prev => [...prev, makeCondition(logic, firstFieldKey)]);
   };
 
-  const updateCondition = (id, updates) => {
+  const updateCondition = (id: string, updates: Partial<BuilderCondition>) => {
     setConditions(prev => prev.map(c => {
       if (c.id !== id) return c;
       const next = { ...c, ...updates };
@@ -118,7 +165,7 @@ export default function AdvancedFilterBuilder({
     }));
   };
 
-  const removeCondition = (id) => {
+  const removeCondition = (id: string) => {
     setConditions(prev => prev.length > 1 ? prev.filter(c => c.id !== id) : prev);
   };
 
@@ -154,9 +201,9 @@ export default function AdvancedFilterBuilder({
 
       {/* ── Condition rows ── */}
       <div className={styles.conditions}>
-        {conditions.map((cond, index) => {
-          const fieldDef = schema.find(f => f.key === cond.field);
-          const options  = fieldDef?.options
+        {conditions.map((cond, index: number) => {
+          const fieldDef = schema.find((f: FilterField) => f.key === cond.field);
+          const options: FilterOption[] | null = fieldDef?.options
                         ?? (fieldDef?.getOptions ? fieldDef.getOptions(items) : null);
           return (
             <div key={cond.id} className={styles.conditionWrap}>
@@ -164,7 +211,7 @@ export default function AdvancedFilterBuilder({
               {/* Logic connector (AND / OR) between rows */}
               {index > 0 && (
                 <div className={styles.logicRow}>
-                  {(['AND', 'OR']).map(lbl => (
+                  {(['AND', 'OR'] as const).map((lbl: ConditionLogic) => (
                     <button
                       key={lbl}
                       className={[styles.logicBtn, cond.logic === lbl && styles.logicActive].filter(Boolean).join(' ')}
@@ -185,7 +232,7 @@ export default function AdvancedFilterBuilder({
                   onChange={e => updateCondition(cond.id, { field: e.target.value })}
                   aria-label="Filter field"
                 >
-                  {fieldOptions.map(f => (
+                  {fieldOptions.map((f: FilterField) => (
                     <option key={f.key} value={f.key}>{f.label}</option>
                   ))}
                 </select>
@@ -197,7 +244,7 @@ export default function AdvancedFilterBuilder({
                   onChange={e => updateCondition(cond.id, { operator: e.target.value })}
                   aria-label="Filter operator"
                 >
-                  {(operatorMap[cond.field] ?? []).map(op => (
+                  {(operatorMap[cond.field] ?? []).map((op: FilterOperator) => (
                     <option key={op.value} value={op.value}>{op.label}</option>
                   ))}
                 </select>
@@ -206,12 +253,12 @@ export default function AdvancedFilterBuilder({
                 {options && options.length > 0 ? (
                   <select
                     className={[styles.select, styles.valueSelect].join(' ')}
-                    value={cond.value}
-                    onChange={e => updateCondition(cond.id, { value: e.target.value })}
+                    value={String(cond.value)}
+                    onChange={e => updateCondition(cond.id, { value: parseOptionValue(e.target.value, options) })}
                     aria-label="Filter value"
                   >
                     <option value="">Select…</option>
-                    {options.map(opt => (
+                    {options.map((opt: FilterOption) => (
                       <option key={String(opt.value)} value={String(opt.value)}>{opt.label}</option>
                     ))}
                   </select>
@@ -219,7 +266,7 @@ export default function AdvancedFilterBuilder({
                   <input
                     className={[styles.input, styles.valueInput].join(' ')}
                     type="text"
-                    value={cond.value}
+                    value={String(cond.value)}
                     onChange={e => updateCondition(cond.id, { value: e.target.value })}
                     placeholder="Value…"
                     aria-label="Filter value"

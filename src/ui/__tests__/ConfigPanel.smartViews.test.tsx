@@ -23,7 +23,7 @@ function renderTab(overrides: any = {}) {
     <SmartViewsTab
       categories={['Cat-A', 'Cat-B']}
       resources={['alice', 'bob']}
-      savedViews={savedViews}
+      savedViews={overrides.savedViews ?? savedViews}
       onSaveView={overrides.onSaveView ?? vi.fn()}
       onUpdateView={overrides.onUpdateView ?? vi.fn()}
       onDeleteView={overrides.onDeleteView ?? vi.fn()}
@@ -103,5 +103,35 @@ describe('SmartViewsTab edit UI (issue #100)', () => {
     expect(onUpdateView).toHaveBeenCalledTimes(1);
     expect(onUpdateView.mock.calls[0][0]).toBe('v1');
     expect(onUpdateView.mock.calls[0][1]).toMatchObject({ name: 'Alpha' });
+  });
+
+  it('preserves numeric and boolean condition values when reopening and updating a saved view', () => {
+    const onUpdateView = vi.fn();
+    renderTab({
+      onUpdateView,
+      savedViews: [
+        {
+          id: 'typed-1',
+          name: 'Typed Values',
+          color: '#444',
+          conditions: [
+            { field: 'priority', operator: 'is', value: 2, logic: 'AND' },
+            { field: 'isLocked', operator: 'is', value: true, logic: 'AND' },
+          ],
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByLabelText('Edit Typed Values'));
+    fireEvent.click(screen.getByRole('button', { name: 'Update Smart View' }));
+
+    expect(onUpdateView).toHaveBeenCalledTimes(1);
+    const [, updatePayload] = onUpdateView.mock.calls[0];
+    expect(updatePayload.conditions).toEqual([
+      expect.objectContaining({ value: 2 }),
+      expect.objectContaining({ value: true }),
+    ]);
+    expect(typeof updatePayload.conditions[0].value).toBe('number');
+    expect(typeof updatePayload.conditions[1].value).toBe('boolean');
   });
 });
