@@ -1,5 +1,5 @@
 /**
- * AdvancedFilterBuilder.jsx — Visual AND/OR condition builder for Smart Views.
+ * AdvancedFilterBuilder — Visual AND/OR condition builder for Smart Views.
  *
  * Lets users compose multi-condition filters with explicit AND / OR logic
  * between each row, then save the result as a named Smart View.
@@ -28,50 +28,36 @@
  */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, X, Check } from 'lucide-react';
-import { createId } from '../core/createId';
-import { DEFAULT_FILTER_SCHEMA, defaultOperatorsForType } from '../filters/filterSchema';
-import { conditionsToFilters } from '../filters/conditionEngine';
-import type { FilterField, FilterOperator, FilterOption } from '../filters/filterSchema';
+import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
+import type { FilterField, FilterOption } from '../filters/filterSchema';
+import { useConditionBuilder } from '../hooks/useConditionBuilder';
+import type { Condition } from '../hooks/useConditionBuilder';
 import styles from './AdvancedFilterBuilder.module.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type ConditionLogic = 'AND' | 'OR';
-
-type BuilderCondition = {
-  id: string;
-  field: string;
-  operator: string;
-  value: string;
-  logic: ConditionLogic;
-};
-
 type AdvancedFilterBuilderProps = {
   schema?: FilterField[];
   items?: unknown[];
-  onSave?: (name: string, filters: Record<string, unknown>, conditions: BuilderCondition[]) => void;
+  onSave?: (name: string, filters: Record<string, unknown>, conditions: Condition[]) => void;
   categories?: unknown[];
   resources?: unknown[];
   initialName?: string;
   initialConditions?: unknown[] | null;
   editingId?: string | null;
-  onUpdate?: (id: string, name: string, filters: Record<string, unknown>, conditions: BuilderCondition[]) => void;
+  onUpdate?: (id: string, name: string, filters: Record<string, unknown>, conditions: Condition[]) => void;
   onCancelEdit?: () => void;
 };
 
-function makeCondition(logic: ConditionLogic = 'AND', firstFieldKey = 'categories'): BuilderCondition {
-  return { id: createId('cond'), field: firstFieldKey, operator: 'is', value: '', logic };
-}
-
-function toBuilderCondition(input: unknown, fallbackFieldKey: string): BuilderCondition {
-  const candidate = (input ?? {}) as Partial<BuilderCondition>;
-  const logic: ConditionLogic = candidate.logic === 'OR' ? 'OR' : 'AND';
+/** Safely coerce an unknown value from persisted storage into a typed Condition. */
+function toCondition(input: unknown, fallbackFieldKey: string): Condition {
+  const c = (input ?? {}) as Partial<Condition>;
   return {
-    id: createId('cond'),
-    field: typeof candidate.field === 'string' ? candidate.field : fallbackFieldKey,
-    operator: typeof candidate.operator === 'string' ? candidate.operator : 'is',
-    value: typeof candidate.value === 'string' ? candidate.value : '',
-    logic,
+    id:       '',   // hook assigns a fresh id in its useState initializer
+    field:    typeof c.field    === 'string' ? c.field    : fallbackFieldKey,
+    operator: typeof c.operator === 'string' ? c.operator : 'is',
+    value:    typeof c.value    === 'string' ? c.value    : '',
+    logic:    c.logic === 'OR' ? 'OR' : 'AND',
   };
 }
 
@@ -92,31 +78,24 @@ export default function AdvancedFilterBuilder({
   void categories;
   void resources;
 
-  // Exclude date-range fields from the condition builder field list
-  const fieldOptions = useMemo(
-    () => schema.filter((f) => f.type !== 'date-range'),
-    [schema]
-  );
+  // Pre-process unknown initial conditions into typed Condition[] for the hook.
+  // Computed once on mount — the parent remounts via key={editingId} on switch.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initializer
+  const safeInitialConditions = useMemo<Condition[] | null>(() => {
+    if (!initialConditions || initialConditions.length === 0) return null;
+    const firstKey = schema.filter(f => f.type !== 'date-range')[0]?.key ?? 'categories';
+    return initialConditions.map(c => toCondition(c, firstKey));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Operator map keyed by field.key — falls back to defaultOperatorsForType
-  const operatorMap = useMemo<Record<string, FilterOperator[]>>(() => {
-    const map: Record<string, FilterOperator[]> = {};
-    for (const f of fieldOptions) {
-      map[f.key] = f.operators ?? defaultOperatorsForType(f.type);
-    }
-    return map;
-  }, [fieldOptions]);
+  const {
+    conditions, fieldOptions, operatorMap,
+    addCondition, updateCondition, removeCondition,
+    clearConditions, toFilters,
+  } = useConditionBuilder({ schema, initialConditions: safeInitialConditions });
 
-  const firstFieldKey = fieldOptions[0]?.key ?? 'categories';
-
-  const [conditions, setConditions] = useState<BuilderCondition[]>(() =>
-    initialConditions && initialConditions.length > 0
-      ? initialConditions.map((c) => toBuilderCondition(c, firstFieldKey))
-      : [makeCondition('AND', firstFieldKey)]
-  );
-  const [viewName,   setViewName]   = useState(initialName);
-  const [nameError,  setNameError]  = useState('');
-  const [saved,      setSaved]      = useState(false);
+  const [viewName,  setViewName]  = useState(initialName);
+  const [nameError, setNameError] = useState('');
+  const [saved,     setSaved]     = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef       = useRef<HTMLDivElement | null>(null);
   const nameInputRef  = useRef<HTMLInputElement | null>(null);
@@ -138,51 +117,27 @@ export default function AdvancedFilterBuilder({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only on edit open
   }, []);
 
-  // ── Condition mutations ─────────────────────────────────────────────────
-
-  const addCondition = (logic: ConditionLogic) => {
-    setConditions(prev => [...prev, makeCondition(logic, firstFieldKey)]);
-  };
-
-  const updateCondition = (id: string, updates: Partial<BuilderCondition>) => {
-    setConditions(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      const next = { ...c, ...updates };
-      // Reset operator + value when field changes
-      if (updates.field && updates.field !== c.field) {
-        next.operator = operatorMap[updates.field]?.[0]?.value ?? 'is';
-        next.value    = '';
-      }
-      return next;
-    }));
-  };
-
-  const removeCondition = (id: string) => {
-    setConditions(prev => prev.length > 1 ? prev.filter(c => c.id !== id) : prev);
-  };
-
   // ── Save ────────────────────────────────────────────────────────────────
+
+  const showSaved = () => {
+    setSaved(true);
+    clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
+  };
 
   const handleSave = () => {
     const name = viewName.trim();
-    if (!name) {
-      setNameError('Enter a name for this Smart View.');
-      return;
-    }
+    if (!name) { setNameError('Enter a name for this Smart View.'); return; }
     setNameError('');
-    const filters = conditionsToFilters(conditions, schema);
+    const filters = toFilters();
     if (editingId && onUpdate) {
       onUpdate(editingId, name, filters, conditions);
-      setSaved(true);
-      clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
+      showSaved();
     } else {
       onSave?.(name, filters, conditions);
-      setSaved(true);
-      clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
+      showSaved();
       setViewName('');
-      setConditions([makeCondition('AND', firstFieldKey)]);
+      clearConditions();
     }
   };
 
