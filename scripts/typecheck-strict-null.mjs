@@ -27,6 +27,7 @@ const MIGRATED_PATHS = [
   'src/__tests__/groupingFilteringSorting.integration.test.ts',
   'src/__tests__/phaseB.integration.test.tsx',
   'src/api/v1/__tests__/sync.test.ts',
+  'src/views/TimelineView.tsx',
 ];
 
 const BASELINE_PATH = path.resolve(process.cwd(), 'scripts/strict-null-baseline.json');
