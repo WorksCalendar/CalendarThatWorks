@@ -7,6 +7,9 @@
 
 export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
+/** Drives data-wc-priority="muted"|"high" on event pills across all views. */
+export type EventVisualPriority = 'muted' | 'high';
+
 export interface WorksCalendarEvent {
   id?: string;
   title: string;
@@ -17,6 +20,8 @@ export interface WorksCalendarEvent {
   color?: string;
   resource?: string;
   status?: EventStatus;
+  /** Importance signal: 'muted' = normal recurring ops; 'high' = planning exceptions. */
+  visualPriority?: EventVisualPriority;
   meta?: Record<string, unknown>;
   rrule?: string;
   exdates?: Array<Date | string>;
@@ -32,6 +37,7 @@ export interface NormalizedEvent {
   color: string;
   resource: string | null;
   status: EventStatus;
+  visualPriority: EventVisualPriority | null;
   meta: Record<string, unknown>;
   rrule: string | null;
   exdates: Array<Date | string>;
