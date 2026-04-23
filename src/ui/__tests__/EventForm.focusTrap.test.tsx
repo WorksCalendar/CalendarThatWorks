@@ -10,6 +10,13 @@ import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EventForm from '../EventForm';
 
+function requireElement<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message);
+  }
+  return value;
+}
+
 function renderForm(extra: any = {}) {
   render(
     <EventForm
@@ -28,15 +35,24 @@ function renderForm(extra: any = {}) {
       permissions={{}}
     />,
   );
-  return document.querySelector('[role="dialog"]');
+  return requireElement(
+    document.querySelector('[role="dialog"]'),
+    'Expected EventForm dialog',
+  );
 }
 
 function tabForward() {
-  fireEvent.keyDown(document.activeElement, { key: 'Tab', shiftKey: false });
+  fireEvent.keyDown(
+    requireElement(document.activeElement, 'Expected active element for Tab'),
+    { key: 'Tab', shiftKey: false },
+  );
 }
 
 function tabBackward() {
-  fireEvent.keyDown(document.activeElement, { key: 'Tab', shiftKey: true });
+  fireEvent.keyDown(
+    requireElement(document.activeElement, 'Expected active element for Shift+Tab'),
+    { key: 'Tab', shiftKey: true },
+  );
 }
 
 describe('EventForm focus trap', () => {
@@ -78,7 +94,10 @@ describe('EventForm focus trap', () => {
         permissions={{}}
       />,
     );
-    fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+    fireEvent.keyDown(
+      requireElement(document.activeElement, 'Expected active element for Escape'),
+      { key: 'Escape' },
+    );
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -89,15 +108,21 @@ describe('EventForm focus trap', () => {
       onDelete,
     });
 
-    const deleteBtn = [...dialog.querySelectorAll('button')]
-      .find(b => b.textContent.trim() === 'Delete');
-    expect(deleteBtn).not.toBeUndefined();
+    const deleteBtn = requireElement(
+      [...dialog.querySelectorAll('button')].find(
+        (b) => b.textContent?.trim() === 'Delete',
+      ),
+      'Expected Delete button',
+    );
 
     fireEvent.click(deleteBtn);
 
     // ConfirmDialog must appear with alertdialog role
-    const confirmDialog = document.querySelector('[role="alertdialog"]');
-    expect(confirmDialog).not.toBeNull();
+    const confirmDialog = requireElement(
+      document.querySelector('[role="alertdialog"]'),
+      'Expected confirm dialog',
+    );
+    expect(confirmDialog).toBeInTheDocument();
     // onDelete not yet called — user must click the confirm button
     expect(onDelete).not.toHaveBeenCalled();
   });
