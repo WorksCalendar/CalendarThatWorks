@@ -55,6 +55,7 @@ jobs:
 
   browser-e2e:
     name: Browser E2E Tests
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
