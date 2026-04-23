@@ -13,6 +13,13 @@ import '@testing-library/jest-dom';
 import ConfigPanel from '../ConfigPanel';
 import { DEFAULT_CONFIG } from '../../core/configSchema';
 
+function requireElement<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message);
+  }
+  return value;
+}
+
 function mount(props = {}) {
   return render(
     <ConfigPanel
@@ -35,7 +42,10 @@ describe('ConfigPanel — focus trap & accordion', () => {
   it('Escape calls onClose', () => {
     const onClose = vi.fn();
     mount({ onClose });
-    fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+    fireEvent.keyDown(
+      requireElement(document.activeElement, 'Expected active element for Escape'),
+      { key: 'Escape' },
+    );
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -49,8 +59,13 @@ describe('ConfigPanel — focus trap & accordion', () => {
     mount();
     const dialog = screen.getByRole('dialog', { name: 'Calendar settings' });
     for (let i = 0; i < 25; i++) {
-      fireEvent.keyDown(document.activeElement, { key: 'Tab' });
-      expect(dialog.contains(document.activeElement)).toBe(true);
+      fireEvent.keyDown(
+        requireElement(document.activeElement, 'Expected active element for Tab'),
+        { key: 'Tab' },
+      );
+      expect(
+        dialog.contains(requireElement(document.activeElement, 'Expected active element after Tab')),
+      ).toBe(true);
     }
   });
 
