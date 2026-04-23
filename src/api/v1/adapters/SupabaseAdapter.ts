@@ -172,7 +172,10 @@ export class SupabaseAdapter implements CalendarAdapter {
       };
 
     if (error) throw new Error(`SupabaseAdapter.createEvent: ${JSON.stringify(error)}`);
-    const row = Array.isArray(data) ? data[0] : data as Record<string, unknown>;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
+      throw new Error('SupabaseAdapter.createEvent: insert did not return a row');
+    }
     return this._fromRow(row);
   }
 
