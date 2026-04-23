@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent, type MouseEvent, type RefObject } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -84,7 +84,7 @@ function fromInput(str: string, allDay: boolean): Date | null {
  *   onClose    () => void
  */
 export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }: any) {
-  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose) as RefObject<HTMLDivElement>;
 
   const kind = (initialKind ?? 'pto') as string;
   const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.pto;
@@ -107,6 +107,14 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const [end,    setEnd]    = useState(toDateInput(endDefault, initialAllDay));
   const [notes,  setNotes]  = useState(initialEvent?.meta?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function clearError(...keys: string[]) {
+    setErrors((prev) => {
+      const next = { ...prev };
+      for (const key of keys) delete next[key];
+      return next;
+    });
+  }
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -176,7 +184,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
               id="af-title"
               className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
               value={title}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => { setTitle(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, title: undefined })); }}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => { setTitle(e.target.value); clearError('title'); }}
               placeholder="e.g. Vacation, Doctor appointment…"
               autoFocus
             />
@@ -216,7 +224,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
                 type={allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
                 value={start}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => { setStart(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, start: undefined, end: undefined })); }}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => { setStart(e.target.value); clearError('start', 'end'); }}
               />
               {errors.start && <span className={styles.error}>{errors.start}</span>}
             </div>
@@ -229,7 +237,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
                 type={allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
                 value={end}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => { setEnd(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, end: undefined })); }}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => { setEnd(e.target.value); clearError('end'); }}
               />
               {errors.end && <span className={styles.error}>{errors.end}</span>}
             </div>

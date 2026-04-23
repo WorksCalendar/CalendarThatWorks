@@ -3,9 +3,24 @@
  * Avoids prop-drilling renderEvent, colorRules, businessHours, etc.
  */
 import { createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import type { NormalizedEvent } from '../types/events';
 
-export const CalendarContext = createContext(null);
+type CalendarContextRenderOptions = {
+  view?: string;
+  isCompact?: boolean;
+  onClick?: () => void;
+  color?: string | undefined;
+};
+
+export type CalendarContextValue = {
+  colorRules?: Array<Record<string, unknown>>;
+  renderEvent?: (event: NormalizedEvent, options: CalendarContextRenderOptions) => ReactNode;
+  emptyState?: ReactNode;
+  [key: string]: unknown;
+} | null;
+
+export const CalendarContext = createContext<CalendarContextValue>(null);
 
 export function useCalendarContext() {
   return useContext(CalendarContext);

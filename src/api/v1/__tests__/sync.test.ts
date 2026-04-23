@@ -21,6 +21,7 @@ import {
 } from '../sync/conflictStrategies';
 import { SyncManager }         from '../sync/SyncManager';
 import type { CalendarAdapter } from '../adapters/CalendarAdapter';
+import type { AdapterChange } from '../adapters/CalendarAdapter';
 import type { CalendarEventV1 } from '../types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -32,7 +33,9 @@ function ev(overrides: Partial<CalendarEventV1> = {}): CalendarEventV1 {
   return { id: 'ev-1', title: 'Meeting', start: S, end: E, ...overrides };
 }
 
-function makeAdapter(overrides: Partial<CalendarAdapter> = {}): CalendarAdapter {
+type TestAdapter = CalendarAdapter & Required<Pick<CalendarAdapter, 'createEvent' | 'updateEvent' | 'deleteEvent' | 'subscribe'>>;
+
+function makeAdapter(overrides: Partial<TestAdapter> = {}): TestAdapter {
   return {
     loadRange:   vi.fn().mockResolvedValue([]),
     createEvent: vi.fn().mockImplementation(async (e: CalendarEventV1) => ({ ...e, id: 'server-1' })),
@@ -296,7 +299,7 @@ describe('SyncManager', () => {
   });
 
   it('createEvent with no adapter.createEvent marks synced immediately', async () => {
-    const readOnlyAdapter = makeAdapter({ createEvent: undefined });
+    const readOnlyAdapter = { ...makeAdapter(), createEvent: undefined } as CalendarAdapter;
     const m = new SyncManager({ adapter: readOnlyAdapter });
     await m.createEvent(ev());
     expect(m.queue.pendingCount).toBe(0);
@@ -400,7 +403,10 @@ describe('SyncManager', () => {
     await Promise.resolve();
 
     expect(onError).toHaveBeenCalledOnce();
-    const [opId, err] = onError.mock.calls[0];
+    const firstCall = onError.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    if (!firstCall) return;
+    const [opId, err] = firstCall;
     expect(typeof opId).toBe('string');
     expect(err.message).toBe('network');
   });
@@ -486,27 +492,33 @@ describe('SyncManager', () => {
   // ── connectLive ─────────────────────────────────────────────────────────────
 
   it('connectLive merges insert change into events', () => {
-    let pushChange: ((c: import('../adapters/CalendarAdapter.js').AdapterChange) => void) | null = null;
-    vi.mocked(adapter.subscribe).mockImplementation((cb) => {
+    let pushChange: ((c: AdapterChange) => void) | null = null;
+    vi.mocked(adapter.subscribe).mockImplementation((cb: import('../adapters/CalendarAdapter').AdapterChangeCallback) => {
       pushChange = cb;
       return () => {};
     });
 
     manager.connectLive();
-    pushChange!({ type: 'insert', event: ev() });
+    const emit = pushChange;
+    expect(emit).not.toBeNull();
+    if (typeof emit !== 'function') return;
+    (emit as (c: AdapterChange) => void)({ type: 'insert', event: ev() });
     expect(manager.events.get('ev-1')).toMatchObject({ title: 'Meeting' });
     manager.disconnectLive();
   });
 
   it('connectLive handles reload change', () => {
-    let pushChange: ((c: import('../adapters/CalendarAdapter.js').AdapterChange) => void) | null = null;
-    vi.mocked(adapter.subscribe).mockImplementation((cb) => {
+    let pushChange: ((c: AdapterChange) => void) | null = null;
+    vi.mocked(adapter.subscribe).mockImplementation((cb: import('../adapters/CalendarAdapter').AdapterChangeCallback) => {
       pushChange = cb;
       return () => {};
     });
 
     manager.connectLive();
-    pushChange!({ type: 'reload', events: [ev(), ev({ id: 'ev-2', title: 'Other' })] });
+    const emit = pushChange;
+    expect(emit).not.toBeNull();
+    if (typeof emit !== 'function') return;
+    (emit as (c: AdapterChange) => void)({ type: 'reload', events: [ev(), ev({ id: 'ev-2', title: 'Other' })] });
     expect(manager.events.size).toBe(2);
     manager.disconnectLive();
   });
@@ -515,14 +527,17 @@ describe('SyncManager', () => {
     vi.mocked(adapter.loadRange).mockResolvedValue([ev()]);
     await manager.loadRange(S, E);
 
-    let pushChange: ((c: import('../adapters/CalendarAdapter.js').AdapterChange) => void) | null = null;
-    vi.mocked(adapter.subscribe).mockImplementation((cb) => {
+    let pushChange: ((c: AdapterChange) => void) | null = null;
+    vi.mocked(adapter.subscribe).mockImplementation((cb: import('../adapters/CalendarAdapter').AdapterChangeCallback) => {
       pushChange = cb;
       return () => {};
     });
 
     manager.connectLive();
-    pushChange!({ type: 'delete', id: 'ev-1' });
+    const emit = pushChange;
+    expect(emit).not.toBeNull();
+    if (typeof emit !== 'function') return;
+    (emit as (c: AdapterChange) => void)({ type: 'delete', id: 'ev-1' });
     expect(manager.events.has('ev-1')).toBe(false);
     manager.disconnectLive();
   });

@@ -71,6 +71,13 @@ function normalizeFields(fields: ExternalFormField[]): ExternalFormField[] {
   });
 }
 
+function clearFieldError(prev: Record<string, string>, name: string): Record<string, string> {
+  if (!(name in prev)) return prev;
+  const next = { ...prev };
+  delete next[name];
+  return next;
+}
+
 function ensureAdapter(adapter: unknown): ExternalFormAdapter {
   if (!adapter || typeof (adapter as { submitEvent?: unknown }).submitEvent !== 'function') {
     throw new Error('CalendarExternalForm adapter must define submitEvent(payload, context).');
@@ -158,7 +165,7 @@ export default function CalendarExternalForm({
 
   function setValue(name: string, value: string | boolean) {
     setValues((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setErrors((prev) => clearFieldError(prev, name));
     setSubmitError('');
   }
 
@@ -225,7 +232,7 @@ export default function CalendarExternalForm({
                   onChange={(e) => setValue(field.name, e.target.checked)}
                 />
               )}
-              {!['textarea', 'select', 'checkbox'].includes(field.type) && (
+              {!['textarea', 'select', 'checkbox'].includes(field.type ?? 'text') && (
                 <input
                   id={inputId}
                   className={styles.input}

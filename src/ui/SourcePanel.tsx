@@ -65,6 +65,16 @@ type SourceHandlers = {
   onUpdate: (id: string, patch: Partial<CalendarSource>) => void;
 };
 
+type FeedValidationState = {
+  ok: true;
+  count: number;
+} | {
+  ok: false;
+  error: string;
+  corsLikely: boolean;
+  count?: undefined;
+} | null;
+
 function ColorDot({ color, size = 12, onClick }: { color: string; size?: number; onClick: () => void }) {
   return (
     <button
@@ -302,7 +312,7 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
   const [color,           setColor]           = useState(PRESET_COLORS[0]);
   const [refreshInterval, setRefreshInterval] = useState<number | null>(300_000);
   const [validating,      setValidating]      = useState(false);
-  const [validation,      setValidation]      = useState<{ ok: boolean; count?: number; error?: string; corsLikely?: boolean } | null>(null);
+  const [validation,      setValidation]      = useState<FeedValidationState>(null);
 
   function reset() {
     setUrl(''); setLabel(''); setColor(PRESET_COLORS[0]);
