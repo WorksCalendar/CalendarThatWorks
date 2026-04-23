@@ -17,12 +17,7 @@ import {
   crew,
   medicalCrew,
   mechanics,
-  dispatchShifts,
-  pilotShifts,
-  medicalShifts,
-  mechanicOnCall,
-  maintenanceEvents,
-  requests,
+  allEvents,
   mission,
 } from './emsData';
 
@@ -38,19 +33,19 @@ const DEMO_CALENDAR_ID = 'air-ems-demo';
 // — each view sets category filters that match its label; the View-tab
 // perspective preset does the heavy grouping lifting.
 const DEMO_PROFILES = [
-  { id: 'p-by-base',        name: 'By Base',              color: '#0ea5e9', filters: { categories: [],              resources: [], search: '' }, view: 'base'     },
-  { id: 'p-dispatch-board', name: 'Dispatch Board',       color: '#6366f1', filters: { categories: ['dispatch'],    resources: [], search: '' }, view: 'schedule' },
-  { id: 'p-maintenance',    name: 'Maintenance Coverage', color: '#f97316', filters: { categories: ['maintenance'], resources: [], search: '' }, view: 'assets'   },
-  { id: 'p-flight-crew',    name: 'Flight Crew',          color: '#3b82f6', filters: { categories: ['shift'],       resources: [], search: '' }, view: 'schedule' },
-  { id: 'p-requests',       name: 'Requests',             color: '#10b981', filters: { categories: ['request'],     resources: [], search: '' }, view: 'agenda'   },
-  { id: 'p-mission',        name: 'Mission Timeline',     color: '#a855f7', filters: { categories: ['mission'],     resources: [], search: '' }, view: 'schedule' },
+  { id: 'p-by-base',        name: 'By Base',              color: '#0ea5e9', filters: { categories: [],                                                    resources: [], search: '' }, view: 'base'     },
+  { id: 'p-dispatch-board', name: 'Dispatch Board',       color: '#6366f1', filters: { categories: ['dispatch-shift'],                                    resources: [], search: '' }, view: 'schedule' },
+  { id: 'p-maintenance',    name: 'Maintenance Coverage', color: '#f97316', filters: { categories: ['maintenance'],                                       resources: [], search: '' }, view: 'assets'   },
+  { id: 'p-flight-crew',    name: 'Flight Crew',          color: '#3b82f6', filters: { categories: ['pilot-shift', 'medical-shift', 'mechanic-shift'],   resources: [], search: '' }, view: 'schedule' },
+  { id: 'p-requests',       name: 'Requests',             color: '#10b981', filters: { categories: ['aircraft-request', 'asset-request'],                resources: [], search: '' }, view: 'agenda'   },
+  { id: 'p-mission',        name: 'Mission Timeline',     color: '#a855f7', filters: { categories: ['mission-assignment'],                               resources: [], search: '' }, view: 'schedule' },
 ];
 // Reseed profiles on first load AND when DEMO_SEED_VERSION bumps so
 // returning visitors pick up new profile-list changes (like the Sprint 3
 // rename from "Full Ops / Pilots / …" to the 6 issue-required views).
 const storedProfiles = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
 const storedProfileSeedVer = Number(localStorage.getItem(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`) ?? 0);
-const PROFILES_SEED_VERSION = 2;
+const PROFILES_SEED_VERSION = 3;
 if (!storedProfiles || storedProfiles === '[]' || storedProfileSeedVer < PROFILES_SEED_VERSION) {
   saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
   localStorage.setItem(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`, String(PROFILES_SEED_VERSION));
@@ -62,7 +57,7 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 /* ─── Config seed ───────────────────────────────────────────────── */
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
 // see the new defaults on their next load without a manual storage wipe.
-const DEMO_SEED_VERSION = 3;
+const DEMO_SEED_VERSION = 4;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
@@ -107,21 +102,21 @@ const INITIAL_EMPLOYEES = [
     name:  c.name,
     role:  `Pilot (${c.certifications.join(', ')})`,
     color: PILOT_COLOR,
-    base:  c.baseId,
+    base:  c.basedAt,
   })),
   ...medicalCrew.map(m => ({
     id:    m.id,
     name:  m.name,
     role:  m.certifications.join(' · '),
-    color: m.certifications.includes('ECMO') ? SPECIAL_COLOR : MEDICAL_COLOR,
-    base:  m.baseId,
+    color: m.certifications.some(c => c.includes('ECMO')) ? SPECIAL_COLOR : MEDICAL_COLOR,
+    base:  m.basedAt,
   })),
   ...mechanics.map(m => ({
     id:    m.id,
     name:  m.name,
     role:  'Mechanic',
     color: MECHANIC_COLOR,
-    base:  m.baseId,
+    base:  m.basedAt,
   })),
 ];
 
@@ -133,13 +128,13 @@ const REGION_BY_BASE = Object.fromEntries(bases.map(b => [b.id, regions.find(r =
 const AIRCRAFT_RESOURCES = EMS_ASSETS.map(a => ({
   id:    a.id,
   label: a.name,
-  group: REGION_BY_BASE[a.baseId] || 'Fleet',
+  group: REGION_BY_BASE[a.basedAt] || 'Fleet',
   meta: {
-    sublabel: a.capability.join(' · '),
+    sublabel: a.capabilities.join(' · '),
     model:    a.type === 'helicopter' ? 'Helicopter' : 'Fixed-wing',
-    base:     a.baseId,
+    base:     a.basedAt,
     status:   a.status,
-    location: { text: bases.find(b => b.id === a.baseId)?.name ?? '—', status: 'live', asOf: new Date().toISOString() },
+    location: { text: bases.find(b => b.id === a.basedAt)?.name ?? '—', status: 'live', asOf: new Date().toISOString() },
   },
 }));
 
@@ -147,106 +142,66 @@ const AIRCRAFT_RESOURCES = EMS_ASSETS.map(a => ({
 // Convert the Air EMS dataset into WorksCalendar's event shape
 // ({ id, title, start, end, category, resource, color }).
 
-const DISPATCH_COLOR    = '#0ea5e9';
-const SHIFT_PILOT_COLOR = PILOT_COLOR;
-const SHIFT_MED_COLOR   = MEDICAL_COLOR;
-const ONCALL_COLOR      = MECHANIC_COLOR;
-const MAINT_COLOR       = '#ef4444';
-const REQUEST_COLOR     = '#64748b';
-const MISSION_COLOR     = '#a855f7';
+const DISPATCH_COLOR = '#0ea5e9';
+const MAINT_COLOR    = '#ef4444';
+const REQUEST_COLOR  = '#64748b';
+const MISSION_COLOR  = '#a855f7';
 
-const DISPATCH_EVENTS = dispatchShifts.map(s => ({
-  id: s.id, title: s.title, start: s.start, end: s.end,
-  category: 'dispatch', resource: null, color: DISPATCH_COLOR,
+function categoryColor(cat) {
+  switch (cat) {
+    case 'dispatch-shift':   return DISPATCH_COLOR;
+    case 'pilot-shift':      return PILOT_COLOR;
+    case 'medical-shift':    return MEDICAL_COLOR;
+    case 'mechanic-shift':   return MECHANIC_COLOR;
+    case 'on-call':          return MECHANIC_COLOR;
+    case 'pto':              return '#94a3b8';
+    case 'mission-assignment': return MISSION_COLOR;
+    case 'maintenance':      return MAINT_COLOR;
+    case 'training':         return '#f59e0b';
+    case 'aircraft-request': return REQUEST_COLOR;
+    case 'asset-request':    return REQUEST_COLOR;
+    case 'base-event':       return '#64748b';
+    default:                 return '#94a3b8';
+  }
+}
+
+const APPROVAL_CATS = new Set(['maintenance', 'aircraft-request', 'asset-request']);
+
+const INITIAL_EVENTS = allEvents.map(e => ({
+  id: e.id, title: e.title, start: e.start, end: e.end,
+  category: e.category,
+  resource: e.assignedTo ?? null,
+  color: categoryColor(e.category),
+  ...(e.category === 'on-call' || e.category === 'pto' ? { allDay: true } : {}),
+  ...(APPROVAL_CATS.has(e.category) ? {
+    meta: { approvalStage: { stage: e.visualPriority === 'high' ? 'requested' : 'approved', updatedAt: e.start } },
+  } : {}),
 }));
-
-const PILOT_SHIFT_EVENTS = pilotShifts.map(s => ({
-  id: s.id, title: s.title, start: s.start, end: s.end,
-  category: 'shift', resource: s.crewId, color: SHIFT_PILOT_COLOR,
-}));
-
-const MEDICAL_SHIFT_EVENTS = medicalShifts.map(s => ({
-  id: s.id, title: s.title, start: s.start, end: s.end,
-  category: 'shift', resource: s.crewId, color: SHIFT_MED_COLOR,
-}));
-
-const ONCALL_EVENTS = mechanicOnCall.map(s => ({
-  id: s.id, title: s.title, start: s.start, end: s.end,
-  category: 'on-call', resource: s.crewId, color: ONCALL_COLOR, allDay: true,
-}));
-
-const MAINT_EVENTS = maintenanceEvents.map(m => ({
-  id: m.id, title: m.title, start: m.start, end: m.end,
-  category: 'maintenance', resource: m.assetId, color: MAINT_COLOR,
-  meta: { approvalStage: { stage: 'approved', updatedAt: m.start } },
-}));
-
-const REQUEST_EVENTS = requests.map(r => ({
-  id: r.id, title: r.title, start: r.start, end: r.end,
-  category: 'request', resource: r.assetId, color: REQUEST_COLOR,
-  meta: { approvalStage: { stage: r.status === 'pending' ? 'requested' : 'approved', updatedAt: r.start } },
-}));
-
-// Flight legs — rendered on the Jet 1 row so the mission is visible on the
-// assets view.  Pilot and medical crew assignments are exposed as additional
-// events on the respective people rows for the same leg windows.
-const MISSION_LEG_EVENTS = mission.legs.flatMap(leg => {
-  const flightTitle = `${mission.name} — ${leg.from} → ${leg.to}`;
-  const pilotAssignment   = mission.assignments.pilots.find(a => a.legId === leg.id);
-  const medicalAssignment = mission.assignments.medical.find(a => a.legId === leg.id);
-  return [
-    {
-      id: `mission-${leg.id}-jet`,
-      title: flightTitle, start: leg.start, end: leg.end,
-      category: 'mission', resource: 'a3', color: MISSION_COLOR,
-      meta: { sublabel: `Leg ${leg.id}` },
-    },
-    pilotAssignment && {
-      id: `mission-${leg.id}-pilot`,
-      title: `Flight: ${leg.from} → ${leg.to}`,
-      start: leg.start, end: leg.end,
-      category: 'mission', resource: pilotAssignment.crewId, color: MISSION_COLOR,
-    },
-    medicalAssignment && {
-      id: `mission-${leg.id}-medical`,
-      title: `Flight: ${leg.from} → ${leg.to}`,
-      start: leg.start, end: leg.end,
-      category: 'mission', resource: medicalAssignment.crewId, color: MISSION_COLOR,
-    },
-  ].filter(Boolean);
-});
-
-const INITIAL_EVENTS = [
-  ...DISPATCH_EVENTS,
-  ...PILOT_SHIFT_EVENTS,
-  ...MEDICAL_SHIFT_EVENTS,
-  ...ONCALL_EVENTS,
-  ...MAINT_EVENTS,
-  ...REQUEST_EVENTS,
-  ...MISSION_LEG_EVENTS,
-];
 
 /* ─── Resource pools (#212) ─────────────────────────────────────── */
 // Group aircraft by region so bookings can target a pool instead of a tail
 // number; the round-robin cursor persists in localStorage.
 const DEMO_POOLS_DEFAULT = [
-  { id: 'pool-mountain',  name: 'Mountain Fleet',  memberIds: ['a1', 'a3'], strategy: 'round-robin'     },
-  { id: 'pool-southwest', name: 'Southwest Fleet', memberIds: [],           strategy: 'first-available' },
+  { id: 'pool-pnw', name: 'Pacific Northwest Fleet', memberIds: ['ac-n801aw', 'ac-n803lj'], strategy: 'round-robin'     },
+  { id: 'pool-rm',  name: 'Rocky Mountain Fleet',   memberIds: ['ac-n804aw', 'ac-n805pc'], strategy: 'first-available' },
 ];
 const _storedPools = loadPools(DEMO_CALENDAR_ID);
 if (_storedPools.length === 0) savePools(DEMO_CALENDAR_ID, DEMO_POOLS_DEFAULT);
 
 /* ─── Categories ────────────────────────────────────────────────── */
 const UNIFIED_CATEGORIES = [
-  // Operations
-  { id: 'dispatch',    label: 'Dispatch',    color: DISPATCH_COLOR },
-  { id: 'shift',       label: 'Shift',       color: PILOT_COLOR    },
-  { id: 'on-call',     label: 'On Call',     color: ONCALL_COLOR   },
-  { id: 'mission',     label: 'Mission',     color: MISSION_COLOR  },
-  // Fleet
-  { id: 'maintenance', label: 'Maintenance', color: MAINT_COLOR    },
-  { id: 'request',     label: 'Request',     color: REQUEST_COLOR  },
-  { id: 'training',    label: 'Training',    color: '#f59e0b'      },
+  { id: 'dispatch-shift',    label: 'Dispatch',         color: DISPATCH_COLOR },
+  { id: 'pilot-shift',       label: 'Pilot Shift',      color: PILOT_COLOR    },
+  { id: 'medical-shift',     label: 'Medical Shift',    color: MEDICAL_COLOR  },
+  { id: 'mechanic-shift',    label: 'Mechanic Shift',   color: MECHANIC_COLOR },
+  { id: 'on-call',           label: 'On Call',          color: MECHANIC_COLOR },
+  { id: 'pto',               label: 'PTO',              color: '#94a3b8'      },
+  { id: 'mission-assignment', label: 'Mission',         color: MISSION_COLOR  },
+  { id: 'maintenance',       label: 'Maintenance',      color: MAINT_COLOR    },
+  { id: 'training',          label: 'Training',         color: '#f59e0b'      },
+  { id: 'aircraft-request',  label: 'Aircraft Request', color: REQUEST_COLOR  },
+  { id: 'asset-request',     label: 'Asset Request',    color: REQUEST_COLOR  },
+  { id: 'base-event',        label: 'Base Event',       color: '#64748b'      },
   ...DEFAULT_CATEGORIES,
 ];
 
@@ -438,7 +393,7 @@ function App() {
             pools={pools}
             onPoolsChange={handlePoolsChange}
             strictAssetFiltering={true}
-            assetRequestCategories={['maintenance', 'request', 'training', 'mission']}
+            assetRequestCategories={['maintenance', 'aircraft-request', 'asset-request', 'training', 'mission-assignment']}
             onEmployeeAdd={handleEmployeeAdd}
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
