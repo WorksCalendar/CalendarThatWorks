@@ -26,7 +26,7 @@ This created a lower-noise environment for deeper structural work.
 
 ## Sprint 3 — Core Boundary Hardening & Type Flow Control
 
-**Status:** READY
+**Status:** IN PROGRESS (PR4 + PR5 update recorded on 2026-04-23)
 
 ### Goal
 
@@ -120,6 +120,19 @@ Actions:
 3. PR3 — Context hardening
 4. PR4 — Ghost null cleanup pass
 5. PR5 — Ratchet tightening + baseline reduction
+
+### PR4 / PR5 Execution Notes (2026-04-23)
+
+- **PR4 (Ghost null cleanup):**
+  - Eliminated strict-null "ghost null" dereference noise in `useEventDraftState` by narrowing template defaults once and reusing the narrowed object.
+  - Hardened adapter create-path null handling in `SupabaseAdapter` by rejecting missing inserted rows explicitly.
+- **PR5 (Ratchet tightening + baseline reduction):**
+  - Added the above files to Stage 7 `MIGRATED_PATHS`.
+  - Reduced strict-null baseline from `324` to `148` based on latest run.
+  - Validation command: `npm run -s type-check:strict-null`.
+  - Current result: strict-null diagnostics total `148`, migrated paths clean.
+- **Ordering note:**
+  - This section records only PR4/PR5 outcomes and does not imply PR1–PR3 ordering or sprint closure.
 
 ---
 

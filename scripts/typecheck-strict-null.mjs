@@ -21,11 +21,13 @@ const MIGRATED_PATHS = [
   'src/grouping/groupRows.ts',
   'src/grouping/__tests__/groupRows.test.ts',
   'src/hooks/useFocusTrap.ts',
+  'src/hooks/useEventDraftState.ts',
   'src/hooks/__tests__/useFocusTrap.test.tsx',
   'src/__tests__/WorksCalendar.employees.sync.test.tsx',
   'src/__tests__/WorksCalendar.recurringScopedEdit.test.tsx',
   'src/__tests__/groupingFilteringSorting.integration.test.ts',
   'src/__tests__/phaseB.integration.test.tsx',
+  'src/api/v1/adapters/SupabaseAdapter.ts',
   'src/api/v1/__tests__/sync.test.ts',
   'src/views/TimelineView.tsx',
 ];
