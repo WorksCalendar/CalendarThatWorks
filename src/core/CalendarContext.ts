@@ -5,7 +5,12 @@
 import { createContext, useContext } from 'react';
 import type { NormalizedEvent } from '../types/events';
 
-export const CalendarContext = createContext(null);
+type CalendarContextValue = {
+  renderEvent?: (...args: unknown[]) => unknown;
+  [key: string]: unknown;
+} | null;
+
+export const CalendarContext = createContext<CalendarContextValue>(null);
 
 export function useCalendarContext() {
   return useContext(CalendarContext);
