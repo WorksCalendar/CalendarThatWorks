@@ -30,6 +30,47 @@ const REFRESH_OPTIONS = [
   { label: 'Manual',     value: null       },
 ];
 
+type Feed = {
+  id: string;
+  label: string;
+  color: string;
+  url: string;
+  enabled: boolean;
+  refreshInterval?: number | null;
+};
+
+type FeedErrorEntry = {
+  feed?: { url?: string };
+  err?: Error;
+};
+
+type FeedValidationState =
+  | {
+      ok: true;
+      count: number;
+    }
+  | {
+      ok: false;
+      count: null;
+      error: string;
+      corsLikely: boolean;
+    }
+  | null;
+
+type RefreshIntervalValue = number | null;
+
+type FeedHandlers = {
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<Feed>) => void;
+};
+
+type PanelProps = FeedHandlers & {
+  feeds: Feed[];
+  feedErrors?: FeedErrorEntry[];
+  onAdd: (partial: Partial<Feed>) => void;
+};
+
 function colorDot(color: string, size = 10) {
   return (
     <span style={{
@@ -44,7 +85,7 @@ function colorDot(color: string, size = 10) {
 
 // ── Feed row ──────────────────────────────────────────────────────────────────
 
-function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
+function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: { feed: Feed; error?: Error } & FeedHandlers) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(feed.label);
   const inputRef = useRef(null);
@@ -141,14 +182,14 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
 
 // ── Add feed form ─────────────────────────────────────────────────────────────
 
-function AddFeedForm({ onAdd }: any) {
-  const [open,            setOpen]            = useState(false);
-  const [url,             setUrl]             = useState('');
-  const [label,           setLabel]           = useState('');
-  const [color,           setColor]           = useState(PRESET_COLORS[0]);
-  const [refreshInterval, setRefreshInterval] = useState(300_000);
-  const [validating,      setValidating]      = useState(false);
-  const [validation,      setValidation]      = useState(null); // { ok, count, error }
+function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<Feed>) => void }) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState('');
+  const [label, setLabel] = useState('');
+  const [color, setColor] = useState(PRESET_COLORS[0]);
+  const [refreshInterval, setRefreshInterval] = useState<RefreshIntervalValue>(300_000);
+  const [validating, setValidating] = useState(false);
+  const [validation, setValidation] = useState<FeedValidationState>(null);
 
   function reset() {
     setUrl(''); setLabel(''); setColor(PRESET_COLORS[0]);
@@ -167,13 +208,15 @@ function AddFeedForm({ onAdd }: any) {
       const suggested = label || _suggestLabel(trimmed);
       if (!label) setLabel(suggested);
       setValidation({ ok: true, count: events.length });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown validation error';
+      const lower = message.toLowerCase();
       // CORS failures are expected for some feeds — still allow adding with a warning
-      const isCors = err.message?.toLowerCase().includes('cors') ||
-                     err.message?.toLowerCase().includes('fetch') ||
-                     err.message?.toLowerCase().includes('network') ||
-                     err.message?.toLowerCase().includes('failed');
-      setValidation({ ok: false, count: null, error: err.message, corsLikely: isCors });
+      const isCors = lower.includes('cors') ||
+                     lower.includes('fetch') ||
+                     lower.includes('network') ||
+                     lower.includes('failed');
+      setValidation({ ok: false, count: null, error: message, corsLikely: isCors });
     } finally {
       setValidating(false);
     }
@@ -200,6 +243,13 @@ function AddFeedForm({ onAdd }: any) {
   }
 
   const canSubmit = !!url.trim();
+  const validationMessage = validation?.ok === true
+    ? `Found ${validation.count} event${validation.count === 1 ? '' : 's'} — feed looks good.`
+    : validation?.ok === false
+      ? validation.corsLikely
+        ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
+        : `Error: ${validation.error}`
+      : null;
 
   return (
     <div style={{
@@ -255,11 +305,7 @@ function AddFeedForm({ onAdd }: any) {
             ? <CheckCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
             : <AlertCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />}
           <span>
-            {validation.ok
-              ? `Found ${validation.count} event${validation.count === 1 ? '' : 's'} — feed looks good.`
-              : validation.corsLikely
-                ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
-                : `Error: ${validation.error}`}
+            {validationMessage}
           </span>
         </div>
       )}
@@ -346,13 +392,13 @@ function AddFeedForm({ onAdd }: any) {
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onToggle, onUpdate }: any) {
+export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onToggle, onUpdate }: PanelProps) {
   // Build a quick error lookup by URL
   const errorByUrl = Object.fromEntries(
-    (feedErrors ?? []).map(({ feed, err }: { feed: { url: string }; err: Error }) => [feed.url, err])
+    (feedErrors ?? []).map((entry) => [entry.feed?.url ?? '', entry.err])
   );
 
-  const enabledCount  = feeds.filter((f: any) => f.enabled).length;
+  const enabledCount  = feeds.filter((f) => f.enabled).length;
   const errorCount    = Object.keys(errorByUrl).length;
 
   return (
@@ -378,7 +424,7 @@ export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onTog
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {feeds.map((feed: any) => (
+          {feeds.map((feed) => (
             <FeedRow
               key={feed.id}
               feed={feed}
