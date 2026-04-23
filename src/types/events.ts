@@ -5,10 +5,10 @@
  * all fields are guaranteed and all dates are `Date` instances.
  */
 
-export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
+import type { EventVisualPriority } from './view';
 
-/** Drives data-wc-priority="muted"|"high" on event pills across all views. */
-export type EventVisualPriority = 'muted' | 'high';
+export type { EventVisualPriority };
+export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
 export interface WorksCalendarEvent {
   id?: string;
@@ -37,7 +37,8 @@ export interface NormalizedEvent {
   color: string;
   resource: string | null;
   status: EventStatus;
-  visualPriority: EventVisualPriority | null;
+  /** Present when the raw event supplies visualPriority; null otherwise. */
+  visualPriority?: EventVisualPriority | null;
   meta: Record<string, unknown>;
   rrule: string | null;
   exdates: Array<Date | string>;
