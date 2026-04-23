@@ -1,4 +1,15 @@
 .root {
+  /* Structural defaults — overridden per family via data-wc-theme-family */
+  --wc-spacing-row-height:    40px;
+  --wc-border-width:          1px;
+  --wc-border-radius-pill:    6px;
+  --wc-grid-line-strength:    1px;
+  --wc-event-pill-font-size:  0.75rem;
+  --wc-event-pill-font-weight: 500;
+
+  /* Theme transition */
+  transition: background 180ms ease, color 180ms ease;
+
   --wc-font:        'Inter', system-ui, -apple-system, sans-serif;
   --wc-font-heading: var(--wc-font);
   --wc-font-mono:    ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace;

@@ -20,6 +20,13 @@
     "./styles/corporate": "./dist/themes/corporate.css",
     "./styles/forest": "./dist/themes/forest.css",
     "./styles/ocean": "./dist/themes/ocean.css",
+    "./styles/family": "./dist/themes/family/index.css",
+    "./styles/family/canvas": "./dist/themes/family/canvas.css",
+    "./styles/family/corporate": "./dist/themes/family/corporate.css",
+    "./styles/family/industrial": "./dist/themes/family/industrial.css",
+    "./styles/family/grid": "./dist/themes/family/grid.css",
+    "./styles/family/ops": "./dist/themes/family/ops.css",
+    "./styles/family/neon": "./dist/themes/family/neon.css",
     "./themes": "./dist/works-calendar.es.js"
   },
   "files": [
