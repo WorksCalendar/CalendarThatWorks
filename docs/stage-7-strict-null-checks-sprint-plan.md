@@ -26,7 +26,7 @@ This created a lower-noise environment for deeper structural work.
 
 ## Sprint 3 — Core Boundary Hardening & Type Flow Control
 
-**Status:** READY
+**Status:** IN PROGRESS (PR4 + PR5 update recorded on 2026-04-23)
 
 ### Goal
 
