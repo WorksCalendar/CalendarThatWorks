@@ -36,7 +36,7 @@ import { validateOperation } from './core/engine/validation/validateOperation.ts
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
 import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
-import { resolveCssTheme } from './styles/themes';
+import { resolveCssTheme, normalizeTheme, THEME_META } from './styles/themes';
 import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
 import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
@@ -478,6 +478,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // user-facing ID to a CSS selector via resolveCssTheme().
   const rawTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'canvas-light';
   const effectiveTheme = resolveCssTheme(rawTheme);
+  const themeId = normalizeTheme(rawTheme);
+  const themeFamily = THEME_META[themeId].family;
+  const themeMode   = THEME_META[themeId].mode;
   const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
   // Merge parent's employees prop with owner-config team.members so edits
   // made from the Settings → Employees tab (e.g. renaming a member) are
@@ -1962,6 +1965,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         <div
           className={styles.root}
           data-wc-theme={effectiveTheme}
+          data-wc-theme-family={themeFamily}
+          data-wc-theme-mode={themeMode}
           data-testid="works-calendar-setup"
           style={customThemeVars as React.CSSProperties}
         >
@@ -1979,7 +1984,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={effectiveTheme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
+        <div className={styles.root} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
