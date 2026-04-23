@@ -7,32 +7,22 @@
 import { useState, useRef, type ChangeEvent, type DragEvent } from 'react';
 import { Upload } from 'lucide-react';
 import { parseICS } from '../core/icalParser';
+import type { CsvEvent } from './CSVImportDialog';
 import type { WorksCalendarEvent } from '../types/events';
 import ImportPreview from './ImportPreview';
 import CSVImportDialog from './CSVImportDialog';
 import styles from './ImportZone.module.css';
 
-type ImportedEvent = {
-  id?: string;
-  title: string;
-  start: Date | string;
-  end?: Date | string;
-  category?: string;
-  resource?: string;
-  status?: string;
-  color?: string;
-  allDay?: boolean;
-  meta?: Record<string, unknown>;
-};
+type ImportZoneImportedEvents = WorksCalendarEvent[] | CsvEvent[];
 
 type ImportZoneProps = {
-  onImport: (events: ImportedEvent[], metadata?: { label?: string }) => void;
+  onImport: (events: ImportZoneImportedEvents, metadata?: { label?: string }) => void;
   onClose: () => void;
 };
 
 export default function ImportZone({ onImport, onClose }: ImportZoneProps) {
   const [dragging, setDragging] = useState(false);
-  const [parsed, setParsed] = useState<ImportedEvent[] | null>(null); // ICS parsed events
+  const [parsed, setParsed] = useState<ReturnType<typeof parseICS> | null>(null); // ICS parsed events
   const [csvMode, setCsvMode] = useState(false); // switch to CSV dialog
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -62,7 +52,7 @@ export default function ImportZone({ onImport, onClose }: ImportZoneProps) {
         const text = typeof e.target?.result === 'string' ? e.target.result : '';
         const events = parseICS(text);
         if (!events.length) { setError('No events found in this file.'); return; }
-        setParsed(events as ImportedEvent[]);
+        setParsed(events);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         setError(`Could not parse file: ${message}`);
