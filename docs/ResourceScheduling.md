@@ -60,8 +60,12 @@ interface ResourcePool {
 }
 ```
 
-`memberIds` are ids of `EngineResource` entries. The resolver tolerates
-ids that do not resolve — they are simply skipped.
+`memberIds` are ids of `EngineResource` entries. The resolver does
+**not** filter candidates against the registry — an unknown id is a
+valid candidate and, if no conflict rule rejects it, can be committed
+as the resolved `resourceId`. Validate the registry/pool integrity at
+your own layer if that matters; see the "Unknown member ids" note
+under [Invariants](#invariants).
 
 ### `EngineResource`
 
@@ -90,13 +94,16 @@ interface Assignment {
   readonly id:         string;
   readonly eventId:    string;
   readonly resourceId: string;
-  readonly units:      number;                     // 0..100
+  readonly units:      number;                     // 100 = full; >100 = over-allocated (double-booked)
   readonly tenantId?:  string;
 }
 ```
 
 One `eventId` may have several `Assignment` rows across resources.
-Helpers: `assignmentsForEvent`, `resourceIdsForEvent`, and
+`units` is an unconstrained number: `100` is fully assigned, `50` is
+half-time, and values above `100` (e.g. `200`) explicitly represent
+over-allocation / double-booking for workload computation. Helpers:
+`assignmentsForEvent`, `resourceIdsForEvent`, and
 `workloadForResource`.
 
 ### `ResourceCalendar`
@@ -229,20 +236,24 @@ Soft conflicts (min-rest warnings, holds) do **not** disqualify.
 `src/core/engine/resolvePoolOnSubmit.ts` is the engine-side wrapper.
 It:
 
-1. Passes through ops with no `resourcePoolId` or with an explicit
-   `resourceId` (concrete wins).
-2. Looks up the pool; rejects with `POOL_UNKNOWN` if unknown.
-3. Builds the `ConflictEvent[]` for comparison — **assignment-aware**:
+1. Passes through any op whose `type` is not `'create'`
+   (`resolvePoolOnSubmit.ts:68`). `update` / `group-change` ops that
+   carry a `resourcePoolId` are **not** resolved today — see
+   [#386](https://github.com/WorksCalendar/CalendarThatWorks/issues/386).
+2. Passes through `create` ops with no `resourcePoolId`, or with an
+   explicit `resourceId` already set (concrete wins).
+3. Looks up the pool; rejects with `POOL_UNKNOWN` if unknown.
+4. Builds the `ConflictEvent[]` for comparison — **assignment-aware**:
    an event with `resourceId: null` that holds resources via
    `Assignment` rows is expanded to one conflict entry per held
    resource (`resolvePoolOnSubmit.ts:93`), so the resolver cannot hand
    out a member that an assignment is already occupying.
-4. Always includes a hard `resource-overlap` rule
+5. Always includes a hard `resource-overlap` rule
    (`__pool-overlap`, `resolvePoolOnSubmit.ts:35`) plus any host-
    supplied rules.
-5. On success, rewrites the op: `resourceId` set, `resourcePoolId`
+6. On success, rewrites the op: `resourceId` set, `resourcePoolId`
    cleared, `meta.resolvedFromPoolId` and `meta.poolEvaluated` added.
-6. On round-robin success, returns a `poolUpdate` with the new cursor
+7. On round-robin success, returns a `poolUpdate` with the new cursor
    so the engine can persist it atomically with the event commit.
 
 ## Conflict evaluation
@@ -341,8 +352,12 @@ These are enforced by the resolver and the engine commit path:
   a shrunken pool still picks a valid starting index.
 * **Concrete wins**: an op with both `resourceId` and `resourcePoolId`
   keeps the explicit resource and does not consult the pool.
-* **Unknown member ids are tolerated**: pool `memberIds` entries that
-  do not resolve to an `EngineResource` are skipped.
+* **Unknown member ids are not filtered**: the resolver iterates
+  `pool.memberIds` as-is and never cross-references the `EngineResource`
+  registry. An id that does not correspond to a known resource is a
+  valid candidate and, if no hard rule rejects it, will be committed
+  as the resolved `resourceId`. Host-side integrity checking is the
+  caller's job.
 * **Disabled pools never drive a draft**: filtered out of the Assets
   view and rejected on submit.
 * **Assignment-aware occupancy**: the resolver sees assignment-held
