@@ -34,6 +34,8 @@ import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import type { LegacyEvent } from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
+import type { OperationContext } from './core/engine/validation/validationTypes';
+import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
 import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
@@ -828,9 +830,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
 
   // ── CalendarEngine — single source of truth for mutations & expansions ───
-  const engineRef      = useRef(null);
-  const undoManagerRef = useRef(null);
-  const announcerRef   = useRef(null);
+  const engineRef      = useRef<CalendarEngine | null>(null);
+  const undoManagerRef = useRef<UndoRedoManager | null>(null);
+  const announcerRef   = useRef<AnnouncerRef | null>(null);
   // Tracks the pools map we last emitted so subsequent engine _notify calls
   // only fire onPoolsChange on real pool mutations (e.g. round-robin cursor
   // advance), not on every state tick.
@@ -842,6 +844,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
     lastPoolsRef.current = engineRef.current.state.pools;
   }
+  // Narrow refs into non-null locals for the rest of render. The init block
+  // above runs synchronously and makes both refs singletons across renders.
+  const engine = engineRef.current;
+  const undoManager = undoManagerRef.current;
+  if (engine === null || undoManager === null) {
+    throw new Error('CalendarEngine/UndoRedoManager failed to initialize');
+  }
 
   // Counts how many onEventSave-triggered prop updates to suppress clear() for.
   // Scope ops (single/following) emit multiple onEventSave calls; each one
@@ -850,7 +859,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // Version counter: increments whenever the engine emits a state change.
   const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
-  useEffect(() => engineRef.current.subscribe(() => tickEngine()), []);
+  useEffect(() => engine.subscribe(() => tickEngine()), [engine]);
 
   // Keep engine pools in sync when the host rewrites the prop (controlled
   // pattern: demo persists to localStorage in onPoolsChange, then re-renders
@@ -859,38 +868,41 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // latest onPoolsChange payload back in.
   useEffect(() => {
     if (!rawPools) return;
-    engineRef.current.setPools(rawPools);
-    lastPoolsRef.current = engineRef.current.state.pools;
-  }, [rawPools]);
+    engine.setPools(rawPools);
+    lastPoolsRef.current = engine.state.pools;
+  }, [engine, rawPools]);
 
   // Emit onPoolsChange whenever the engine commits a new pools map (typically
   // a round-robin cursor advance during applyMutation). Suppress emissions
   // driven by the host's own setPools round-trip above.
   useEffect(() => {
     if (!onPoolsChange) return;
-    const current = engineRef.current.state.pools;
+    const current = engine.state.pools;
     if (current === lastPoolsRef.current) return;
     lastPoolsRef.current = current;
     onPoolsChange(Array.from(current.values()));
-  }, [engineVer, onPoolsChange]);
+  }, [engine, engineVer, onPoolsChange]);
 
   // Keep engine in sync with the merged+normalized event list from all sources.
   // Skip clear() when the change was triggered by our own onEventSave so the
   // undo stack survives the controlled-events prop round-trip.
   useEffect(() => {
-    engineRef.current.setEvents(fromLegacyEvents(allNormalized as any));
+    engine.setEvents(fromLegacyEvents(allNormalized as any));
     if (engineMutationPendingRef.current > 0) {
       engineMutationPendingRef.current -= 1;
     } else {
-      undoManagerRef.current.clear();
+      undoManager.clear();
     }
-  }, [allNormalized]);
+  }, [engine, undoManager, allNormalized]);
 
   // ── Expand recurring events within the visible range (via engine) ────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const expandedEvents = useMemo(
-    () => engineRef.current.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
-    [engineVer, range],
+  // Cast preserves the file's existing loose typing pattern — expandedEvents
+  // was previously inferred as `any` via a nullable ref, and many consumers
+  // still rely on that looseness. Tightening is out of scope for this PR.
+  const expandedEvents: LooseValue[] = useMemo(
+    () => engine.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
+    [engine, engineVer, range],
   );
 
   // ── Base/Region view config ───────────────────────────────────────────────
@@ -972,30 +984,32 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
   // Stable ref so applyEngineOp closure never goes stale.
-  const opCtxRef = useRef(null);
+  // Cast preserves the prior loose-typed assignment — the prop shapes for
+  // businessHours/blockedWindows don't yet match OperationContext's structured
+  // type. Narrowing those prop types is out of scope for this PR.
+  const opCtxRef = useRef<OperationContext | null>(null);
   opCtxRef.current = {
     businessHours:  ownerCfg.config?.businessHours ?? businessHours ?? null,
     blockedWindows: blockedWindows ?? [],
-  };
+  } as unknown as OperationContext;
 
   const [pendingAlert,      setPendingAlert]      = useState(null); // { violations, isHard, onConfirm }
   // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
   const [recurringPrompt, setRecurringPrompt] = useState(null);
 
   const applyEngineOp = useCallback((op: LooseValue, onAccepted: LooseValue) => {
-    const engine  = engineRef.current;
-    const undoMgr = undoManagerRef.current;
-    const ctx     = opCtxRef.current;
+    const ctx = opCtxRef.current;
+    if (ctx === null) return;
 
     // Pre-capture the state BEFORE mutation. We only record this to the undo
     // stack on acceptance to keep the history free of rejected operations.
-    const preSnap = undoMgr.captureSnapshot();
+    const preSnap = undoManager.captureSnapshot();
 
     const result = engine.applyMutation(op, ctx);
 
     if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
       // State has changed — record the pre-mutation snapshot.
-      undoMgr.record(preSnap, op.type);
+      undoManager.record(preSnap, op.type);
       announcerRef.current?.announce(opAnnouncement(op));
       // Each emitted onEventSave call will trigger an allNormalized update; count
       // them so the effect can skip clear() for all of them.
@@ -1011,7 +1025,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         onConfirm: () => {
           const confirmed = engine.applyMutation(op, ctx, { overrideSoftViolations: true });
           if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
-            undoMgr.record(preSnap, op.type);
+            undoManager.record(preSnap, op.type);
             announcerRef.current?.announce(opAnnouncement(op));
             engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
             onAccepted(confirmed);
@@ -1023,7 +1037,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // Rejected — state unchanged, nothing to record.
       setPendingAlert({ violations: result.validation.violations, isHard: true, onConfirm: null });
     }
-  }, []); // stable — reads from refs
+  }, [engine, undoManager]); // engine/undoManager are singleton refs — stable
 
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState(null);
@@ -1104,21 +1118,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // Undo: Ctrl+Z / Cmd+Z
       if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        const did = undoManagerRef.current.undo();
+        const did = undoManager.undo();
         if (did) announcerRef.current?.announce('Undo.');
         return;
       }
       // Redo: Ctrl+Y / Cmd+Y  or  Ctrl+Shift+Z / Cmd+Shift+Z
       if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
         e.preventDefault();
-        const did = undoManagerRef.current.redo();
+        const did = undoManager.redo();
         if (did) announcerRef.current?.announce('Redo.');
         return;
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [undoManager]);
 
   // ── CalendarApi / imperative handle ─────────────────────────────────────
   const api = useMemo(() => ({
@@ -1132,11 +1146,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     getVisibleEvents: ()     => visibleEvents,
     clearFilters:     ()     => cal.clearFilters(),
     addEvent:         (d={}) => setFormEvent(d),
-    undo:             ()     => undoManagerRef.current.undo(),
-    redo:             ()     => undoManagerRef.current.redo(),
-    get canUndo()            { return undoManagerRef.current?.canUndo ?? false; },
-    get canRedo()            { return undoManagerRef.current?.canRedo ?? false; },
-  }), [cal, expandedEvents, visibleEvents]);
+    undo:             ()     => undoManager.undo(),
+    redo:             ()     => undoManager.redo(),
+    get canUndo()            { return undoManager.canUndo; },
+    get canRedo()            { return undoManager.canRedo; },
+  }), [cal, expandedEvents, visibleEvents, undoManager]);
 
   useImperativeHandle(ref, () => api, [api]);
 
@@ -1158,12 +1172,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const getSavedEventPayload = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const normalizedId = eventId == null ? '' : String(eventId);
     if (normalizedId) {
-      const saved = engineRef.current.state.events.get(normalizedId);
+      const saved = engine.state.events.get(normalizedId);
       if (saved) return toLegacyEvent(saved);
     }
     if (!fallbackEvent) return null;
     return fallbackPatch ? { ...fallbackEvent, ...fallbackPatch } : fallbackEvent;
-  }, []);
+  }, [engine]);
 
   const emitEventSave = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const savedPayload = getSavedEventPayload(eventId, fallbackEvent, fallbackPatch);
@@ -1514,7 +1528,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // Defensive RRULE preservation: if a recurring edit payload arrives with a
     // missing RRULE (e.g. an occurrence shape that lost series fields), keep
     // the series master cadence instead of accidentally stripping recurrence.
-    const existingMaster = recurringMasterId ? engineRef.current?.state?.events?.get(String(recurringMasterId)) : null;
+    const existingMaster = recurringMasterId ? engine.state.events.get(String(recurringMasterId)) : null;
     const resolvedRrule = rawEv.rrule ?? existingMaster?.rrule ?? null;
 
     if (!eventId) {
@@ -1791,7 +1805,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
 
     const ctx = opCtxRef.current;
-    const seededEvents = [...engineRef.current.state.events.values()];
+    const seededEvents = [...engine.state.events.values()];
     const conflicts: SchedulePreviewConflict[] = [];
 
     generated.forEach((ev, index) => {
@@ -1875,13 +1889,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // Recurring occurrences carry rrule:null — look up the series master so the
     // EventForm shows the correct repeat cadence and preserves it on save.
     if (ev._recurring && ev._eventId) {
-      const master = engineRef.current?.state?.events?.get(ev._eventId);
+      const master = engine.state.events.get(ev._eventId);
       if (master?.rrule) {
         formEv = { ...formEv, rrule: master.rrule };
       }
     }
     setFormEvent(formEv);
-  }, []);
+  }, [engine]);
 
   /** Save quick display customizations from InlineEventEditor. */
   const handleInlineSave = useCallback((patch: LooseValue) => {
@@ -1927,7 +1941,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }
 
-  const swipeAreaRef = useRef(null);
+  const swipeAreaRef = useRef<HTMLDivElement | null>(null);
   const swipeNavigationEnabled = cal.view === 'month' || cal.view === 'schedule';
   useTouchSwipe({
     targetRef: swipeAreaRef,
