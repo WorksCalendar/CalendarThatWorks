@@ -596,7 +596,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const eventOptions = useEventOptions(calendarId);
 
   // ── Saved view active state ──────────────────────────────────────────────
-  const [savedViewActiveId, setSavedViewActiveId] = useState(null);
+  const [savedViewActiveId, setSavedViewActiveId] = useState<string | null>(null);
   const [savedViewDirty,    setSavedViewDirty]    = useState(false);
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
@@ -800,7 +800,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   });
 
   // ── Supabase Realtime ────────────────────────────────────────────────────
-  const [supabaseClient, setSupabaseClient] = useState(null);
+  const [supabaseClient, setSupabaseClient] = useState<LooseValue | null>(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
     import('@supabase/supabase-js')
@@ -993,9 +993,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     blockedWindows: blockedWindows ?? [],
   } as unknown as OperationContext;
 
-  const [pendingAlert,      setPendingAlert]      = useState(null); // { violations, isHard, onConfirm }
+  const [pendingAlert,      setPendingAlert]      = useState<LooseValue | null>(null); // { violations, isHard, onConfirm }
   // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
-  const [recurringPrompt, setRecurringPrompt] = useState(null);
+  const [recurringPrompt, setRecurringPrompt] = useState<LooseValue | null>(null);
 
   const applyEngineOp = useCallback((op: LooseValue, onAccepted: LooseValue) => {
     const ctx = opCtxRef.current;
@@ -1040,25 +1040,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [engine, undoManager]); // engine/undoManager are singleton refs — stable
 
   // ── Local UI state ───────────────────────────────────────────────────────
-  const [selectedEvent,  setSelectedEvent]  = useState(null);
-  const [formEvent,        setFormEvent]        = useState(null);
+  const [selectedEvent,  setSelectedEvent]  = useState<LooseValue | null>(null);
+  const [formEvent,        setFormEvent]        = useState<LooseValue | null>(null);
   const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
-  const [availabilityState, setAvailabilityState] = useState(null);
+  const [availabilityState, setAvailabilityState] = useState<LooseValue | null>(null);
   // { emp: { id, name, role? }, start?: Date, end?: Date }
-  const [scheduleEditorState, setScheduleEditorState] = useState(null);
+  const [scheduleEditorState, setScheduleEditorState] = useState<LooseValue | null>(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
   const [helpOpen,         setHelpOpen]         = useState(false);
   // { event, x, y } — set when an event is clicked in edit mode
-  const [inlineEditTarget, setInlineEditTarget] = useState(null);
+  const [inlineEditTarget, setInlineEditTarget] = useState<LooseValue | null>(null);
   // Capture last click coords so InlineEventEditor can position near the pill
   const lastClickCoordsRef = useRef({ x: 0, y: 0 });
   const editModeRef = useRef(false);
   editModeRef.current = editMode;
-  const [remoteTemplates, setRemoteTemplates] = useState([]);
+  const [remoteTemplates, setRemoteTemplates] = useState<LooseValue[]>([]);
   const [templateError, setTemplateError] = useState('');
 
   const resolvedScheduleLimits = useMemo(() => {
