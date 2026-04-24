@@ -26,7 +26,7 @@ This created a lower-noise environment for deeper structural work.
 
 ## Sprint 3 — Core Boundary Hardening & Type Flow Control
 
-**Status:** IN PROGRESS (PR4 + PR5 update recorded on 2026-04-23)
+**Status:** COMPLETE (wrap-up ratchet tightening recorded on 2026-04-24)
 
 ### Goal
 
@@ -127,6 +127,16 @@ Actions:
 - ✅ PR5 completed: strict-null ratchet tightened by adding PR4 files to migrated-path enforcement.
 - ✅ Baseline reduced from **324** to **144** strict-null diagnostics (`npm run -s type-check:strict-null`).
 - ⚠️ Remaining strict-null diagnostics are still concentrated in `src/WorksCalendar.tsx` and other non-migrated files.
+
+### Sprint 3 Wrap-Up (2026-04-24)
+
+- ✅ Exit criteria verified:
+  - Core data flows normalized (PR1 landed via core/api/context boundary hardening).
+  - Null handling isolated to boundaries (PR2 landed via adapter typing).
+  - Context fully typed without optional chaining consumer side (PR3 landed via context hardening).
+  - Strict-null baseline reduced again (PR5 + wrap-up ratchet).
+- ✅ Baseline retightened from **144** → **131** to match current diagnostic floor (`npm run -s type-check:strict-null`).
+- ⚠️ Remaining **131** strict-null diagnostics are concentrated in `src/WorksCalendar.tsx` (root composition) and the last view/hook seams — scoped to Sprint 4.
 
 ---
 
