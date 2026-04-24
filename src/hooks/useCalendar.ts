@@ -79,7 +79,7 @@ export function useCalendar(
 
   const toggleCategory = useCallback((cat: string) => {
     setFilters((f: CalendarFilters) => {
-      const next = new Set((f as any).categories);
+      const next = new Set<string>(f['categories']);
       next.has(cat) ? next.delete(cat) : next.add(cat);
       return { ...f, categories: next };
     });
@@ -87,7 +87,7 @@ export function useCalendar(
 
   const toggleResource = useCallback((res: string) => {
     setFilters((f: CalendarFilters) => {
-      const next = new Set((f as any).resources);
+      const next = new Set<string>(f['resources']);
       next.has(res) ? next.delete(res) : next.add(res);
       return { ...f, resources: next };
     });
@@ -95,7 +95,7 @@ export function useCalendar(
 
   const toggleSourceFilter = useCallback((id: string) => {
     setFilters((f: CalendarFilters) => {
-      const next = new Set((f as any).sources);
+      const next = new Set<string>(f['sources']);
       next.has(id) ? next.delete(id) : next.add(id);
       return { ...f, sources: next };
     });

@@ -412,10 +412,10 @@ function JoinFields({
           onChange={e => onChange({ pairedWith: e.target.value })}
         >
           {/* Show the current value first so a stale pairing still renders. */}
-          {!parallelNodeIds!.includes(node.pairedWith) && (
+          {parallelNodeIds !== undefined && !parallelNodeIds.includes(node.pairedWith) && (
             <option value={node.pairedWith}>{node.pairedWith} (missing)</option>
           )}
-          {parallelNodeIds!.map(id => (
+          {(parallelNodeIds ?? []).map(id => (
             <option key={id} value={id}>{id}</option>
           ))}
         </select>

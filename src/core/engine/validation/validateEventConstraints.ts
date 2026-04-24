@@ -28,8 +28,7 @@ export function validateEventConstraints(
   // (change.event may be the old state; constraints don't change during move/resize).
   const events    = ctx.events ?? [];
   const canonical = events.find(e => e.id === ev.id) ?? ev;
-  const constraints = (canonical as any).constraints as
-    import('../schema/constraintSchema.js').EventConstraint[] | undefined;
+  const constraints = (canonical as { constraints?: readonly import('../schema/constraintSchema.js').EventConstraint[] }).constraints;
 
   if (!constraints || constraints.length === 0) return null;
 
