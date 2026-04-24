@@ -84,7 +84,7 @@ describe('group-change op', () => {
 
     // Example rule: "only Alice can own the on-call shift."
     const rule: GroupChangeRule = ({ patch }) => {
-      if ('resourceId' in patch && patch.resourceId !== 'alice') {
+      if ('resourceId' in patch && patch['resourceId'] !== 'alice') {
         return {
           rule: 'on-call-owner',
           severity: 'hard',

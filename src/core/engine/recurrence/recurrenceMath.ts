@@ -33,7 +33,7 @@ export function serializeRRule(rule: Record<string, string>): string {
  */
 export function getRRuleUntil(rrule: string): Date | null {
   const parsed = parseRRule(rrule);
-  const until = parsed.UNTIL;
+  const until = parsed['UNTIL'];
   if (!until) return null;
   return parseICSDateStr(until);
 }
@@ -41,7 +41,7 @@ export function getRRuleUntil(rrule: string): Date | null {
 /** Return the COUNT from a RRULE string, or null if not set. */
 export function getRRuleCount(rrule: string): number | null {
   const parsed = parseRRule(rrule);
-  const count = parsed.COUNT;
+  const count = parsed['COUNT'];
   if (!count) return null;
   return parseInt(count, 10);
 }
@@ -52,8 +52,8 @@ export function getRRuleCount(rrule: string): number | null {
  */
 export function setRRuleUntil(rrule: string, until: Date): string {
   const parsed = parseRRule(rrule);
-  delete parsed.COUNT;
-  parsed.UNTIL = formatICSDateStr(until);
+  delete parsed['COUNT'];
+  parsed['UNTIL'] = formatICSDateStr(until);
   return serializeRRule(parsed);
 }
 
@@ -62,7 +62,7 @@ export function setRRuleUntil(rrule: string, until: Date): string {
  */
 export function removeRRuleUntil(rrule: string): string {
   const parsed = parseRRule(rrule);
-  delete parsed.UNTIL;
+  delete parsed['UNTIL'];
   return serializeRRule(parsed);
 }
 

@@ -137,31 +137,31 @@ export default function ScheduleTemplateDialog({
   }
 
   return (
-    <div className={styles.overlay} onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div className={styles.dialog} role="dialog" aria-modal="true" aria-label="Add schedule template">
-        <div className={styles.header}>
-          <h2 className={styles.title}>Add Schedule</h2>
+    <div className={styles['overlay']} onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose?.(); }}>
+      <div className={styles['dialog']} role="dialog" aria-modal="true" aria-label="Add schedule template">
+        <div className={styles['header']}>
+          <h2 className={styles['title']}>Add Schedule</h2>
         </div>
 
         {templates.length === 0 ? (
-          <div className={styles.emptyState}>
+          <div className={styles['emptyState']}>
             No schedule templates are configured yet.
           </div>
         ) : (
-          <form className={styles.form} onSubmit={handleSubmit}>
-            <label className={styles.label}>
+          <form className={styles['form']} onSubmit={handleSubmit}>
+            <label className={styles['label']}>
               Template
-              <select className={styles.select} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+              <select className={styles['select']} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
                 {templates.map((template: ScheduleTemplate) => (
                   <option key={template.id} value={template.id}>{template.name}</option>
                 ))}
               </select>
             </label>
 
-            <label className={styles.label}>
+            <label className={styles['label']}>
               Anchor start
               <input
-                className={styles.input}
+                className={styles['input']}
                 type="datetime-local"
                 value={anchor}
                 onChange={(e) => setAnchor(e.target.value)}
@@ -169,50 +169,50 @@ export default function ScheduleTemplateDialog({
               />
             </label>
 
-            <label className={styles.label}>
+            <label className={styles['label']}>
               Resource override (optional)
-              <input className={styles.input} value={resource} onChange={(e) => setResource(e.target.value)} />
+              <input className={styles['input']} value={resource} onChange={(e) => setResource(e.target.value)} />
             </label>
 
-            <label className={styles.label}>
+            <label className={styles['label']}>
               Category override (optional)
-              <input className={styles.input} value={category} onChange={(e) => setCategory(e.target.value)} />
+              <input className={styles['input']} value={category} onChange={(e) => setCategory(e.target.value)} />
             </label>
 
-            <div className={styles.meta} role="status">
+            <div className={styles['meta']} role="status">
               {selectedTemplate ? `${selectedTemplate.entries.length} entries will be generated.` : 'Choose a template.'}
             </div>
 
             {(templateError || anchorError || preview.error) && (
-              <div className={styles.error} role="alert">
+              <div className={styles['error']} role="alert">
                 {templateError || anchorError || preview.error}
               </div>
             )}
 
             {preview.generated.length > 0 && (
-              <div className={styles.preview} aria-label="Generated schedule preview">
-                <div className={styles.previewHeader}>
+              <div className={styles['preview']} aria-label="Generated schedule preview">
+                <div className={styles['previewHeader']}>
                   Preview ({preview.generated.length})
                   {preview.conflicts.length > 0 && (
-                    <span className={styles.conflictBadge}>
+                    <span className={styles['conflictBadge']}>
                       {preview.conflicts.length} conflict{preview.conflicts.length === 1 ? '' : 's'}
                     </span>
                   )}
                 </div>
-                <ul className={styles.previewList}>
+                <ul className={styles['previewList']}>
                   {preview.generated.map((ev: GeneratedEvent, idx: number) => (
                     <li
                       key={`${ev.title}-${idx}`}
-                      className={`${styles.previewItem} ${conflictsByIndex.has(idx) ? styles.previewItemConflict : ''}`}
+                      className={`${styles['previewItem']} ${conflictsByIndex.has(idx) ? styles['previewItemConflict'] : ''}`}
                     >
-                      <div className={styles.previewSummary}>
+                      <div className={styles['previewSummary']}>
                         <span>{ev.title ?? '(untitled)'}</span>
                         <span>{ev.start == null ? '' : toDatetimeLocal(ev.start)}</span>
                       </div>
                       {conflictsByIndex.has(idx) && (
-                        <ul className={styles.conflictList}>
+                        <ul className={styles['conflictList']}>
                           {conflictsByIndex.get(idx)?.violations?.map((violation, vIdx: number) => (
-                            <li key={`${violation.rule}-${vIdx}`} className={styles.conflictItem}>
+                            <li key={`${violation.rule}-${vIdx}`} className={styles['conflictItem']}>
                               {violation.message ?? 'Conflict'}
                             </li>
                           ))}
@@ -224,9 +224,9 @@ export default function ScheduleTemplateDialog({
               </div>
             )}
 
-            <div className={styles.actions}>
-              <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
-              <button type="submit" className={styles.submitBtn} disabled={submitDisabled}>Create schedule</button>
+            <div className={styles['actions']}>
+              <button type="button" className={styles['cancelBtn']} onClick={onClose}>Cancel</button>
+              <button type="submit" className={styles['submitBtn']} disabled={submitDisabled}>Create schedule</button>
             </div>
           </form>
         )}

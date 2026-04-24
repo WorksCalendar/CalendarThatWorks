@@ -100,9 +100,9 @@ function DropStep({ onFile, onClose }: DropStepProps) {
   }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    <div className={styles['overlay']} onClick={onClose}>
       <div
-        className={[styles.zone, dragging && styles.dragging].filter(Boolean).join(' ')}
+        className={[styles['zone'], dragging && styles['dragging']].filter(Boolean).join(' ')}
         onClick={e => e.stopPropagation()}
         onDrop={e => {
           e.preventDefault();
@@ -113,24 +113,24 @@ function DropStep({ onFile, onClose }: DropStepProps) {
         onDragLeave={() => setDragging(false)}
         onDragEnter={e => { e.preventDefault(); setDragging(true); }}
       >
-        <div className={styles.iconWrap}><Upload size={32} /></div>
-        <h2 className={styles.heading}>Import from CSV</h2>
-        <p className={styles.hint}>
+        <div className={styles['iconWrap']}><Upload size={32} /></div>
+        <h2 className={styles['heading']}>Import from CSV</h2>
+        <p className={styles['hint']}>
           Drag &amp; drop a <code>.csv</code> spreadsheet here, or click to browse.
           <br />Column headers are detected automatically.
         </p>
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && <p className={styles['error']}>{error}</p>}
 
-        <button className={styles.browseBtn} onClick={() => inputRef.current?.click()}>
+        <button className={styles['browseBtn']} onClick={() => inputRef.current?.click()}>
           Choose File
         </button>
         <input
           ref={inputRef} type="file" accept=".csv,text/csv"
-          className={styles.hiddenInput}
+          className={styles['hiddenInput']}
           onChange={e => processFile(e.currentTarget.files?.[0])}
         />
-        <button className={styles.cancelLink} onClick={onClose}>Cancel</button>
+        <button className={styles['cancelLink']} onClick={onClose}>Cancel</button>
       </div>
     </div>
   );
@@ -189,7 +189,7 @@ function MapStep({ filename, headers, rows, onBack, onNext }: MapStepProps) {
   const previewRows = rows.slice(0, 3);
 
   return (
-    <div className={styles.overlay} onClick={e => e.stopPropagation()}>
+    <div className={styles['overlay']} onClick={e => e.stopPropagation()}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
@@ -431,11 +431,11 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: PreviewStepP
   const allSelected = selected.size === events.length;
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={pStyles.dialog} onClick={e => e.stopPropagation()}>
-        <div className={pStyles.header}>
-          <h2 className={pStyles.title}>Preview Import</h2>
-          <span className={pStyles.count}>
+    <div className={styles['overlay']} onClick={onClose}>
+      <div className={pStyles['dialog']} onClick={e => e.stopPropagation()}>
+        <div className={pStyles['header']}>
+          <h2 className={pStyles['title']}>Preview Import</h2>
+          <span className={pStyles['count']}>
             {events.length} event{events.length !== 1 ? 's' : ''} ready
             {errors.length > 0 && (
               <span style={{ marginLeft: 8, color: '#ef4444' }}>
@@ -443,7 +443,7 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: PreviewStepP
               </span>
             )}
           </span>
-          <button className={pStyles.closeBtn} onClick={onClose}>×</button>
+          <button className={pStyles['closeBtn']} onClick={onClose}>×</button>
         </div>
 
         {/* Parse errors */}
@@ -465,28 +465,28 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: PreviewStepP
           </div>
         )}
 
-        <div className={pStyles.toolbar}>
-          <label className={pStyles.selectAll}>
+        <div className={pStyles['toolbar']}>
+          <label className={pStyles['selectAll']}>
             <input type="checkbox" checked={allSelected} onChange={toggleAll} />
             {allSelected ? 'Deselect all' : 'Select all'}
           </label>
-          <span className={pStyles.selectedCount}>{selected.size} selected</span>
+          <span className={pStyles['selectedCount']}>{selected.size} selected</span>
         </div>
 
-        <div className={pStyles.list}>
+        <div className={pStyles['list']}>
           {events.map((ev: CsvEvent, i: number) => {
             const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
             return (
-              <label key={i} className={[pStyles.item, selected.has(i) && pStyles.itemSelected].filter(Boolean).join(' ')}>
-                <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} className={pStyles.checkbox} />
-                <div className={pStyles.evInfo}>
-                  <span className={pStyles.evTitle}>{ev.title}</span>
-                  <span className={pStyles.evDate}>
+              <label key={i} className={[pStyles['item'], selected.has(i) && pStyles['itemSelected']].filter(Boolean).join(' ')}>
+                <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} className={pStyles['checkbox']} />
+                <div className={pStyles['evInfo']}>
+                  <span className={pStyles['evTitle']}>{ev.title}</span>
+                  <span className={pStyles['evDate']}>
                     {_fmtDate(start)}
                     {ev.category && ` · ${ev.category}`}
                     {ev.resource && ` · ${ev.resource}`}
                     {ev.status && ev.status !== 'confirmed' && (
-                      <span className={pStyles.statusBadge} data-status={ev.status}>{ev.status}</span>
+                      <span className={pStyles['statusBadge']} data-status={ev.status}>{ev.status}</span>
                     )}
                   </span>
                 </div>
@@ -495,11 +495,11 @@ function PreviewStep({ events, errors, onBack, onImport, onClose }: PreviewStepP
           })}
         </div>
 
-        <div className={pStyles.footer}>
+        <div className={pStyles['footer']}>
           <button onClick={onBack} style={{ ...btnStyle('var(--wc-text-muted)'), background: 'none', border: '1px solid var(--wc-border)' }}>
             <ChevronLeft size={13} /> Back
           </button>
-          <button className={pStyles.importBtn} onClick={handleImport} disabled={selected.size === 0}>
+          <button className={pStyles['importBtn']} onClick={handleImport} disabled={selected.size === 0}>
             <CheckCircle size={13} /> Import {selected.size > 0 ? selected.size : ''} event{selected.size !== 1 ? 's' : ''}
           </button>
         </div>

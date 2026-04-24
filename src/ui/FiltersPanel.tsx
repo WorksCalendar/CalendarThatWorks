@@ -47,8 +47,8 @@ export default function FiltersPanel({
 
   if (fieldOptions.length === 0) {
     return (
-      <div className={styles.root}>
-        <div className={styles.empty}>
+      <div className={styles['root']}>
+        <div className={styles['empty']}>
           <Filter size={20} style={{ marginBottom: 6, opacity: 0.5 }} />
           <div>No filterable fields available</div>
         </div>
@@ -57,7 +57,7 @@ export default function FiltersPanel({
   }
 
   return (
-    <div className={styles.root}>
+    <div className={styles['root']}>
       {/* Condition rows */}
       <div>
         {conditions.map((cond, index) => {
@@ -66,16 +66,16 @@ export default function FiltersPanel({
             ?? (fieldDef?.getOptions ? fieldDef.getOptions(items) : null);
 
           return (
-            <div key={cond.id} className={styles.conditionWrap}>
+            <div key={cond.id} className={styles['conditionWrap']}>
               {/* Logic connector (AND / OR) */}
               {index > 0 && (
-                <div className={styles.logicRow}>
+                <div className={styles['logicRow']}>
                   {(['AND', 'OR'] as const).map(lbl => (
                     <button
                       key={lbl}
                       className={[
-                        styles.logicBtn,
-                        cond.logic === lbl && styles.logicActive,
+                        styles['logicBtn'],
+                        cond.logic === lbl && styles['logicActive'],
                       ].filter(Boolean).join(' ')}
                       onClick={() => updateCondition(cond.id, { logic: lbl })}
                     >
@@ -86,9 +86,9 @@ export default function FiltersPanel({
               )}
 
               {/* Sentence-style row: [Field] [Operator] [Value] [X] */}
-              <div className={styles.conditionRow}>
+              <div className={styles['conditionRow']}>
                 <select
-                  className={styles.select}
+                  className={styles['select']}
                   value={cond.field}
                   onChange={e => updateCondition(cond.id, { field: e.target.value })}
                   aria-label="Filter field"
@@ -99,7 +99,7 @@ export default function FiltersPanel({
                 </select>
 
                 <select
-                  className={styles.select}
+                  className={styles['select']}
                   value={cond.operator}
                   onChange={e => updateCondition(cond.id, { operator: e.target.value })}
                   aria-label="Filter operator"
@@ -111,7 +111,7 @@ export default function FiltersPanel({
 
                 {options && options.length > 0 ? (
                   <select
-                    className={[styles.select, styles.valueSelect].join(' ')}
+                    className={[styles['select'], styles['valueSelect']].join(' ')}
                     value={cond.value}
                     onChange={e => updateCondition(cond.id, { value: e.target.value })}
                     aria-label="Filter value"
@@ -125,7 +125,7 @@ export default function FiltersPanel({
                   </select>
                 ) : (
                   <input
-                    className={[styles.input, styles.valueInput].join(' ')}
+                    className={[styles['input'], styles['valueInput']].join(' ')}
                     type="text"
                     value={cond.value}
                     onChange={e => updateCondition(cond.id, { value: e.target.value })}
@@ -135,7 +135,7 @@ export default function FiltersPanel({
                 )}
 
                 <button
-                  className={styles.removeBtn}
+                  className={styles['removeBtn']}
                   onClick={() => removeCondition(cond.id)}
                   disabled={conditions.length <= 1}
                   aria-label="Remove condition"
@@ -149,19 +149,19 @@ export default function FiltersPanel({
       </div>
 
       {/* Add condition buttons */}
-      <div className={styles.addRow}>
-        <button className={styles.addBtn} onClick={() => addCondition('AND')}>
+      <div className={styles['addRow']}>
+        <button className={styles['addBtn']} onClick={() => addCondition('AND')}>
           <Plus size={13} /> AND
         </button>
-        <button className={styles.addBtn} onClick={() => addCondition('OR')}>
+        <button className={styles['addBtn']} onClick={() => addCondition('OR')}>
           <Plus size={13} /> OR
         </button>
       </div>
 
       {/* Clear all */}
       {activeCount > 0 && (
-        <div className={styles.clearRow}>
-          <button className={styles.clearLink} onClick={clearConditions}>
+        <div className={styles['clearRow']}>
+          <button className={styles['clearLink']} onClick={clearConditions}>
             Clear all filters
           </button>
         </div>

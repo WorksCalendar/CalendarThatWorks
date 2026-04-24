@@ -655,7 +655,7 @@ export class CalendarEngine {
 
 function readApprovalStage(ev: EngineEvent | undefined): ApprovalStage | null {
   if (!ev) return null;
-  const stage = (ev.meta as Record<string, unknown> | undefined)?.approvalStage;
+  const stage = (ev.meta as Record<string, unknown> | undefined)?.['approvalStage'];
   if (!stage || typeof stage !== 'object') return null;
   const s = stage as ApprovalStage;
   return typeof s.stage === 'string' ? s : null;

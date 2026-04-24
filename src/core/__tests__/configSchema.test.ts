@@ -27,16 +27,16 @@ beforeEach(() => {
 
 describe('configSchema — defaults', () => {
   it('DEFAULT_CONFIG includes an approvals block with all five stages', () => {
-    expect(DEFAULT_CONFIG.approvals).toBeTruthy();
-    expect(DEFAULT_CONFIG.approvals.enabled).toBe(false);
+    expect(DEFAULT_CONFIG['approvals']).toBeTruthy();
+    expect(DEFAULT_CONFIG['approvals'].enabled).toBe(false);
     for (const stage of APPROVAL_STAGE_IDS) {
-      expect(DEFAULT_CONFIG.approvals.rules[stage]).toBeDefined();
-      expect(Array.isArray(DEFAULT_CONFIG.approvals.rules[stage].allow)).toBe(true);
+      expect(DEFAULT_CONFIG['approvals'].rules[stage]).toBeDefined();
+      expect(Array.isArray(DEFAULT_CONFIG['approvals'].rules[stage].allow)).toBe(true);
     }
   });
 
   it('DEFAULT_CONFIG carries the current schemaVersion', () => {
-    expect(DEFAULT_CONFIG.schemaVersion).toBe(CONFIG_SCHEMA_VERSION);
+    expect(DEFAULT_CONFIG['schemaVersion']).toBe(CONFIG_SCHEMA_VERSION);
   });
 });
 
@@ -49,9 +49,9 @@ describe('configSchema — v3 → v4 migration', () => {
     }));
 
     const loaded = loadConfig(CAL_ID);
-    expect(loaded.title).toBe('Legacy Cal');
-    expect(loaded.assets).toEqual([{ id: 'a1', label: 'Asset 1' }]);
-    expect(loaded.schemaVersion).toBe(CONFIG_SCHEMA_VERSION);
+    expect(loaded['title']).toBe('Legacy Cal');
+    expect(loaded['assets']).toEqual([{ id: 'a1', label: 'Asset 1' }]);
+    expect(loaded['schemaVersion']).toBe(CONFIG_SCHEMA_VERSION);
   });
 
   it('fills in the approvals block on load when the legacy payload lacks it', () => {
@@ -60,11 +60,11 @@ describe('configSchema — v3 → v4 migration', () => {
     }));
 
     const loaded = loadConfig(CAL_ID);
-    expect(loaded.approvals).toBeTruthy();
-    expect(loaded.approvals.enabled).toBe(false);
-    expect(loaded.approvals.tiers.length).toBeGreaterThan(0);
+    expect(loaded['approvals']).toBeTruthy();
+    expect(loaded['approvals'].enabled).toBe(false);
+    expect(loaded['approvals'].tiers.length).toBeGreaterThan(0);
     for (const stage of APPROVAL_STAGE_IDS) {
-      expect(loaded.approvals.rules[stage]).toBeDefined();
+      expect(loaded['approvals'].rules[stage]).toBeDefined();
     }
   });
 
@@ -81,27 +81,27 @@ describe('configSchema — v3 → v4 migration', () => {
     }));
 
     const loaded = loadConfig(CAL_ID);
-    expect(loaded.approvals.enabled).toBe(true);
-    expect(loaded.approvals.tiers).toHaveLength(1);
-    expect(loaded.approvals.tiers[0].id).toBe('only-tier');
+    expect(loaded['approvals'].enabled).toBe(true);
+    expect(loaded['approvals'].tiers).toHaveLength(1);
+    expect(loaded['approvals'].tiers[0].id).toBe('only-tier');
     // Default rules merge in for stages the owner didn't override.
-    expect(loaded.approvals.rules.requested.allow).toEqual(['approve']);
-    expect(loaded.approvals.rules.approved).toBeDefined();
-    expect(loaded.approvals.labels.approve).toBe('Sign');
+    expect(loaded['approvals'].rules.requested.allow).toEqual(['approve']);
+    expect(loaded['approvals'].rules.approved).toBeDefined();
+    expect(loaded['approvals'].labels.approve).toBe('Sign');
   });
 
   it('saveConfig round-trips the approvals block through localStorage', () => {
     const next = {
       ...DEFAULT_CONFIG,
       approvals: {
-        ...DEFAULT_CONFIG.approvals,
+        ...DEFAULT_CONFIG['approvals'],
         enabled: true,
-        labels: { ...DEFAULT_CONFIG.approvals.labels, approve: 'Okay' },
+        labels: { ...DEFAULT_CONFIG['approvals'].labels, approve: 'Okay' },
       },
     };
     saveConfig(CAL_ID, next);
     const loaded = loadConfig(CAL_ID);
-    expect(loaded.approvals.enabled).toBe(true);
-    expect(loaded.approvals.labels.approve).toBe('Okay');
+    expect(loaded['approvals'].enabled).toBe(true);
+    expect(loaded['approvals'].labels.approve).toBe('Okay');
   });
 });

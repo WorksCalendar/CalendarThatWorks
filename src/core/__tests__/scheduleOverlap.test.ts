@@ -180,37 +180,37 @@ describe('buildOpenShiftEvent', () => {
 
   it('creates an open-shift event with correct meta', () => {
     const ev = buildOpenShiftEvent({ shiftEvent, reason: 'pto' });
-    expect(ev.category).toBe('open-shift');
-    expect(ev.meta.kind).toBe('open-shift');
-    expect(ev.meta.reason).toBe('pto');
-    expect(ev.meta.status).toBe('open');
-    expect(ev.meta.coveredBy).toBeNull();
-    expect(ev.meta.originalEmployeeId).toBe('emp-1');
-    expect(ev.meta.sourceShiftId).toBe('shift-42');
+    expect(ev['category']).toBe('open-shift');
+    expect(ev['meta'].kind).toBe('open-shift');
+    expect(ev['meta'].reason).toBe('pto');
+    expect(ev['meta'].status).toBe('open');
+    expect(ev['meta'].coveredBy).toBeNull();
+    expect(ev['meta'].originalEmployeeId).toBe('emp-1');
+    expect(ev['meta'].sourceShiftId).toBe('shift-42');
   });
 
   it('copies start/end from the shift event', () => {
     const ev = buildOpenShiftEvent({ shiftEvent, reason: 'unavailable' });
-    expect(ev.start).toEqual(d('2026-04-15T20:00'));
-    expect(ev.end).toEqual(d('2026-04-16T08:00'));
+    expect(ev['start']).toEqual(d('2026-04-15T20:00'));
+    expect(ev['end']).toEqual(d('2026-04-16T08:00'));
   });
 
   it('sets resource to null (unassigned)', () => {
     const ev = buildOpenShiftEvent({ shiftEvent, reason: 'pto' });
-    expect(ev.resource).toBeNull();
+    expect(ev['resource']).toBeNull();
   });
 
   it('uses a custom openShiftCategory', () => {
     const ev = buildOpenShiftEvent({ shiftEvent, reason: 'pto', openShiftCategory: 'needs-cover' });
-    expect(ev.category).toBe('needs-cover');
+    expect(ev['category']).toBe('needs-cover');
   });
 
   it('generates an open-shift id with a source-based prefix', () => {
     const a = buildOpenShiftEvent({ shiftEvent, reason: 'pto' });
     const b = buildOpenShiftEvent({ shiftEvent, reason: 'pto' });
-    expect(a.id.startsWith('open-shift-42-')).toBe(true);
-    expect(b.id.startsWith('open-shift-42-')).toBe(true);
-    expect(a.id).not.toBe(b.id);
+    expect(a['id'].startsWith('open-shift-42-')).toBe(true);
+    expect(b['id'].startsWith('open-shift-42-')).toBe(true);
+    expect(a['id']).not.toBe(b['id']);
   });
 
   it('prefers _eventId over id for sourceShiftId', () => {
@@ -218,6 +218,6 @@ describe('buildOpenShiftEvent', () => {
       shiftEvent: { ...shiftEvent, _eventId: 'occurrence-99' },
       reason: 'pto',
     });
-    expect(ev.meta.sourceShiftId).toBe('occurrence-99');
+    expect(ev['meta'].sourceShiftId).toBe('occurrence-99');
   });
 });

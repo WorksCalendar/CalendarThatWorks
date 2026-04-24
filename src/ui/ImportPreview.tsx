@@ -37,40 +37,40 @@ export default function ImportPreview({ events, onImport, onClose }: ImportPrevi
   const allSelected = selected.size === events.length;
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.dialog} onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
-        <div className={styles.header}>
-          <h2 className={styles.title}>Import Events</h2>
-          <span className={styles.count}>{events.length} event{events.length !== 1 ? 's' : ''} found</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">×</button>
+    <div className={styles['overlay']} onClick={onClose}>
+      <div className={styles['dialog']} onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
+        <div className={styles['header']}>
+          <h2 className={styles['title']}>Import Events</h2>
+          <span className={styles['count']}>{events.length} event{events.length !== 1 ? 's' : ''} found</span>
+          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close">×</button>
         </div>
 
-        <div className={styles.toolbar}>
-          <label className={styles.selectAll}>
+        <div className={styles['toolbar']}>
+          <label className={styles['selectAll']}>
             <input type="checkbox" checked={allSelected} onChange={toggleAll} />
             {allSelected ? 'Deselect all' : 'Select all'}
           </label>
-          <span className={styles.selectedCount}>{selected.size} selected</span>
+          <span className={styles['selectedCount']}>{selected.size} selected</span>
         </div>
 
-        <div className={styles.list}>
+        <div className={styles['list']}>
           {events.map((ev, i: number) => {
             const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
             return (
-              <label key={i} className={[styles.item, selected.has(i) && styles.itemSelected].filter(Boolean).join(' ')}>
+              <label key={i} className={[styles['item'], selected.has(i) && styles['itemSelected']].filter(Boolean).join(' ')}>
                 <input
                   type="checkbox"
                   checked={selected.has(i)}
                   onChange={() => toggle(i)}
-                  className={styles.checkbox}
+                  className={styles['checkbox']}
                 />
-                <div className={styles.evInfo}>
-                  <span className={styles.evTitle}>{ev.title}</span>
-                  <span className={styles.evDate}>
+                <div className={styles['evInfo']}>
+                  <span className={styles['evTitle']}>{ev.title}</span>
+                  <span className={styles['evDate']}>
                     {isValid(start) ? format(start, 'MMM d, yyyy') : '—'}
                     {ev.category && ` · ${ev.category}`}
                     {ev.status && ev.status !== 'confirmed' && (
-                      <span className={styles.statusBadge} data-status={ev.status}>
+                      <span className={styles['statusBadge']} data-status={ev.status}>
                         {ev.status}
                       </span>
                     )}
@@ -81,10 +81,10 @@ export default function ImportPreview({ events, onImport, onClose }: ImportPrevi
           })}
         </div>
 
-        <div className={styles.footer}>
-          <button className={styles.cancelBtn} onClick={onClose}>Cancel</button>
+        <div className={styles['footer']}>
+          <button className={styles['cancelBtn']} onClick={onClose}>Cancel</button>
           <button
-            className={styles.importBtn}
+            className={styles['importBtn']}
             onClick={handleImport}
             disabled={selected.size === 0}
           >

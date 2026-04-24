@@ -57,12 +57,12 @@ describe('serializeFilters', () => {
       dateRange:  null,
     };
     const serialized = serializeFilters(filters);
-    expect(Array.isArray(serialized.categories)).toBe(true);
-    expect(serialized.categories).toContain('Work');
-    expect(Array.isArray(serialized.resources)).toBe(true);
-    expect(Array.isArray(serialized.sources)).toBe(true);
-    expect(serialized.search).toBe('hello');
-    expect(serialized.dateRange).toBeNull();
+    expect(Array.isArray(serialized['categories'])).toBe(true);
+    expect(serialized['categories']).toContain('Work');
+    expect(Array.isArray(serialized['resources'])).toBe(true);
+    expect(Array.isArray(serialized['sources'])).toBe(true);
+    expect(serialized['search']).toBe('hello');
+    expect(serialized['dateRange']).toBeNull();
   });
 
   it('serializes dateRange dates as ISO strings', () => {
@@ -75,8 +75,8 @@ describe('serializeFilters', () => {
       search:     '',
       dateRange:  { start, end },
     });
-    expect(typeof serialized.dateRange.start).toBe('string');
-    expect(typeof serialized.dateRange.end).toBe('string');
+    expect(typeof serialized['dateRange'].start).toBe('string');
+    expect(typeof serialized['dateRange'].end).toBe('string');
   });
 
   it('handles empty Sets', () => {
@@ -87,9 +87,9 @@ describe('serializeFilters', () => {
       search:     '',
       dateRange:  null,
     });
-    expect(serialized.categories).toEqual([]);
-    expect(serialized.resources).toEqual([]);
-    expect(serialized.sources).toEqual([]);
+    expect(serialized['categories']).toEqual([]);
+    expect(serialized['resources']).toEqual([]);
+    expect(serialized['sources']).toEqual([]);
   });
 });
 
@@ -103,15 +103,15 @@ describe('deserializeFilters', () => {
       dateRange:  null,
     };
     const filters = deserializeFilters(saved);
-    expect(filters.categories).toBeInstanceOf(Set);
-    expect(filters.categories.has('Work')).toBe(true);
-    expect(filters.categories.has('PTO')).toBe(true);
-    expect(filters.resources).toBeInstanceOf(Set);
-    expect(filters.resources.has('Alice')).toBe(true);
-    expect(filters.sources).toBeInstanceOf(Set);
-    expect(filters.sources.has('src-a')).toBe(true);
-    expect(filters.search).toBe('test');
-    expect(filters.dateRange).toBeNull();
+    expect(filters['categories']).toBeInstanceOf(Set);
+    expect(filters['categories'].has('Work')).toBe(true);
+    expect(filters['categories'].has('PTO')).toBe(true);
+    expect(filters['resources']).toBeInstanceOf(Set);
+    expect(filters['resources'].has('Alice')).toBe(true);
+    expect(filters['sources']).toBeInstanceOf(Set);
+    expect(filters['sources'].has('src-a')).toBe(true);
+    expect(filters['search']).toBe('test');
+    expect(filters['dateRange']).toBeNull();
   });
 
   it('converts dateRange strings to Date objects', () => {
@@ -126,8 +126,8 @@ describe('deserializeFilters', () => {
       },
     };
     const filters = deserializeFilters(saved);
-    expect(filters.dateRange.start).toBeInstanceOf(Date);
-    expect(filters.dateRange.end).toBeInstanceOf(Date);
+    expect(filters['dateRange'].start).toBeInstanceOf(Date);
+    expect(filters['dateRange'].end).toBeInstanceOf(Date);
   });
 
   it('round-trip preserves Sets, search, and dateRange', () => {
@@ -142,12 +142,12 @@ describe('deserializeFilters', () => {
       },
     };
     const roundTripped = deserializeFilters(serializeFilters(original));
-    expect(roundTripped.categories.has('Work')).toBe(true);
-    expect(roundTripped.resources.has('Bob')).toBe(true);
-    expect(roundTripped.sources.has('src-x')).toBe(true);
-    expect(roundTripped.search).toBe('quarterly');
-    expect(roundTripped.dateRange.start).toBeInstanceOf(Date);
-    expect(roundTripped.dateRange.end.toISOString()).toBe('2026-04-30T00:00:00.000Z');
+    expect(roundTripped['categories'].has('Work')).toBe(true);
+    expect(roundTripped['resources'].has('Bob')).toBe(true);
+    expect(roundTripped['sources'].has('src-x')).toBe(true);
+    expect(roundTripped['search']).toBe('quarterly');
+    expect(roundTripped['dateRange'].start).toBeInstanceOf(Date);
+    expect(roundTripped['dateRange'].end.toISOString()).toBe('2026-04-30T00:00:00.000Z');
   });
 });
 
@@ -178,8 +178,8 @@ describe('useSavedViews', () => {
     expect(view!.id.length).toBeGreaterThan(0);
     expect(view!.createdAt).toBeDefined();
     // Filters should be serialized (arrays, not Sets)
-    expect(Array.isArray(view!.filters.categories)).toBe(true);
-    expect(view!.filters.categories).toContain('Work');
+    expect(Array.isArray(view!.filters['categories'])).toBe(true);
+    expect(view!.filters['categories']).toContain('Work');
   });
 
   it('saveView returns the created view object', () => {
@@ -339,8 +339,8 @@ describe('useSavedViews', () => {
         categories: new Set(['PTO']), resources: new Set(), sources: new Set(), search: '', dateRange: null,
       }, 'month');
     });
-    expect(result.current.views[0].filters.categories!).toContain('PTO');
-    expect(result.current.views[0].filters.categories!).not.toContain('Work');
+    expect(result.current.views[0].filters['categories']!).toContain('PTO');
+    expect(result.current.views[0].filters['categories']!).not.toContain('Work');
     expect(result.current.views[0].view!).toBe('month');
   });
 
@@ -424,7 +424,7 @@ describe('deserializeFilters dateRange validation', () => {
       search: '',
       dateRange: { start: 'not-a-date', end: '2026-04-30T00:00:00.000Z' },
     });
-    expect(filters.dateRange).toBeNull();
+    expect(filters['dateRange']).toBeNull();
   });
 });
 

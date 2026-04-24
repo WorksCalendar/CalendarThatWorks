@@ -22,9 +22,9 @@ export default function OwnerLock({ isOwner, authError, isAuthLoading, onAuthent
   }
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles['wrap']}>
       <button
-        className={styles.gear}
+        className={styles['gear']}
         onClick={handleGearClick}
         aria-label={isOwner ? 'Open settings' : 'Owner settings'}
         title={isOwner ? 'Settings' : 'Owner settings'}

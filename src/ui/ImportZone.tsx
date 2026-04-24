@@ -83,9 +83,9 @@ export default function ImportZone({ onImport, onClose }: ImportZoneProps) {
   }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    <div className={styles['overlay']} onClick={onClose}>
       <div
-        className={[styles.zone, dragging && styles.dragging].filter(Boolean).join(' ')}
+        className={[styles['zone'], dragging && styles['dragging']].filter(Boolean).join(' ')}
         onClick={e => e.stopPropagation()}
         onDrop={(e: DragEvent<HTMLDivElement>) => {
           e.preventDefault();
@@ -96,20 +96,20 @@ export default function ImportZone({ onImport, onClose }: ImportZoneProps) {
         onDragLeave={() => setDragging(false)}
         onDragEnter={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(true); }}
       >
-        <div className={styles.iconWrap}>
+        <div className={styles['iconWrap']}>
           <Upload size={32} />
         </div>
-        <h2 className={styles.heading}>Import Events</h2>
-        <p className={styles.hint}>
+        <h2 className={styles['heading']}>Import Events</h2>
+        <p className={styles['hint']}>
           Drag &amp; drop a <code>.ics</code> or <code>.csv</code> file here,
           or choose the format below.
         </p>
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && <p className={styles['error']}>{error}</p>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
           <button
-            className={styles.browseBtn}
+            className={styles['browseBtn']}
             onClick={() => {
               if (inputRef.current) {
                 inputRef.current.accept = '.ics,text/calendar';
@@ -120,7 +120,7 @@ export default function ImportZone({ onImport, onClose }: ImportZoneProps) {
             iCal / ICS
           </button>
           <button
-            className={styles.browseBtn}
+            className={styles['browseBtn']}
             style={{ background: 'var(--wc-text-muted, #64748b)' }}
             onClick={() => {
               if (inputRef.current) {
@@ -137,11 +137,11 @@ export default function ImportZone({ onImport, onClose }: ImportZoneProps) {
           ref={inputRef}
           type="file"
           accept=".ics,.csv,text/calendar,text/csv"
-          className={styles.hiddenInput}
+          className={styles['hiddenInput']}
           onChange={(e: ChangeEvent<HTMLInputElement>) => processFile(e.currentTarget.files?.[0])}
         />
 
-        <button className={styles.cancelLink} onClick={onClose}>Cancel</button>
+        <button className={styles['cancelLink']} onClick={onClose}>Cancel</button>
       </div>
     </div>
   );

@@ -159,8 +159,8 @@ export function mapToEvents(
 
   rows.forEach((row, index) => {
     try {
-      const title = _field(row, mapping.title);
-      const startRaw = _field(row, mapping.start);
+      const title = _field(row, mapping['title']);
+      const startRaw = _field(row, mapping['start']);
 
       if (!title)    throw new Error('Title is empty');
       if (!startRaw) throw new Error('Start date is empty');
@@ -170,10 +170,10 @@ export function mapToEvents(
         throw new Error(`Cannot parse start date: "${startRaw}"`);
       }
 
-      const endRaw = _field(row, mapping.end);
+      const endRaw = _field(row, mapping['end']);
       const end = endRaw ? _parseDate(endRaw, dateFormat) : null;
 
-      const allDayRaw = _field(row, mapping.allDay);
+      const allDayRaw = _field(row, mapping['allDay']);
       const allDay = allDayRaw
         ? ['true', '1', 'yes', 'y'].includes(allDayRaw.toLowerCase())
         : (!endRaw && !startRaw.includes(':') && !startRaw.includes('T'));
@@ -183,11 +183,11 @@ export function mapToEvents(
         start,
         ...(end && !isNaN(end.getTime()) && { end }),
         ...(allDay && { allDay: true }),
-        ...(_field(row, mapping.category) && { category: _field(row, mapping.category) }),
-        ...(_field(row, mapping.resource) && { resource:  _field(row, mapping.resource) }),
-        ...(_field(row, mapping.status)   && { status:    _field(row, mapping.status) }),
-        ...(_field(row, mapping.color)    && { color:     _field(row, mapping.color) }),
-        id: _field(row, mapping.id) || `csv-${Date.now()}-${autoId++}`,
+        ...(_field(row, mapping['category']) && { category: _field(row, mapping['category']) }),
+        ...(_field(row, mapping['resource']) && { resource:  _field(row, mapping['resource']) }),
+        ...(_field(row, mapping['status'])   && { status:    _field(row, mapping['status']) }),
+        ...(_field(row, mapping['color'])    && { color:     _field(row, mapping['color']) }),
+        id: _field(row, mapping['id']) || `csv-${Date.now()}-${autoId++}`,
       };
 
       events.push(event);

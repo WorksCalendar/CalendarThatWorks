@@ -200,19 +200,19 @@ export function loadConfig(calendarId: string): ConfigObject {
 
     // Migrate older setup-only data into live config fields.
     if (parsed?.wizardData?.calendarName && !parsed?.title) {
-      merged.title = parsed.wizardData.calendarName;
+      merged['title'] = parsed.wizardData.calendarName;
     }
 
     if (parsed?.wizardData?.preferredTheme && !parsed?.setup?.preferredTheme) {
-      merged.setup.preferredTheme = parsed.wizardData.preferredTheme;
+      merged['setup'].preferredTheme = parsed.wizardData.preferredTheme;
     }
 
     if (Array.isArray(parsed?.wizardData?.teamMembers) && !parsed?.team?.members?.length) {
-      merged.team.members = parsed.wizardData.teamMembers;
+      merged['team'].members = parsed.wizardData.teamMembers;
     }
 
     if (parsed?.setupCompleted && !parsed?.setup?.completed) {
-      merged.setup.completed = true;
+      merged['setup'].completed = true;
     }
 
     // Schema-version migration. mergeDeep above already folds in any new
@@ -223,7 +223,7 @@ export function loadConfig(calendarId: string): ConfigObject {
       ? parsed.schemaVersion
       : 3;
     if (storedVersion < CONFIG_SCHEMA_VERSION) {
-      merged.schemaVersion = CONFIG_SCHEMA_VERSION;
+      merged['schemaVersion'] = CONFIG_SCHEMA_VERSION;
     }
 
     return merged;

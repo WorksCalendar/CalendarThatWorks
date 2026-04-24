@@ -131,7 +131,7 @@ export function WorkflowEdgeGuardPicker(
       ref={ref}
       role="menu"
       aria-label="Pick edge guard"
-      className={styles.menu}
+      className={styles['menu']}
       data-testid="workflow-edge-guard-picker"
       style={style}
     >
@@ -140,7 +140,7 @@ export function WorkflowEdgeGuardPicker(
           key={g}
           type="button"
           role="menuitem"
-          className={styles.menuItem}
+          className={styles['menuItem']}
           data-guard={g}
           onClick={e => {
             e.stopPropagation()

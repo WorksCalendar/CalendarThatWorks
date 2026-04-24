@@ -179,7 +179,7 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
   const merged = normalizeCustomTheme(theme);
   const selectedFontOptionByRole = useMemo(() => Object.fromEntries(
     FONT_ROLE_CONTROLS.map(({ key }) => {
-      const rawValue = merged.typography[key] ?? merged.typography.fontFamily;
+      const rawValue = merged['typography'][key] ?? merged['typography'].fontFamily;
       const hasNamedFontOption = FONT_STACK_OPTIONS.some((option) => option.value === rawValue);
       return [key, hasNamedFontOption ? rawValue : '__custom__'];
     }),
@@ -190,10 +190,10 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
   } as React.CSSProperties;
   const exportJson = useMemo(() => JSON.stringify(merged, null, 2), [merged]);
   const contrastChecks = useMemo(() => ([
-    { id: 'text-on-bg', label: 'Body text on background', fg: merged.colors.text, bg: merged.colors.bg },
-    { id: 'text-on-surface', label: 'Body text on surface', fg: merged.colors.text, bg: merged.colors.surface },
-    { id: 'accent-on-accent-dim', label: 'Accent on accent soft', fg: merged.colors.accent, bg: merged.colors.accentDim },
-    { id: 'muted-on-bg', label: 'Muted text on background', fg: merged.colors.textMuted, bg: merged.colors.bg },
+    { id: 'text-on-bg', label: 'Body text on background', fg: merged['colors'].text, bg: merged['colors'].bg },
+    { id: 'text-on-surface', label: 'Body text on surface', fg: merged['colors'].text, bg: merged['colors'].surface },
+    { id: 'accent-on-accent-dim', label: 'Accent on accent soft', fg: merged['colors'].accent, bg: merged['colors'].accentDim },
+    { id: 'muted-on-bg', label: 'Muted text on background', fg: merged['colors'].textMuted, bg: merged['colors'].bg },
   ].map((item) => {
     const ratio = contrastRatio(item.fg, item.bg);
     const rating = wcagRating(ratio);
@@ -242,11 +242,11 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
           : {
             ...current,
             ...parsed,
-            colors: { ...current.colors, ...(parsed.colors || {}) },
-            typography: { ...current.typography, ...(parsed.typography || {}) },
-            spacing: { ...current.spacing, ...(parsed.spacing || {}) },
-            borders: { ...current.borders, ...(parsed.borders || {}) },
-            shadows: { ...current.shadows, ...(parsed.shadows || {}) },
+            colors: { ...current['colors'], ...(parsed.colors || {}) },
+            typography: { ...current['typography'], ...(parsed.typography || {}) },
+            spacing: { ...current['spacing'], ...(parsed.spacing || {}) },
+            borders: { ...current['borders'], ...(parsed.borders || {}) },
+            shadows: { ...current['shadows'], ...(parsed.shadows || {}) },
           };
         return { ...config, customTheme: nextCustomTheme };
       });
@@ -267,22 +267,22 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
   }
 
   return (
-    <div className={styles.section}>
+    <div className={styles['section']}>
       <p>Tune colors and core style tokens. Changes are saved to <code>ownerConfig.customTheme</code>.</p>
 
-      <div className={styles.grid}>
+      <div className={styles['grid']}>
         {COLOR_CONTROLS.map(([key, label]) => (
-          <label key={key} className={styles.control}>
+          <label key={key} className={styles['control']}>
             <span>{label}</span>
-            <input type="color" value={merged.colors[key]} onChange={(e) => update(['colors', key], e.target.value)} />
+            <input type="color" value={merged['colors'][key]} onChange={(e) => update(['colors', key], e.target.value)} />
           </label>
         ))}
 
         {FONT_ROLE_CONTROLS.map((role) => {
-          const roleValue = merged.typography[role.key] ?? merged.typography.fontFamily;
+          const roleValue = merged['typography'][role.key] ?? merged['typography'].fontFamily;
           const selectedFontOption = selectedFontOptionByRole[role.key];
           return (
-            <label className={styles.control} key={role.key}>
+            <label className={styles['control']} key={role.key}>
               <span>{role.label}</span>
               <select
                 value={selectedFontOption}
@@ -310,7 +310,7 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
         })}
 
         {TOKEN_SLIDERS.map(([group, key, label, min, max, step, suffix]) => (
-          <label key={`${group}.${key}`} className={styles.control}>
+          <label key={`${group}.${key}`} className={styles['control']}>
             <span>{label} ({valueLabel(merged[group][key], suffix)})</span>
             <input
               type="range"
@@ -324,47 +324,47 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
         ))}
       </div>
 
-      <div className={styles.presets}>
-        <strong className={styles.blockLabel}>Quick presets</strong>
-        <div className={styles.presetRow}>
+      <div className={styles['presets']}>
+        <strong className={styles['blockLabel']}>Quick presets</strong>
+        <div className={styles['presetRow']}>
           {PRESET_THEMES.map((preset) => (
-            <button key={preset.id} className={styles.btn} onClick={() => applyPreset(preset)}>
+            <button key={preset.id} className={styles['btn']} onClick={() => applyPreset(preset)}>
               {preset.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className={styles.preview} style={previewStyle}>
-        <div className={styles.previewHeader}>
+      <div className={styles['preview']} style={previewStyle}>
+        <div className={styles['previewHeader']}>
           <strong>Live Preview</strong>
-          <span className={styles.badge}>Mini Calendar</span>
+          <span className={styles['badge']}>Mini Calendar</span>
         </div>
-        <div className={styles.previewBody}>
-          <div className={styles.previewLegend}>
-            Aa Text preview • Border {merged.borders.borderWidth}px • Density {merged.spacing.density.toFixed(2)}x
+        <div className={styles['previewBody']}>
+          <div className={styles['previewLegend']}>
+            Aa Text preview • Border {merged['borders'].borderWidth}px • Density {merged['spacing'].density.toFixed(2)}x
           </div>
           {Array.from({ length: 14 }).map((_, i) => (
-            <div key={i} className={styles.day}>
-              {(i === 2 || i === 8) && <div className={styles.event} />}
+            <div key={i} className={styles['day']}>
+              {(i === 2 || i === 8) && <div className={styles['event']} />}
             </div>
           ))}
         </div>
       </div>
 
-      <div className={styles.actions}>
-        <button className={styles.btn} onClick={() => onChange((c: ThemeConfig) => ({ ...c, customTheme: {} }))}>Reset to default</button>
+      <div className={styles['actions']}>
+        <button className={styles['btn']} onClick={() => onChange((c: ThemeConfig) => ({ ...c, customTheme: {} }))}>Reset to default</button>
       </div>
 
-      <div className={styles.ioSection}>
-        <strong className={styles.blockLabel}>Contrast checks (WCAG)</strong>
-        <div className={styles.contrastList}>
+      <div className={styles['ioSection']}>
+        <strong className={styles['blockLabel']}>Contrast checks (WCAG)</strong>
+        <div className={styles['contrastList']}>
           {contrastChecks.map((check) => (
-            <div key={check.id} className={styles.contrastRow}>
+            <div key={check.id} className={styles['contrastRow']}>
               <span>{check.label}</span>
-              <span className={styles.contrastMeta}>
+              <span className={styles['contrastMeta']}>
                 <span>{check.ratio ? `${check.ratio.toFixed(2)}:1` : 'n/a'}</span>
-                <span className={[styles.rating, styles[`rating_${check.rating.tone}`]].join(' ')}>
+                <span className={[styles['rating'], styles[`rating_${check.rating.tone}`]].join(' ')}>
                   {check.rating.label}
                 </span>
               </span>
@@ -373,19 +373,19 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
         </div>
       </div>
 
-      <div className={styles.ioSection}>
-        <strong className={styles.blockLabel}>Export theme JSON</strong>
-        <textarea className={styles.textarea} value={exportJson} readOnly aria-label="Export theme JSON" />
-        <div className={styles.inlineActions}>
-          <button className={styles.btn} onClick={copyExportJson}>Copy JSON</button>
-          {copyState && <span className={styles.helperText}>{copyState}</span>}
+      <div className={styles['ioSection']}>
+        <strong className={styles['blockLabel']}>Export theme JSON</strong>
+        <textarea className={styles['textarea']} value={exportJson} readOnly aria-label="Export theme JSON" />
+        <div className={styles['inlineActions']}>
+          <button className={styles['btn']} onClick={copyExportJson}>Copy JSON</button>
+          {copyState && <span className={styles['helperText']}>{copyState}</span>}
         </div>
       </div>
 
-      <div className={styles.ioSection}>
-        <strong className={styles.blockLabel}>Import theme JSON</strong>
-        <div className={styles.importMode}>
-          <label className={styles.radioLabel}>
+      <div className={styles['ioSection']}>
+        <strong className={styles['blockLabel']}>Import theme JSON</strong>
+        <div className={styles['importMode']}>
+          <label className={styles['radioLabel']}>
             <input
               type="radio"
               name="theme-import-mode"
@@ -394,7 +394,7 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
             />
             Merge into current theme
           </label>
-          <label className={styles.radioLabel}>
+          <label className={styles['radioLabel']}>
             <input
               type="radio"
               name="theme-import-mode"
@@ -405,15 +405,15 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
           </label>
         </div>
         <textarea
-          className={styles.textarea}
+          className={styles['textarea']}
           value={draftImport}
           onChange={(e) => setDraftImport(e.target.value)}
           aria-label="Import theme JSON"
           placeholder='{"colors":{"accent":"#00bcd4"}}'
         />
-        {importError && <div className={styles.importError} role="alert">{importError}</div>}
-        {importSuccess && <div className={styles.importSuccess} role="status">{importSuccess}</div>}
-        <button className={styles.btn} onClick={applyImport}>Apply imported JSON</button>
+        {importError && <div className={styles['importError']} role="alert">{importError}</div>}
+        {importSuccess && <div className={styles['importSuccess']} role="status">{importSuccess}</div>}
+        <button className={styles['btn']} onClick={applyImport}>Apply imported JSON</button>
       </div>
     </div>
   );

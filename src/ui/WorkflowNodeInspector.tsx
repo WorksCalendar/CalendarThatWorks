@@ -60,12 +60,12 @@ export function WorkflowNodeInspector(
   const { node, onChange, parallelNodeIds } = props
   return (
     <section
-      className={styles.panel}
+      className={styles['panel']}
       aria-label={`Inspector for ${node.type} node ${node.id}`}
     >
-      <header className={styles.header}>
-        <span className={styles.headerTitle}>{node.type}</span>
-        <span className={styles.headerKind}>#{node.id}</span>
+      <header className={styles['header']}>
+        <span className={styles['headerTitle']}>{node.type}</span>
+        <span className={styles['headerKind']}>#{node.id}</span>
       </header>
 
       <CommonFields node={node} onChange={onChange} />
@@ -109,23 +109,23 @@ function CommonFields({
 }): JSX.Element {
   return (
     <>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-id">Node ID</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-id">Node ID</label>
         <input
           id="wc-node-id"
-          className={styles.input}
+          className={styles['input']}
           value={node.id}
           disabled
           readOnly
         />
-        <span className={styles.hint}>IDs are fixed after creation.</span>
+        <span className={styles['hint']}>IDs are fixed after creation.</span>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-label">Label</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-label">Label</label>
         <input
           id="wc-node-label"
-          className={styles.input}
+          className={styles['input']}
           value={node.label ?? ''}
           placeholder="Shown on the canvas"
           onChange={e => onChange({ label: e.target.value } as Partial<WorkflowNode>)}
@@ -184,11 +184,11 @@ function ConditionFields({
   }
 
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor="wc-node-expr">Expression</label>
+    <div className={styles['field']}>
+      <label className={styles['label']} htmlFor="wc-node-expr">Expression</label>
       <textarea
         id="wc-node-expr"
-        className={[styles.textarea, error ? styles.errorInput : ''].filter(Boolean).join(' ')}
+        className={[styles['textarea'], error ? styles['errorInput'] : ''].filter(Boolean).join(' ')}
         value={draftExpr}
         onChange={e => handleChange(e.target.value)}
         aria-invalid={error ? 'true' : 'false'}
@@ -196,7 +196,7 @@ function ConditionFields({
         rows={3}
         spellCheck={false}
       />
-      <span id="wc-node-expr-hint" className={error ? styles.error : styles.hint}>
+      <span id="wc-node-expr-hint" className={error ? styles['error'] : styles['hint']}>
         {error ?? 'Evaluated against action variables — e.g. event.cost > 500'}
       </span>
     </div>
@@ -212,22 +212,22 @@ function ApprovalFields({
 }): JSX.Element {
   return (
     <>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-assignTo">Assign to</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-assignTo">Assign to</label>
         <input
           id="wc-node-assignTo"
-          className={styles.input}
+          className={styles['input']}
           value={node.assignTo}
           placeholder="role:director, user:alice, …"
           onChange={e => onChange({ assignTo: e.target.value })}
         />
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-sla">SLA minutes (optional)</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-sla">SLA minutes (optional)</label>
         <input
           id="wc-node-sla"
-          className={styles.input}
+          className={styles['input']}
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
@@ -242,17 +242,17 @@ function ApprovalFields({
             }
           }}
         />
-        <span className={styles.hint}>
+        <span className={styles['hint']}>
           When elapsed, the interpreter fires a timeout action using the
           behavior below. Add a <code>timeout</code> edge for escalate.
         </span>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-onTimeout">On timeout</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-onTimeout">On timeout</label>
         <select
           id="wc-node-onTimeout"
-          className={styles.select}
+          className={styles['select']}
           value={node.onTimeout ?? ''}
           onChange={e => {
             const v = e.target.value as TimeoutBehavior | ''
@@ -276,22 +276,22 @@ function NotifyFields({
 }): JSX.Element {
   return (
     <>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-channel">Channel</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-channel">Channel</label>
         <input
           id="wc-node-channel"
-          className={styles.input}
+          className={styles['input']}
           value={node.channel}
           placeholder="slack, email, webhook, …"
           onChange={e => onChange({ channel: e.target.value })}
         />
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-template">Template (optional)</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-template">Template (optional)</label>
         <input
           id="wc-node-template"
-          className={styles.input}
+          className={styles['input']}
           value={node.template ?? ''}
           onChange={e => onChange({ template: e.target.value || undefined })}
         />
@@ -308,11 +308,11 @@ function TerminalFields({
   onChange: (patch: Partial<WorkflowTerminalNode>) => void
 }): JSX.Element {
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor="wc-node-outcome">Outcome</label>
+    <div className={styles['field']}>
+      <label className={styles['label']} htmlFor="wc-node-outcome">Outcome</label>
       <select
         id="wc-node-outcome"
-        className={styles.select}
+        className={styles['select']}
         value={node.outcome}
         onChange={e => onChange({ outcome: e.target.value as WorkflowOutcome })}
       >
@@ -331,11 +331,11 @@ function ParallelFields({
 }): JSX.Element {
   return (
     <>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-node-mode">Mode</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-node-mode">Mode</label>
         <select
           id="wc-node-mode"
-          className={styles.select}
+          className={styles['select']}
           value={node.mode}
           onChange={e => {
             const mode = e.target.value as ParallelMode
@@ -349,11 +349,11 @@ function ParallelFields({
       </div>
 
       {node.mode === 'requireN' && (
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="wc-node-n">N (required approvals)</label>
+        <div className={styles['field']}>
+          <label className={styles['label']} htmlFor="wc-node-n">N (required approvals)</label>
           <input
             id="wc-node-n"
-            className={styles.input}
+            className={styles['input']}
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
@@ -368,22 +368,22 @@ function ParallelFields({
               }
             }}
           />
-          <span className={styles.hint}>
+          <span className={styles['hint']}>
             Must be between 1 and the number of branches.
           </span>
         </div>
       )}
 
-      <div className={styles.field}>
-        <label className={styles.label}>Branches</label>
-        <ul className={styles.list} data-testid="wc-parallel-branches">
+      <div className={styles['field']}>
+        <label className={styles['label']}>Branches</label>
+        <ul className={styles['list']} data-testid="wc-parallel-branches">
           {node.branches.length === 0
-            ? <li className={styles.hint}>No branches yet.</li>
+            ? <li className={styles['hint']}>No branches yet.</li>
             : node.branches.map(b => (
-              <li key={b} className={styles.listItem}>{b}</li>
+              <li key={b} className={styles['listItem']}>{b}</li>
             ))}
         </ul>
-        <span className={styles.hint}>
+        <span className={styles['hint']}>
           Branches are authored by picking entry nodes on the canvas.
         </span>
       </div>
@@ -402,12 +402,12 @@ function JoinFields({
 }): JSX.Element {
   const useDropdown = parallelNodeIds !== undefined
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor="wc-node-paired">Paired parallel</label>
+    <div className={styles['field']}>
+      <label className={styles['label']} htmlFor="wc-node-paired">Paired parallel</label>
       {useDropdown ? (
         <select
           id="wc-node-paired"
-          className={styles.select}
+          className={styles['select']}
           value={node.pairedWith}
           onChange={e => onChange({ pairedWith: e.target.value })}
         >
@@ -422,12 +422,12 @@ function JoinFields({
       ) : (
         <input
           id="wc-node-paired"
-          className={styles.input}
+          className={styles['input']}
           value={node.pairedWith}
           onChange={e => onChange({ pairedWith: e.target.value })}
         />
       )}
-      <span className={styles.hint}>
+      <span className={styles['hint']}>
         Join releases once the paired parallel's quorum is met.
       </span>
     </div>

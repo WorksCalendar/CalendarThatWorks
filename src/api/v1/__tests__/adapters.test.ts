@@ -571,6 +571,6 @@ describe('serializeToICS', () => {
       rangeEnd:   new Date('2027-01-01'),
     });
     expect(reparsed.length).toBe(1);
-    expect(reparsed[0]!.title).toBe('Round-trip');
+    expect(reparsed[0]!['title']).toBe('Round-trip');
   });
 });

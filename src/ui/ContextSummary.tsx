@@ -25,14 +25,14 @@ export default function ContextSummary({
 
   return (
     <div
-      className={styles.bar}
+      className={styles['bar']}
       aria-live="polite"
       aria-label="Current calendar context"
     >
       <Segment label="View" value={viewText} />
-      <span className={styles.dot} aria-hidden="true">·</span>
+      <span className={styles['dot']} aria-hidden="true">·</span>
       <Segment label="Focus" value={focusText} />
-      <span className={styles.dot} aria-hidden="true">·</span>
+      <span className={styles['dot']} aria-hidden="true">·</span>
       <Segment label="Scope" value={scope} />
     </div>
   );
@@ -40,9 +40,9 @@ export default function ContextSummary({
 
 function Segment({ label, value }: { label: string; value: string }) {
   return (
-    <span className={styles.segment}>
-      <span className={styles.key}>{label}</span>
-      <span className={styles.value}>{value}</span>
+    <span className={styles['segment']}>
+      <span className={styles['key']}>{label}</span>
+      <span className={styles['value']}>{value}</span>
     </span>
   );
 }

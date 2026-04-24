@@ -151,9 +151,9 @@ function assignLanes(events: LooseEvent[], monthStart: Date, monthEnd: Date) {
 // (events created by ScheduleEditorForm or mirrored coverage).  Used so the
 // shift-status pills render for user-created shifts, not just seeded ones.
 function isShiftOrOnCallLikeEvent(ev: LooseEvent, onCallCategory: string) {
-  const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
+  const kind = normalizeScheduleKind(ev?.meta?.['kind'] ?? ev?.['kind']);
   return ev?.category === onCallCategory
-    || ev?.meta?.onCall === true
+    || ev?.meta?.['onCall'] === true
     || kind === SCHEDULE_KINDS.SHIFT
     || kind === SCHEDULE_KINDS.ON_CALL;
 }
@@ -340,15 +340,15 @@ export default function TimelineView({
     if (useEmployees) {
       events.forEach(ev => {
         if (!isShiftOrOnCallLikeEvent(ev, onCallCategory)) return;
-        if (!ev.meta?.shiftStatus || !ev.meta?.coveredBy) return;
-        const coverId = String(ev.meta.coveredBy);
+        if (!ev.meta?.['shiftStatus'] || !ev.meta?.['coveredBy']) return;
+        const coverId = String(ev.meta['coveredBy']);
         if (!coveringMap.has(coverId)) coveringMap.set(coverId, []);
         const origEmp = displayEmployees.find(e => String(e.id) === String(ev.resource ?? ''));
         // Clamp to the PTO request window (meta.requestStart/End) so the
         // "covering for" pill only spans the days actually needing coverage,
         // not the entire underlying shift.
-        const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
-        const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
+        const reqStart = ev.meta?.['requestStart'] ? new Date(ev.meta['requestStart']) : ev.start;
+        const reqEnd   = ev.meta?.['requestEnd']   ? new Date(ev.meta['requestEnd'])   : ev.end;
         const clampedStart = max([startOfDay(reqStart), monthStart]);
         const clampedEnd   = min([startOfDay(reqEnd),   monthEnd]);
         if (clampedStart > clampedEnd) return;
@@ -370,7 +370,7 @@ export default function TimelineView({
 
         const coveringPills  = coveringMap.get(String(emp.id)) ?? [];
         const hasStatusPills = laned.some(ev =>
-          isShiftOrOnCallLikeEvent(ev, onCallCategory) && !!ev.meta?.shiftStatus
+          isShiftOrOnCallLikeEvent(ev, onCallCategory) && !!ev.meta?.['shiftStatus']
         );
 
         const baseH = Math.max(
@@ -561,7 +561,7 @@ export default function TimelineView({
       case ' ': {
         e.preventDefault();
         // Activate the first event whose day range includes di
-        const hit = cellRowEvents.find(ev => ev._dayStart <= di && ev._dayEnd >= di);
+        const hit = cellRowEvents.find(ev => ev['_dayStart'] <= di && ev['_dayEnd'] >= di);
         if (hit) {
           onEventClick?.(hit);
         } else {
@@ -596,7 +596,7 @@ export default function TimelineView({
   if (rows.length === 0 && !filterTrappedEmpty) {
     if (ctx?.emptyState) return <>{ctx.emptyState}</>;
     return (
-      <div className={styles.empty}>
+      <div className={styles['empty']}>
         <p>No {useEmployees ? 'employees' : 'events'} to display in {format(currentDate, 'MMMM yyyy')}.</p>
       </div>
     );
@@ -609,9 +609,9 @@ export default function TimelineView({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className={styles.wrap} ref={wrapRef}>
+    <div className={styles['wrap']} ref={wrapRef}>
       <div
-        className={styles.inner}
+        className={styles['inner']}
         style={{ width: NAME_W + totalDays * DAY_W }}
         role="grid"
         aria-label={`Timeline for ${format(currentDate, 'MMMM yyyy')}`}
@@ -621,9 +621,9 @@ export default function TimelineView({
       >
 
         {/* ── Sticky header ── */}
-        <div className={styles.headerRow} role="row" aria-rowindex={1}>
+        <div className={styles['headerRow']} role="row" aria-rowindex={1}>
           <div
-            className={styles.cornerCell}
+            className={styles['cornerCell']}
             style={{ width: NAME_W, minWidth: NAME_W, position: 'relative' }}
             role="columnheader"
             aria-label={format(currentDate, 'MMMM yyyy')}
@@ -631,7 +631,7 @@ export default function TimelineView({
             {format(currentDate, 'MMMM yyyy')}
             {onEmployeeAdd && (
               <button
-                className={styles.addPersonBtn}
+                className={styles['addPersonBtn']}
                 onClick={() => setAddFormOpen(v => !v)}
                 title="Add person"
                 aria-label="Add person"
@@ -639,10 +639,10 @@ export default function TimelineView({
             )}
             {/* Add-person form dropdown */}
             {addFormOpen && (
-              <div className={styles.addPersonForm} role="dialog" aria-label="Add person">
+              <div className={styles['addPersonForm']} role="dialog" aria-label="Add person">
                 <input
                   ref={nameInputRef}
-                  className={styles.addPersonInput}
+                  className={styles['addPersonInput']}
                   placeholder="Name"
                   value={addName}
                   onChange={e => setAddName(e.target.value)}
@@ -650,7 +650,7 @@ export default function TimelineView({
                 />
                 {roles.length > 0 ? (
                   <select
-                    className={styles.addPersonInput}
+                    className={styles['addPersonInput']}
                     value={addRole}
                     onChange={e => setAddRole(e.target.value)}
                   >
@@ -659,7 +659,7 @@ export default function TimelineView({
                   </select>
                 ) : (
                   <input
-                    className={styles.addPersonInput}
+                    className={styles['addPersonInput']}
                     placeholder="Role"
                     value={addRole}
                     onChange={e => setAddRole(e.target.value)}
@@ -668,7 +668,7 @@ export default function TimelineView({
                 )}
                 {bases.length > 0 && (
                   <select
-                    className={styles.addPersonInput}
+                    className={styles['addPersonInput']}
                     value={addBase}
                     onChange={e => setAddBase(e.target.value)}
                   >
@@ -676,14 +676,14 @@ export default function TimelineView({
                     {bases.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 )}
-                <div className={styles.addPersonActions}>
-                  <button className={styles.addPersonSave} onClick={submitAddForm}>Add</button>
-                  <button className={styles.addPersonCancel} onClick={() => setAddFormOpen(false)}>Cancel</button>
+                <div className={styles['addPersonActions']}>
+                  <button className={styles['addPersonSave']} onClick={submitAddForm}>Add</button>
+                  <button className={styles['addPersonCancel']} onClick={() => setAddFormOpen(false)}>Cancel</button>
                 </div>
               </div>
             )}
           </div>
-          <div className={styles.dayHeads} role="presentation">
+          <div className={styles['dayHeads']} role="presentation">
             {days.map((day, di) => (
               <div
                 key={format(day, 'yyyy-MM-dd')}
@@ -691,14 +691,14 @@ export default function TimelineView({
                 aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
                 aria-colindex={di + 2}
                 className={[
-                  styles.dayHead,
-                  isToday(day)   && styles.todayHead,
-                  isWeekend(day) && styles.weekendHead,
+                  styles['dayHead'],
+                  isToday(day)   && styles['todayHead'],
+                  isWeekend(day) && styles['weekendHead'],
                 ].filter(Boolean).join(' ')}
                 style={{ width: DAY_W, minWidth: DAY_W }}
               >
-                <span className={styles.dayNum} aria-hidden="true">{format(day, 'd')}</span>
-                <span className={styles.dayAbbr} aria-hidden="true">{format(day, 'EEE')}</span>
+                <span className={styles['dayNum']} aria-hidden="true">{format(day, 'd')}</span>
+                <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
               </div>
             ))}
           </div>
@@ -706,15 +706,15 @@ export default function TimelineView({
 
         {/* ── Base filter bar ── */}
         {bases.length > 0 && (
-          <div className={styles.baseFilterBar} role="toolbar" aria-label="Filter by base">
+          <div className={styles['baseFilterBar']} role="toolbar" aria-label="Filter by base">
             <button
-              className={[styles.baseFilterBtn, !baseFilter && styles.baseFilterActive].filter(Boolean).join(' ')}
+              className={[styles['baseFilterBtn'], !baseFilter && styles['baseFilterActive']].filter(Boolean).join(' ')}
               onClick={() => setBaseFilter('')}
             >All</button>
             {bases.map(b => (
               <button
                 key={b.id}
-                className={[styles.baseFilterBtn, baseFilter === b.id && styles.baseFilterActive].filter(Boolean).join(' ')}
+                className={[styles['baseFilterBtn'], baseFilter === b.id && styles['baseFilterActive']].filter(Boolean).join(' ')}
                 onClick={() => setBaseFilter(prev => prev === b.id ? '' : b.id)}
               >{b.name}</button>
             ))}
@@ -722,11 +722,11 @@ export default function TimelineView({
         )}
 
         {filterTrappedEmpty && (
-          <div className={styles.filterEmptyState} role="status" aria-live="polite">
+          <div className={styles['filterEmptyState']} role="status" aria-live="polite">
             <p>No employees assigned to <strong>{activeBaseName}</strong>.</p>
             <button
               type="button"
-              className={styles.filterEmptyClear}
+              className={styles['filterEmptyClear']}
               onClick={() => setBaseFilter('')}
             >Show all bases</button>
           </div>
@@ -734,7 +734,7 @@ export default function TimelineView({
 
         {/* ── Body (virtualized rows) ── */}
         <div
-          className={styles.body}
+          className={styles['body']}
           role="presentation"
           style={{ position: 'relative', height: totalBodyH }}
         >
@@ -749,24 +749,24 @@ export default function TimelineView({
               return (
                 <div
                   key={`gh-${rowData.groupKey}`}
-                  className={styles.groupHeaderRow}
+                  className={styles['groupHeaderRow']}
                   style={{ position: 'absolute', top: topOffset, left: 0, right: 0, height: rowData.rowH }}
                   role="row"
                   aria-rowindex={rowIdx + 2}
                   aria-level={depth + 1}
                   data-depth={depth}
                 >
-                  <div className={styles.groupHeaderCell} style={{ width: NAME_W + totalDays * DAY_W }}>
+                  <div className={styles['groupHeaderCell']} style={{ width: NAME_W + totalDays * DAY_W }}>
                     <button
-                      className={styles.groupToggleBtn}
+                      className={styles['groupToggleBtn']}
                       style={{ paddingLeft: 8 + indent }}
                       onClick={() => toggleGroup(rowData.groupKey)}
                       aria-expanded={!rowData.collapsed}
                       aria-label={`${rowData.collapsed ? 'Expand' : 'Collapse'} group ${rowData.groupLabel}`}
                     >
-                      <span className={styles.groupChevron} data-collapsed={rowData.collapsed || undefined}>&#9656;</span>
-                      <span className={styles.groupLabel}>{rowData.groupLabel}</span>
-                      <span className={styles.groupCount}>{rowData.count}</span>
+                      <span className={styles['groupChevron']} data-collapsed={rowData.collapsed || undefined}>&#9656;</span>
+                      <span className={styles['groupLabel']}>{rowData.groupLabel}</span>
+                      <span className={styles['groupCount']}>{rowData.count}</span>
                     </button>
                   </div>
                 </div>
@@ -783,7 +783,7 @@ export default function TimelineView({
             // and the drop handler.
             const rowDndEnabled = !!onEventGroupChange;
             const isDropTarget  = rowDndEnabled && dropTargetKey === key;
-            const rowClassName  = [styles.row, isDropTarget && styles.dropTarget].filter(Boolean).join(' ');
+            const rowClassName  = [styles['row'], isDropTarget && styles['dropTarget']].filter(Boolean).join(' ');
 
             const onRowDragOver = rowDndEnabled
               ? (e: ReactDragEvent<HTMLDivElement>) => {
@@ -833,7 +833,7 @@ export default function TimelineView({
               >
                 {/* Sticky name / employee cell — row header */}
                 <div
-                  className={styles.nameCell}
+                  className={styles['nameCell']}
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
                   role="rowheader"
                   aria-label={label}
@@ -843,10 +843,10 @@ export default function TimelineView({
                     <>
                       {onEmployeeAction ? (
                         <button
-                          className={styles.empEntryBtn}
+                          className={styles['empEntryBtn']}
                           onClick={e => {
                             e.stopPropagation();
-                            const rect = e.currentTarget.closest(`.${styles.nameCell}`)?.getBoundingClientRect()
+                            const rect = e.currentTarget.closest(`.${styles['nameCell']}`)?.getBoundingClientRect()
                               ?? e.currentTarget.getBoundingClientRect();
                             setEmpCard({ emp, rect });
                           }}
@@ -855,49 +855,49 @@ export default function TimelineView({
                           aria-haspopup="dialog"
                         >
                           <div
-                            className={styles.empAvatar}
+                            className={styles['empAvatar']}
                             style={{ background: color }}
                             aria-hidden="true"
                           >
                             {emp.avatar
-                              ? <img src={emp.avatar} alt="" className={styles.empAvatarImg} />
+                              ? <img src={emp.avatar} alt="" className={styles['empAvatarImg']} />
                               : getInitials(emp.name)
                             }
                           </div>
-                          <span className={styles.nameInfo}>
-                            <span className={styles.empName}>{emp.name}</span>
-                            {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                          <span className={styles['nameInfo']}>
+                            <span className={styles['empName']}>{emp.name}</span>
+                            {emp.role && <span className={styles['empRole']}>{emp.role}</span>}
                             {emp.base && !baseFilter && (() => {
                               const b = bases.find(x => x.id === emp.base);
-                              return b ? <span className={styles.empBase}>{b.name}</span> : null;
+                              return b ? <span className={styles['empBase']}>{b.name}</span> : null;
                             })()}
                           </span>
                         </button>
                       ) : (
                         <>
                           <div
-                            className={styles.empAvatar}
+                            className={styles['empAvatar']}
                             style={{ background: color }}
                             aria-hidden="true"
                           >
                             {emp.avatar
-                              ? <img src={emp.avatar} alt="" className={styles.empAvatarImg} />
+                              ? <img src={emp.avatar} alt="" className={styles['empAvatarImg']} />
                               : getInitials(emp.name)
                             }
                           </div>
-                          <div className={styles.nameInfo}>
-                            <span className={styles.empName}>{emp.name}</span>
-                            {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                          <div className={styles['nameInfo']}>
+                            <span className={styles['empName']}>{emp.name}</span>
+                            {emp.role && <span className={styles['empRole']}>{emp.role}</span>}
                             {emp.base && !baseFilter && (() => {
                               const b = bases.find(x => x.id === emp.base);
-                              return b ? <span className={styles.empBase}>{b.name}</span> : null;
+                              return b ? <span className={styles['empBase']}>{b.name}</span> : null;
                             })()}
                           </div>
                         </>
                       )}
                       {onEmployeeDelete && (
                         <button
-                          className={styles.removeEmpBtn}
+                          className={styles['removeEmpBtn']}
                           onClick={e => { e.stopPropagation(); onEmployeeDelete(emp.id); }}
                           title={`Secondary action: remove ${emp.name}`}
                           aria-label={`Remove ${emp.name}`}
@@ -905,13 +905,13 @@ export default function TimelineView({
                       )}
                     </>
                   ) : (
-                    <span className={styles.resourceName}>{label}</span>
+                    <span className={styles['resourceName']}>{label}</span>
                   )}
                 </div>
 
                 {/* Event zone — contains day background bands + keyboard cells + event bars */}
                 <div
-                  className={styles.eventZone}
+                  className={styles['eventZone']}
                   style={{ width: totalDays * DAY_W, height: rowH, position: 'relative' }}
                   role="presentation"
                 >
@@ -920,9 +920,9 @@ export default function TimelineView({
                     <div
                       key={di}
                       className={[
-                        styles.dayCol,
-                        isToday(day)   && styles.todayCol,
-                        isWeekend(day) && styles.weekendCol,
+                        styles['dayCol'],
+                        isToday(day)   && styles['todayCol'],
+                        isWeekend(day) && styles['weekendCol'],
                       ].filter(Boolean).join(' ')}
                       style={{ left: di * DAY_W, width: DAY_W, height: rowH }}
                     />
@@ -932,7 +932,7 @@ export default function TimelineView({
                   {days.map((day, di) => {
                     const isFocused    = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
                     const resourceId   = emp ? emp.id : resource;
-                    const cellHasEvent = rowEvents.some((ev: LooseEvent) => ev._dayStart <= di && ev._dayEnd >= di);
+                    const cellHasEvent = rowEvents.some((ev: LooseEvent) => ev['_dayStart'] <= di && ev['_dayEnd'] >= di);
                     return (
                       <div
                         key={`kbcell-${di}`}
@@ -942,7 +942,7 @@ export default function TimelineView({
                         aria-label={`${label}, ${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}${cellHasEvent ? '' : ', empty — click to create'}`}
                         aria-rowindex={rowIdx + 2}
                         aria-colindex={di + 2}
-                        className={styles.kbCell}
+                        className={styles['kbCell']}
                         style={{ left: di * DAY_W, width: DAY_W, top: 0, height: rowH }}
                         onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents, resourceId)}
                         onClick={() => {
@@ -957,18 +957,18 @@ export default function TimelineView({
 
                   {/* Event bars */}
                   {rowEvents.map((ev: LooseEvent) => {
-                    const isOnCall = ev.category === onCallCategory || ev.meta?.onCall === true;
+                    const isOnCall = ev.category === onCallCategory || ev.meta?.['onCall'] === true;
                     const evColor  = isOnCall
                       ? (color ?? resolveColor(ev as any, ctx?.colorRules))
                       : resolveColor(ev as any, ctx?.colorRules);
 
-                    const left    = ev._dayStart * DAY_W + 2;
-                    const width   = Math.max(DAY_W - 4, (ev._dayEnd - ev._dayStart + 1) * DAY_W - 4);
-                    const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
+                    const left    = ev['_dayStart'] * DAY_W + 2;
+                    const width   = Math.max(DAY_W - 4, (ev['_dayEnd'] - ev['_dayStart'] + 1) * DAY_W - 4);
+                    const top     = ROW_PAD + ev['_lane'] * (LANE_H + LANE_GAP);
                     const onClick = () => onEventClick?.(ev);
 
-                    const statusClass = ev.status === 'cancelled' ? styles.cancelled
-                      : ev.status === 'tentative' ? styles.tentative : '';
+                    const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+                      : ev.status === 'tentative' ? styles['tentative'] : '';
                     const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
 
                     // Event-level DnD: each event button is a drag source when
@@ -999,7 +999,7 @@ export default function TimelineView({
                         return (
                           <div
                             key={ev.id}
-                            className={[styles.event, isOnCall && styles.onCall, statusClass].filter(Boolean).join(' ')}
+                            className={[styles['event'], isOnCall && styles['onCall'], statusClass].filter(Boolean).join(' ')}
                             style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
                             role="button" tabIndex={0} aria-label={ariaLabel}
                             draggable={evDndEnabled || undefined}
@@ -1017,15 +1017,15 @@ export default function TimelineView({
 
                     // On-call events: wrapper div so we can nest the status-toggle button
                     if (isOnCall && onShiftStatusChange) {
-                      const hasStatus = !!ev.meta?.shiftStatus;
+                      const hasStatus = !!ev.meta?.['shiftStatus'];
                       return (
                         <div
                           key={ev.id}
-                          className={[styles.eventWrap, styles.onCall, statusClass].filter(Boolean).join(' ')}
+                          className={[styles['eventWrap'], styles['onCall'], statusClass].filter(Boolean).join(' ')}
                           style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
                         >
                           <button
-                            className={[styles.event, styles.eventFill, styles.onCall, statusClass].filter(Boolean).join(' ')}
+                            className={[styles['event'], styles['eventFill'], styles['onCall'], statusClass].filter(Boolean).join(' ')}
                             style={{ '--ev-color': evColor }}
                             draggable={evDndEnabled || undefined}
                             onDragStart={onEvDragStart}
@@ -1034,16 +1034,16 @@ export default function TimelineView({
                             onClick={onClick}
                             aria-label={ariaLabel}
                           >
-                            <span className={styles.onCallIcon} aria-hidden="true">🌙</span>
-                            <span className={styles.evTitle}>{ev.title}</span>
+                            <span className={styles['onCallIcon']} aria-hidden="true">🌙</span>
+                            <span className={styles['evTitle']}>{ev.title}</span>
                             {hasStatus && (
-                              <span className={styles.shiftStatusBadge}>
-                                {ev.meta?.shiftStatus === 'pto' ? 'PTO' : 'Unavail.'}
+                              <span className={styles['shiftStatusBadge']}>
+                                {ev.meta?.['shiftStatus'] === 'pto' ? 'PTO' : 'Unavail.'}
                               </span>
                             )}
                           </button>
                           <button
-                            className={[styles.shiftStatusBtn, hasStatus && styles.hasStatus].filter(Boolean).join(' ')}
+                            className={[styles['shiftStatusBtn'], hasStatus && styles['hasStatus']].filter(Boolean).join(' ')}
                             onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
                               const rect = e.currentTarget.getBoundingClientRect();
@@ -1062,7 +1062,7 @@ export default function TimelineView({
                     return (
                       <button
                         key={ev.id}
-                        className={[styles.event, isOnCall && styles.onCall, statusClass].filter(Boolean).join(' ')}
+                        className={[styles['event'], isOnCall && styles['onCall'], statusClass].filter(Boolean).join(' ')}
                         style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
                         draggable={evDndEnabled || undefined}
                         onDragStart={onEvDragStart}
@@ -1072,12 +1072,12 @@ export default function TimelineView({
                         aria-label={ariaLabel}
                       >
                         {isOnCall
-                          ? <span className={styles.onCallIcon} aria-hidden="true">🌙</span>
-                          : <span className={styles.evDot} aria-hidden="true" />
+                          ? <span className={styles['onCallIcon']} aria-hidden="true">🌙</span>
+                          : <span className={styles['evDot']} aria-hidden="true" />
                         }
-                        <span className={styles.evTitle}>{ev.title}</span>
-                        {!isOnCall && (ev._dayEnd - ev._dayStart + 1) >= 3 && ev.category && (
-                          <span className={styles.evCat} aria-hidden="true">{ev.category}</span>
+                        <span className={styles['evTitle']}>{ev.title}</span>
+                        {!isOnCall && (ev['_dayEnd'] - ev['_dayStart'] + 1) >= 3 && ev.category && (
+                          <span className={styles['evCat']} aria-hidden="true">{ev.category}</span>
                         )}
                       </button>
                     );
@@ -1085,10 +1085,10 @@ export default function TimelineView({
 
                   {/* ── Shift coverage status pills (below event lanes) ── */}
                   {rowEvents
-                    .filter((ev: LooseEvent) => isShiftOrOnCallLikeEvent(ev, onCallCategory) && ev.meta?.shiftStatus)
+                    .filter((ev: LooseEvent) => isShiftOrOnCallLikeEvent(ev, onCallCategory) && ev.meta?.['shiftStatus'])
                     .map((ev: LooseEvent) => {
-                      const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
-                      const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
+                      const reqStart = ev.meta?.['requestStart'] ? new Date(ev.meta['requestStart']) : ev.start;
+                      const reqEnd   = ev.meta?.['requestEnd']   ? new Date(ev.meta['requestEnd'])   : ev.end;
                       // Use startOfDay (matches assignLanes) so this pill spans the same
                       // day range as the PTO/unavailable event pill it mirrors.
                       const pillDayStart = differenceInCalendarDays(max([startOfDay(reqStart), monthStart]), monthStart);
@@ -1096,9 +1096,9 @@ export default function TimelineView({
                       const left  = pillDayStart * DAY_W + 2;
                       const width = Math.max(DAY_W - 4, (pillDayEnd - pillDayStart + 1) * DAY_W - 4);
                       const top   = baseH + 3;
-                      const isCovered = !!ev.meta?.coveredBy;
+                      const isCovered = !!ev.meta?.['coveredBy'];
                       const coveredByEmp = isCovered
-                        ? employees.find(e => String(e.id) === String(ev.meta?.coveredBy))
+                        ? employees.find(e => String(e.id) === String(ev.meta?.['coveredBy']))
                         : null;
                       const coveredByName = coveredByEmp?.name ?? 'Someone';
 
@@ -1106,7 +1106,7 @@ export default function TimelineView({
                         return (
                           <button
                             key={`sp-${ev.id}`}
-                            className={[styles.coveragePill, styles.coveragePillCovered].join(' ')}
+                            className={[styles['coveragePill'], styles['coveragePillCovered']].join(' ')}
                             style={{ left, top, width, height: COVERAGE_PILL_H }}
                             onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
@@ -1123,7 +1123,7 @@ export default function TimelineView({
                       return (
                         <button
                           key={`sp-${ev.id}`}
-                          className={[styles.coveragePill, styles.coveragePillUncovered].join(' ')}
+                          className={[styles['coveragePill'], styles['coveragePillUncovered']].join(' ')}
                           style={{ left, top, width, height: COVERAGE_PILL_H }}
                           onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
@@ -1147,7 +1147,7 @@ export default function TimelineView({
                     return (
                       <div
                         key={`cf-${covEv.id}`}
-                        className={[styles.coveragePill, styles.coveragePillCovering].join(' ')}
+                        className={[styles['coveragePill'], styles['coveragePillCovering']].join(' ')}
                         style={{ left, top, width, height: COVERAGE_PILL_H }}
                         title={`On call (covering for ${origEmpName})`}
                       >
@@ -1165,14 +1165,14 @@ export default function TimelineView({
       {shiftMenu && (
         <div
           ref={shiftMenuRef}
-          className={styles.shiftMenu}
+          className={styles['shiftMenu']}
           style={{ top: shiftMenu.rect.bottom + 4, left: shiftMenu.rect.left }}
         >
           <button
-            className={styles.shiftMenuItem}
+            className={styles['shiftMenuItem']}
             onClick={() => {
               const handled = triggerEmployeeAction(
-                shiftMenu.ev.resource ?? shiftMenu.ev.employeeId,
+                shiftMenu.ev.resource ?? shiftMenu.ev['employeeId'],
                 'pto',
                 { source: 'shift-quick-action', sourceShift: shiftMenu.ev },
               );
@@ -1183,10 +1183,10 @@ export default function TimelineView({
             Shift-only shortcut: Mark PTO
           </button>
           <button
-            className={styles.shiftMenuItem}
+            className={styles['shiftMenuItem']}
             onClick={() => {
               const handled = triggerEmployeeAction(
-                shiftMenu.ev.resource ?? shiftMenu.ev.employeeId,
+                shiftMenu.ev.resource ?? shiftMenu.ev['employeeId'],
                 'unavailable',
                 { source: 'shift-quick-action', sourceShift: shiftMenu.ev },
               );
@@ -1196,10 +1196,10 @@ export default function TimelineView({
           >
             Shift-only shortcut: Mark Unavailable
           </button>
-          {shiftMenu.ev.meta?.shiftStatus && (
+          {shiftMenu.ev.meta?.['shiftStatus'] && (
             <>
-              <div className={styles.shiftMenuDivider} />
-              <button className={[styles.shiftMenuItem, styles.shiftMenuItemClear].join(' ')} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, null); setShiftMenu(null); }}>
+              <div className={styles['shiftMenuDivider']} />
+              <button className={[styles['shiftMenuItem'], styles['shiftMenuItemClear']].join(' ')} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, null); setShiftMenu(null); }}>
                 ✕ Clear Status
               </button>
             </>
@@ -1211,38 +1211,38 @@ export default function TimelineView({
       {coverMenu && (
         <div
           ref={coverMenuRef}
-          className={styles.coverPopover}
+          className={styles['coverPopover']}
           style={{ top: coverMenu.rect.bottom + 4, left: coverMenu.rect.left }}
         >
-          <p className={styles.coverPopoverTitle}>
-            {coverMenu.ev?.meta?.coveredBy ? 'Edit shift coverage' : 'Who will cover this shift?'}
+          <p className={styles['coverPopoverTitle']}>
+            {coverMenu.ev?.meta?.['coveredBy'] ? 'Edit shift coverage' : 'Who will cover this shift?'}
           </p>
-          {coverMenu.ev?.meta?.coveredBy && (
+          {coverMenu.ev?.meta?.['coveredBy'] && (
             <button
-              className={styles.coverEmpBtn}
+              className={styles['coverEmpBtn']}
               onClick={() => { onCoverageAssign?.(coverMenu.ev, null); setCoverMenu(null); }}
             >
               ✕ Remove coverage (mark shift as available)
             </button>
           )}
           {employees.filter(e => e.id !== (coverMenu.ev.resource ?? '')).length === 0 ? (
-            <p className={styles.coverPopoverEmpty}>No other employees available.</p>
+            <p className={styles['coverPopoverEmpty']}>No other employees available.</p>
           ) : (
             employees
               .filter(e => e.id !== (coverMenu.ev.resource ?? ''))
               .map((emp, idx) => (
                 <button
                   key={emp.id}
-                  className={styles.coverEmpBtn}
+                  className={styles['coverEmpBtn']}
                   onClick={() => { onCoverageAssign?.(coverMenu.ev, emp.id); setCoverMenu(null); }}
                 >
                   <span
-                    className={styles.coverEmpAvatar}
+                    className={styles['coverEmpAvatar']}
                     style={{ background: employeeColor(emp, idx) }}
                     aria-hidden="true"
                   >
                     {emp.avatar
-                      ? <img src={emp.avatar} alt="" className={styles.coverEmpAvatarImg} />
+                      ? <img src={emp.avatar} alt="" className={styles['coverEmpAvatarImg']} />
                       : getInitials(emp.name)
                     }
                   </span>

@@ -71,16 +71,16 @@ const STRATEGIES: readonly PoolStrategy[] = ['first-available', 'least-loaded', 
 function coerce(item: unknown): ResourcePool | null {
   if (!item || typeof item !== 'object') return null;
   const r = item as Record<string, unknown>;
-  if (typeof r.id !== 'string' || typeof r.name !== 'string') return null;
-  if (!Array.isArray(r.memberIds) || !r.memberIds.every(m => typeof m === 'string')) return null;
-  if (typeof r.strategy !== 'string' || !STRATEGIES.includes(r.strategy as PoolStrategy)) return null;
+  if (typeof r['id'] !== 'string' || typeof r['name'] !== 'string') return null;
+  if (!Array.isArray(r['memberIds']) || !r['memberIds'].every(m => typeof m === 'string')) return null;
+  if (typeof r['strategy'] !== 'string' || !STRATEGIES.includes(r['strategy'] as PoolStrategy)) return null;
   const out: ResourcePool = {
-    id:        r.id,
-    name:      r.name,
-    memberIds: r.memberIds as string[],
-    strategy:  r.strategy as PoolStrategy,
-    ...(typeof r.rrCursor === 'number'  ? { rrCursor: r.rrCursor } : {}),
-    ...(typeof r.disabled === 'boolean' ? { disabled: r.disabled } : {}),
+    id:        r['id'],
+    name:      r['name'],
+    memberIds: r['memberIds'] as string[],
+    strategy:  r['strategy'] as PoolStrategy,
+    ...(typeof r['rrCursor'] === 'number'  ? { rrCursor: r['rrCursor'] } : {}),
+    ...(typeof r['disabled'] === 'boolean' ? { disabled: r['disabled'] } : {}),
   };
   return out;
 }

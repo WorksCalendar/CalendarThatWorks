@@ -159,7 +159,7 @@ export default function FilterGroupSidebar({
     <>
       {/* Backdrop overlay */}
       <div
-        className={[styles.overlay, open && styles.open].filter(Boolean).join(' ')}
+        className={[styles['overlay'], open && styles['open']].filter(Boolean).join(' ')}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -167,19 +167,19 @@ export default function FilterGroupSidebar({
       {/* Sidebar panel */}
       <div
         ref={sidebarRef}
-        className={[styles.sidebar, open && styles.open].filter(Boolean).join(' ')}
+        className={[styles['sidebar'], open && styles['open']].filter(Boolean).join(' ')}
         role="complementary"
         aria-label="Filter and group sidebar"
         aria-hidden={!open}
       >
         {/* Header */}
-        <div className={styles.header}>
-          <h2 className={styles.headerTitle}>
+        <div className={styles['header']}>
+          <h2 className={styles['headerTitle']}>
             <SlidersHorizontal size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
             View Controls
           </h2>
           <button
-            className={styles.closeBtn}
+            className={styles['closeBtn']}
             onClick={onClose}
             aria-label="Close sidebar"
           >
@@ -188,9 +188,9 @@ export default function FilterGroupSidebar({
         </div>
 
         {/* Tab strip */}
-        <div className={styles.tabs} role="tablist" aria-label="Sidebar tabs">
+        <div className={styles['tabs']} role="tablist" aria-label="Sidebar tabs">
           <button
-            className={[styles.tab, activeTab === 'view' && styles.active].filter(Boolean).join(' ')}
+            className={[styles['tab'], activeTab === 'view' && styles['active']].filter(Boolean).join(' ')}
             onClick={() => setActiveTab('view')}
             role="tab"
             aria-selected={activeTab === 'view'}
@@ -199,11 +199,11 @@ export default function FilterGroupSidebar({
             <Layers size={14} />
             View
             {groupLevels.length > 0 && (
-              <span className={styles.badge}>{groupLevels.length}</span>
+              <span className={styles['badge']}>{groupLevels.length}</span>
             )}
           </button>
           <button
-            className={[styles.tab, activeTab === 'focus' && styles.active].filter(Boolean).join(' ')}
+            className={[styles['tab'], activeTab === 'focus' && styles['active']].filter(Boolean).join(' ')}
             onClick={() => setActiveTab('focus')}
             role="tab"
             aria-selected={activeTab === 'focus'}
@@ -212,11 +212,11 @@ export default function FilterGroupSidebar({
             <Filter size={14} />
             Focus
             {conditionBuilder.activeCount > 0 && (
-              <span className={styles.badge}>{conditionBuilder.activeCount}</span>
+              <span className={styles['badge']}>{conditionBuilder.activeCount}</span>
             )}
           </button>
           <button
-            className={[styles.tab, activeTab === 'saved' && styles.active].filter(Boolean).join(' ')}
+            className={[styles['tab'], activeTab === 'saved' && styles['active']].filter(Boolean).join(' ')}
             onClick={() => setActiveTab('saved')}
             role="tab"
             aria-selected={activeTab === 'saved'}
@@ -225,13 +225,13 @@ export default function FilterGroupSidebar({
             <Bookmark size={14} />
             Saved
             {views.length > 0 && (
-              <span className={styles.badge}>{views.length}</span>
+              <span className={styles['badge']}>{views.length}</span>
             )}
           </button>
         </div>
 
         {/* Tab content */}
-        <div className={styles.content}>
+        <div className={styles['content']}>
           {activeTab === 'view' && (
             <div id="sidebar-tab-view" role="tabpanel" aria-label="View">
               <ViewPanel
@@ -293,7 +293,7 @@ export function SidebarToggleButton({
   const totalActive = filterCount + groupCount;
   return (
     <button
-      className={[styles.toggleBtn, isOpen && styles.active].filter(Boolean).join(' ')}
+      className={[styles['toggleBtn'], isOpen && styles['active']].filter(Boolean).join(' ')}
       onClick={onClick}
       aria-label={isOpen ? 'Close view controls' : 'Open view controls'}
       aria-expanded={isOpen}
@@ -302,7 +302,7 @@ export function SidebarToggleButton({
       <SlidersHorizontal size={15} />
       <span>View Controls</span>
       {totalActive > 0 && (
-        <span className={styles.badge}>{totalActive}</span>
+        <span className={styles['badge']}>{totalActive}</span>
       )}
     </button>
   );

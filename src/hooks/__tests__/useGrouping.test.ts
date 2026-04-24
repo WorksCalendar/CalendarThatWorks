@@ -25,7 +25,7 @@ describe('useGrouping', () => {
     );
     expect(result.current.isGrouped).toBe(true);
     expect(result.current.groupOrder).toEqual(['Nurse', 'Doctor']);
-    const headers = result.current.flatRows.filter((r) => r._type === 'groupHeader');
+    const headers = result.current.flatRows.filter((r) => r['_type'] === 'groupHeader');
     expect(headers.length).toBe(2);
   });
 
@@ -35,7 +35,7 @@ describe('useGrouping', () => {
     );
     act(() => result.current.toggleGroup('Nurse'));
     expect(result.current.collapsedGroups.has('Nurse')).toBe(true);
-    const nurseMembers = result.current.flatRows.filter((r) => !r._type && r.emp?.role === 'Nurse');
+    const nurseMembers = result.current.flatRows.filter((r) => !r['_type'] && r['emp']?.role === 'Nurse');
     expect(nurseMembers.length).toBe(0);
   });
 

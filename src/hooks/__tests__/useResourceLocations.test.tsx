@@ -108,7 +108,7 @@ describe('useResourceLocations', () => {
 
     // Push a live update and assert it lands.
     act(() => {
-      updaters.A({ text: 'pushed', status: 'live', asOf: '2026-04-17T00:00:00Z' });
+      updaters['A']({ text: 'pushed', status: 'live', asOf: '2026-04-17T00:00:00Z' });
     });
     expect(result.current.get('A')?.text).toBe('pushed');
 

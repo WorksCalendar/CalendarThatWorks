@@ -508,36 +508,36 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── View / date / filter state ───────────────────────────────────────────
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
-  const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
-  const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
+  const weekStartDay = weekStartDayProp ?? ownerCfg.config?.['display']?.weekStartDay ?? 0;
+  const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.['customTheme']), [ownerCfg.config?.['customTheme']]);
   // The raw theme value (from props, owner config, or default). The new theme
   // system uses `family-mode` IDs (see src/styles/themes.ts); the CSS runtime
   // still matches the historical single-word selectors, so we resolve the
   // user-facing ID to a CSS selector via resolveCssTheme().
-  const rawTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'canvas-light';
+  const rawTheme = theme || ownerCfg.config?.['setup']?.preferredTheme || 'canvas-light';
   const effectiveTheme = resolveCssTheme(rawTheme);
   const themeId = normalizeTheme(rawTheme);
   const themeFamily = THEME_META[themeId].family;
   const themeMode   = THEME_META[themeId].mode;
-  const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
+  const calendarTitle = ownerCfg.config?.['title'] || 'My WorksCalendar';
   // Merge parent's employees prop with owner-config team.members so edits
   // made from the Settings → Employees tab (e.g. renaming a member) are
   // reflected live in the schedule, even when the parent's prop is stale.
   // Config entries take precedence for matching ids; parent-only entries
   // (not yet mirrored into config) are preserved.
   const configuredEmployees = useMemo(() => {
-    const configMembers = ownerCfg.config?.team?.members ?? [];
+    const configMembers = ownerCfg.config?.['team']?.members ?? [];
     const parentMembers = Array.isArray(employees) ? employees : [];
     if (configMembers.length === 0) return parentMembers;
     if (parentMembers.length === 0) return configMembers;
     const configById = new Map(configMembers.map((m: LooseValue) => [String(m.id), m]));
     const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
     return [...configMembers, ...parentOnly];
-  }, [employees, ownerCfg.config?.team?.members]);
+  }, [employees, ownerCfg.config?.['team']?.members]);
 
   // Resolve resource ids (e.g. "emp-sarah") to human-readable labels
   // (e.g. "Sarah Chen") using merged employees + assets directory.
-  const effectiveAssets = assets ?? ownerCfg.config?.assets;
+  const effectiveAssets = assets ?? ownerCfg.config?.['assets'];
   const resolveResourceLabel = useMemo(
     () => makeResourceResolver({ employees: configuredEmployees, assets: effectiveAssets }),
     [configuredEmployees, effectiveAssets],
@@ -557,12 +557,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // config. Keeps TeamTab and the live schedule in sync. See issue #101.
   const handleEmployeeAddInternal = useCallback((member: LooseValue) => {
     ownerCfg.updateConfig(c => {
-      const existing = c.team?.members ?? [];
+      const existing = c['team']?.members ?? [];
       if (existing.some((m: LooseValue) => String(m.id) === String(member.id))) return c;
       return {
         ...c,
-        team: { ...(c.team ?? {}), members: [...existing, member] },
-        setup: { ...(c.setup ?? {}), completed: true },
+        team: { ...(c['team'] ?? {}), members: [...existing, member] },
+        setup: { ...(c['setup'] ?? {}), completed: true },
       };
     });
     onEmployeeAdd?.(member);
@@ -571,7 +571,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleEmployeeDeleteInternal = useCallback((id: LooseValue) => {
     ownerCfg.updateConfig(c => ({
       ...c,
-      team: { ...(c.team ?? {}), members: (c.team?.members ?? []).filter((m: LooseValue) => String(m.id) !== String(id)) },
+      team: { ...(c['team'] ?? {}), members: (c['team']?.members ?? []).filter((m: LooseValue) => String(m.id) !== String(id)) },
     }));
     onEmployeeDelete?.(id);
   }, [ownerCfg.updateConfig, onEmployeeDelete]);
@@ -582,12 +582,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const defaultViewApplied = useRef(false);
   useEffect(() => {
     if (initialView) return;
-    const defaultView = ownerCfg.config?.display?.defaultView;
+    const defaultView = ownerCfg.config?.['display']?.defaultView;
     if (defaultView && !defaultViewApplied.current) {
       defaultViewApplied.current = true;
       cal.setView(defaultView);
     }
-  }, [ownerCfg.config?.display?.defaultView, initialView]);
+  }, [ownerCfg.config?.['display']?.defaultView, initialView]);
 
   // ── Permissions ──────────────────────────────────────────────────────────
   const perms = usePermissions(role);
@@ -606,13 +606,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // skip the guide. The landing persists its decision via setup.completed;
   // this session flag is just for "show on demand" re-opens later.
   const [setupDismissed, setSetupDismissed] = useState(false);
-  const setupCompleted  = !!ownerCfg.config?.setup?.completed;
+  const setupCompleted  = !!ownerCfg.config?.['setup']?.completed;
   const shouldShowSetup = showSetupLanding && !setupCompleted && !setupDismissed;
 
   const handleSetupSkip = useCallback(() => {
     ownerCfg.updateConfig(prev => ({
       ...prev,
-      setup: { ...(prev.setup ?? {}), completed: true },
+      setup: { ...(prev['setup'] ?? {}), completed: true },
     }));
     setSetupDismissed(true);
   }, [ownerCfg.updateConfig]);
@@ -623,20 +623,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       ...prev,
       title: result.calendarName,
       setup: {
-        ...(prev.setup ?? {}),
+        ...(prev['setup'] ?? {}),
         completed: true,
         preferredTheme: result.theme,
       },
       display: {
-        ...(prev.display ?? {}),
+        ...(prev['display'] ?? {}),
         defaultView: result.defaultView,
         enabledViews: result.enabledViews,
       },
       team: {
-        ...(prev.team ?? {}),
+        ...(prev['team'] ?? {}),
         locationLabel: result.locationLabel,
         members: [
-          ...((prev.team?.members ?? []) as Array<{ id: unknown }>)
+          ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
             .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
           ...result.teamMembers,
         ],
@@ -906,25 +906,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   );
 
   // ── Base/Region view config ───────────────────────────────────────────────
-  const configuredBases = ownerCfg.config?.team?.bases ?? [];
-  const locationLabel   = ownerCfg.config?.team?.locationLabel ?? 'Base';
+  const configuredBases = ownerCfg.config?.['team']?.bases ?? [];
+  const locationLabel   = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
 
   // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
   const VIEWS = useMemo(() => {
-    const enabled = new Set<string>(ownerCfg.config?.display?.enabledViews ?? []);
+    const enabled = new Set<string>(ownerCfg.config?.['display']?.enabledViews ?? []);
     return ALL_VIEWS
       .filter(v => v.alwaysOn || enabled.has(v.id))
       .map(v => v.id === 'base' ? { ...v, label: locationLabel } : v);
-  }, [ownerCfg.config?.display?.enabledViews, locationLabel]);
+  }, [ownerCfg.config?.['display']?.enabledViews, locationLabel]);
 
   // Self-heal: if the active tab is no longer enabled, fall back to default/month.
   useEffect(() => {
     if (VIEWS.some(v => v.id === cal.view)) return;
-    const fallback = (ownerCfg.config?.display?.defaultView as ViewId) ?? 'month';
+    const fallback = (ownerCfg.config?.['display']?.defaultView as ViewId) ?? 'month';
     const target = VIEWS.some(v => v.id === fallback) ? fallback : 'month';
     if (cal.view !== target) cal.setView(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [VIEWS, cal.view, ownerCfg.config?.display?.defaultView]);
+  }, [VIEWS, cal.view, ownerCfg.config?.['display']?.defaultView]);
 
   // ── Derive categories / resources / filtered events ──────────────────────
   // Events scoped to the active tab — drives BOTH FilterBar option lists and
@@ -949,7 +949,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // the modal never renders a blank dropdown.
   const resolvedAssetRequestCategories = useMemo(() => {
     if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
-    const cfg = categoriesConfig ?? ownerCfg.config?.categoriesConfig;
+    const cfg = categoriesConfig ?? ownerCfg.config?.['categoriesConfig'];
     const defs = (Array.isArray(cfg?.categories) ? cfg.categories : []) as Array<{
       id: string
       label?: string
@@ -960,7 +960,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       const def = byId.get(id);
       return { id, label: def?.label ?? id, color: def?.color };
     });
-  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.categoriesConfig]);
+  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.['categoriesConfig']]);
 
   const canRequestAsset =
     resolvedAssetRequestCategories.length > 0 &&
@@ -989,7 +989,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // type. Narrowing those prop types is out of scope for this PR.
   const opCtxRef = useRef<OperationContext | null>(null);
   opCtxRef.current = {
-    businessHours:  ownerCfg.config?.businessHours ?? businessHours ?? null,
+    businessHours:  ownerCfg.config?.['businessHours'] ?? businessHours ?? null,
     blockedWindows: blockedWindows ?? [],
   } as unknown as OperationContext;
 
@@ -1294,7 +1294,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     //    Clamp the mirrored event to the PTO request window (meta.requestStart/End)
     //    when available, so the coverage bar only spans the days actually needing
     //    coverage — not the entire underlying shift.
-    const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+    const onCallCat = ownerCfg.config?.['onCallCategory'] ?? 'on-call';
     const shiftStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
     const shiftEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
     const requestStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : shiftStart;
@@ -1329,7 +1329,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         () => emitEventSave(mirrorId, mirroredPatch, { id: mirrorId }),
       );
     }
-  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete, ownerCfg.config?.onCallCategory]);
+  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete, ownerCfg.config?.['onCallCategory']]);
 
   /**
    * Handle employee action card clicks.
@@ -1417,7 +1417,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // 2. Detect overlapping shifts and auto-create open-shift records
     const isLeave = availEv.kind === 'pto' || availEv.kind === 'unavailable';
     if (isLeave) {
-      const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+      const onCallCat = ownerCfg.config?.['onCallCategory'] ?? 'on-call';
       const { conflictingEvents } = detectShiftConflicts({
         employeeId:    String(availEv.employeeId ?? availEv.resource ?? ''),
         requestStart:  availEv.start instanceof Date ? availEv.start : new Date(availEv.start),
@@ -1451,7 +1451,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         } else {
           applyEngineOp(
             { type: 'create', event: openShift, source: 'api' },
-            () => emitEventSave(openShift.id, openShift),
+            () => emitEventSave(openShift['id'], openShift),
           );
         }
 
@@ -1459,7 +1459,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         const updatedMeta = {
           ...(shiftEv.meta ?? {}),
           shiftStatus:  availEv.kind,   // 'pto' | 'unavailable'
-          openShiftId:  openShift.id,
+          openShiftId:  openShift['id'],
           coveredBy:    null as LooseValue,
           requestStart: availEv.start instanceof Date ? availEv.start.toISOString() : String(availEv.start),
           requestEnd:   availEv.end   instanceof Date ? availEv.end.toISOString()   : String(availEv.end),
@@ -1472,7 +1472,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
 
     setAvailabilityState(null);
-  }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerCfg.config?.onCallCategory]);
+  }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerCfg.config?.['onCallCategory']]);
 
   /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
   const handleScheduleEditorSave = useCallback((shiftEvOrArr: LooseValue) => {
@@ -2031,7 +2031,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return (
       <CalendarErrorBoundary>
         <div
-          className={styles.root}
+          className={styles['root']}
           data-wc-theme={effectiveTheme}
           data-wc-theme-family={themeFamily}
           data-wc-theme-mode={themeMode}
@@ -2041,8 +2041,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           <SetupLanding
             onSkip={handleSetupSkip}
             onFinish={handleSetupFinish}
-            initialName={ownerCfg.config?.title}
-            initialTheme={ownerCfg.config?.setup?.preferredTheme ?? rawTheme}
+            initialName={ownerCfg.config?.['title']}
+            initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
           />
         </div>
       </CalendarErrorBoundary>
@@ -2052,41 +2052,41 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
+        <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
-          <div className={styles.customToolbar}>{renderToolbar(api)}</div>
+          <div className={styles['customToolbar']}>{renderToolbar(api)}</div>
         ) : (
-          <div className={styles.toolbar} role="toolbar" aria-label="Calendar navigation">
-            <div className={styles.navGroup}>
+          <div className={styles['toolbar']} role="toolbar" aria-label="Calendar navigation">
+            <div className={styles['navGroup']}>
               <button
-                className={styles.navBtn}
+                className={styles['navBtn']}
                 onClick={() => cal.navigate(-1)}
                 aria-label="Previous"
                 title={`Previous ${cal.view}`}
               >
                 <ChevronLeft size={18} aria-hidden="true" />
               </button>
-              <button className={styles.todayBtn} onClick={cal.goToToday}>Today</button>
+              <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
               <button
-                className={styles.navBtn}
+                className={styles['navBtn']}
                 onClick={() => cal.navigate(1)}
                 aria-label="Next"
                 title={`Next ${cal.view}`}
               >
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
-              <span className={styles.dateLabel} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
-              <span className={styles.calendarTitle}>{calendarTitle}</span>
-              {fetchLoading && <span className={styles.loadingDot} title="Loading…" aria-label="Loading events" role="status" />}
+              <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+              <span className={styles['calendarTitle']}>{calendarTitle}</span>
+              {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
             </div>
 
-            <div className={styles.viewGroup} role="group" aria-label="Calendar view">
+            <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
               {VIEWS.map(v => (
                 <button
                   key={v.id}
-                  className={[styles.viewBtn, cal.view === v.id && styles.activeView].filter(Boolean).join(' ')}
+                  className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
                   onClick={() => cal.setView(v.id)}
                   aria-pressed={cal.view === v.id}
                   title={v.hint}
@@ -2096,17 +2096,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               ))}
             </div>
 
-            <div className={styles.actions}>
+            <div className={styles['actions']}>
               <SidebarToggleButton
                 isOpen={sidebarOpen}
                 onClick={() => setSidebarOpen(v => !v)}
                 filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
                 groupCount={sidebarGroupLevels.length}
               />
-              {devMode && <span className={styles.devBadge}>Dev</span>}
+              {devMode && <span className={styles['devBadge']}>Dev</span>}
               {(ownerCfg.isOwner || devMode) && (
                 <button
-                  className={[styles.wandBtn, editMode && styles.wandBtnActive].filter(Boolean).join(' ')}
+                  className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
                   onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
                   aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
                   title={editMode ? 'Exit edit mode' : 'Customize events'}
@@ -2115,13 +2115,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 </button>
               )}
               {hasAddButton && cal.view !== 'schedule' && (
-                <button className={styles.addBtn} onClick={() => setFormEvent({})} aria-label="Add new event">
-                  <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Event</span>
+                <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
+                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
                 </button>
               )}
               {hasAddButton && hasScheduleTemplates && (
                 <button
-                  className={styles.addBtn}
+                  className={styles['addBtn']}
                   onClick={() => {
                     setScheduleOpen(true);
                     trackScheduleTemplateAnalytics('schedule_dialog_opened', {
@@ -2130,15 +2130,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   }}
                   aria-label="Add schedule from template"
                 >
-                  <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Schedule</span>
+                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
                 </button>
               )}
               {hasImport && (
-                <button className={styles.exportBtn} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
+                <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
                   <Upload size={15} aria-hidden="true" />
                 </button>
               )}
-              <button className={styles.exportBtn} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
+              <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
                 <Download size={15} aria-hidden="true" />
               </button>
               {ownerPassword && (
@@ -2156,11 +2156,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
         {/* ── Edit mode banner ── */}
         {editMode && (
-          <div className={styles.editModeBanner} role="status" aria-live="polite">
+          <div className={styles['editModeBanner']} role="status" aria-live="polite">
             <Sparkles size={13} aria-hidden="true" />
             <span>Edit mode — click any event to customize it</span>
             <button
-              className={styles.editModeExit}
+              className={styles['editModeExit']}
               onClick={() => { setEditMode(false); setInlineEditTarget(null); }}
               aria-label="Exit edit mode"
             >
@@ -2218,7 +2218,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           const resolvedChips: FocusChipDef[] = Array.isArray(focusChips)
             ? focusChips
             : DEFAULT_FOCUS_CHIPS;
-          const activeCategories = cal.filters?.categories as Set<string> | undefined;
+          const activeCategories = cal.filters?.['categories'] as Set<string> | undefined;
           return (
             <>
               <ContextSummary
@@ -2277,13 +2277,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── View area ── */}
         <div
           ref={swipeAreaRef}
-          className={styles.viewArea}
+          className={styles['viewArea']}
           onClickCapture={editMode ? (e) => {
             lastClickCoordsRef.current = { x: e.clientX, y: e.clientY };
           } : undefined}
         >
           {isEmpty && emptyState ? (
-            <div className={styles.emptyStateWrap}>{emptyState}</div>
+            <div className={styles['emptyStateWrap']}>{emptyState}</div>
           ) : (
             <>
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
@@ -2305,8 +2305,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEmployeeAction={handleEmployeeAction}
                   groupBy={activeGroupBy}
                   sort={activeSort}
-                  roles={ownerCfg.config?.team?.roles ?? []}
-                  bases={ownerCfg.config?.team?.bases ?? []}
+                  roles={ownerCfg.config?.['team']?.roles ?? []}
+                  bases={ownerCfg.config?.['team']?.bases ?? []}
                 />
               )}
               {cal.view === 'base' && (
@@ -2331,7 +2331,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onPoolDateSelect={handlePoolDateSelect}
                   groupBy={activeGroupBy}
                   onGroupByChange={setActiveGroupBy}
-                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
+                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.['categoriesConfig']}
                   assets={effectiveAssets}
                   pools={rawPools ?? []}
                   strictAssetFiltering={strictAssetFiltering}
@@ -2344,7 +2344,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   renderAssetLocation={renderAssetLocation}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
-                  approvalsConfig={ownerCfg.config?.approvals}
+                  approvalsConfig={ownerCfg.config?.['approvals']}
                   onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
                 />
               )}
@@ -2422,7 +2422,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             emp={scheduleEditorState.emp}
             initialStart={scheduleEditorState.start}
             initialEnd={scheduleEditorState.end}
-            onCallCategory={ownerCfg.config?.onCallCategory ?? 'on-call'}
+            onCallCategory={ownerCfg.config?.['onCallCategory'] ?? 'on-call'}
             onSave={handleScheduleEditorSave}
             onClose={() => setScheduleEditorState(null)}
           />

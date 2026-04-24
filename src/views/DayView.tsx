@@ -31,7 +31,7 @@ export default function DayView({
   const dayStart  = config?.display?.dayStart ?? 6;
   const dayEnd    = config?.display?.dayEnd   ?? 22;
   const pxPerHour = 64;
-  const bizHours  = ctx?.businessHours ?? null;
+  const bizHours  = ctx?.['businessHours'] ?? null;
 
   const gridRef = useRef<HTMLDivElement | null>(null);
   const days    = useMemo(() => [currentDate], [currentDate]);
@@ -94,7 +94,7 @@ export default function DayView({
   );
   const dayEvents = useMemo(() => layoutOverlaps(rawTimed), [rawTimed]);
 
-  const displayTz = ctx?.displayTimezone ?? null;
+  const displayTz = ctx?.['displayTimezone'] ?? null;
 
   const now     = new Date();
   const nowHour = displayTz ? hoursInTimezone(now, displayTz) : getHours(now) + getMinutes(now) / 60;
@@ -126,10 +126,10 @@ export default function DayView({
   const drag = useDrag({ pxPerHour, dayStart, dayEnd });
 
   const handleGridPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || !ctx?.permissions?.canAddEvent) return;
+    if (e.button !== 0 || !ctx?.['permissions']?.canAddEvent) return;
     if (!gridRef.current) return;
     drag.startCreate(e, gridRef.current, days, GUTTER_W);
-  }, [drag.startCreate, days, ctx?.permissions?.canAddEvent]);
+  }, [drag.startCreate, days, ctx?.['permissions']?.canAddEvent]);
 
   const handleGridPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     drag.onPointerMove(e);
@@ -150,7 +150,7 @@ export default function DayView({
   // ── Renderers ─────────────────────────────────────────────────────────
   function renderEvent(ev: CalendarViewEvent) {
     const isDimmed = drag.draggedId === ev.id;
-    const color    = resolveColor(ev as NormalizedEvent, ctx?.colorRules);
+    const color    = resolveColor(ev as NormalizedEvent, ctx?.['colorRules']);
     const onClick  = () => !isDimmed && onEventClick?.(ev);
     const pos = eventPosition(ev.start, ev.end);
     if (!pos) return null;
@@ -159,8 +159,8 @@ export default function DayView({
     const col      = ev._col     ?? 0;
     const pctLeft  = (col / numCols) * 100;
     const pctWidth = (1 / numCols) * 100;
-    const statusClass = ev.status === 'cancelled' ? styles.cancelled
-      : ev.status === 'tentative' ? styles.tentative : '';
+    const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+      : ev.status === 'tentative' ? styles['tentative'] : '';
     const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
 
     if (ctx?.renderEvent) {
@@ -168,21 +168,21 @@ export default function DayView({
       if (custom != null) {
         return (
           <div key={ev.id} data-event="1"
-            className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
+            className={[styles['event'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
             style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
             data-wc-priority={ev.visualPriority ?? undefined}
             role="button" tabIndex={0}
             aria-label={ariaLabel}
             onClick={onClick}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           >
-            <div className={styles.resizeHandleTop}
-              onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+            <div className={styles['resizeHandleTop']}
+              onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
               aria-hidden="true" />
             {custom}
-            <div className={styles.resizeHandle}
-              onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+            <div className={styles['resizeHandle']}
+              onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
               aria-hidden="true" />
           </div>
         );
@@ -191,23 +191,23 @@ export default function DayView({
 
     return (
       <div key={ev.id} data-event="1"
-        className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
+        className={[styles['event'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
         style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
         data-wc-priority={ev.visualPriority ?? undefined}
         role="button" tabIndex={0}
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
       >
-        <div className={styles.resizeHandleTop}
-          onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+        <div className={styles['resizeHandleTop']}
+          onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
-        <span className={styles.evTitle}>{ev.title}</span>
-        <span className={styles.evTime}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
-        {ev.resource && numCols === 1 && <span className={styles.evMeta}>{ev.resource}</span>}
-        <div className={styles.resizeHandle}
-          onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+        <span className={styles['evTitle']}>{ev.title}</span>
+        <span className={styles['evTime']}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
+        {ev.resource && numCols === 1 && <span className={styles['evMeta']}>{ev.resource}</span>}
+        <div className={styles['resizeHandle']}
+          onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
       </div>
     );
@@ -229,9 +229,9 @@ export default function DayView({
       left  = '2px';
       width = 'calc(100% - 4px)';
     }
-    const color = g.ev ? resolveColor(g.ev, ctx?.colorRules) : undefined;
+    const color = g.ev ? resolveColor(g.ev, ctx?.['colorRules']) : undefined;
     return (
-      <div className={[styles.ghost, !g.ev && styles.ghostCreate].filter(Boolean).join(' ')}
+      <div className={[styles['ghost'], !g.ev && styles['ghostCreate']].filter(Boolean).join(' ')}
         aria-hidden="true"
         style={{ top, height, '--ev-color': color, left, width }}
       />
@@ -241,28 +241,28 @@ export default function DayView({
   const dayLabel = `${format(currentDate, 'EEEE, MMMM d')}${isToday(currentDate) ? ', today' : ''}`;
 
   return (
-    <div className={styles.day} role="grid" aria-label={dayLabel}>
-      <div className={styles.dayHeader} role="row" aria-rowindex={1}>
+    <div className={styles['day']} role="grid" aria-label={dayLabel}>
+      <div className={styles['dayHeader']} role="row" aria-rowindex={1}>
         <span
           role="columnheader"
           aria-label={dayLabel}
-          className={[styles.dayNum, isToday(currentDate) && styles.today].filter(Boolean).join(' ')}
+          className={[styles['dayNum'], isToday(currentDate) && styles['today']].filter(Boolean).join(' ')}
         >
           {format(currentDate, 'EEEE, MMMM d')}
         </span>
       </div>
 
       {allDayEvs.length > 0 && (
-        <div className={styles.allDayRow} role="row" aria-rowindex={2}>
-          <div className={styles.timeLabel} role="rowheader" aria-label="All-day events">
+        <div className={styles['allDayRow']} role="row" aria-rowindex={2}>
+          <div className={styles['timeLabel']} role="rowheader" aria-label="All-day events">
             <span aria-hidden="true">all&#8209;day</span>
           </div>
-          <div className={styles.allDayEvents} role="gridcell" aria-label="All-day events">
+          <div className={styles['allDayEvents']} role="gridcell" aria-label="All-day events">
             {allDayEvs.map(ev => {
-              const color = resolveColor(ev as NormalizedEvent, ctx?.colorRules);
+              const color = resolveColor(ev as NormalizedEvent, ctx?.['colorRules']);
               const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
               return (
-                <button key={ev.id} className={styles.allDayPill} style={{ '--ev-color': color }}
+                <button key={ev.id} className={styles['allDayPill']} style={{ '--ev-color': color }}
                   aria-label={ariaLabel}
                   onClick={() => onEventClick?.(ev)}>{ev.title}</button>
               );
@@ -271,16 +271,16 @@ export default function DayView({
         </div>
       )}
 
-      <div className={styles.grid} role="presentation">
-        <div className={styles.timeCol} aria-hidden="true">
+      <div className={styles['grid']} role="presentation">
+        <div className={styles['timeCol']} aria-hidden="true">
           {hours.map(h => (
-            <div key={h} className={styles.hourLabel} style={{ height: pxPerHour }}>
+            <div key={h} className={styles['hourLabel']} style={{ height: pxPerHour }}>
               {h === dayStart ? '' : format(new Date().setHours(h, 0, 0, 0), 'h a')}
             </div>
           ))}
         </div>
         <div
-          className={styles.eventCol}
+          className={styles['eventCol']}
           style={{ height: (dayEnd - dayStart) * pxPerHour }}
           ref={gridRef}
           onPointerDown={handleGridPointerDown}
@@ -291,7 +291,7 @@ export default function DayView({
           {/* Background hour lines */}
           {hours.map(h => (
             <div key={h}
-              className={[styles.hourLine, bizHours && !isBizHour(h) && styles.offHour].filter(Boolean).join(' ')}
+              className={[styles['hourLine'], bizHours && !isBizHour(h) && styles['offHour']].filter(Boolean).join(' ')}
               style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
             />
           ))}
@@ -310,7 +310,7 @@ export default function DayView({
                 aria-label={`${format(currentDate, 'EEEE, MMMM d')}, ${format(slotStart, 'h:mm a')}${isToday(currentDate) ? ', today' : ''}`}
                 aria-rowindex={hi + 3}
                 aria-colindex={1}
-                className={styles.slotCell}
+                className={styles['slotCell']}
                 style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
                 onKeyDown={e => handleSlotKeyDown(e, hi, slotStart, slotEnd)}
               />
@@ -318,8 +318,8 @@ export default function DayView({
           })}
 
           {showNow && (
-            <div className={styles.nowLine} style={{ top: nowTop }}>
-              <div className={styles.nowDot} />
+            <div className={styles['nowLine']} style={{ top: nowTop }}>
+              <div className={styles['nowDot']} />
             </div>
           )}
           {dayEvents.map(ev => renderEvent(ev))}

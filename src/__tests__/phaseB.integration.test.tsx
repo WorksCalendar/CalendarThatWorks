@@ -120,8 +120,8 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config:
     const result = evaluateConflicts({
       proposed: evt,
       events,
-      rules: config.conflicts.rules,
-      enabled: config.conflicts.enabled,
+      rules: config['conflicts'].rules,
+      enabled: config['conflicts'].enabled,
     });
     setProposed(evt);
     if (result.severity === 'none') {
@@ -149,7 +149,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config:
   return (
     <div>
       <RequestForm
-        schema={config.requestForm}
+        schema={config['requestForm']}
         onSubmit={handleSubmit}
         onCancel={vi.fn()}
       />
@@ -159,7 +159,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config:
           <span>{committed.title}</span>
           <ApprovalActionMenu
             stage={committed.meta?.approvalStage?.stage ?? 'requested'}
-            approvalsConfig={config.approvals}
+            approvalsConfig={config['approvals']}
             onAction={vi.fn()}
             variant="inline"
           />
@@ -186,9 +186,9 @@ describe('Phase B pipeline — RequestForm → conflictEngine → approval pill'
   it('owner config defaults include all three Phase B blocks', () => {
     // Guards against someone removing a block from the default — every host
     // app relies on the union being present for the integration to compose.
-    expect(DEFAULT_CONFIG.requestForm?.fields?.length).toBeGreaterThan(0);
-    expect(DEFAULT_CONFIG.conflicts).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Array) });
-    expect(DEFAULT_CONFIG.approvals).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Object) });
+    expect(DEFAULT_CONFIG['requestForm']?.fields?.length).toBeGreaterThan(0);
+    expect(DEFAULT_CONFIG['conflicts']).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Array) });
+    expect(DEFAULT_CONFIG['approvals']).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Object) });
   });
 
   it('commits the event unchanged when no rules trigger', () => {

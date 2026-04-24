@@ -42,37 +42,37 @@ export default function KeyboardHelpOverlay({ onClose }: any) {
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         ref={trapRef}
-        className={styles.dialog}
+        className={styles['dialog']}
         role="dialog"
         aria-modal="true"
         aria-labelledby="kbd-help-title"
       >
-        <div className={styles.head}>
-          <div className={styles.title}>
+        <div className={styles['head']}>
+          <div className={styles['title']}>
             <Keyboard size={16} aria-hidden="true" />
-            <h2 id="kbd-help-title" className={styles.titleText}>Keyboard shortcuts</h2>
+            <h2 id="kbd-help-title" className={styles['titleText']}>Keyboard shortcuts</h2>
           </div>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close keyboard help">
+          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close keyboard help">
             <X size={16} />
           </button>
         </div>
 
-        <div className={styles.body}>
+        <div className={styles['body']}>
           {SHORTCUTS.map(group => (
-            <section key={group.group} className={styles.group}>
-              <h3 className={styles.groupTitle}>{group.group}</h3>
-              <ul className={styles.list}>
+            <section key={group.group} className={styles['group']}>
+              <h3 className={styles['groupTitle']}>{group.group}</h3>
+              <ul className={styles['list']}>
                 {group.items.map(item => (
-                  <li key={item.label} className={styles.row}>
-                    <span className={styles.label}>{item.label}</span>
-                    <span className={styles.keys}>
+                  <li key={item.label} className={styles['row']}>
+                    <span className={styles['label']}>{item.label}</span>
+                    <span className={styles['keys']}>
                       {item.keys.map((k, i) => (
-                        <kbd key={i} className={styles.kbd}>{k}</kbd>
+                        <kbd key={i} className={styles['kbd']}>{k}</kbd>
                       ))}
                     </span>
                   </li>

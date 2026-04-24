@@ -121,25 +121,25 @@ function sanitizeBaseIds(value: unknown): string[] | null {
 function normalizeSavedView(view: unknown): SavedView | null {
   if (!view || typeof view !== 'object') return null;
   const v = view as Record<string, unknown>;
-  if (typeof v.id !== 'string' || typeof v.name !== 'string') return null;
-  if (!v.filters || typeof v.filters !== 'object' || Array.isArray(v.filters)) return null;
+  if (typeof v['id'] !== 'string' || typeof v['name'] !== 'string') return null;
+  if (!v['filters'] || typeof v['filters'] !== 'object' || Array.isArray(v['filters'])) return null;
 
   return {
-    id:              v.id,
-    name:            v.name,
-    createdAt:       typeof v.createdAt === 'string' ? v.createdAt : new Date().toISOString(),
-    color:           (v.color as string | null | undefined) ?? null,
-    view:            (v.view as string | null | undefined) ?? null,
-    conditions:      Array.isArray(v.conditions) ? v.conditions : null,
-    groupBy:         sanitizeGroupBy((v.groupBy as GroupByInput | undefined) ?? null),
-    sort:            sanitizeSort(v.sort),
-    sortBy:          sanitizeSort(v.sortBy),
-    zoomLevel:       sanitizeZoomLevel(v.zoomLevel),
-    collapsedGroups: sanitizeCollapsedGroups(v.collapsedGroups),
-    showAllGroups:   typeof v.showAllGroups === 'boolean' ? v.showAllGroups : null,
-    selectedBaseIds: sanitizeBaseIds(v.selectedBaseIds),
-    hiddenFromStrip: v.hiddenFromStrip === true,
-    filters:         v.filters as Record<string, unknown>,
+    id:              v['id'],
+    name:            v['name'],
+    createdAt:       typeof v['createdAt'] === 'string' ? v['createdAt'] : new Date().toISOString(),
+    color:           (v['color'] as string | null | undefined) ?? null,
+    view:            (v['view'] as string | null | undefined) ?? null,
+    conditions:      Array.isArray(v['conditions']) ? v['conditions'] : null,
+    groupBy:         sanitizeGroupBy((v['groupBy'] as GroupByInput | undefined) ?? null),
+    sort:            sanitizeSort(v['sort']),
+    sortBy:          sanitizeSort(v['sortBy']),
+    zoomLevel:       sanitizeZoomLevel(v['zoomLevel']),
+    collapsedGroups: sanitizeCollapsedGroups(v['collapsedGroups']),
+    showAllGroups:   typeof v['showAllGroups'] === 'boolean' ? v['showAllGroups'] : null,
+    selectedBaseIds: sanitizeBaseIds(v['selectedBaseIds']),
+    hiddenFromStrip: v['hiddenFromStrip'] === true,
+    filters:         v['filters'] as Record<string, unknown>,
   };
 }
 
@@ -157,18 +157,18 @@ function migrateSavedViewsPayload(payload: unknown, calendarId: string): SavedVi
   if (payload && typeof payload === 'object') {
     const p = payload as Record<string, unknown>;
     if (
-      typeof p.version === 'number'
-      && p.version >= MIN_READABLE_VERSION
-      && p.version <= STORAGE_VERSION
+      typeof p['version'] === 'number'
+      && p['version'] >= MIN_READABLE_VERSION
+      && p['version'] <= STORAGE_VERSION
     ) {
       // v2–v4 share a compatible on-disk shape; normalizeSavedView fills in
       // fields added in later versions (sort, collapsedGroups, showAllGroups,
       // hiddenFromStrip) when loading older payloads.
-      return normalizeViews(p.views);
+      return normalizeViews(p['views']);
     }
 
     // Future explicit migration path by version number.
-    if (typeof p.version === 'number' && p.version > STORAGE_VERSION) {
+    if (typeof p['version'] === 'number' && p['version'] > STORAGE_VERSION) {
       return [];
     }
   }
@@ -185,12 +185,12 @@ function migrateProfiles(calendarId: string): SavedView[] {
     const profiles = JSON.parse(raw);
     // Convert profile shape to saved view shape
     return normalizeViews((profiles as Array<Record<string, unknown>>).map((p) => ({
-      id:        p.id,
-      name:      p.name,
-      createdAt: p.createdAt ?? new Date().toISOString(),
-      color:     p.color ?? null,
-      view:      p.view ?? null,
-      filters:   p.filters, // already serialized (arrays, not Sets)
+      id:        p['id'],
+      name:      p['name'],
+      createdAt: p['createdAt'] ?? new Date().toISOString(),
+      color:     p['color'] ?? null,
+      view:      p['view'] ?? null,
+      filters:   p['filters'], // already serialized (arrays, not Sets)
     })));
   } catch { return []; }
 }
@@ -265,17 +265,17 @@ export function deserializeFilters(saved: Record<string, any> | null | undefined
 
   // Restore dateRange Date objects
   if (
-    result.dateRange &&
-    typeof result.dateRange === 'object' &&
-    isValidDate(result.dateRange.start) &&
-    isValidDate(result.dateRange.end)
+    result['dateRange'] &&
+    typeof result['dateRange'] === 'object' &&
+    isValidDate(result['dateRange'].start) &&
+    isValidDate(result['dateRange'].end)
   ) {
-    result.dateRange = {
-      start: new Date(result.dateRange.start),
-      end:   new Date(result.dateRange.end),
+    result['dateRange'] = {
+      start: new Date(result['dateRange'].start),
+      end:   new Date(result['dateRange'].end),
     };
-  } else if (result.dateRange) {
-    result.dateRange = null;
+  } else if (result['dateRange']) {
+    result['dateRange'] = null;
   }
 
   return result;

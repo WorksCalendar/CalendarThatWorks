@@ -52,7 +52,7 @@ export interface LegacyEventOut {
  */
 export function toLegacyEvent(ev: EngineEvent): LegacyEventOut {
   const isRecurring = ev.seriesId !== null && ev.seriesId !== ev.id;
-  const vp = ev.meta._visualPriority;
+  const vp = ev.meta['_visualPriority'];
   return {
     id:            ev.id,
     title:         ev.title,
@@ -87,7 +87,7 @@ export function toLegacyEvents(events: EngineEvent[]): LegacyEventOut[] {
  *   - rrule/exdates are null/[] (occurrences are already expanded)
  */
 export function occurrenceToLegacy(occ: EngineOccurrence): LegacyEventOut {
-  const vp = occ.meta._visualPriority;
+  const vp = occ.meta['_visualPriority'];
   return {
     id:            occ.occurrenceId,
     title:         occ.title,

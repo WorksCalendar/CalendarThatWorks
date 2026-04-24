@@ -256,28 +256,28 @@ export function WorkflowBuilderModal(
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       data-testid="workflow-builder-overlay"
     >
       <div
         ref={trapRef}
-        className={styles.panel}
+        className={styles['panel']}
         role="dialog"
         aria-modal="true"
         aria-label={title ?? `Workflow builder — ${draftWorkflow.id}`}
       >
-        <header className={styles.header}>
-          <div className={styles.headerTitle}>
-            <h2 className={styles.title}>{title ?? 'Workflow builder'}</h2>
-            <span className={styles.subtitle} data-testid="wb-workflow-id">
+        <header className={styles['header']}>
+          <div className={styles['headerTitle']}>
+            <h2 className={styles['title']}>{title ?? 'Workflow builder'}</h2>
+            <span className={styles['subtitle']} data-testid="wb-workflow-id">
               {draftWorkflow.id} · v{draftWorkflow.version}
             </span>
           </div>
-          <div className={styles.headerActions}>
+          <div className={styles['headerActions']}>
             <button
               type="button"
-              className={styles.secondary}
+              className={styles['secondary']}
               onClick={handleUndo}
               disabled={!undoSnap}
               data-testid="wb-undo"
@@ -287,7 +287,7 @@ export function WorkflowBuilderModal(
             <button
               type="button"
               ref={saveBtnRef}
-              className={styles.primary}
+              className={styles['primary']}
               onClick={handleSave}
               disabled={blocked}
               data-testid="wb-save"
@@ -296,7 +296,7 @@ export function WorkflowBuilderModal(
             </button>
             <button
               type="button"
-              className={styles.close}
+              className={styles['close']}
               onClick={onClose}
               aria-label="Close workflow builder"
             >
@@ -305,15 +305,15 @@ export function WorkflowBuilderModal(
           </div>
         </header>
 
-        <div className={styles.body}>
-          <div className={styles.canvasPane}>
-            <div className={styles.palette} role="toolbar" aria-label="Add node">
-              <span className={styles.paletteLabel}>Add node</span>
+        <div className={styles['body']}>
+          <div className={styles['canvasPane']}>
+            <div className={styles['palette']} role="toolbar" aria-label="Add node">
+              <span className={styles['paletteLabel']}>Add node</span>
               {NODE_PALETTE.map(type => (
                 <button
                   key={type}
                   type="button"
-                  className={styles.paletteButton}
+                  className={styles['paletteButton']}
                   data-testid={`wb-add-${type}`}
                   onClick={() => handleAddNode(type)}
                 >
@@ -345,13 +345,13 @@ export function WorkflowBuilderModal(
             )}
           </div>
 
-          <aside className={styles.sidePane} aria-label="Builder side panel">
-            <div role="tablist" className={styles.sideTabs}>
+          <aside className={styles['sidePane']} aria-label="Builder side panel">
+            <div role="tablist" className={styles['sideTabs']}>
               <button
                 type="button"
                 role="tab"
                 aria-selected={sidePane === 'inspector'}
-                className={sidePane === 'inspector' ? styles.sideTabActive : styles.sideTab}
+                className={sidePane === 'inspector' ? styles['sideTabActive'] : styles['sideTab']}
                 onClick={() => setSidePane('inspector')}
               >
                 Inspector
@@ -360,7 +360,7 @@ export function WorkflowBuilderModal(
                 type="button"
                 role="tab"
                 aria-selected={sidePane === 'simulator'}
-                className={sidePane === 'simulator' ? styles.sideTabActive : styles.sideTab}
+                className={sidePane === 'simulator' ? styles['sideTabActive'] : styles['sideTab']}
                 onClick={() => setSidePane('simulator')}
               >
                 Simulator
@@ -377,7 +377,7 @@ export function WorkflowBuilderModal(
                   />
                 )
                 : (
-                  <p className={styles.empty} data-testid="wb-inspector-empty">
+                  <p className={styles['empty']} data-testid="wb-inspector-empty">
                     Select a node to edit its fields.
                   </p>
                 )
@@ -411,29 +411,29 @@ function IssuesList({
 }): JSX.Element {
   if (issues.length === 0) {
     return (
-      <p className={styles.clean} data-testid="wb-issues-clean">
+      <p className={styles['clean']} data-testid="wb-issues-clean">
         No validation issues. Ready to save.
       </p>
     )
   }
   return (
-    <div className={styles.issuesBlock}>
-      <h4 className={styles.issuesTitle}>Validation</h4>
-      <ul className={styles.issuesList} data-testid="wb-issues-list">
+    <div className={styles['issuesBlock']}>
+      <h4 className={styles['issuesTitle']}>Validation</h4>
+      <ul className={styles['issuesList']} data-testid="wb-issues-list">
         {issues.map((issue, i) => (
           <li
             key={`${issue.code}-${i}`}
-            className={styles.issueItem}
+            className={styles['issueItem']}
             data-severity={issue.severity}
             data-code={issue.code}
           >
-            <span className={styles.issueSeverity}>{issue.severity}</span>
-            <span className={styles.issueMessage}>{issue.message}</span>
+            <span className={styles['issueSeverity']}>{issue.severity}</span>
+            <span className={styles['issueMessage']}>{issue.message}</span>
           </li>
         ))}
       </ul>
       {Object.keys(byNode).length > 0 && (
-        <p className={styles.issuesByNodeHint}>
+        <p className={styles['issuesByNodeHint']}>
           {Object.keys(byNode).length} node(s) with issues — click a node on the canvas to inspect.
         </p>
       )}

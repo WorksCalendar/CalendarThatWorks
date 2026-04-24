@@ -162,14 +162,14 @@ export function WorkflowSimulator(
   const statusLabel = instance === null ? 'idle' : instance.status
 
   return (
-    <section className={styles.panel} aria-label="Workflow simulator">
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-sim-vars">Variables (JSON)</label>
+    <section className={styles['panel']} aria-label="Workflow simulator">
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-sim-vars">Variables (JSON)</label>
         <textarea
           id="wc-sim-vars"
           className={[
-            styles.textarea,
-            parseError ? styles.errorInput : '',
+            styles['textarea'],
+            parseError ? styles['errorInput'] : '',
           ].filter(Boolean).join(' ')}
           value={variablesText}
           onChange={e => setVariablesText(e.target.value)}
@@ -180,31 +180,31 @@ export function WorkflowSimulator(
         />
         <span
           id="wc-sim-vars-hint"
-          className={parseError ? styles.error : styles.hint}
+          className={parseError ? styles['error'] : styles['hint']}
         >
           {parseError ?? 'Passed to condition expressions — e.g. event.cost.'}
         </span>
       </div>
 
-      <div className={styles.status} data-status={statusLabel}>
-        <span className={styles.statusLabel}>Status</span>
-        <span className={styles.statusValue}>{statusLabel}</span>
+      <div className={styles['status']} data-status={statusLabel}>
+        <span className={styles['statusLabel']}>Status</span>
+        <span className={styles['statusValue']}>{statusLabel}</span>
         {instance?.currentNodeId && (
-          <span className={styles.currentNode} data-testid="sim-current-node">
+          <span className={styles['currentNode']} data-testid="sim-current-node">
             @ {instance.currentNodeId}
           </span>
         )}
         {instance?.outcome && (
-          <span className={styles.outcome} data-outcome={instance.outcome}>
+          <span className={styles['outcome']} data-outcome={instance.outcome}>
             {instance.outcome}
           </span>
         )}
       </div>
 
-      <div className={styles.actions}>
+      <div className={styles['actions']}>
         <button
           type="button"
-          className={styles.button}
+          className={styles['button']}
           onClick={() => dispatch({ type: 'start' })}
           disabled={!canStart}
         >
@@ -212,7 +212,7 @@ export function WorkflowSimulator(
         </button>
         <button
           type="button"
-          className={styles.button}
+          className={styles['button']}
           onClick={() => dispatch({ type: 'approve' })}
           disabled={!canApprove}
         >
@@ -220,7 +220,7 @@ export function WorkflowSimulator(
         </button>
         <button
           type="button"
-          className={styles.button}
+          className={styles['button']}
           onClick={() => dispatch({ type: 'deny', reason: denyReason })}
           disabled={!canDeny}
         >
@@ -228,7 +228,7 @@ export function WorkflowSimulator(
         </button>
         <button
           type="button"
-          className={styles.button}
+          className={styles['button']}
           onClick={() => dispatch({ type: 'cancel' })}
           disabled={!canCancel}
         >
@@ -236,37 +236,37 @@ export function WorkflowSimulator(
         </button>
         <button
           type="button"
-          className={styles.buttonSecondary}
+          className={styles['buttonSecondary']}
           onClick={reset}
         >
           Reset
         </button>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="wc-sim-deny-reason">Deny reason</label>
+      <div className={styles['field']}>
+        <label className={styles['label']} htmlFor="wc-sim-deny-reason">Deny reason</label>
         <input
           id="wc-sim-deny-reason"
-          className={styles.input}
+          className={styles['input']}
           value={denyReason}
           placeholder="Required to enable Deny"
           onChange={e => setDenyReason(e.target.value)}
         />
       </div>
 
-      <div className={styles.section} data-testid="sim-clock">
-        <h4 className={styles.sectionTitle}>Sim clock</h4>
-        <div className={styles.clockRow}>
-          <span className={styles.clockValue} data-testid="sim-clock-value">
+      <div className={styles['section']} data-testid="sim-clock">
+        <h4 className={styles['sectionTitle']}>Sim clock</h4>
+        <div className={styles['clockRow']}>
+          <span className={styles['clockValue']} data-testid="sim-clock-value">
             {new Date(simClockMs).toISOString()}
           </span>
         </div>
-        <div className={styles.actions}>
+        <div className={styles['actions']}>
           {CLOCK_JUMPS_MINUTES.map(m => (
             <button
               key={m}
               type="button"
-              className={styles.buttonSecondary}
+              className={styles['buttonSecondary']}
               onClick={() => advanceClock(m)}
               disabled={atCap}
               data-testid={`sim-advance-${m}m`}
@@ -275,50 +275,50 @@ export function WorkflowSimulator(
             </button>
           ))}
         </div>
-        <span className={styles.hint}>
+        <span className={styles['hint']}>
           Advances the simulator clock. If the current approval has
           an SLA and the elapsed time crosses it, a timeout action fires.
         </span>
       </div>
 
       {atCap && (
-        <div className={styles.capBanner} role="status" data-testid="sim-cap-banner">
+        <div className={styles['capBanner']} role="status" data-testid="sim-cap-banner">
           Step limit reached — reset to continue.
         </div>
       )}
 
       {lastError && (
-        <div className={styles.errorBanner} role="alert" data-testid="sim-error">
+        <div className={styles['errorBanner']} role="alert" data-testid="sim-error">
           {lastError}
         </div>
       )}
 
-      <div className={styles.section}>
-        <h4 className={styles.sectionTitle}>Emit log</h4>
+      <div className={styles['section']}>
+        <h4 className={styles['sectionTitle']}>Emit log</h4>
         {emitLog.length === 0
-          ? <p className={styles.empty}>No events yet.</p>
+          ? <p className={styles['empty']}>No events yet.</p>
           : (
-            <ul className={styles.emitList} data-testid="sim-emit-log">
+            <ul className={styles['emitList']} data-testid="sim-emit-log">
               {emitLog.map(({ seq, event }) => (
                 <li
                   key={seq}
-                  className={styles.emitItem}
+                  className={styles['emitItem']}
                   data-emit-type={event.type}
                 >
-                  <span className={styles.emitType}>{event.type}</span>
-                  <span className={styles.emitDetail}>{summarizeEmit(event)}</span>
+                  <span className={styles['emitType']}>{event.type}</span>
+                  <span className={styles['emitDetail']}>{summarizeEmit(event)}</span>
                 </li>
               ))}
             </ul>
           )}
       </div>
 
-      <div className={styles.section}>
-        <h4 className={styles.sectionTitle}>History</h4>
+      <div className={styles['section']}>
+        <h4 className={styles['sectionTitle']}>History</h4>
         {instance === null || instance.history.length === 0
-          ? <p className={styles.empty}>No history yet.</p>
+          ? <p className={styles['empty']}>No history yet.</p>
           : (
-            <table className={styles.historyTable} data-testid="sim-history">
+            <table className={styles['historyTable']} data-testid="sim-history">
               <thead>
                 <tr>
                   <th>Node</th>

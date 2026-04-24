@@ -144,24 +144,24 @@ export default function AdvancedFilterBuilder({
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className={styles.builder} ref={rootRef}>
+    <div className={styles['builder']} ref={rootRef}>
 
       {/* ── Condition rows ── */}
-      <div className={styles.conditions}>
+      <div className={styles['conditions']}>
         {conditions.map((cond, index) => {
           const fieldDef = schema.find((f) => f.key === cond.field);
           const options: FilterOption[] | null = fieldDef?.options
                         ?? (fieldDef?.getOptions ? fieldDef.getOptions(items) : null);
           return (
-            <div key={cond.id} className={styles.conditionWrap}>
+            <div key={cond.id} className={styles['conditionWrap']}>
 
               {/* Logic connector (AND / OR) between rows */}
               {index > 0 && (
-                <div className={styles.logicRow}>
+                <div className={styles['logicRow']}>
                   {(['AND', 'OR'] as const).map((lbl) => (
                     <button
                       key={lbl}
-                      className={[styles.logicBtn, cond.logic === lbl && styles.logicActive].filter(Boolean).join(' ')}
+                      className={[styles['logicBtn'], cond.logic === lbl && styles['logicActive']].filter(Boolean).join(' ')}
                       onClick={() => updateCondition(cond.id, { logic: lbl })}
                     >
                       {lbl}
@@ -171,10 +171,10 @@ export default function AdvancedFilterBuilder({
               )}
 
               {/* Condition parts */}
-              <div className={styles.conditionRow}>
+              <div className={styles['conditionRow']}>
                 {/* Field */}
                 <select
-                  className={styles.select}
+                  className={styles['select']}
                   value={cond.field}
                   onChange={e => updateCondition(cond.id, { field: e.target.value })}
                   aria-label="Filter field"
@@ -186,7 +186,7 @@ export default function AdvancedFilterBuilder({
 
                 {/* Operator */}
                 <select
-                  className={styles.select}
+                  className={styles['select']}
                   value={cond.operator}
                   onChange={e => updateCondition(cond.id, { operator: e.target.value })}
                   aria-label="Filter operator"
@@ -199,7 +199,7 @@ export default function AdvancedFilterBuilder({
                 {/* Value — dropdown if options available, else text */}
                 {options && options.length > 0 ? (
                   <select
-                    className={[styles.select, styles.valueSelect].join(' ')}
+                    className={[styles['select'], styles['valueSelect']].join(' ')}
                     value={cond.value}
                     onChange={e => updateCondition(cond.id, { value: e.target.value })}
                     aria-label="Filter value"
@@ -211,7 +211,7 @@ export default function AdvancedFilterBuilder({
                   </select>
                 ) : (
                   <input
-                    className={[styles.input, styles.valueInput].join(' ')}
+                    className={[styles['input'], styles['valueInput']].join(' ')}
                     type="text"
                     value={cond.value}
                     onChange={e => updateCondition(cond.id, { value: e.target.value })}
@@ -222,7 +222,7 @@ export default function AdvancedFilterBuilder({
 
                 {/* Remove */}
                 <button
-                  className={styles.removeBtn}
+                  className={styles['removeBtn']}
                   onClick={() => removeCondition(cond.id)}
                   disabled={conditions.length <= 1}
                   aria-label="Remove condition"
@@ -236,36 +236,36 @@ export default function AdvancedFilterBuilder({
       </div>
 
       {/* ── Add condition buttons ── */}
-      <div className={styles.addRow}>
-        <button className={styles.addBtn} onClick={() => addCondition('AND')}>
+      <div className={styles['addRow']}>
+        <button className={styles['addBtn']} onClick={() => addCondition('AND')}>
           <Plus size={13} /> AND
         </button>
-        <button className={styles.addBtn} onClick={() => addCondition('OR')}>
+        <button className={styles['addBtn']} onClick={() => addCondition('OR')}>
           <Plus size={13} /> OR
         </button>
       </div>
 
       {/* ── Save as Smart View ── */}
-      <div className={styles.saveSection}>
-        <div className={styles.nameField}>
-          <label htmlFor="afb-view-name" className={styles.srOnly}>Smart View name</label>
+      <div className={styles['saveSection']}>
+        <div className={styles['nameField']}>
+          <label htmlFor="afb-view-name" className={styles['srOnly']}>Smart View name</label>
           <input
             id="afb-view-name"
             ref={nameInputRef}
-            className={[styles.input, styles.nameInput, nameError ? styles.inputError : ''].filter(Boolean).join(' ')}
+            className={[styles['input'], styles['nameInput'], nameError ? styles['inputError'] : ''].filter(Boolean).join(' ')}
             type="text"
             value={viewName}
             onChange={e => { setViewName(e.target.value); if (nameError) setNameError(''); }}
             placeholder="Name this Smart View…"
             onKeyDown={e => e.key === 'Enter' && handleSave()}
           />
-          {nameError && <span className={styles.errorMsg}>{nameError}</span>}
+          {nameError && <span className={styles['errorMsg']}>{nameError}</span>}
         </div>
-        <button className={[styles.saveBtn, saved ? styles.saveBtnSaved : ''].filter(Boolean).join(' ')} onClick={handleSave}>
+        <button className={[styles['saveBtn'], saved ? styles['saveBtnSaved'] : ''].filter(Boolean).join(' ')} onClick={handleSave}>
           {saved ? <><Check size={13} /> Saved!</> : (editingId ? 'Update Smart View' : 'Save Smart View')}
         </button>
         {editingId && onCancelEdit && (
-          <button className={styles.cancelBtn} onClick={onCancelEdit}>Cancel</button>
+          <button className={styles['cancelBtn']} onClick={onCancelEdit}>Cancel</button>
         )}
       </div>
     </div>

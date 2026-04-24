@@ -78,15 +78,15 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
   return (
     <div
       ref={panelRef}
-      className={styles.panel}
+      className={styles['panel']}
       style={{ left: px, top: py }}
       role="dialog"
       aria-label="Edit event appearance"
       onKeyDown={handleKeyDown}
     >
-      <div className={styles.header}>
-        <span className={styles.headerLabel}>Customize Event</span>
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+      <div className={styles['header']}>
+        <span className={styles['headerLabel']}>Customize Event</span>
+        <button className={styles['closeBtn']} onClick={onClose} aria-label="Close">
           <X size={14} />
         </button>
       </div>
@@ -94,7 +94,7 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
       {/* Title */}
       <input
         ref={inputRef}
-        className={styles.titleInput}
+        className={styles['titleInput']}
         value={title}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
         placeholder="Event title…"
@@ -102,12 +102,12 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
       />
 
       {/* Color swatches */}
-      <div className={styles.colorRow} role="group" aria-label="Event color">
+      <div className={styles['colorRow']} role="group" aria-label="Event color">
         {PRESET_COLORS.map(c => (
           <button
             type="button"
             key={c}
-            className={[styles.colorSwatch, color === c && styles.colorActive].filter(Boolean).join(' ')}
+            className={[styles['colorSwatch'], color === c && styles['colorActive']].filter(Boolean).join(' ')}
             style={{ background: c }}
             onClick={() => setColor(c)}
             aria-label={`Color ${c}`}
@@ -117,10 +117,10 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
       </div>
 
       {/* Style toggles */}
-      <div className={styles.styleRow}>
+      <div className={styles['styleRow']}>
         <button
           type="button"
-          className={[styles.styleBtn, bold && styles.styleBtnActive].filter(Boolean).join(' ')}
+          className={[styles['styleBtn'], bold && styles['styleBtnActive']].filter(Boolean).join(' ')}
           onClick={() => setBold(v => !v)}
           aria-pressed={bold}
           title="Bold text"
@@ -129,20 +129,20 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
         </button>
         <button
           type="button"
-          className={[styles.styleBtn, large && styles.styleBtnActive].filter(Boolean).join(' ')}
+          className={[styles['styleBtn'], large && styles['styleBtnActive']].filter(Boolean).join(' ')}
           onClick={() => setLarge(v => !v)}
           aria-pressed={large}
           title="Priority size — makes this event stand out"
         >
           <span aria-hidden="true">★</span>
         </button>
-        <span className={styles.styleHint}>{styleLabel}</span>
+        <span className={styles['styleHint']}>{styleLabel}</span>
       </div>
 
       {/* Actions */}
-      <div className={styles.actions}>
-        <button type="button" className={styles.saveBtn} onClick={handleSave}>Save</button>
-        <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
+      <div className={styles['actions']}>
+        <button type="button" className={styles['saveBtn']} onClick={handleSave}>Save</button>
+        <button type="button" className={styles['cancelBtn']} onClick={onClose}>Cancel</button>
       </div>
     </div>
   );

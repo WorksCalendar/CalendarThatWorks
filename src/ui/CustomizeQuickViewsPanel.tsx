@@ -49,10 +49,10 @@ export default function CustomizeQuickViewsPanel({
   }, [open]);
 
   return (
-    <div ref={rootRef} className={styles.headerControl}>
+    <div ref={rootRef} className={styles['headerControl']}>
       <button
         type="button"
-        className={styles.headerBtn}
+        className={styles['headerBtn']}
         onClick={() => setOpen(v => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -66,14 +66,14 @@ export default function CustomizeQuickViewsPanel({
 
       {open && (
         <div
-          className={`${styles.dropdownPanel} ${styles.customizePanel}`}
+          className={`${styles['dropdownPanel']} ${styles['customizePanel']}`}
           role="dialog"
           aria-label="Customize quick views"
         >
           {views.length === 0 ? (
-            <p className={styles.dropdownEmpty}>No saved views yet.</p>
+            <p className={styles['dropdownEmpty']}>No saved views yet.</p>
           ) : (
-            <ul className={styles.customizeList}>
+            <ul className={styles['customizeList']}>
               {views.map((view: any) => (
                 <CustomizeRow
                   key={view.id}
@@ -122,12 +122,12 @@ function CustomizeRow({
   }
 
   return (
-    <li className={styles.customizeRow} style={{ '--chip-color': color } as React.CSSProperties}>
-      <div className={styles.customizeHeader}>
+    <li className={styles['customizeRow']} style={{ '--chip-color': color } as React.CSSProperties}>
+      <div className={styles['customizeHeader']}>
         {renaming ? (
-          <div className={styles.renameRow}>
+          <div className={styles['renameRow']}>
             <input
-              className={styles.renameInput}
+              className={styles['renameInput']}
               value={nameVal}
               onChange={e => setNameVal(e.target.value)}
               onKeyDown={e => {
@@ -138,7 +138,7 @@ function CustomizeRow({
             />
             <button
               type="button"
-              className={styles.iconBtn}
+              className={styles['iconBtn']}
               onClick={commitRename}
               aria-label="Confirm rename"
             >
@@ -146,7 +146,7 @@ function CustomizeRow({
             </button>
             <button
               type="button"
-              className={styles.iconBtn}
+              className={styles['iconBtn']}
               onClick={() => { setNameVal(view.name); setRenaming(false); }}
               aria-label="Cancel rename"
             >
@@ -154,12 +154,12 @@ function CustomizeRow({
             </button>
           </div>
         ) : (
-          <div className={styles.customizeNameRow}>
-            <span className={styles.customizeColorDot} style={{ background: color }} aria-hidden="true" />
-            <span className={styles.customizeName}>{view.name}</span>
+          <div className={styles['customizeNameRow']}>
+            <span className={styles['customizeColorDot']} style={{ background: color }} aria-hidden="true" />
+            <span className={styles['customizeName']}>{view.name}</span>
             <button
               type="button"
-              className={styles.iconBtn}
+              className={styles['iconBtn']}
               onClick={() => setRenaming(true)}
               aria-label={`Rename ${view.name}`}
             >
@@ -169,12 +169,12 @@ function CustomizeRow({
         )}
       </div>
 
-      <div className={styles.colorRow}>
+      <div className={styles['colorRow']}>
         {PROFILE_COLORS.map(c => (
           <button
             key={c}
             type="button"
-            className={[styles.colorDot, view.color === c && styles.colorDotActive].filter(Boolean).join(' ')}
+            className={[styles['colorDot'], view.color === c && styles['colorDotActive']].filter(Boolean).join(' ')}
             style={{ background: c }}
             onClick={() => onColorChange(view.id, c)}
             aria-label={`Set color ${c} for ${view.name}`}
@@ -182,10 +182,10 @@ function CustomizeRow({
         ))}
       </div>
 
-      <div className={styles.customizeActions}>
+      <div className={styles['customizeActions']}>
         <button
           type="button"
-          className={styles.manageLine}
+          className={styles['manageLine']}
           onClick={() => onToggleVisibility(view.id)}
         >
           {isHidden ? <Eye size={12} /> : <EyeOff size={12} />}
@@ -194,7 +194,7 @@ function CustomizeRow({
 
         <button
           type="button"
-          className={styles.manageLine}
+          className={styles['manageLine']}
           onClick={() => onResave(view.id)}
         >
           <RefreshCw size={12} /> Update with current filters
@@ -203,7 +203,7 @@ function CustomizeRow({
         {onEditConditions && (
           <button
             type="button"
-            className={styles.manageLine}
+            className={styles['manageLine']}
             onClick={() => onEditConditions(view.id)}
           >
             <Settings2 size={12} /> Edit conditions
@@ -211,11 +211,11 @@ function CustomizeRow({
         )}
 
         {confirmDelete ? (
-          <div className={styles.confirmRow} role="alertdialog" aria-label="Confirm delete">
-            <span className={styles.confirmText}>Delete saved view?</span>
+          <div className={styles['confirmRow']} role="alertdialog" aria-label="Confirm delete">
+            <span className={styles['confirmText']}>Delete saved view?</span>
             <button
               type="button"
-              className={[styles.confirmBtn, styles.confirmYes].join(' ')}
+              className={[styles['confirmBtn'], styles['confirmYes']].join(' ')}
               onClick={() => { onDelete(view.id); setConfirmDelete(false); }}
               autoFocus
             >
@@ -223,7 +223,7 @@ function CustomizeRow({
             </button>
             <button
               type="button"
-              className={styles.confirmBtn}
+              className={styles['confirmBtn']}
               onClick={() => setConfirmDelete(false)}
             >
               Cancel
@@ -232,7 +232,7 @@ function CustomizeRow({
         ) : (
           <button
             type="button"
-            className={[styles.manageLine, styles.danger].join(' ')}
+            className={[styles['manageLine'], styles['danger']].join(' ')}
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 size={12} /> Delete saved view

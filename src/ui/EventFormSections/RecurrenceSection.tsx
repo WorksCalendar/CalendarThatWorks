@@ -27,11 +27,11 @@ export function RecurrenceSection({ preset, customRrule, onPresetChange, onCusto
   }
 
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor="ef-repeat">Repeat</label>
+    <div className={styles['field']}>
+      <label className={styles['label']} htmlFor="ef-repeat">Repeat</label>
       <select
         id="ef-repeat"
-        className={styles.select}
+        className={styles['select']}
         value={preset}
         onChange={handlePresetChange}
       >
@@ -43,13 +43,13 @@ export function RecurrenceSection({ preset, customRrule, onPresetChange, onCusto
         <input
           id="ef-repeat-custom"
           aria-label="Custom RRULE string"
-          className={styles.input}
+          className={styles['input']}
           value={customRrule}
           onChange={e => onCustomRruleChange(e.target.value)}
           placeholder="FREQ=WEEKLY;BYDAY=MO,WE,FR"
         />
       )}
-      <span className={styles.helperText}>Uses RFC5545 RRULE format internally.</span>
+      <span className={styles['helperText']}>Uses RFC5545 RRULE format internally.</span>
     </div>
   );
 }

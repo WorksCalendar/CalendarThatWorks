@@ -31,96 +31,96 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
       : `${format(event.start, 'MMM d, h:mm a')} – ${format(event.end, 'MMM d, h:mm a')}`;
 
   return (
-    <div ref={trapRef} className={styles.card} role="dialog" aria-modal="true" aria-label={`Event details: ${event.title}`}>
+    <div ref={trapRef} className={styles['card']} role="dialog" aria-modal="true" aria-label={`Event details: ${event.title}`}>
       {/* Color accent bar */}
-      <div className={styles.accent} style={{ background: event.color }} />
+      <div className={styles['accent']} style={{ background: event.color }} />
 
-      <div className={styles.body}>
-        <div className={styles.titleRow}>
-          <h3 className={styles.title}>{event.title}</h3>
+      <div className={styles['body']}>
+        <div className={styles['titleRow']}>
+          <h3 className={styles['title']}>{event.title}</h3>
           {onEdit && (
-            <button className={styles.editBtn} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEdit(event); }} aria-label="Edit event" title="Edit">
+            <button className={styles['editBtn']} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEdit(event); }} aria-label="Edit event" title="Edit">
               <Pencil size={13} />
             </button>
           )}
-          <button className={styles.close} onClick={onClose} aria-label="Close">
+          <button className={styles['close']} onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>
         {event.status && event.status !== 'confirmed' && (
-          <div className={styles.statusBadge} data-status={event.status}>
+          <div className={styles['statusBadge']} data-status={event.status}>
             {event.status === 'tentative' ? 'Tentative' : 'Cancelled'}
           </div>
         )}
 
         {hc.showTime !== false && (
-          <div className={styles.field}>
-            <Clock size={13} className={styles.icon} />
+          <div className={styles['field']}>
+            <Clock size={13} className={styles['icon']} />
             <span>{timeRangeText}</span>
           </div>
         )}
 
         {hc.showCategory !== false && event.category && (
-          <div className={styles.field}>
-            <Tag size={13} className={styles.icon} />
-            <span className={styles.badge} style={{ '--badge-color': event.color } as React.CSSProperties}>
+          <div className={styles['field']}>
+            <Tag size={13} className={styles['icon']} />
+            <span className={styles['badge']} style={{ '--badge-color': event.color } as React.CSSProperties}>
               {event.category}
             </span>
           </div>
         )}
 
         {hc.showResource !== false && event.resource && (
-          <div className={styles.field}>
-            <Anchor size={13} className={styles.icon} />
+          <div className={styles['field']}>
+            <Anchor size={13} className={styles['icon']} />
             <span>{resolveResourceLabel?.(event.resource) ?? event.resource}</span>
           </div>
         )}
 
         {hc.showMeta !== false && event.meta && Object.entries(event.meta).length > 0 && (
-          <div className={styles.metaBlock}>
+          <div className={styles['metaBlock']}>
             {Object.entries(event.meta).map(([k, v]) => (
-              <div key={k} className={styles.metaRow}>
-                <span className={styles.metaKey}>{k}</span>
-                <span className={styles.metaVal}>{String(v)}</span>
+              <div key={k} className={styles['metaRow']}>
+                <span className={styles['metaKey']}>{k}</span>
+                <span className={styles['metaVal']}>{String(v)}</span>
               </div>
             ))}
           </div>
         )}
 
         {hc.showNotes !== false && onNoteSave && (
-          <div className={styles.notesSection}>
-            <div className={styles.notesHeader}>
-              <StickyNote size={13} className={styles.icon} />
+          <div className={styles['notesSection']}>
+            <div className={styles['notesHeader']}>
+              <StickyNote size={13} className={styles['icon']} />
               <span>Notes</span>
               {!editing && (
-                <button className={styles.editNoteBtn} onClick={() => setEditing(true)}>
+                <button className={styles['editNoteBtn']} onClick={() => setEditing(true)}>
                   {note ? 'Edit' : 'Add note'}
                 </button>
               )}
             </div>
 
             {editing ? (
-              <div className={styles.noteEdit}>
-                <label htmlFor="hc-note" className={styles.srOnly}>Event note</label>
+              <div className={styles['noteEdit']}>
+                <label htmlFor="hc-note" className={styles['srOnly']}>Event note</label>
                 <textarea
                   id="hc-note"
-                  className={styles.noteTextarea}
+                  className={styles['noteTextarea']}
                   value={noteText}
                   onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNoteText(e.target.value)}
                   placeholder="Add a note…"
                   autoFocus
                   rows={3}
                 />
-                <div className={styles.noteActions}>
-                  <button className={styles.btnSave} onClick={handleNoteSave}>Save</button>
-                  <button className={styles.btnCancel} onClick={() => { setEditing(false); setNoteText(note?.body || ''); }}>Cancel</button>
+                <div className={styles['noteActions']}>
+                  <button className={styles['btnSave']} onClick={handleNoteSave}>Save</button>
+                  <button className={styles['btnCancel']} onClick={() => { setEditing(false); setNoteText(note?.body || ''); }}>Cancel</button>
                   {note && (
-                    <button className={styles.btnDelete} onClick={() => { onNoteDelete?.(note.id); onClose(); }}>Delete</button>
+                    <button className={styles['btnDelete']} onClick={() => { onNoteDelete?.(note.id); onClose(); }}>Delete</button>
                   )}
                 </div>
               </div>
             ) : (
-              note?.body && <p className={styles.noteText}>{note.body}</p>
+              note?.body && <p className={styles['noteText']}>{note.body}</p>
             )}
           </div>
         )}

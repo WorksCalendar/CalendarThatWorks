@@ -80,21 +80,21 @@ function Slot({ label, subtitle, filledId, employees, fleet, onOpen, onRemove }:
     <button
       ref={btnRef}
       type="button"
-      className={[styles.slot, filled ? styles.slotFilled : styles.slotEmpty].filter(Boolean).join(' ')}
+      className={[styles['slot'], filled ? styles['slotFilled'] : styles['slotEmpty']].filter(Boolean).join(' ')}
       onClick={handleClick}
       aria-label={filled ? `${filled.name} assigned` : `Assign ${label}`}
     >
-      <span className={[styles.slotDot, filled ? styles.slotFilledDot : ''].filter(Boolean).join(' ')}>
+      <span className={[styles['slotDot'], filled ? styles['slotFilledDot'] : ''].filter(Boolean).join(' ')}>
         {filled ? <CheckCircle size={14} /> : <Circle size={14} />}
       </span>
-      <span className={styles.slotText}>
-        <span className={styles.slotName}>{filled ? filled.name : label}</span>
-        <span className={styles.slotRole}>{filled ? (pilot?.certifications.slice(0,2).join(' · ') ?? med?.certifications.slice(0,1).join('') ?? ac?.tail ?? '') : subtitle}</span>
+      <span className={styles['slotText']}>
+        <span className={styles['slotName']}>{filled ? filled.name : label}</span>
+        <span className={styles['slotRole']}>{filled ? (pilot?.certifications.slice(0,2).join(' · ') ?? med?.certifications.slice(0,1).join('') ?? ac?.tail ?? '') : subtitle}</span>
       </span>
       {filled && (
         <button
           type="button"
-          className={styles.removeBtn}
+          className={styles['removeBtn']}
           onClick={e => { e.stopPropagation(); onRemove(); }}
           aria-label="Remove assignment"
         >
@@ -180,12 +180,12 @@ function CandidatePopover({ slot, employees, fleet, mission, onSelect, onDismiss
   return (
     <div
       ref={ref}
-      className={styles.candidatePopover}
+      className={styles['candidatePopover']}
       style={{ top, left }}
       role="listbox"
       aria-label="Select candidate"
     >
-      <div className={styles.candidateHeader}>
+      <div className={styles['candidateHeader']}>
         {slot.kind === 'pilot' ? 'Select Pilot' : slot.kind === 'medical' ? 'Select Medical Crew' : 'Select Aircraft'}
       </div>
       {candidates.map(c => (
@@ -193,12 +193,12 @@ function CandidatePopover({ slot, employees, fleet, mission, onSelect, onDismiss
           key={c.id}
           role="option"
           aria-selected="false"
-          className={[styles.candidateItem, !c.valid ? styles.candidateItemDisabled : ''].filter(Boolean).join(' ')}
+          className={[styles['candidateItem'], !c.valid ? styles['candidateItemDisabled'] : ''].filter(Boolean).join(' ')}
           onClick={() => onSelect(c.id, c.valid, c.reason)}
         >
           <div>
-            <div className={styles.candidateName}>{c.name}</div>
-            <div className={styles.candidateSub}>{c.sub}</div>
+            <div className={styles['candidateName']}>{c.name}</div>
+            <div className={styles['candidateSub']}>{c.sub}</div>
           </div>
         </div>
       ))}
@@ -282,38 +282,38 @@ export default function MissionHoverCard({
   const metaText = `${mission.legs.length} legs · ${mission.requirements.durationDays} days`;
 
   return (
-    <div className={styles.backdrop} role="dialog" aria-modal="true" aria-label={`Mission: ${mission.title}`}>
-      <div className={styles.card}>
+    <div className={styles['backdrop']} role="dialog" aria-modal="true" aria-label={`Mission: ${mission.title}`}>
+      <div className={styles['card']}>
 
         {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.missionIcon}><Plane size={18} /></div>
-          <div className={styles.headerText}>
-            <h2 className={styles.missionTitle}>{mission.title}</h2>
-            <div className={styles.missionMeta}>
+        <div className={styles['header']}>
+          <div className={styles['missionIcon']}><Plane size={18} /></div>
+          <div className={styles['headerText']}>
+            <h2 className={styles['missionTitle']}>{mission.title}</h2>
+            <div className={styles['missionMeta']}>
               <span>{mission.start.slice(0,10)} – {mission.end.slice(0,10)}</span>
               <span>{metaText}</span>
             </div>
           </div>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close"><X size={16} /></button>
+          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
 
         {/* Validation error */}
         {error && (
-          <div className={styles.errorBanner}>
+          <div className={styles['errorBanner']}>
             <AlertCircle size={14} />
             {error}
           </div>
         )}
 
         {/* Requirements diagram */}
-        <div className={styles.mapArea}>
-          <div className={styles.diagram}>
+        <div className={styles['mapArea']}>
+          <div className={styles['diagram']}>
 
             {/* Left: Pilots */}
-            <div className={styles.leftCol}>
-              <div className={styles.slotGroup}>
-                <div className={styles.groupLabel}>Pilots ({pilotCount} required)</div>
+            <div className={styles['leftCol']}>
+              <div className={styles['slotGroup']}>
+                <div className={styles['groupLabel']}>Pilots ({pilotCount} required)</div>
                 {Array.from({ length: pilotCount }).map((_, i) => (
                   <Slot
                     key={i}
@@ -330,15 +330,15 @@ export default function MissionHoverCard({
             </div>
 
             {/* Center: mission node */}
-            <div className={styles.centerNode}>
-              <div className={styles.centerTitle}>{mission.title.split('→')[0].trim()}</div>
-              <div className={styles.centerSub}>→ {mission.title.split('→')[1]?.trim()}</div>
+            <div className={styles['centerNode']}>
+              <div className={styles['centerTitle']}>{mission.title.split('→')[0].trim()}</div>
+              <div className={styles['centerSub']}>→ {mission.title.split('→')[1]?.trim()}</div>
             </div>
 
             {/* Right: Medical + Aircraft */}
-            <div className={styles.rightCol}>
-              <div className={styles.slotGroup}>
-                <div className={styles.groupLabel}>Medical Crew</div>
+            <div className={styles['rightCol']}>
+              <div className={styles['slotGroup']}>
+                <div className={styles['groupLabel']}>Medical Crew</div>
                 {medSlots.map((slot, i) => (
                   <Slot
                     key={i}
@@ -353,8 +353,8 @@ export default function MissionHoverCard({
                 ))}
               </div>
 
-              <div className={styles.slotGroup}>
-                <div className={styles.groupLabel}>Aircraft</div>
+              <div className={styles['slotGroup']}>
+                <div className={styles['groupLabel']}>Aircraft</div>
                 <Slot
                   label="Assign Aircraft"
                   subtitle={`min ${mission.requirements.aircraft.minHoursRemaining}hr · ${(mission.requirements.aircraft.requiredCapabilities ?? []).join(', ')}`}
@@ -380,13 +380,13 @@ export default function MissionHoverCard({
         </div>
 
         {/* Compliance strip */}
-        <div className={styles.complianceStrip}>
-          <div className={styles.complianceTitle}>Country clearances &amp; compliance</div>
-          <div className={styles.complianceList}>
+        <div className={styles['complianceStrip']}>
+          <div className={styles['complianceTitle']}>Country clearances &amp; compliance</div>
+          <div className={styles['complianceList']}>
             {mission.compliance.map(c => (
               <span
                 key={c.id}
-                className={[styles.complianceItem, c.status === 'approved' ? styles.complianceApproved : styles.compliancePending].join(' ')}
+                className={[styles['complianceItem'], c.status === 'approved' ? styles['complianceApproved'] : styles['compliancePending']].join(' ')}
               >
                 {c.status === 'approved' ? <CheckCircle size={11} /> : <AlertCircle size={11} />}
                 {c.label}

@@ -91,21 +91,21 @@ export default function ViewsPanel({
   };
 
   return (
-    <div className={styles.root}>
+    <div className={styles['root']}>
       {/* Save current as view */}
       {!saveOpen ? (
         <button
-          className={styles.saveBtn}
+          className={styles['saveBtn']}
           onClick={() => setSaveOpen(true)}
         >
           <Plus size={14} /> Save current as view
         </button>
       ) : (
-        <div className={styles.saveForm}>
-          <div className={styles.saveFormRow}>
+        <div className={styles['saveForm']}>
+          <div className={styles['saveFormRow']}>
             <input
               ref={nameInputRef}
-              className={styles.nameInput}
+              className={styles['nameInput']}
               type="text"
               value={saveName}
               onChange={e => setSaveName(e.target.value)}
@@ -114,22 +114,22 @@ export default function ViewsPanel({
               aria-label="New view name"
             />
             <button
-              className={styles.confirmBtn}
+              className={styles['confirmBtn']}
               onClick={handleSave}
               disabled={!saveName.trim()}
             >
               <Check size={13} /> Save
             </button>
-            <button className={styles.cancelBtn} onClick={() => setSaveOpen(false)}>
+            <button className={styles['cancelBtn']} onClick={() => setSaveOpen(false)}>
               Cancel
             </button>
           </div>
-          <div className={styles.colorRow}>
-            <span className={styles.colorLabel}>Color:</span>
+          <div className={styles['colorRow']}>
+            <span className={styles['colorLabel']}>Color:</span>
             {PROFILE_COLORS.map(c => (
               <div
                 key={c}
-                className={[styles.colorDot, saveColor === c && styles.selected].filter(Boolean).join(' ')}
+                className={[styles['colorDot'], saveColor === c && styles['selected']].filter(Boolean).join(' ')}
                 style={{ background: c }}
                 onClick={() => setSaveColor(c)}
                 role="radio"
@@ -143,13 +143,13 @@ export default function ViewsPanel({
 
       {/* View list */}
       {views.length === 0 ? (
-        <div className={styles.empty}>
+        <div className={styles['empty']}>
           <Bookmark size={20} style={{ marginBottom: 6, opacity: 0.5 }} />
           <div>No saved views yet</div>
           <div style={{ fontSize: 12, marginTop: 4 }}>Save your current filters and grouping as a view</div>
         </div>
       ) : (
-        <div className={styles.viewList}>
+        <div className={styles['viewList']}>
           {views.map(v => {
             const isActive = v.id === activeId;
             const viewInfo = v.view ? VIEW_ICON_MAP[v.view] : null;
@@ -158,11 +158,11 @@ export default function ViewsPanel({
             return (
               <div
                 key={v.id}
-                className={[styles.viewItem, isActive && styles.active].filter(Boolean).join(' ')}
+                className={[styles['viewItem'], isActive && styles['active']].filter(Boolean).join(' ')}
               >
                 {/* Color dot */}
                 <div
-                  className={styles.viewColor}
+                  className={styles['viewColor']}
                   style={{ background: v.color || PROFILE_COLORS[0] }}
                 />
 
@@ -170,7 +170,7 @@ export default function ViewsPanel({
                 {renamingId === v.id ? (
                   <input
                     ref={renameInputRef}
-                    className={styles.renameInput}
+                    className={styles['renameInput']}
                     value={renameValue}
                     onChange={e => setRenameValue(e.target.value)}
                     onKeyDown={e => {
@@ -182,7 +182,7 @@ export default function ViewsPanel({
                   />
                 ) : (
                   <button
-                    className={styles.viewName}
+                    className={styles['viewName']}
                     onClick={() => onApply(v)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                     title={`Apply "${v.name}"`}
@@ -193,7 +193,7 @@ export default function ViewsPanel({
 
                 {/* View type icon */}
                 {ViewIcon && (
-                  <span className={styles.viewIcon} title={viewInfo.label}>
+                  <span className={styles['viewIcon']} title={viewInfo.label}>
                     <ViewIcon size={14} />
                   </span>
                 )}
@@ -204,11 +204,11 @@ export default function ViewsPanel({
                 )}
 
                 {/* Action buttons */}
-                <div className={styles.viewActions}>
+                <div className={styles['viewActions']}>
                   {/* Resave (only when active + dirty) */}
                   {isActive && isDirty && (
                     <button
-                      className={styles.viewActionBtn}
+                      className={styles['viewActionBtn']}
                       onClick={e => { e.stopPropagation(); onResave(v.id); }}
                       title="Update with current state"
                       aria-label={`Resave "${v.name}" with current state`}
@@ -219,7 +219,7 @@ export default function ViewsPanel({
 
                   {/* Rename */}
                   <button
-                    className={styles.viewActionBtn}
+                    className={styles['viewActionBtn']}
                     onClick={e => {
                       e.stopPropagation();
                       setRenamingId(v.id);
@@ -234,8 +234,8 @@ export default function ViewsPanel({
                   {/* Visibility toggle */}
                   <button
                     className={[
-                      styles.viewActionBtn,
-                      v.hiddenFromStrip && styles.hidden,
+                      styles['viewActionBtn'],
+                      v.hiddenFromStrip && styles['hidden'],
                     ].filter(Boolean).join(' ')}
                     onClick={e => { e.stopPropagation(); onToggleVisibility(v.id); }}
                     title={v.hiddenFromStrip ? 'Show in chip strip' : 'Hide from chip strip'}
@@ -246,7 +246,7 @@ export default function ViewsPanel({
 
                   {/* Delete */}
                   <button
-                    className={[styles.viewActionBtn, styles.danger].join(' ')}
+                    className={[styles['viewActionBtn'], styles['danger']].join(' ')}
                     onClick={e => { e.stopPropagation(); onDelete(v.id); }}
                     title="Delete"
                     aria-label={`Delete "${v.name}"`}

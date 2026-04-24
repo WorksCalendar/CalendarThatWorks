@@ -66,14 +66,14 @@ function extractSync(meta: Readonly<Record<string, unknown>>): SyncMetadata | un
   const raw = meta[SYNC_META_KEY];
   if (!raw || typeof raw !== 'object') return undefined;
   const s = raw as Record<string, unknown>;
-  if (typeof s.externalId !== 'string' || typeof s.syncSource !== 'string') return undefined;
+  if (typeof s['externalId'] !== 'string' || typeof s['syncSource'] !== 'string') return undefined;
   const sync: SyncMetadata = {
-    externalId: s.externalId,
-    syncSource: s.syncSource,
-    ...(typeof s.syncToken === 'string'       && { syncToken:    s.syncToken }),
-    ...(s.lastSyncedAt instanceof Date        && { lastSyncedAt: s.lastSyncedAt }),
-    ...(typeof s.version === 'number'         && { version:      s.version }),
-    ...(s.updatedAt instanceof Date           && { updatedAt:    s.updatedAt }),
+    externalId: s['externalId'],
+    syncSource: s['syncSource'],
+    ...(typeof s['syncToken'] === 'string'       && { syncToken:    s['syncToken'] }),
+    ...(s['lastSyncedAt'] instanceof Date        && { lastSyncedAt: s['lastSyncedAt'] }),
+    ...(typeof s['version'] === 'number'         && { version:      s['version'] }),
+    ...(s['updatedAt'] instanceof Date           && { updatedAt:    s['updatedAt'] }),
   };
   return sync;
 }

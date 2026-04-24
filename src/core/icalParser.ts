@@ -93,19 +93,19 @@ export function expandRRule(
   rangeEnd: Date,
 ): Date[] {
   const rule     = parseRRule(rruleStr);
-  const freq     = rule.FREQ;
+  const freq     = rule['FREQ'];
   if (!freq) return [new Date(dtstart)];
 
-  const interval = parseInt(rule.INTERVAL || '1', 10);
-  const maxCount = rule.COUNT ? parseInt(rule.COUNT, 10) : 500; // safe cap
-  const until    = rule.UNTIL ? parseICSDate(rule.UNTIL) : null;
+  const interval = parseInt(rule['INTERVAL'] || '1', 10);
+  const maxCount = rule['COUNT'] ? parseInt(rule['COUNT'], 10) : 500; // safe cap
+  const until    = rule['UNTIL'] ? parseICSDate(rule['UNTIL']) : null;
   const ceiling  = until
     ? new Date(Math.min(until.getTime(), rangeEnd.getTime()))
     : new Date(rangeEnd);
 
   // Parse BYDAY: "MO,FR" or "1MO,-1FR"
-  const byDays: ByDay[] | null = rule.BYDAY
-    ? rule.BYDAY.split(',').map(s => {
+  const byDays: ByDay[] | null = rule['BYDAY']
+    ? rule['BYDAY'].split(',').map(s => {
         const m = s.match(/^([+-]?\d*)([A-Z]{2})$/);
         if (!m || m[2] === undefined) return null;
         const day = DAYS[m[2]];
@@ -114,8 +114,8 @@ export function expandRRule(
       }).filter((bd): bd is ByDay => bd !== null)
     : null;
 
-  const byMonthDays: number[] | null = rule.BYMONTHDAY ? rule.BYMONTHDAY.split(',').map(Number) : null;
-  const byMonths: number[] | null    = rule.BYMONTH    ? rule.BYMONTH.split(',').map(Number) : null;
+  const byMonthDays: number[] | null = rule['BYMONTHDAY'] ? rule['BYMONTHDAY'].split(',').map(Number) : null;
+  const byMonths: number[] | null    = rule['BYMONTH']    ? rule['BYMONTH'].split(',').map(Number) : null;
 
   const exSet = new Set((exdates || []).map(d => dayKey(d)));
 
@@ -369,8 +369,8 @@ function parseVEvent(
   if (statusRaw === 'CANCELLED') status = 'cancelled';
 
   const meta: Record<string, string> = {};
-  if (desc)     meta.description = desc.replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\\\/g, '\\');
-  if (location) meta.location    = location;
+  if (desc)     meta['description'] = desc.replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\\\/g, '\\');
+  if (location) meta['location']    = location;
 
   const category = categories?.split(',')[0]?.trim() || null;
 

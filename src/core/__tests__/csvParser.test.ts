@@ -25,21 +25,21 @@ describe('parseCSV', () => {
   it('handles quoted fields with commas', () => {
     const text = 'Title,Notes\n"Meeting, all hands","See you there"';
     const { rows } = parseCSV(text);
-    expect(rows[0]!.Title).toBe('Meeting, all hands');
-    expect(rows[0]!.Notes).toBe('See you there');
+    expect(rows[0]!['Title']).toBe('Meeting, all hands');
+    expect(rows[0]!['Notes']).toBe('See you there');
   });
 
   it('handles escaped quotes inside quoted fields', () => {
     const text = 'Title\n"She said ""hello"""\n';
     const { rows } = parseCSV(text);
-    expect(rows[0]!.Title).toBe('She said "hello"');
+    expect(rows[0]!['Title']).toBe('She said "hello"');
   });
 
   it('handles Windows CRLF line endings', () => {
     const text = 'Name,Start\r\nMeeting,2026-04-10\r\n';
     const { rows } = parseCSV(text);
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.Name).toBe('Meeting');
+    expect(rows[0]!['Name']).toBe('Meeting');
   });
 
   it('skips blank rows', () => {
@@ -66,27 +66,27 @@ describe('suggestMapping', () => {
   it('maps common column names to event fields', () => {
     const headers = ['Title', 'Start Date', 'End Date', 'Category', 'Resource'];
     const mapping = suggestMapping(headers);
-    expect(mapping.title).toBe('Title');
-    expect(mapping.start).toBe('Start Date');
-    expect(mapping.end).toBe('End Date');
-    expect(mapping.category).toBe('Category');
-    expect(mapping.resource).toBe('Resource');
+    expect(mapping['title']).toBe('Title');
+    expect(mapping['start']).toBe('Start Date');
+    expect(mapping['end']).toBe('End Date');
+    expect(mapping['category']).toBe('Category');
+    expect(mapping['resource']).toBe('Resource');
   });
 
   it('handles "Name" → title', () => {
-    expect(suggestMapping(['Name', 'Begin']).title).toBe('Name');
+    expect(suggestMapping(['Name', 'Begin'])['title']).toBe('Name');
   });
 
   it('handles "Summary" → title', () => {
-    expect(suggestMapping(['Summary']).title).toBe('Summary');
+    expect(suggestMapping(['Summary'])['title']).toBe('Summary');
   });
 
   it('handles "Subject" → title', () => {
-    expect(suggestMapping(['Subject', 'Date']).title).toBe('Subject');
+    expect(suggestMapping(['Subject', 'Date'])['title']).toBe('Subject');
   });
 
   it('handles "Date" → start when no other start column', () => {
-    expect(suggestMapping(['Name', 'Date']).start).toBe('Date');
+    expect(suggestMapping(['Name', 'Date'])['start']).toBe('Date');
   });
 
   it('does not map same column to two fields', () => {
@@ -223,14 +223,14 @@ describe('presets', () => {
     savePreset(preset);
     const loaded = loadPresets();
     expect(loaded).toHaveLength(1);
-    expect(loaded[0]!.name).toBe('My Preset');
+    expect(loaded[0]!['name']).toBe('My Preset');
   });
 
   it('updates an existing preset by id', () => {
     savePreset({ id: 'p1', name: 'Old', mapping: {}, dateFormat: 'iso' });
     savePreset({ id: 'p1', name: 'New', mapping: {}, dateFormat: 'mdy' });
     expect(loadPresets()).toHaveLength(1);
-    expect(loadPresets!()[0].name).toBe('New');
+    expect(loadPresets!()[0]['name']).toBe('New');
   });
 
   it('deletes a preset by id', () => {

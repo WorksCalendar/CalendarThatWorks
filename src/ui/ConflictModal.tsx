@@ -32,7 +32,7 @@ export default function ConflictModal({
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onCancel()}
     >
       <div
@@ -40,17 +40,17 @@ export default function ConflictModal({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="conflict-modal-title"
-        className={styles.panel}
+        className={styles['panel']}
         data-severity={result.severity}
       >
-        <div className={styles.head}>
+        <div className={styles['head']}>
           <AlertTriangle size={18} aria-hidden="true" />
-          <h2 id="conflict-modal-title" className={styles.title}>
+          <h2 id="conflict-modal-title" className={styles['title']}>
             {title}
           </h2>
           <button
             type="button"
-            className={styles.closeBtn}
+            className={styles['closeBtn']}
             onClick={onCancel}
             aria-label="Close conflict dialog"
           >
@@ -58,34 +58,34 @@ export default function ConflictModal({
           </button>
         </div>
 
-        <ul className={styles.list} aria-label="Conflict violations">
+        <ul className={styles['list']} aria-label="Conflict violations">
           {result.violations.map((v: any, i: number) => (
             <li
               key={`${v.rule}:${v.conflictingEventId ?? i}`}
-              className={styles.item}
+              className={styles['item']}
               data-severity={v.severity}
               data-rule={v.rule}
             >
-              <span className={styles.severityTag}>{v.severity}</span>
-              <span className={styles.message}>{v.message}</span>
-              <span className={styles.ruleTag} aria-label={`rule ${v.rule}`}>
+              <span className={styles['severityTag']}>{v.severity}</span>
+              <span className={styles['message']}>{v.message}</span>
+              <span className={styles['ruleTag']} aria-label={`rule ${v.rule}`}>
                 {v.rule}
               </span>
             </li>
           ))}
         </ul>
 
-        <div className={styles.footer}>
+        <div className={styles['footer']}>
           <button
             type="button"
-            className={styles.btnSecondary}
+            className={styles['btnSecondary']}
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
             type="button"
-            className={styles.btnPrimary}
+            className={styles['btnPrimary']}
             onClick={onProceed}
             disabled={!canProceed}
             title={canProceed

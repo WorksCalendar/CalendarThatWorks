@@ -18,8 +18,8 @@ describe('groupRows', () => {
   it('groups rows by field value', () => {
     const { flatRows, groupOrder } = groupRows(rows, { groupBy: 'role', fieldAccessor });
     expect(groupOrder).toEqual(['Nurse', 'Doctor', '(Ungrouped)']);
-    expect(flatRows.filter(r => r._type === 'groupHeader').length).toBe(3);
-    expect(flatRows.filter(r => !r._type).length).toBe(6);
+    expect(flatRows.filter(r => r['_type'] === 'groupHeader').length).toBe(3);
+    expect(flatRows.filter(r => !r['_type']).length).toBe(6);
   });
 
   it('interleaves headers and members correctly', () => {
@@ -27,10 +27,10 @@ describe('groupRows', () => {
     const nurseHeader: any = flatRows.find((r: any) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
     expect(nurseHeader).toBeDefined();
     expect(nurseHeader.count).toBe(3);
-    const doctorHeader = flatRows.find(r => r._type === 'groupHeader' && r.groupKey === 'Doctor');
+    const doctorHeader = flatRows.find(r => r['_type'] === 'groupHeader' && r['groupKey'] === 'Doctor');
     expect(doctorHeader).toBeDefined();
     if (!doctorHeader) throw new Error('Expected doctorHeader to be defined');
-    expect(doctorHeader.count).toBe(2);
+    expect(doctorHeader['count']).toBe(2);
   });
 
   it('collapsed group keeps header but omits members', () => {
@@ -41,19 +41,19 @@ describe('groupRows', () => {
     });
     const nurseHeader: any = flatRows.find((r: any) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
     expect(nurseHeader.collapsed).toBe(true);
-    const nurseMembers = flatRows.filter(r => !r._type && r.emp?.role === 'Nurse');
+    const nurseMembers = flatRows.filter(r => !r['_type'] && r['emp']?.role === 'Nurse');
     expect(nurseMembers.length).toBe(0);
     // Doctor members still present
-    expect(flatRows.filter(r => !r._type && r.emp?.role === 'Doctor').length).toBe(2);
+    expect(flatRows.filter(r => !r['_type'] && r['emp']?.role === 'Doctor').length).toBe(2);
   });
 
   it('null/undefined values go to (Ungrouped) sorted last', () => {
     const { groupOrder, flatRows } = groupRows(rows, { groupBy: 'role', fieldAccessor });
     expect(groupOrder[groupOrder.length - 1]).toBe('(Ungrouped)');
-    const ungrouped = flatRows.find(r => r._type === 'groupHeader' && r.groupKey === '(Ungrouped)');
+    const ungrouped = flatRows.find(r => r['_type'] === 'groupHeader' && r['groupKey'] === '(Ungrouped)');
     expect(ungrouped).toBeDefined();
     if (!ungrouped) throw new Error('Expected ungrouped header to be defined');
-    expect(ungrouped.count).toBe(1);
+    expect(ungrouped['count']).toBe(1);
   });
 
   it('returns empty flatRows and groupOrder for empty input', () => {
@@ -89,10 +89,10 @@ describe('groupRows', () => {
         groupBy: ['role', 'shift'],
         fieldAccessor: [roleAcc, shiftAcc],
       });
-      const headers = flatRows.filter(r => r._type === 'groupHeader');
+      const headers = flatRows.filter(r => r['_type'] === 'groupHeader');
       // 2 top-level (Nurse, Doctor) + 4 second-level (Nurse/Day, Nurse/Night, Doctor/Day, Doctor/Night)
       expect(headers).toHaveLength(6);
-      const depths = headers.map(h => h.depth);
+      const depths = headers.map(h => h['depth']);
       expect(depths).toEqual([0, 1, 1, 0, 1, 1]);
       // groupOrder contains every path in traversal order
       expect(groupOrder).toContain('Nurse');
@@ -108,11 +108,11 @@ describe('groupRows', () => {
         collapsedGroups: new Set(['Nurse']),
       });
       // No Nurse sub-headers, no Nurse rows
-      expect(flatRows.find(r => r.groupKey === 'Nurse/Day')).toBeUndefined();
-      expect(flatRows.find(r => !r._type && r.emp.role === 'Nurse')).toBeUndefined();
+      expect(flatRows.find(r => r['groupKey'] === 'Nurse/Day')).toBeUndefined();
+      expect(flatRows.find(r => !r['_type'] && r['emp'].role === 'Nurse')).toBeUndefined();
       // Doctor tree intact
-      expect(flatRows.find(r => r.groupKey === 'Doctor/Day')).toBeDefined();
-      expect(flatRows.filter(r => !r._type && r.emp.role === 'Doctor')).toHaveLength(2);
+      expect(flatRows.find(r => r['groupKey'] === 'Doctor/Day')).toBeDefined();
+      expect(flatRows.filter(r => !r['_type'] && r['emp'].role === 'Doctor')).toHaveLength(2);
     });
 
     it('collapsing a nested path hides only its bucket', () => {
@@ -122,13 +122,13 @@ describe('groupRows', () => {
         collapsedGroups: new Set(['Nurse/Day']),
       });
       // Nurse/Day header present (collapsed) but its rows hidden
-      const dayHeader = flatRows.find(r => r.groupKey === 'Nurse/Day');
+      const dayHeader = flatRows.find(r => r['groupKey'] === 'Nurse/Day');
       expect(dayHeader).toBeDefined();
       if (!dayHeader) throw new Error('Expected Nurse/Day header to be defined');
-      expect(dayHeader.collapsed).toBe(true);
-      expect(flatRows.filter(r => !r._type && r.emp.role === 'Nurse' && r.emp.shift === 'Day')).toHaveLength(0);
+      expect(dayHeader['collapsed']).toBe(true);
+      expect(flatRows.filter(r => !r['_type'] && r['emp'].role === 'Nurse' && r['emp'].shift === 'Day')).toHaveLength(0);
       // Nurse/Night unaffected — 1 row
-      expect(flatRows.filter(r => !r._type && r.emp.role === 'Nurse' && r.emp.shift === 'Night')).toHaveLength(1);
+      expect(flatRows.filter(r => !r['_type'] && r['emp'].role === 'Nurse' && r['emp'].shift === 'Night')).toHaveLength(1);
     });
 
     it('parent header count reports leaf-row totals, not direct children', () => {
@@ -136,14 +136,14 @@ describe('groupRows', () => {
         groupBy: ['role', 'shift'],
         fieldAccessor: [roleAcc, shiftAcc],
       });
-      const nurseHeader = flatRows.find(r => r.groupKey === 'Nurse');
+      const nurseHeader = flatRows.find(r => r['groupKey'] === 'Nurse');
       expect(nurseHeader).toBeDefined();
       if (!nurseHeader) throw new Error('Expected nurseHeader to be defined');
-      expect(nurseHeader.count).toBe(3); // Day: 2 + Night: 1
-      const doctorHeader = flatRows.find(r => r.groupKey === 'Doctor');
+      expect(nurseHeader['count']).toBe(3); // Day: 2 + Night: 1
+      const doctorHeader = flatRows.find(r => r['groupKey'] === 'Doctor');
       expect(doctorHeader).toBeDefined();
       if (!doctorHeader) throw new Error('Expected doctorHeader to be defined');
-      expect(doctorHeader.count).toBe(2);
+      expect(doctorHeader['count']).toBe(2);
     });
   });
 });

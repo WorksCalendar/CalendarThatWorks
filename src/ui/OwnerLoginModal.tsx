@@ -23,35 +23,35 @@ export default function OwnerLoginModal({ authError, isAuthLoading, onAuthentica
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         ref={trapRef}
-        className={styles.dialog}
+        className={styles['dialog']}
         role="dialog"
         aria-modal="true"
         aria-labelledby="owner-login-title"
       >
-        <div className={styles.head}>
-          <div className={styles.title}>
+        <div className={styles['head']}>
+          <div className={styles['title']}>
             <Lock size={14} aria-hidden="true" />
-            <h2 id="owner-login-title" className={styles.titleText}>Owner settings</h2>
+            <h2 id="owner-login-title" className={styles['titleText']}>Owner settings</h2>
           </div>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label} htmlFor="owner-login-password">
+        <form onSubmit={handleSubmit} className={styles['form']}>
+          <label className={styles['label']} htmlFor="owner-login-password">
             Owner password
           </label>
-          <div className={styles.inputRow}>
+          <div className={styles['inputRow']}>
             <input
               id="owner-login-password"
               type={showPw ? 'text' : 'password'}
-              className={styles.input}
+              className={styles['input']}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Enter password…"
@@ -60,7 +60,7 @@ export default function OwnerLoginModal({ authError, isAuthLoading, onAuthentica
             />
             <button
               type="button"
-              className={styles.togglePw}
+              className={styles['togglePw']}
               onClick={() => setShowPw(p => !p)}
               tabIndex={-1}
               aria-label={showPw ? 'Hide password' : 'Show password'}
@@ -68,13 +68,13 @@ export default function OwnerLoginModal({ authError, isAuthLoading, onAuthentica
               {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
-          {authError && <span className={styles.error} role="alert">{authError}</span>}
+          {authError && <span className={styles['error']} role="alert">{authError}</span>}
 
-          <div className={styles.actions}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>
+          <div className={styles['actions']}>
+            <button type="button" className={styles['cancelBtn']} onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className={styles.submit} disabled={isAuthLoading || !password}>
+            <button type="submit" className={styles['submit']} disabled={isAuthLoading || !password}>
               {isAuthLoading ? 'Checking…' : 'Unlock'}
             </button>
           </div>

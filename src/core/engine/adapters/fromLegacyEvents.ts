@@ -81,7 +81,7 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     null;
 
   const metaBase: Record<string, unknown> = { ...(raw.meta ?? {}) };
-  if (isVisualPriority(raw.visualPriority)) metaBase._visualPriority = raw.visualPriority;
+  if (isVisualPriority(raw['visualPriority'])) metaBase['_visualPriority'] = raw['visualPriority'];
 
   return {
     id,
@@ -90,7 +90,7 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     detachedFrom:  null,
     start:         toDate(raw.start),
     end:           toDate(raw.end),
-    timezone:      typeof raw.timezone === 'string' ? raw.timezone : null,
+    timezone:      typeof raw['timezone'] === 'string' ? raw['timezone'] : null,
     allDay:        raw.allDay === true,
     title:         raw.title ?? '(untitled)',
     category:      raw.category ?? null,

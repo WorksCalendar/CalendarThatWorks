@@ -55,8 +55,8 @@ describe('applyMutation — pool resolve on submit', () => {
     const saved = Array.from(engine.state.events.values())[0];
     expect(saved!.resourceId).toBe('d1');
     expect(saved!.resourcePoolId).toBeNull();
-    expect(saved!.meta.resolvedFromPoolId).toBe('drivers');
-    expect(saved!.meta.poolEvaluated).toEqual(['d1']);
+    expect(saved!.meta['resolvedFromPoolId']).toBe('drivers');
+    expect(saved!.meta['poolEvaluated']).toEqual(['d1']);
   });
 
   it('skips members in hard conflict and picks the next available', () => {
@@ -72,7 +72,7 @@ describe('applyMutation — pool resolve on submit', () => {
 
     const saved = Array.from(engine.state.events.values()).find(e => e.id !== 'blocker')!;
     expect(saved.resourceId).toBe('d2');
-    expect(saved.meta.poolEvaluated).toEqual(['d1', 'd2']);
+    expect(saved.meta['poolEvaluated']).toEqual(['d1', 'd2']);
   });
 
   it('advances the round-robin cursor and persists it in state', () => {
@@ -111,7 +111,7 @@ describe('applyMutation — pool resolve on submit', () => {
     expect(result.status).toBe('rejected');
     expect(result.validation.severity).toBe('hard');
     expect(result.validation.violations[0]?.rule).toBe('pool-unresolvable');
-    expect(result.validation.violations[0]?.details?.code).toBe('NO_AVAILABLE_MEMBER');
+    expect(result.validation.violations[0]?.details?.['code']).toBe('NO_AVAILABLE_MEMBER');
     expect(engine.state.events).toBe(before); // state unchanged
   });
 
@@ -120,7 +120,7 @@ describe('applyMutation — pool resolve on submit', () => {
     const result = engine.applyMutation(createOp({ resourcePoolId: 'ghost' }));
     expect(result.status).toBe('rejected');
     expect(result.validation.violations[0]?.rule).toBe('pool-unresolvable');
-    expect(result.validation.violations[0]?.details?.code).toBe('POOL_UNKNOWN');
+    expect(result.validation.violations[0]?.details?.['code']).toBe('POOL_UNKNOWN');
   });
 
   it('leaves a concrete resourceId alone when both resourceId and resourcePoolId are set', () => {
@@ -145,7 +145,7 @@ describe('applyMutation — pool resolve on submit', () => {
     expect(result.status).toBe('accepted');
     const saved = Array.from(engine.state.events.values())[0];
     expect(saved!.resourceId).toBe('r1');
-    expect(saved!.meta.resolvedFromPoolId).toBeUndefined();
+    expect(saved!.meta['resolvedFromPoolId']).toBeUndefined();
   });
 
   it('fires a single notify per mutation (event + pool commit are atomic)', () => {
@@ -175,7 +175,7 @@ describe('applyMutation — pool resolve on submit', () => {
 
     const saved = Array.from(engine.state.events.values()).find(e => e.id !== 'blocker')!;
     expect(saved.resourceId).toBe('d2');
-    expect(saved.meta.poolEvaluated).toEqual(['d1', 'd2']);
+    expect(saved.meta['poolEvaluated']).toEqual(['d1', 'd2']);
   });
 
   it('undo reverts the round-robin cursor alongside the event', () => {

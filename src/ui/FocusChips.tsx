@@ -107,8 +107,8 @@ export default function FocusChips({
   if (chips.length === 0) return null;
 
   return (
-    <div className={styles.row} role="toolbar" aria-label="Focus filters">
-      <span className={styles.label}>Focus</span>
+    <div className={styles['row']} role="toolbar" aria-label="Focus filters">
+      <span className={styles['label']}>Focus</span>
       {chips.map(chip => {
         const Icon = chip.icon ? ICON_MAP[chip.icon] : null;
         const active = chipIsActive(chip, activeCategories);
@@ -116,7 +116,7 @@ export default function FocusChips({
           <button
             key={chip.id}
             type="button"
-            className={[styles.chip, active && styles.chipActive].filter(Boolean).join(' ')}
+            className={[styles['chip'], active && styles['chipActive']].filter(Boolean).join(' ')}
             onClick={() => onCategoriesChange(toggleChip(chip, activeCategories))}
             aria-pressed={active}
             title={`Focus on ${chip.label.toLowerCase()}`}

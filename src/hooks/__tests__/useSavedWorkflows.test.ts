@@ -34,7 +34,7 @@ describe('useSavedWorkflows — save / update / delete', () => {
     expect(returned!.name).toBe('My flow')
     expect(returned!.workflow.id).toBe(singleApproverWorkflow.id)
     // layout coords survive
-    expect(returned!.layout.positions.approve).toEqual({ x: 40, y: 40 })
+    expect(returned!.layout.positions['approve']).toEqual({ x: 40, y: 40 })
 
     const raw = localStorage.getItem(KEY)!
     expect(raw).toBeTruthy()
@@ -162,7 +162,7 @@ describe('useSavedWorkflows — save / update / delete', () => {
 
     const updated = result.current.workflows[0]
     expect(updated!.workflow.version).toBe(originalVersion)
-    expect(updated!.layout.positions.approve).toEqual({ x: 200, y: 200 })
+    expect(updated!.layout.positions['approve']).toEqual({ x: 200, y: 200 })
   })
 
   it('updateWorkflow can rename without touching version', () => {

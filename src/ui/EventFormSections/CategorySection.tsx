@@ -30,13 +30,13 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
   }
 
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor="ef-category">
+    <div className={styles['field']}>
+      <label className={styles['label']} htmlFor="ef-category">
         Category
         {onAddCategory && (
           <button
             type="button"
-            className={styles.addCatBtn}
+            className={styles['addCatBtn']}
             onClick={() => setAddCatOpen((v: boolean) => !v)}
             title="Add category"
             aria-label="Add category"
@@ -47,10 +47,10 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
       </label>
 
       {addCatOpen && (
-        <div className={styles.addCatRow}>
+        <div className={styles['addCatRow']}>
           <input
             ref={newCatRef}
-            className={styles.addCatInput}
+            className={styles['addCatInput']}
             placeholder="New category name"
             value={newCatName}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setNewCatName(e.target.value)}
@@ -59,7 +59,7 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
               if (e.key === 'Escape') setAddCatOpen(false);
             }}
           />
-          <button type="button" className={styles.addCatSave} onClick={submitNewCat}>
+          <button type="button" className={styles['addCatSave']} onClick={submitNewCat}>
             Add
           </button>
         </div>
@@ -67,7 +67,7 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
 
       <select
         id="ef-category"
-        className={styles.select}
+        className={styles['select']}
         value={value}
         onChange={e => onChange(e.target.value)}
       >

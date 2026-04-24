@@ -210,7 +210,7 @@ export class SupabaseAdapter implements CalendarAdapter {
       schema: 'public',
       table:  this._table,
     };
-    if (this._filter) pgFilter.filter = this._filter;
+    if (this._filter) pgFilter['filter'] = this._filter;
 
     const channel = this._sb
       .channel(chanName)

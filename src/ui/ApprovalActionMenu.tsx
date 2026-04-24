@@ -81,8 +81,8 @@ export default function ApprovalActionMenu({
       role="menu"
       aria-labelledby={labelledBy}
       className={[
-        styles.menu,
-        variant === 'inline' ? styles.menuInline : '',
+        styles['menu'],
+        variant === 'inline' ? styles['menuInline'] : '',
       ].filter(Boolean).join(' ')}
       data-testid="approval-action-menu"
       data-variant={variant}
@@ -93,7 +93,7 @@ export default function ApprovalActionMenu({
           key={action}
           type="button"
           role="menuitem"
-          className={styles.menuItem}
+          className={styles['menuItem']}
           data-action={action}
           onClick={(e) => {
             e.stopPropagation();

@@ -97,9 +97,9 @@ export default function GroupsPanel({
   };
 
   return (
-    <div className={styles.root}>
+    <div className={styles['root']}>
       {levels.length === 0 && (
-        <div className={styles.empty}>
+        <div className={styles['empty']}>
           <Layers size={20} style={{ marginBottom: 6, opacity: 0.5 }} />
           <div>No grouping applied</div>
           <div style={{ fontSize: 12, marginTop: 4 }}>Add a level to group events by field</div>
@@ -109,11 +109,11 @@ export default function GroupsPanel({
       {levels.map((level, index) => {
         const fieldDef = groupableFields.find(f => f.key === level.field);
         return (
-          <div key={index} className={styles.levelCard}>
-            <div className={styles.levelHeader}>
-              <span className={styles.levelLabel}>{LEVEL_LABELS[index] ?? `Level ${index + 1}`}</span>
+          <div key={index} className={styles['levelCard']}>
+            <div className={styles['levelHeader']}>
+              <span className={styles['levelLabel']}>{LEVEL_LABELS[index] ?? `Level ${index + 1}`}</span>
               <select
-                className={styles.fieldSelect}
+                className={styles['fieldSelect']}
                 value={level.field}
                 onChange={e => updateLevel(index, { field: e.target.value })}
                 aria-label={`Group by field level ${index + 1}`}
@@ -123,7 +123,7 @@ export default function GroupsPanel({
                 ))}
               </select>
               <button
-                className={styles.removeBtn}
+                className={styles['removeBtn']}
                 onClick={() => removeLevel(index)}
                 aria-label={`Remove grouping level ${index + 1}`}
               >
@@ -132,20 +132,20 @@ export default function GroupsPanel({
             </div>
 
             {/* Color swatch preview — shows palette colors for this field */}
-            <div className={styles.swatches}>
+            <div className={styles['swatches']}>
               {GROUP_PALETTE.map((color, ci) => (
                 <div
                   key={ci}
-                  className={styles.swatch}
+                  className={styles['swatch']}
                   style={{ background: color }}
                   title={`Group color ${ci + 1}`}
                 />
               ))}
             </div>
 
-            <div className={styles.toggleRow}>
+            <div className={styles['toggleRow']}>
               <button
-                className={[styles.toggle, level.showEmpty ? styles.on : ''].filter(Boolean).join(' ')}
+                className={[styles['toggle'], level.showEmpty ? styles['on'] : ''].filter(Boolean).join(' ')}
                 onClick={() => updateLevel(index, { showEmpty: !level.showEmpty })}
                 role="switch"
                 aria-checked={!!level.showEmpty}
@@ -158,7 +158,7 @@ export default function GroupsPanel({
       })}
 
       <button
-        className={styles.addBtn}
+        className={styles['addBtn']}
         onClick={addLevel}
         disabled={levels.length >= MAX_LEVELS || groupableFields.length === 0}
         aria-label={levels.length === 0 ? 'Add primary grouping' : 'Add secondary grouping'}
@@ -170,9 +170,9 @@ export default function GroupsPanel({
 
       {/* Show all groups toggle (global) */}
       {levels.length > 0 && (
-        <div className={styles.toggleRow} style={{ paddingTop: 4 }}>
+        <div className={styles['toggleRow']} style={{ paddingTop: 4 }}>
           <button
-            className={[styles.toggle, showAllGroups ? styles.on : ''].filter(Boolean).join(' ')}
+            className={[styles['toggle'], showAllGroups ? styles['on'] : ''].filter(Boolean).join(' ')}
             onClick={() => onShowAllGroupsChange(!showAllGroups)}
             role="switch"
             aria-checked={showAllGroups}
@@ -183,7 +183,7 @@ export default function GroupsPanel({
       )}
 
       {/* Sort controls */}
-      <div className={styles.sortSection}>
+      <div className={styles['sortSection']}>
         <SortControls
           value={sort}
           onChange={onSortChange}
