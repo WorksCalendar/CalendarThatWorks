@@ -463,41 +463,24 @@
   background: var(--wc-accent-dim);
   border-color: var(--wc-accent);
   color: var(--wc-accent);
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Inline "Done" label appended to the wand button while in edit mode.
+   Pairs with the accent ring on the calendar root to signal editing is
+   active without consuming a dedicated horizontal band. */
+.wandBtnLabel {
+  font-family: inherit;
 }
 
 /* Edit mode: glow ring on the calendar root */
 .root[data-wc-edit-mode] {
   box-shadow: 0 0 0 2px var(--wc-accent);
 }
-
-/* Edit mode banner */
-.editModeBanner {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: calc(6px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
-  background: var(--wc-accent-dim);
-  color: var(--wc-accent);
-  font-size: 12px;
-  font-weight: 500;
-  border-bottom: 1px solid var(--wc-accent);
-  flex-shrink: 0;
-}
-
-.editModeExit {
-  margin-left: auto;
-  background: var(--wc-accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--wc-radius-sm);
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.15s;
-}
-.editModeExit:hover { opacity: 0.85; }
 
 /* View area */
 .viewArea {
@@ -605,11 +588,6 @@
   .addBtn {
     min-height: 44px;
     padding: 10px 14px;
-  }
-  .editModeExit {
-    min-height: 36px;
-    padding: 8px 14px;
-    font-size: 12px;
   }
 }
 

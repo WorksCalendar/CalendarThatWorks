@@ -2147,6 +2147,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   title={editMode ? 'Exit edit mode' : 'Customize events'}
                 >
                   <Sparkles size={15} aria-hidden="true" />
+                  {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
                 </button>
               )}
               {hasAddButton && cal.view !== 'schedule' && (
@@ -2186,21 +2187,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 />
               )}
             </div>
-          </div>
-        )}
-
-        {/* ── Edit mode banner ── */}
-        {editMode && (
-          <div className={styles['editModeBanner']} role="status" aria-live="polite">
-            <Sparkles size={13} aria-hidden="true" />
-            <span>Edit mode — click any event to customize it</span>
-            <button
-              className={styles['editModeExit']}
-              onClick={() => { setEditMode(false); setInlineEditTarget(null); }}
-              aria-label="Exit edit mode"
-            >
-              Done
-            </button>
           </div>
         )}
 
