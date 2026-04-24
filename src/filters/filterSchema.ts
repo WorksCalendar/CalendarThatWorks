@@ -157,7 +157,8 @@ export function priorityField(overrides: Partial<FilterField> = {}): FilterField
     ],
     operators: defaultOperatorsForType('select'),
     predicate: (item: any, value: any) =>
-      ((item as any).priority ?? (item as any).meta?.priority) === value,
+      ((item as { priority?: unknown; meta?: { priority?: unknown } }).priority
+        ?? (item as { priority?: unknown; meta?: { priority?: unknown } }).meta?.priority) === value,
     ...overrides,
   }
 }
@@ -268,7 +269,7 @@ export function makeResourceResolver({ employees, assets }: ResolverInput = {}):
   for (const e of employees ?? []) {
     if (e && e.id != null) {
       const key = String(e.id)
-      const label = (e as any).name ?? e.label ?? key
+      const label = (e as { name?: string; label?: string }).name ?? e.label ?? key
       lookup.set(key, label)
     }
   }
@@ -277,7 +278,7 @@ export function makeResourceResolver({ employees, assets }: ResolverInput = {}):
     if (a && a.id != null) {
       const key = String(a.id)
       if (lookup.has(key)) continue
-      const label = a.label ?? (a as any).name ?? key
+      const label = a.label ?? (a as { name?: string; label?: string }).name ?? key
       lookup.set(key, label)
     }
   }

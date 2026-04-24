@@ -61,8 +61,9 @@ export function layoutWorkflow(
     overrides.workflowId === workflow.id &&
     overrides.workflowVersion === workflow.version
   const positions: Record<string, NodePosition> = {}
+  const overridePositions = overridesMatch && overrides ? overrides.positions : null
   for (const node of workflow.nodes) {
-    const override = overridesMatch ? overrides!.positions[node.id] : undefined
+    const override = overridePositions ? overridePositions[node.id] : undefined
     const resolved = override ?? auto[node.id]
     if (resolved !== undefined) positions[node.id] = resolved
   }

@@ -67,7 +67,7 @@ export function useSyncedCalendar({
   adapter,
   start,
   end,
-  conflictResolution = 'server-wins' as any,
+  conflictResolution = 'server-wins' as const,
   onConflict,
   onError,
   maxRetries,
@@ -134,37 +134,34 @@ export function useSyncedCalendar({
   }, [manager, live]);
 
   // ── Stable mutation callbacks ───────────────────────────────────────────────
+  // `manager` is the singleton narrowed from managerRef above — safe to close
+  // over in callbacks because the init block makes it stable across renders.
   const createEvent = useCallback(
-    /** @param {CalendarEventV1} event */
-    (event: CalendarEventV1) => managerRef.current!.createEvent(event),
-    [],
+    (event: CalendarEventV1) => manager.createEvent(event),
+    [manager],
   );
 
   const updateEvent = useCallback(
-    /** @param {string} id @param {Partial<CalendarEventV1>} patch */
-    (id: string, patch: Partial<CalendarEventV1>) => managerRef.current!.updateEvent(id, patch),
-    [],
+    (id: string, patch: Partial<CalendarEventV1>) => manager.updateEvent(id, patch),
+    [manager],
   );
 
   const deleteEvent = useCallback(
-    /** @param {string} id */
-    (id: string) => managerRef.current!.deleteEvent(id),
-    [],
+    (id: string) => manager.deleteEvent(id),
+    [manager],
   );
 
-  const retryFailed = useCallback(() => managerRef.current!.retryFailed(), []);
-  const clearErrors = useCallback(() => managerRef.current!.clearErrors(), []);
+  const retryFailed = useCallback(() => manager.retryFailed(), [manager]);
+  const clearErrors = useCallback(() => manager.clearErrors(), [manager]);
 
   const statusFor = useCallback(
-    /** @param {string} eventId */
-    (eventId: string) => managerRef.current!.statusFor(eventId),
-    [],
+    (eventId: string) => manager.statusFor(eventId),
+    [manager],
   );
 
   const errorFor = useCallback(
-    /** @param {string} eventId */
-    (eventId: string) => managerRef.current!.errorFor(eventId),
-    [],
+    (eventId: string) => manager.errorFor(eventId),
+    [manager],
   );
 
   // ── Derived convenience values ──────────────────────────────────────────────

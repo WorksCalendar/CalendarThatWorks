@@ -95,7 +95,7 @@ export const VIEW_SCOPES: Record<ViewId, ViewScope> = Object.freeze({
 });
 
 export function getViewScope(view: string): ViewScope {
-  return (VIEW_SCOPES as any)[view] ?? VIEW_SCOPES.month;
+  return (VIEW_SCOPES as Record<string, ViewScope>)[view] ?? VIEW_SCOPES.month;
 }
 
 /**
