@@ -50,7 +50,6 @@ import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
 import FocusChips, { DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
 import type { FocusChipDef } from './ui/FocusChips';
-import type { ContextSummarySegment } from './ui/ContextSummary';
 import type { SidebarTab } from './ui/FilterGroupSidebar';
 import type { GroupLevel } from './ui/GroupsPanel';
 import HoverCard              from './ui/HoverCard';
@@ -692,13 +691,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarInitialTab, setSidebarInitialTab] = useState<SidebarTab>('view');
 
-  const handleContextSegmentClick = useCallback((segment: ContextSummarySegment) => {
-    const tabMap: Record<ContextSummarySegment, SidebarTab> = {
-      view: 'view',
-      focus: 'focus',
-      scope: 'view',
-    };
-    setSidebarInitialTab(tabMap[segment]);
+  const handleScopeClick = useCallback(() => {
+    setSidebarInitialTab('view');
     setSidebarOpen(true);
   }, []);
 
@@ -2228,7 +2222,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 <button
                   type="button"
                   className={styles['scopePill']}
-                  onClick={() => handleContextSegmentClick('scope')}
+                  onClick={handleScopeClick}
                   title="Change scope"
                 >
                   <span>All regions</span>

@@ -112,7 +112,7 @@ export default function FilterGroupSidebar({
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Reset to the requested initial tab every time the sidebar opens, so
-  // callers can deep-link to a tab (e.g. clicking "Focus" in ContextSummary).
+  // callers can deep-link to a specific tab when triggering the panel.
   useEffect(() => {
     if (open) setActiveTab(initialTab ?? 'view');
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reset only on each open

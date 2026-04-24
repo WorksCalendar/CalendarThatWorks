@@ -68,16 +68,6 @@ export type FocusChipsProps = {
   onCategoriesChange: (next: Set<string>) => void;
 };
 
-/** Returns the labels of all chips whose categories are fully active. */
-export function resolveActiveChipLabels(
-  chips: FocusChipDef[],
-  active: Set<string> | null | undefined,
-): string[] {
-  return chips
-    .filter(chip => chipIsActive(chip, active))
-    .map(chip => chip.label);
-}
-
 /** A chip is "active" only when every one of its categories is in the set. */
 function chipIsActive(chip: FocusChipDef, active: Set<string> | null | undefined): boolean {
   if (!active || active.size === 0) return false;
