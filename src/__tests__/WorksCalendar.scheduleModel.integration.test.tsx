@@ -62,7 +62,8 @@ describe('WorksCalendar schedule model integration', () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
 
     await waitFor(() => {
@@ -85,7 +86,8 @@ describe('WorksCalendar schedule model integration', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
 
     await waitFor(() => {
@@ -105,7 +107,8 @@ describe('WorksCalendar schedule model integration', () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
     await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' });
     await requestPtoForAlex();
@@ -123,7 +126,8 @@ describe('WorksCalendar schedule model integration', () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
     await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' });
     await assignCoverageTo(/^Bailey Chen — RN$/);
@@ -149,7 +153,8 @@ describe('WorksCalendar schedule model integration', () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
     await assignCoverageTo(/^Bailey Chen — RN$/);
 
@@ -184,7 +189,8 @@ describe('WorksCalendar schedule model integration', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
     await assignCoverageTo(/^Bailey Chen — RN$/);
     fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
@@ -209,7 +215,8 @@ describe('WorksCalendar schedule model integration', () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
 
     await assignCoverageTo(/^Bailey Chen — RN$/);
@@ -237,7 +244,8 @@ describe('WorksCalendar schedule model integration', () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
     await requestPtoForAlex();
     await assignCoverageTo(/^Bailey Chen — RN$/);
 

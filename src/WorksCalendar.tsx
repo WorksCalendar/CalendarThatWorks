@@ -47,6 +47,7 @@ import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
+import ViewPicker             from './ui/ViewPicker';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
 import FocusChips, { DEFAULT_FOCUS_CHIPS, resolveActiveChipLabels } from './ui/FocusChips';
 import type { FocusChipDef } from './ui/FocusChips';
@@ -2119,18 +2120,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
             </div>
 
-            <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
-              {VIEWS.map(v => (
-                <button
-                  key={v.id}
-                  className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
-                  onClick={() => cal.setView(v.id)}
-                  aria-pressed={cal.view === v.id}
-                  title={v.hint}
-                >
-                  {v.label}
-                </button>
-              ))}
+            <div className={styles['viewPickerWrap']}>
+              <ViewPicker
+                views={VIEWS}
+                activeView={cal.view}
+                onChange={(id) => cal.setView(id as ViewId)}
+              />
             </div>
 
             <div className={styles['actions']}>
@@ -2227,6 +2222,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             })
           : (
             <ProfileBar
+              compact
               views={savedViews.views}
               activeId={savedViewActiveId}
               isDirty={savedViewDirty}

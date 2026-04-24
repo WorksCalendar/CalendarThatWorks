@@ -6,6 +6,64 @@
   background: var(--wc-surface);
 }
 
+/* Compact mode: chip strip only, no header action row.
+   Power-user controls (Customize, Clear, Save-view) live inline at the
+   strip tail, so the bar renders as a single slim row. */
+.barCompact {
+  background: var(--wc-bg);
+}
+.barCompact .strip {
+  padding: 4px 12px;
+}
+
+.stripTail {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding-left: 8px;
+  flex-shrink: 0;
+}
+
+.tailSaveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--wc-radius-sm);
+  border: 1px dashed var(--wc-border);
+  background: transparent;
+  color: var(--wc-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.tailSaveBtn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+.tailClearBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--wc-radius-sm);
+  border: 1px solid var(--wc-border);
+  background: transparent;
+  color: var(--wc-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tailClearBtn:hover {
+  border-color: var(--wc-danger, var(--wc-accent));
+  color: var(--wc-danger, var(--wc-accent));
+}
+
 /* Top row: All views ▾ | Customize | Clear all filters | + Save view */
 .headerRow {
   display: flex;
