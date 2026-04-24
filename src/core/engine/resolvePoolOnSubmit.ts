@@ -122,6 +122,11 @@ export function resolvePoolForOp(
 
   if (result.ok === false) {
     const err = result.error;
+    // `err.evaluated` reflects the actual strategy trail: empty for
+    // POOL_DISABLED / POOL_EMPTY (no member was ever attempted) and the
+    // ordered attempt list for NO_AVAILABLE_MEMBER. Previously this
+    // payload returned `pool.memberIds` unconditionally, which
+    // over-reported evaluation for the first two codes.
     return { kind: 'rejected', result: rejectedFor(op, {
       rule:    'pool-unresolvable',
       severity:'hard',
@@ -129,7 +134,7 @@ export function resolvePoolForOp(
       details: {
         poolId:    err.poolId,
         code:      err.code,
-        evaluated: pool.memberIds,
+        evaluated: err.evaluated,
       },
     }) };
   }
