@@ -91,7 +91,7 @@ function assignLanes(events: BaseGanttEvent[], rangeStart: Date, rangeEnd: Date)
   for (const ev of clipped) {
     let placed = false;
     for (let i = 0; i < laneEnd.length; i++) {
-      if (laneEnd[i] < ev._dayStart) {
+      if (laneEnd[i]! < ev._dayStart) {
         ev._lane = i;
         laneEnd[i] = ev._dayEnd;
         placed = true;
@@ -216,7 +216,7 @@ export default function BaseGanttView({
   const baseWideEvents = useMemo(() => {
     const m = new Map<string, BaseGanttEvent[]>();
     for (const ev of events) {
-      const metaBase = ev?.meta?.base;
+      const metaBase = ev?.meta?.['base'];
       if (!metaBase) continue;
       const resource = ev?.resource != null ? String(ev.resource) : null;
       if (resource && (empIndex.has(resource) || assetIndex.has(resource))) continue;
@@ -237,7 +237,7 @@ export default function BaseGanttView({
 
   if (bases.length === 0) {
     return (
-      <div className={styles.empty}>
+      <div className={styles['empty']}>
         <p>No {locationLabel.toLowerCase()}s configured yet.</p>
         <p>Add one in Settings → Employees → {locationLabel}s.</p>
       </div>
@@ -252,17 +252,17 @@ export default function BaseGanttView({
       const left   = ev._dayStart * DAY_PX;
       const width  = Math.max((ev._dayEnd - ev._dayStart + 1) * DAY_PX - 4, 8);
       const top    = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
-      const bg     = resolveColor(ev as never, ctx.colorRules) || ev.color || 'var(--wc-accent)';
+      const bg     = resolveColor(ev as never, ctx['colorRules']) || ev.color || 'var(--wc-accent)';
       return (
         <button
           key={ev.id ?? `${ev.title}-${idx}`}
           type="button"
-          className={styles.bar}
+          className={styles['bar']}
           style={{ left, width, top, height: LANE_H, background: bg }}
           onClick={() => onEventClick?.(ev)}
           title={`${ev.title ?? ''}  ·  ${format(ev.start, 'PPp')} – ${format(ev.end, 'PPp')}`}
         >
-          <span className={styles.barLabel}>{ev.title ?? 'Event'}</span>
+          <span className={styles['barLabel']}>{ev.title ?? 'Event'}</span>
         </button>
       );
     });
@@ -274,16 +274,16 @@ export default function BaseGanttView({
   };
 
   return (
-    <div className={styles.root}>
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarGroup}>
-          <span className={styles.toolbarLabel}>Span</span>
-          <div className={styles.spanToggle} role="group" aria-label="Timeline span">
+    <div className={styles['root']}>
+      <div className={styles['toolbar']}>
+        <div className={styles['toolbarGroup']}>
+          <span className={styles['toolbarLabel']}>Span</span>
+          <div className={styles['spanToggle']} role="group" aria-label="Timeline span">
             {SPAN_OPTIONS.map(opt => (
               <button
                 key={opt.id}
                 type="button"
-                className={[styles.spanBtn, spanDays === opt.id && styles.spanBtnActive].filter(Boolean).join(' ')}
+                className={[styles['spanBtn'], spanDays === opt.id && styles['spanBtnActive']].filter(Boolean).join(' ')}
                 onClick={() => setSpanDays(opt.id)}
                 aria-pressed={spanDays === opt.id}
               >
@@ -293,16 +293,16 @@ export default function BaseGanttView({
           </div>
         </div>
 
-        <div className={styles.toolbarGroup}>
-          <span className={styles.toolbarLabel}>{locationLabel}s</span>
-          <div className={styles.picker} role="group" aria-label={`Select ${locationLabel.toLowerCase()}s`}>
+        <div className={styles['toolbarGroup']}>
+          <span className={styles['toolbarLabel']}>{locationLabel}s</span>
+          <div className={styles['picker']} role="group" aria-label={`Select ${locationLabel.toLowerCase()}s`}>
             {bases.map(b => {
               const active = selectedBaseIds.length === 0 || selectedBaseIds.includes(b.id);
               return (
                 <button
                   key={b.id}
                   type="button"
-                  className={[styles.pickerChip, active && styles.pickerChipActive].filter(Boolean).join(' ')}
+                  className={[styles['pickerChip'], active && styles['pickerChipActive']].filter(Boolean).join(' ')}
                   aria-pressed={active}
                   onClick={() => toggleBase(b.id)}
                 >
@@ -313,7 +313,7 @@ export default function BaseGanttView({
             {selectedBaseIds.length > 0 && (
               <button
                 type="button"
-                className={styles.pickerClear}
+                className={styles['pickerClear']}
                 onClick={() => onBaseSelectionChange?.([])}
               >
                 Clear
@@ -322,30 +322,30 @@ export default function BaseGanttView({
           </div>
         </div>
 
-        <div className={styles.toolbarSpacer} />
-        <div className={styles.rangeLabel}>
+        <div className={styles['toolbarSpacer']} />
+        <div className={styles['rangeLabel']}>
           {format(rangeStart, 'MMM d, yyyy')} – {format(rangeEnd, 'MMM d, yyyy')}
         </div>
       </div>
 
-      <div ref={wrapRef} className={styles.wrap}>
-        <div className={styles.inner} style={{ minWidth: NAME_W + timelineW }}>
+      <div ref={wrapRef} className={styles['wrap']}>
+        <div className={styles['inner']} style={{ minWidth: NAME_W + timelineW }}>
           {/* Header row with day columns */}
-          <div className={styles.headerRow}>
-            <div className={styles.corner} style={{ width: NAME_W }}>
+          <div className={styles['headerRow']}>
+            <div className={styles['corner']} style={{ width: NAME_W }}>
               {locationLabel} · People · Assets
             </div>
-            <div className={styles.days} style={{ width: timelineW }}>
+            <div className={styles['days']} style={{ width: timelineW }}>
               {days.map((d, i) => {
                 const cls = [
-                  styles.dayCell,
-                  isToday(d) && styles.dayToday,
-                  isWeekend(d) && styles.dayWeekend,
+                  styles['dayCell'],
+                  isToday(d) && styles['dayToday'],
+                  isWeekend(d) && styles['dayWeekend'],
                 ].filter(Boolean).join(' ');
                 return (
                   <div key={i} className={cls} style={{ left: i * DAY_PX, width: DAY_PX }}>
-                    <span className={styles.dayDow}>{format(d, 'EEE')}</span>
-                    <span className={styles.dayNum}>{format(d, 'd')}</span>
+                    <span className={styles['dayDow']}>{format(d, 'EEE')}</span>
+                    <span className={styles['dayNum']}>{format(d, 'd')}</span>
                   </div>
                 );
               })}
@@ -367,25 +367,25 @@ export default function BaseGanttView({
             const baseRowH = measureRowH(baseWide);
 
             return (
-              <div key={b.id} className={styles.baseGroup}>
+              <div key={b.id} className={styles['baseGroup']}>
                 {/* Base header row */}
-                <div className={styles.baseHeaderRow} style={{ minHeight: Math.max(baseRowH, 72) }}>
-                  <div className={styles.baseHeaderName} style={{ width: NAME_W }}>
-                    <div className={styles.baseTitle}>{b.name}</div>
-                    <div className={styles.baseCounts}>
+                <div className={styles['baseHeaderRow']} style={{ minHeight: Math.max(baseRowH, 72) }}>
+                  <div className={styles['baseHeaderName']} style={{ width: NAME_W }}>
+                    <div className={styles['baseTitle']}>{b.name}</div>
+                    <div className={styles['baseCounts']}>
                       {baseAssets.length} assets · {baseEmps.length} people
                     </div>
                     {managers.length > 0 && (
-                      <ul className={styles.managerList}>
+                      <ul className={styles['managerList']}>
                         {managers.map((mg, i) => {
                           const phone = mg.assignment.phone || mg.emp.phone;
                           return (
-                            <li key={`${mg.emp.id}-${i}`} className={styles.managerRow}>
-                              <span className={styles.managerTitle}>{mg.assignment.title}</span>
-                              <span className={styles.managerName}>{mg.emp.name ?? mg.emp.id}</span>
+                            <li key={`${mg.emp.id}-${i}`} className={styles['managerRow']}>
+                              <span className={styles['managerTitle']}>{mg.assignment.title}</span>
+                              <span className={styles['managerName']}>{mg.emp.name ?? mg.emp.id}</span>
                               {phone && (
                                 <a
-                                  className={styles.managerPhone}
+                                  className={styles['managerPhone']}
                                   href={`tel:${phone.replace(/[^0-9+]/g, '')}`}
                                   title={`Call ${mg.emp.name ?? mg.emp.id}`}
                                 >
@@ -399,14 +399,14 @@ export default function BaseGanttView({
                       </ul>
                     )}
                   </div>
-                  <div className={styles.timelineCell} style={{ width: timelineW, minHeight: Math.max(baseRowH, 72) }}>
+                  <div className={styles['timelineCell']} style={{ width: timelineW, minHeight: Math.max(baseRowH, 72) }}>
                     {days.map((d, i) => (
                       <div
                         key={i}
                         className={[
-                          styles.gridCol,
-                          isToday(d) && styles.gridColToday,
-                          isWeekend(d) && styles.gridColWeekend,
+                          styles['gridCol'],
+                          isToday(d) && styles['gridColToday'],
+                          isWeekend(d) && styles['gridColWeekend'],
                         ].filter(Boolean).join(' ')}
                         style={{ left: i * DAY_PX, width: DAY_PX }}
                       />
@@ -420,20 +420,20 @@ export default function BaseGanttView({
                   const rowEvs = eventsByResource.get(String(a.id)) ?? [];
                   const rowH = measureRowH(rowEvs);
                   return (
-                    <div key={`asset-${a.id}`} className={styles.assetRow} style={{ minHeight: rowH }}>
-                      <div className={styles.rowName} style={{ width: NAME_W }}>
-                        <span className={styles.rowKind}>Asset</span>
-                        <span className={styles.rowTitle}>{a.label ?? a.id}</span>
-                        {a.meta?.sublabel && <span className={styles.rowSub}>{a.meta.sublabel}</span>}
+                    <div key={`asset-${a.id}`} className={styles['assetRow']} style={{ minHeight: rowH }}>
+                      <div className={styles['rowName']} style={{ width: NAME_W }}>
+                        <span className={styles['rowKind']}>Asset</span>
+                        <span className={styles['rowTitle']}>{a.label ?? a.id}</span>
+                        {a.meta?.sublabel && <span className={styles['rowSub']}>{a.meta.sublabel}</span>}
                       </div>
-                      <div className={styles.timelineCell} style={{ width: timelineW, minHeight: rowH }}>
+                      <div className={styles['timelineCell']} style={{ width: timelineW, minHeight: rowH }}>
                         {days.map((d, i) => (
                           <div
                             key={i}
                             className={[
-                              styles.gridCol,
-                              isToday(d) && styles.gridColToday,
-                              isWeekend(d) && styles.gridColWeekend,
+                              styles['gridCol'],
+                              isToday(d) && styles['gridColToday'],
+                              isWeekend(d) && styles['gridColWeekend'],
                             ].filter(Boolean).join(' ')}
                             style={{ left: i * DAY_PX, width: DAY_PX }}
                           />
@@ -452,22 +452,22 @@ export default function BaseGanttView({
                     .map(m => m?.title)
                     .filter(Boolean) as string[];
                   return (
-                    <div key={`emp-${e.id}`} className={styles.personRow} style={{ minHeight: rowH }}>
-                      <div className={styles.rowName} style={{ width: NAME_W }}>
-                        <span className={styles.rowKind}>Person</span>
-                        <span className={styles.rowTitle}>{e.name ?? e.id}</span>
-                        <span className={styles.rowMeta}>
-                          {e.role && <span className={styles.rowSub}>{e.role}</span>}
+                    <div key={`emp-${e.id}`} className={styles['personRow']} style={{ minHeight: rowH }}>
+                      <div className={styles['rowName']} style={{ width: NAME_W }}>
+                        <span className={styles['rowKind']}>Person</span>
+                        <span className={styles['rowTitle']}>{e.name ?? e.id}</span>
+                        <span className={styles['rowMeta']}>
+                          {e.role && <span className={styles['rowSub']}>{e.role}</span>}
                           {mgrTitles.length > 0 && (
-                            <span className={styles.mgrBadgeWrap}>
+                            <span className={styles['mgrBadgeWrap']}>
                               {mgrTitles.map(t => (
-                                <span key={t} className={styles.mgrBadge}>{t}</span>
+                                <span key={t} className={styles['mgrBadge']}>{t}</span>
                               ))}
                             </span>
                           )}
                           {e.phone && (
                             <a
-                              className={styles.rowPhone}
+                              className={styles['rowPhone']}
                               href={`tel:${e.phone.replace(/[^0-9+]/g, '')}`}
                               title={`Call ${e.name ?? e.id}`}
                             >
@@ -476,14 +476,14 @@ export default function BaseGanttView({
                           )}
                         </span>
                       </div>
-                      <div className={styles.timelineCell} style={{ width: timelineW, minHeight: rowH }}>
+                      <div className={styles['timelineCell']} style={{ width: timelineW, minHeight: rowH }}>
                         {days.map((d, i) => (
                           <div
                             key={i}
                             className={[
-                              styles.gridCol,
-                              isToday(d) && styles.gridColToday,
-                              isWeekend(d) && styles.gridColWeekend,
+                              styles['gridCol'],
+                              isToday(d) && styles['gridColToday'],
+                              isWeekend(d) && styles['gridColWeekend'],
                             ].filter(Boolean).join(' ')}
                             style={{ left: i * DAY_PX, width: DAY_PX }}
                           />
@@ -495,12 +495,12 @@ export default function BaseGanttView({
                 })}
 
                 {baseAssets.length === 0 && baseEmps.length === 0 && (
-                  <div className={styles.emptyRow}>
-                    <div className={styles.rowName} style={{ width: NAME_W }}>
-                      <span className={styles.rowKind}>—</span>
-                      <span className={styles.rowSub}>No assets or people assigned.</span>
+                  <div className={styles['emptyRow']}>
+                    <div className={styles['rowName']} style={{ width: NAME_W }}>
+                      <span className={styles['rowKind']}>—</span>
+                      <span className={styles['rowSub']}>No assets or people assigned.</span>
                     </div>
-                    <div className={styles.timelineCell} style={{ width: timelineW, height: 32 }} />
+                    <div className={styles['timelineCell']} style={{ width: timelineW, height: 32 }} />
                   </div>
                 )}
               </div>

@@ -12,8 +12,8 @@ describe('conditionsToFilters', () => {
       { field: 'categories', operator: 'is', value: 'Meeting' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.categories).toBeInstanceOf(Set)
-    expect(result.categories.has('Meeting')).toBe(true)
+    expect(result['categories']).toBeInstanceOf(Set)
+    expect(result['categories'].has('Meeting')).toBe(true)
   })
 
   it('multiple "is" on same multi-select field accumulates into one Set', () => {
@@ -22,9 +22,9 @@ describe('conditionsToFilters', () => {
       { field: 'categories', operator: 'is', value: 'PTO' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.categories).toBeInstanceOf(Set)
-    expect(result.categories.size).toBe(2)
-    expect(result.categories.has('PTO')).toBe(true)
+    expect(result['categories']).toBeInstanceOf(Set)
+    expect(result['categories'].size).toBe(2)
+    expect(result['categories'].has('PTO')).toBe(true)
   })
 
   it('"contains" on text produces search string', () => {
@@ -32,7 +32,7 @@ describe('conditionsToFilters', () => {
       { field: 'search', operator: 'contains', value: 'quarterly' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.search).toBe('quarterly')
+    expect(result['search']).toBe('quarterly')
   })
 
   it('"is" on text produces search string', () => {
@@ -40,7 +40,7 @@ describe('conditionsToFilters', () => {
       { field: 'search', operator: 'is', value: 'standup' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.search).toBe('standup')
+    expect(result['search']).toBe('standup')
   })
 
   it('"is_not" produces negation wrapper with Set', () => {
@@ -48,9 +48,9 @@ describe('conditionsToFilters', () => {
       { field: 'categories', operator: 'is_not', value: 'PTO' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.categories).toMatchObject({ __not: true })
-    expect(result.categories.values).toBeInstanceOf(Set)
-    expect(result.categories.values.has('PTO')).toBe(true)
+    expect(result['categories']).toMatchObject({ __not: true })
+    expect(result['categories'].values).toBeInstanceOf(Set)
+    expect(result['categories'].values.has('PTO')).toBe(true)
   })
 
   it('multiple "is_not" on same field accumulates into one negation wrapper', () => {
@@ -59,8 +59,8 @@ describe('conditionsToFilters', () => {
       { field: 'categories', operator: 'is_not', value: 'Holiday' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.categories.__not).toBe(true)
-    expect(result.categories.values.size).toBe(2)
+    expect(result['categories'].__not).toBe(true)
+    expect(result['categories'].values.size).toBe(2)
   })
 
   it('"not_contains" on text produces negation wrapper', () => {
@@ -68,8 +68,8 @@ describe('conditionsToFilters', () => {
       { field: 'search', operator: 'not_contains', value: 'standup' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.search.__not).toBe(true)
-    expect(result.search.values.has('standup')).toBe(true)
+    expect(result['search'].__not).toBe(true)
+    expect(result['search'].values.has('standup')).toBe(true)
   })
 
   it('unknown field key is skipped gracefully', () => {
@@ -78,8 +78,8 @@ describe('conditionsToFilters', () => {
       { field: 'categories',  operator: 'is', value: 'Meeting' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.nonexistent).toBeUndefined()
-    expect(result.categories).toBeInstanceOf(Set)
+    expect(result['nonexistent']).toBeUndefined()
+    expect(result['categories']).toBeInstanceOf(Set)
   })
 
   it('unknown operator on a known field is skipped gracefully', () => {
@@ -87,7 +87,7 @@ describe('conditionsToFilters', () => {
       { field: 'categories', operator: 'unknown_op', value: 'Meeting' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.categories).toBeUndefined()
+    expect(result['categories']).toBeUndefined()
   })
 
   it('empty value is skipped', () => {
@@ -96,7 +96,7 @@ describe('conditionsToFilters', () => {
       { field: 'categories', operator: 'is', value: '   ' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.categories).toBeUndefined()
+    expect(result['categories']).toBeUndefined()
   })
 
   it('multiple fields are processed independently', () => {
@@ -106,9 +106,9 @@ describe('conditionsToFilters', () => {
       { field: 'search',     operator: 'contains', value: 'quarterly' },
     ]
     const result = conditionsToFilters(conditions, schema)
-    expect(result.categories.has('Meeting')).toBe(true)
-    expect(result.resources.has('Alice')).toBe(true)
-    expect(result.search).toBe('quarterly')
+    expect(result['categories'].has('Meeting')).toBe(true)
+    expect(result['resources'].has('Alice')).toBe(true)
+    expect(result['search']).toBe('quarterly')
   })
 })
 

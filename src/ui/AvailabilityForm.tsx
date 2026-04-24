@@ -31,7 +31,8 @@ const KIND_META = {
   },
 };
 
-const INTENT_META: Record<string, { heading: string; submitLabel: string; allDayLocked: boolean; allDayHelp: string | null }> = {
+type IntentMeta = { heading: string; submitLabel: string; allDayLocked: boolean; allDayHelp: string | null };
+const INTENT_META = {
   pto: {
     heading: 'Request PTO',
     submitLabel: 'Save PTO Request',
@@ -50,7 +51,7 @@ const INTENT_META: Record<string, { heading: string; submitLabel: string; allDay
     allDayLocked: false,
     allDayHelp: null,
   },
-};
+} satisfies Record<string, IntentMeta>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const kind = (initialKind ?? 'pto') as string;
   const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.pto;
   const isEdit = Boolean(initialEvent?.id);
-  const intentMeta = INTENT_META[kind] ?? INTENT_META.pto;
+  const intentMeta: IntentMeta = (INTENT_META as Record<string, IntentMeta>)[kind] ?? INTENT_META.pto;
   const isAllDayLocked = Boolean(intentMeta.allDayLocked);
   const heading = isEdit && kind === 'availability' ? 'Edit Availability' : intentMeta.heading;
 
@@ -110,14 +111,14 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
 
   function validate() {
     const errs: Record<string, string> = {};
-    if (!title.trim())  errs.title = 'Title is required';
-    if (!start)         errs.start = 'Start date is required';
-    if (!end)           errs.end   = 'End date is required';
+    if (!title.trim())  errs['title'] = 'Title is required';
+    if (!start)         errs['start'] = 'Start date is required';
+    if (!end)           errs['end']   = 'End date is required';
     const s = fromInput(start, allDay);
     const e = fromInput(end, allDay);
-    if (start && !s) errs.start = `Enter a valid ${allDay ? 'start date' : 'start date/time'}`;
-    if (end && !e) errs.end = `Enter a valid ${allDay ? 'end date' : 'end date/time'}`;
-    if (s && e && s >= e) errs.end = 'End must be after start';
+    if (start && !s) errs['start'] = `Enter a valid ${allDay ? 'start date' : 'start date/time'}`;
+    if (end && !e) errs['end'] = `Enter a valid ${allDay ? 'end date' : 'end date/time'}`;
+    if (s && e && s >= e) errs['end'] = 'End must be after start';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -131,8 +132,8 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
     if (!s || !en) {
       setErrors((prev) => ({
         ...prev,
-        start: prev.start ?? `Enter a valid ${allDay ? 'start date' : 'start date/time'}`,
-        end: prev.end ?? `Enter a valid ${allDay ? 'end date' : 'end date/time'}`,
+        start: prev['start'] ?? `Enter a valid ${allDay ? 'start date' : 'start date/time'}`,
+        end: prev['end'] ?? `Enter a valid ${allDay ? 'end date' : 'end date/time'}`,
       }));
       return;
     }
@@ -155,51 +156,51 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const kindLabel = meta.label;
 
   return (
-    <div className={styles.overlay} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}>
+    <div className={styles['overlay']} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}>
       <div
         ref={trapRef}
-        className={styles.modal}
+        className={styles['modal']}
         role="dialog"
         aria-modal="true"
         aria-label={`${heading} for ${emp.name}`}
       >
         {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.headerInfo}>
-            <h2 className={styles.title}>{heading}</h2>
-            <span className={styles.empName}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
+        <div className={styles['header']}>
+          <div className={styles['headerInfo']}>
+            <h2 className={styles['title']}>{heading}</h2>
+            <span className={styles['empName']}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
 
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+        <form className={styles['form']} onSubmit={handleSubmit} noValidate>
           {/* Title */}
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="af-title">
-              Title <span className={styles.req}>*</span>
+          <div className={styles['field']}>
+            <label className={styles['label']} htmlFor="af-title">
+              Title <span className={styles['req']}>*</span>
             </label>
             <input
               id="af-title"
-              className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
+              className={[styles['input'], errors['title'] && styles['inputError']].filter(Boolean).join(' ')}
               value={title}
               onChange={(e: ChangeEvent<HTMLInputElement>) => {
                 setTitle(e.target.value);
                 setErrors((v: Record<string, string>) => {
                   const next = { ...v };
-                  delete next.title;
+                  delete next['title'];
                   return next;
                 });
               }}
               placeholder="e.g. Vacation, Doctor appointment…"
               autoFocus
             />
-            {errors.title && <span className={styles.error}>{errors.title}</span>}
+            {errors['title'] && <span className={styles['error']}>{errors['title']}</span>}
           </div>
 
           {/* All-day toggle */}
-          <label className={styles.checkRow}>
+          <label className={styles['checkRow']}>
             <input
               type="checkbox"
               checked={allDay}
@@ -217,60 +218,60 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
             All day
           </label>
           {isAllDayLocked && intentMeta.allDayHelp && (
-            <span className={styles.helperText}>{intentMeta.allDayHelp}</span>
+            <span className={styles['helperText']}>{intentMeta.allDayHelp}</span>
           )}
 
           {/* Start / End */}
-          <div className={styles.row2}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="af-start">
-                Start <span className={styles.req}>*</span>
+          <div className={styles['row2']}>
+            <div className={styles['field']}>
+              <label className={styles['label']} htmlFor="af-start">
+                Start <span className={styles['req']}>*</span>
               </label>
               <input
                 id="af-start"
                 type={allDay ? 'date' : 'datetime-local'}
-                className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
+                className={[styles['input'], errors['start'] && styles['inputError']].filter(Boolean).join(' ')}
                 value={start}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   setStart(e.target.value);
                   setErrors((v: Record<string, string>) => {
                     const next = { ...v };
-                    delete next.start;
-                    delete next.end;
+                    delete next['start'];
+                    delete next['end'];
                     return next;
                   });
                 }}
               />
-              {errors.start && <span className={styles.error}>{errors.start}</span>}
+              {errors['start'] && <span className={styles['error']}>{errors['start']}</span>}
             </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="af-end">
-                End <span className={styles.req}>*</span>
+            <div className={styles['field']}>
+              <label className={styles['label']} htmlFor="af-end">
+                End <span className={styles['req']}>*</span>
               </label>
               <input
                 id="af-end"
                 type={allDay ? 'date' : 'datetime-local'}
-                className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
+                className={[styles['input'], errors['end'] && styles['inputError']].filter(Boolean).join(' ')}
                 value={end}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   setEnd(e.target.value);
                   setErrors((v: Record<string, string>) => {
                     const next = { ...v };
-                    delete next.end;
+                    delete next['end'];
                     return next;
                   });
                 }}
               />
-              {errors.end && <span className={styles.error}>{errors.end}</span>}
+              {errors['end'] && <span className={styles['error']}>{errors['end']}</span>}
             </div>
           </div>
 
           {/* Notes */}
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="af-notes">Notes</label>
+          <div className={styles['field']}>
+            <label className={styles['label']} htmlFor="af-notes">Notes</label>
             <textarea
               id="af-notes"
-              className={styles.textarea}
+              className={styles['textarea']}
               rows={3}
               value={notes}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
@@ -279,21 +280,21 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
           </div>
 
           {/* Color swatch preview */}
-          <div className={styles.colorPreview}>
+          <div className={styles['colorPreview']}>
             <span
-              className={styles.colorSwatch}
+              className={styles['colorSwatch']}
               style={{ background: meta.color }}
               aria-hidden="true"
             />
-            <span className={styles.colorLabel}>
+            <span className={styles['colorLabel']}>
               {isEdit ? 'Changes will keep this event in' : 'Event will be shown in'} {kindLabel.toLowerCase()} color
             </span>
           </div>
 
           {/* Actions */}
-          <div className={styles.actions}>
-            <button type="button" className={styles.btnCancel} onClick={onClose}>Cancel</button>
-            <button type="submit" className={styles.btnSave}>
+          <div className={styles['actions']}>
+            <button type="button" className={styles['btnCancel']} onClick={onClose}>Cancel</button>
+            <button type="submit" className={styles['btnSave']}>
               {isEdit && kind === 'availability' ? 'Save Availability Changes' : intentMeta.submitLabel}
             </button>
           </div>

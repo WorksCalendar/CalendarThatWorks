@@ -11,22 +11,22 @@ export type GroupConfig = {
   /** Event field to group by. Checked on event directly, then on event.meta. */
   field: string
   /** Human-readable label for this grouping dimension (e.g. "Location"). */
-  label?: string
+  label?: string | undefined
   /**
    * Surface groups that contain no events after filtering.
    * Default: true (empty groups are shown with a 0-count header).
    */
-  showEmpty?: boolean
+  showEmpty?: boolean | undefined
   /**
    * Custom key extractor. Return null/'' to place the event in (Ungrouped).
    * Default: reads event[field] then event.meta[field].
    */
-  getKey?: (event: NormalizedEvent) => string | null
+  getKey?: ((event: NormalizedEvent) => string | null) | undefined
   /**
    * Custom display label for a resolved group key.
    * Default: the key string itself.
    */
-  getLabel?: (key: string, events: NormalizedEvent[]) => string
+  getLabel?: ((key: string, events: NormalizedEvent[]) => string) | undefined
 }
 
 // ── GroupResult ────────────────────────────────────────────────────────────────

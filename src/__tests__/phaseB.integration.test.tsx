@@ -41,14 +41,14 @@ type EventLike = {
   start: Date;
   end: Date;
   resource: string;
-  category?: string;
+  category?: string | undefined;
   meta?: {
     approvalStage?: {
       stage: string;
       updatedAt: string;
       history: unknown[];
-    };
-  };
+    } | undefined;
+  } | undefined;
 };
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
@@ -120,8 +120,8 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config:
     const result = evaluateConflicts({
       proposed: evt,
       events,
-      rules: config.conflicts.rules,
-      enabled: config.conflicts.enabled,
+      rules: config['conflicts'].rules,
+      enabled: config['conflicts'].enabled,
     });
     setProposed(evt);
     if (result.severity === 'none') {
@@ -149,7 +149,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config:
   return (
     <div>
       <RequestForm
-        schema={config.requestForm}
+        schema={config['requestForm']}
         onSubmit={handleSubmit}
         onCancel={vi.fn()}
       />
@@ -159,7 +159,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config:
           <span>{committed.title}</span>
           <ApprovalActionMenu
             stage={committed.meta?.approvalStage?.stage ?? 'requested'}
-            approvalsConfig={config.approvals}
+            approvalsConfig={config['approvals']}
             onAction={vi.fn()}
             variant="inline"
           />
@@ -186,9 +186,9 @@ describe('Phase B pipeline — RequestForm → conflictEngine → approval pill'
   it('owner config defaults include all three Phase B blocks', () => {
     // Guards against someone removing a block from the default — every host
     // app relies on the union being present for the integration to compose.
-    expect(DEFAULT_CONFIG.requestForm?.fields?.length).toBeGreaterThan(0);
-    expect(DEFAULT_CONFIG.conflicts).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Array) });
-    expect(DEFAULT_CONFIG.approvals).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Object) });
+    expect(DEFAULT_CONFIG['requestForm']?.fields?.length).toBeGreaterThan(0);
+    expect(DEFAULT_CONFIG['conflicts']).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Array) });
+    expect(DEFAULT_CONFIG['approvals']).toMatchObject({ enabled: expect.any(Boolean), rules: expect.any(Object) });
   });
 
   it('commits the event unchanged when no rules trigger', () => {
@@ -202,8 +202,8 @@ describe('Phase B pipeline — RequestForm → conflictEngine → approval pill'
       category: 'pr',
     });
     expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit.mock.calls[0][0].title).toBe('PR shoot');
-    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage).toBe('requested');
+    expect(onCommit.mock.calls[0][0].title!).toBe('PR shoot');
+    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage!).toBe('requested');
     // No conflict modal rendered.
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
@@ -247,7 +247,7 @@ describe('Phase B pipeline — RequestForm → conflictEngine → approval pill'
     expect(proceed).not.toBeDisabled();
     fireEvent.click(proceed);
     expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage).toBe('requested');
+    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage!).toBe('requested');
   });
 
   it('bypasses the conflict engine entirely when conflicts.enabled is false', () => {

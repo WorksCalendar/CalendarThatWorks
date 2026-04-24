@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // Set VITE_BASE=/CalendarThatWorks/ when building for GitHub Pages.
 // Defaults to '/' for local dev and preview.
-const base = process.env.VITE_BASE ?? '/';
+const base = process.env['VITE_BASE'] ?? '/';
 
 export default defineConfig({
   base,

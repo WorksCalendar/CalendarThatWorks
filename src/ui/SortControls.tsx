@@ -64,13 +64,13 @@ export default function SortControls({
   const clearAll = () => onChange([])
 
   return (
-    <div id={id} className={[styles.root, className].filter(Boolean).join(' ')}>
-      <div className={styles.headerRow}>
-        <span className={styles.label}>{label}</span>
+    <div id={id} className={[styles['root'], className].filter(Boolean).join(' ')}>
+      <div className={styles['headerRow']}>
+        <span className={styles['label']}>{label}</span>
         {value.length > 0 && (
           <button
             type="button"
-            className={styles.clearBtn}
+            className={styles['clearBtn']}
             onClick={clearAll}
             aria-label="Clear all sort criteria"
           >
@@ -80,28 +80,28 @@ export default function SortControls({
       </div>
 
       {value.length === 0 ? (
-        <p className={styles.emptyHint} aria-live="polite">
+        <p className={styles['emptyHint']} aria-live="polite">
           No sort applied.
         </p>
       ) : (
-        <ul className={styles.rows} role="list">
+        <ul className={styles['rows']} role="list">
           {value.map((entry, index) => {
             const currentLabel = fieldLabelMap[entry.field] ?? entry.field
             const tiebreakerHint = index > 0 ? 'then' : 'by'
             return (
-              <li key={index} className={styles.row}>
-                <span className={styles.rowHint} aria-hidden="true">
+              <li key={index} className={styles['row']}>
+                <span className={styles['rowHint']} aria-hidden="true">
                   {tiebreakerHint}
                 </span>
                 <label
-                  className={styles.srOnly}
+                  className={styles['srOnly']}
                   htmlFor={`sort-field-${index}`}
                 >
                   Sort field {index + 1}
                 </label>
                 <select
                   id={`sort-field-${index}`}
-                  className={styles.fieldSelect}
+                  className={styles['fieldSelect']}
                   value={entry.field}
                   onChange={e => updateAt(index, { field: e.target.value })}
                 >
@@ -123,7 +123,7 @@ export default function SortControls({
 
                 <button
                   type="button"
-                  className={styles.removeBtn}
+                  className={styles['removeBtn']}
                   onClick={() => removeAt(index)}
                   aria-label={`Remove sort by ${currentLabel}`}
                   title="Remove"
@@ -138,7 +138,7 @@ export default function SortControls({
 
       <button
         type="button"
-        className={styles.addBtn}
+        className={styles['addBtn']}
         onClick={addRow}
         disabled={!canAdd}
         aria-label="Add sort criterion"
@@ -167,7 +167,7 @@ function DirectionToggle({
   return (
     <button
       type="button"
-      className={styles.directionBtn}
+      className={styles['directionBtn']}
       data-direction={direction}
       onClick={() => onChange(next)}
       aria-label={`Sort ${fieldLabel} ${readableDir}; click to toggle`}

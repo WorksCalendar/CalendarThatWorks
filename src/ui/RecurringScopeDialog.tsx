@@ -38,52 +38,52 @@ export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, 
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
         ref={trapRef}
-        className={styles.dialog}
+        className={styles['dialog']}
         role="dialog"
         aria-modal="true"
         aria-labelledby="rsd-title"
       >
-        <div className={styles.header}>
-          <span className={styles.icon} aria-hidden="true">🔁</span>
-          <h2 className={styles.title} id="rsd-title">
+        <div className={styles['header']}>
+          <span className={styles['icon']} aria-hidden="true">🔁</span>
+          <h2 className={styles['title']} id="rsd-title">
             {actionLabel} recurring event
           </h2>
         </div>
 
-        <p className={styles.prompt}>Which events do you want to {actionLabel.toLowerCase()}?</p>
+        <p className={styles['prompt']}>Which events do you want to {actionLabel.toLowerCase()}?</p>
 
-        <div className={styles.options}>
+        <div className={styles['options']}>
           {SCOPE_OPTIONS.map(opt => (
             <label
               key={opt.value}
-              className={[styles.option, scope === opt.value && styles.selected].filter(Boolean).join(' ')}
+              className={[styles['option'], scope === opt.value && styles['selected']].filter(Boolean).join(' ')}
             >
               <input
                 type="radio"
-                className={styles.radio}
+                className={styles['radio']}
                 name="scope"
                 value={opt.value}
                 checked={scope === opt.value}
                 onChange={() => setScope(opt.value)}
               />
-              <span className={styles.optionText}>
-                <span className={styles.optionLabel}>{opt.label}</span>
-                <span className={styles.optionDesc}>{opt.description}</span>
+              <span className={styles['optionText']}>
+                <span className={styles['optionLabel']}>{opt.label}</span>
+                <span className={styles['optionDesc']}>{opt.description}</span>
               </span>
             </label>
           ))}
         </div>
 
-        <div className={styles.actions}>
-          <button className={styles.cancelBtn} onClick={onCancel}>
+        <div className={styles['actions']}>
+          <button className={styles['cancelBtn']} onClick={onCancel}>
             Cancel
           </button>
-          <button className={styles.confirmBtn} onClick={() => onConfirm(scope)}>
+          <button className={styles['confirmBtn']} onClick={() => onConfirm(scope)}>
             {actionLabel}
           </button>
         </div>

@@ -40,7 +40,7 @@ export interface ResourceCalendar {
   /** The resource this calendar governs. */
   readonly resourceId: string;
   /** Optional display name, e.g. "Alice's Schedule". */
-  readonly name?: string;
+  readonly name?: string | undefined;
   readonly entries: readonly CalendarEntry[];
 }
 

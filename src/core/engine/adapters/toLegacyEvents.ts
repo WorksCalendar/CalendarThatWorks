@@ -26,7 +26,7 @@ export interface LegacyEventOut {
   exdates: Date[];
   meta: Record<string, unknown>;
   /** Importance signal threaded through the engine via meta._visualPriority. */
-  visualPriority?: 'muted' | 'high';
+  visualPriority?: 'muted' | 'high' | undefined;
   /** Back-compat: _seriesId if this event is part of a series. */
   _seriesId: string | null;
   /** Back-compat: true if this is an expanded recurrence occurrence. */
@@ -37,7 +37,7 @@ export interface LegacyEventOut {
    * For recurring occurrences, id is the occurrenceId ("{eventId}-r{n}") while
    * _eventId is the series master's id — pass _eventId when building mutations.
    */
-  _eventId?: string;
+  _eventId?: string | undefined;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ export interface LegacyEventOut {
  */
 export function toLegacyEvent(ev: EngineEvent): LegacyEventOut {
   const isRecurring = ev.seriesId !== null && ev.seriesId !== ev.id;
-  const vp = ev.meta._visualPriority;
+  const vp = ev.meta['_visualPriority'];
   return {
     id:            ev.id,
     title:         ev.title,
@@ -87,7 +87,7 @@ export function toLegacyEvents(events: EngineEvent[]): LegacyEventOut[] {
  *   - rrule/exdates are null/[] (occurrences are already expanded)
  */
 export function occurrenceToLegacy(occ: EngineOccurrence): LegacyEventOut {
-  const vp = occ.meta._visualPriority;
+  const vp = occ.meta['_visualPriority'];
   return {
     id:            occ.occurrenceId,
     title:         occ.title,

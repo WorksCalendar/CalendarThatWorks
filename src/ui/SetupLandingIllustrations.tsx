@@ -197,7 +197,7 @@ export function IllustrationTeam({ members }: { members: IllustrationTeamMember[
 
 function firstLetter(name: string): string {
   const trimmed = name.trim();
-  return trimmed ? trimmed[0].toUpperCase() : '?';
+  return trimmed ? trimmed[0]!.toUpperCase() : '?';
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */

@@ -12,35 +12,35 @@ export default function ValidationAlert({ violations, isHard, onConfirm, onCance
   const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
         ref={trapRef}
-        className={[styles.dialog, isHard ? styles.hard : styles.soft].join(' ')}
+        className={[styles['dialog'], isHard ? styles['hard'] : styles['soft']].join(' ')}
         role="alertdialog" aria-modal="true"
       >
-        <div className={styles.header}>
-          <span className={styles.icon} aria-hidden="true">
+        <div className={styles['header']}>
+          <span className={styles['icon']} aria-hidden="true">
             {isHard ? '⛔' : '⚠️'}
           </span>
-          <h2 className={styles.title}>
+          <h2 className={styles['title']}>
             {isHard ? 'Cannot save' : 'Check before saving'}
           </h2>
         </div>
 
-        <ul className={styles.list}>
+        <ul className={styles['list']}>
           {violations.map((v: any, i: number) => (
-            <li key={i} className={styles.item}>{v.message}</li>
+            <li key={i} className={styles['item']}>{v.message}</li>
           ))}
         </ul>
 
-        <div className={styles.actions}>
-          <button className={styles.cancelBtn} onClick={onCancel}>
+        <div className={styles['actions']}>
+          <button className={styles['cancelBtn']} onClick={onCancel}>
             {isHard ? 'Dismiss' : 'Cancel'}
           </button>
           {!isHard && onConfirm && (
-            <button className={styles.confirmBtn} onClick={onConfirm}>
+            <button className={styles['confirmBtn']} onClick={onConfirm}>
               Save anyway
             </button>
           )}

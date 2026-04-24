@@ -11,10 +11,10 @@ export type SavedViewFilters = Record<string, unknown>;
 export type SavedViewDraft = {
   id: string;
   name: string;
-  filters?: SavedViewFilters;
-  color?: string | null;
-  view?: string | null;
-  conditions?: unknown[] | null;
+  filters?: SavedViewFilters | undefined;
+  color?: string | null | undefined;
+  view?: string | null | undefined;
+  conditions?: unknown[] | null | undefined;
   groupBy?: unknown;
   sort?: unknown;
   sortBy?: unknown;
@@ -22,7 +22,7 @@ export type SavedViewDraft = {
   collapsedGroups?: unknown;
   showAllGroups?: unknown;
   selectedBaseIds?: unknown;
-  hiddenFromStrip?: boolean;
+  hiddenFromStrip?: boolean | undefined;
 };
 
 export type SaveViewOptions = Omit<SavedViewDraft, 'id' | 'name' | 'filters' | 'hiddenFromStrip'>;
@@ -39,11 +39,11 @@ export type SavedViewUpdateHandler = (
 ) => void;
 
 export type SourceDraft = {
-  id?: string;
-  label?: string;
-  enabled?: boolean;
-  type?: string;
-  url?: string;
+  id?: string | undefined;
+  label?: string | undefined;
+  enabled?: boolean | undefined;
+  type?: string | undefined;
+  url?: string | undefined;
   [k: string]: any;
 };
 
@@ -79,25 +79,25 @@ export interface ConfigPanelProps {
   items: AnyRecord[];
   onUpdate: UpdateConfig;
   onClose: () => void;
-  onSaveView?: SaveViewHandler;
-  savedViews?: SavedViewDraft[];
-  onUpdateView?: SavedViewUpdateHandler;
-  onDeleteView?: (id: string) => void;
-  sources?: SourceDraft[];
-  feedErrors?: unknown[];
-  onAddSource?: (...args: any[]) => void;
-  onRemoveSource?: (...args: any[]) => void;
-  onToggleSource?: (...args: any[]) => void;
-  onUpdateSource?: (...args: any[]) => void;
-  scheduleTemplates?: ScheduleTemplateDraft[];
-  onCreateScheduleTemplate?: (...args: any[]) => void;
-  onDeleteScheduleTemplate?: (...args: any[]) => void;
-  scheduleTemplateError?: string | null;
-  onEmployeeAdd?: (...args: any[]) => void;
-  onEmployeeDelete?: (...args: any[]) => void;
-  initialTab?: string;
-  initialSmartViewEditId?: string | null;
-  calendarId?: string;
+  onSaveView?: SaveViewHandler | undefined;
+  savedViews?: SavedViewDraft[] | undefined;
+  onUpdateView?: SavedViewUpdateHandler | undefined;
+  onDeleteView?: ((id: string) => void) | undefined;
+  sources?: SourceDraft[] | undefined;
+  feedErrors?: unknown[] | undefined;
+  onAddSource?: ((...args: any[]) => void) | undefined;
+  onRemoveSource?: ((...args: any[]) => void) | undefined;
+  onToggleSource?: ((...args: any[]) => void) | undefined;
+  onUpdateSource?: ((...args: any[]) => void) | undefined;
+  scheduleTemplates?: ScheduleTemplateDraft[] | undefined;
+  onCreateScheduleTemplate?: ((...args: any[]) => void) | undefined;
+  onDeleteScheduleTemplate?: ((...args: any[]) => void) | undefined;
+  scheduleTemplateError?: string | null | undefined;
+  onEmployeeAdd?: ((...args: any[]) => void) | undefined;
+  onEmployeeDelete?: ((...args: any[]) => void) | undefined;
+  initialTab?: string | undefined;
+  initialSmartViewEditId?: string | null | undefined;
+  calendarId?: string | undefined;
 }
 
 export type InputChangeHandler = (value: string) => void;
@@ -109,12 +109,12 @@ export interface CalendarViewEvent {
   title: string;
   start: Date;
   end: Date;
-  allDay?: boolean;
-  category?: string | null;
-  resource?: string | null;
-  status?: EventStatus;
-  visualPriority?: EventVisualPriority | null;
-  meta?: Record<string, unknown>;
-  _col?: number;
-  _numCols?: number;
+  allDay?: boolean | undefined;
+  category?: string | null | undefined;
+  resource?: string | null | undefined;
+  status?: EventStatus | undefined;
+  visualPriority?: EventVisualPriority | null | undefined;
+  meta?: Record<string, unknown> | undefined;
+  _col?: number | undefined;
+  _numCols?: number | undefined;
 }

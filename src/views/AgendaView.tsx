@@ -165,18 +165,18 @@ export default function AgendaView({
 
   function renderEventItem(ev: CalendarViewEvent, opts: { crossGroup?: boolean; sourceLabel?: string | null; nativePath?: string | null; dayTree?: GroupTreeNode[] | null; dayKey?: string | null } = {}) {
     const { crossGroup = false, sourceLabel = null, nativePath = null, dayTree = null, dayKey = null } = opts;
-    const color = resolveColor(ev as NormalizedEvent, ctx?.colorRules);
+    const color = resolveColor(ev as NormalizedEvent, ctx?.['colorRules']);
     const evStartDay = startOfDay(ev.start);
     const rawEndDay  = displayEndDay(ev);
     const evEndDay   = rawEndDay < evStartDay ? evStartDay : rawEndDay;
     const isMultiDay = !isSameDay(evStartDay, evEndDay);
     const onClick = () => onEventClick?.(ev);
-    const statusClass = ev.status === 'cancelled' ? styles.cancelled
-      : ev.status === 'tentative' ? styles.tentative : '';
+    const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+      : ev.status === 'tentative' ? styles['tentative'] : '';
     const className = [
-      styles.event,
+      styles['event'],
       statusClass,
-      crossGroup && styles.crossGroup,
+      crossGroup && styles['crossGroup'],
     ].filter(Boolean).join(' ');
     // Unique key per (event, render-slot) so cross-group duplication doesn't
     // collide with the native instance.
@@ -233,10 +233,10 @@ export default function AgendaView({
         onClick={onClick}
         aria-label={crossGroup && sourceLabel ? `${ev.title} (from ${sourceLabel})` : undefined}
       >
-        <span className={styles.evDot} style={{ background: color }} />
-        <div className={styles.evBody}>
-          <span className={styles.evTitle}>{ev.title}</span>
-          <div className={styles.evMeta}>
+        <span className={styles['evDot']} style={{ background: color }} />
+        <div className={styles['evBody']}>
+          <span className={styles['evTitle']}>{ev.title}</span>
+          <div className={styles['evMeta']}>
             {!ev.allDay && !isMultiDay && (
               <span>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
             )}
@@ -247,10 +247,10 @@ export default function AgendaView({
             {ev.allDay && isMultiDay && (
               <span>All day · {format(evStartDay, 'MMM d')} → {format(evEndDay, 'MMM d')}</span>
             )}
-            {ev.category && <span className={styles.cat}>{ev.category}</span>}
+            {ev.category && <span className={styles['cat']}>{ev.category}</span>}
             {ev.resource && <span>{resourceLabelFor(ev.resource)}</span>}
             {crossGroup && sourceLabel && (
-              <span className={styles.sourceBadge} aria-hidden="true">
+              <span className={styles['sourceBadge']} aria-hidden="true">
                 from {sourceLabel}
               </span>
             )}
@@ -295,7 +295,7 @@ export default function AgendaView({
 
     // When showAllGroups is on, a leaf bucket renders every leaf event that
     // exists in this day's tree — with non-matching events marked crossGroup.
-    const dayKey = path.split('/')[0];
+    const dayKey = path.split('/')[0] ?? null;
     const renderedEvents = (() => {
       if (!isLeaf) return null;
       if (!showAllGroups) return group.events.map((ev) => renderEventItem(ev, { nativePath: path, dayTree, dayKey }));
@@ -334,13 +334,14 @@ export default function AgendaView({
           setDropTargetPath(null);
           if (!drag) return;
           if (drag.nativePath === path) return;
+          if (dayKey === null) return;
           const patch = resolveDropPatch(dayTree, path, dayKey);
           if (!patch) return;
           onEventGroupChange(drag.ev, patch);
         }
       : undefined;
 
-    const className = [styles.subGroup, isDropTarget && styles.dropTarget].filter(Boolean).join(' ');
+    const className = [styles['subGroup'], isDropTarget && styles['dropTarget']].filter(Boolean).join(' ');
 
     return (
       <div
@@ -375,28 +376,28 @@ export default function AgendaView({
   }
 
   if (grouped.length === 0) {
-    if (ctx?.emptyState) return <>{ctx.emptyState}</>;
+    if (ctx?.['emptyState']) return <>{ctx['emptyState']}</>;
     return (
-      <div className={styles.empty}>
+      <div className={styles['empty']}>
         No events in {format(currentDate, 'MMMM yyyy')}
       </div>
     );
   }
 
   return (
-    <div className={styles.agenda}>
+    <div className={styles['agenda']}>
       {grouped.map(({ day, events: dayEvents }, idx) => {
         const dayKey = format(day, 'yyyy-MM-dd');
         const tree = dayTrees?.[idx]?.tree ?? null;
         const allLeafEvents = tree ? collectLeafEvents(tree, dayKey) : [];
         return (
-          <div key={dayKey} className={styles.group}>
-            <div className={[styles.dateHead, isToday(day) && styles.today].filter(Boolean).join(' ')}>
-              <span className={styles.dayName}>{format(day, 'EEE')}</span>
-              <span className={styles.dayNum}>{format(day, 'd')}</span>
-              <span className={styles.monthLabel}>{format(day, 'MMM yyyy')}</span>
+          <div key={dayKey} className={styles['group']}>
+            <div className={[styles['dateHead'], isToday(day) && styles['today']].filter(Boolean).join(' ')}>
+              <span className={styles['dayName']}>{format(day, 'EEE')}</span>
+              <span className={styles['dayNum']}>{format(day, 'd')}</span>
+              <span className={styles['monthLabel']}>{format(day, 'MMM yyyy')}</span>
             </div>
-            <div className={styles.events} role={tree && tree.length > 0 ? 'tree' : undefined}>
+            <div className={styles['events']} role={tree && tree.length > 0 ? 'tree' : undefined}>
               {tree && tree.length > 0
                 ? tree.map((g, i) =>
                     renderGroupNode(g, dayKey, i + 1, tree.length, allLeafEvents, tree),

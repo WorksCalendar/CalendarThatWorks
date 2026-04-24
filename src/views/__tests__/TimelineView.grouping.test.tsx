@@ -165,6 +165,7 @@ describe('TimelineView grouping', () => {
       const bobHeader = screen.getByRole('rowheader', { name: 'Bob Smith' });
       const bobRow = bobHeader.closest('[role="row"]');
       expect(bobRow).toBeTruthy();
+      if (!bobRow) throw new Error('bobRow not found');
 
       dragAndDrop(source, bobRow);
 
@@ -190,6 +191,7 @@ describe('TimelineView grouping', () => {
 
       const source = screen.getByRole('button', { name: /Alice Shift/i });
       const aliceRow = screen.getByRole('rowheader', { name: 'Alice Chen' }).closest('[role="row"]');
+      if (!aliceRow) throw new Error('aliceRow not found');
       dragAndDrop(source, aliceRow);
 
       expect(onEventGroupChange).not.toHaveBeenCalled();

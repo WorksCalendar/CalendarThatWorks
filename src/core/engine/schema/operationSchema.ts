@@ -42,25 +42,25 @@ export type EngineOperation =
         readonly start: Date;
         readonly end: Date;
       };
-      readonly source?: OperationSource;
+      readonly source?: OperationSource | undefined;
     }
   | {
       /** Update arbitrary fields on an existing event. */
       readonly type: 'update';
       readonly id: string;
       readonly patch: Partial<Omit<EngineEvent, 'id'>>;
-      readonly scope?: RecurringEditScope;
+      readonly scope?: RecurringEditScope | undefined;
       /** Original occurrence start (needed for single/following scope). */
-      readonly occurrenceDate?: Date;
-      readonly source?: OperationSource;
+      readonly occurrenceDate?: Date | undefined;
+      readonly source?: OperationSource | undefined;
     }
   | {
       /** Delete an event (or scope of a recurring series). */
       readonly type: 'delete';
       readonly id: string;
-      readonly scope?: RecurringEditScope;
-      readonly occurrenceDate?: Date;
-      readonly source?: OperationSource;
+      readonly scope?: RecurringEditScope | undefined;
+      readonly occurrenceDate?: Date | undefined;
+      readonly source?: OperationSource | undefined;
     }
   | {
       /**
@@ -71,9 +71,9 @@ export type EngineOperation =
       readonly id: string;
       readonly newStart: Date;
       readonly newEnd: Date;
-      readonly scope?: RecurringEditScope;
-      readonly occurrenceDate?: Date;
-      readonly source?: OperationSource;
+      readonly scope?: RecurringEditScope | undefined;
+      readonly occurrenceDate?: Date | undefined;
+      readonly source?: OperationSource | undefined;
     }
   | {
       /**
@@ -85,9 +85,9 @@ export type EngineOperation =
       readonly id: string;
       readonly newStart: Date;
       readonly newEnd: Date;
-      readonly scope?: RecurringEditScope;
-      readonly occurrenceDate?: Date;
-      readonly source?: OperationSource;
+      readonly scope?: RecurringEditScope | undefined;
+      readonly occurrenceDate?: Date | undefined;
+      readonly source?: OperationSource | undefined;
     }
   | {
       /**
@@ -101,9 +101,9 @@ export type EngineOperation =
       readonly type: 'group-change';
       readonly id: string;
       readonly patch: Partial<Omit<EngineEvent, 'id' | 'start' | 'end'>>;
-      readonly scope?: RecurringEditScope;
-      readonly occurrenceDate?: Date;
-      readonly source?: OperationSource;
+      readonly scope?: RecurringEditScope | undefined;
+      readonly occurrenceDate?: Date | undefined;
+      readonly source?: OperationSource | undefined;
     };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

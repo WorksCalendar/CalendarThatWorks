@@ -57,7 +57,7 @@ export default function WeekView({
   const dayEnd     = config?.display?.dayEnd   ?? 22;
   const totalHours = dayEnd - dayStart;
   const pxPerHour  = 64;
-  const bizHours   = ctx?.businessHours ?? null;
+  const bizHours   = ctx?.['businessHours'] ?? null;
 
   const gridRef    = useRef<HTMLDivElement | null>(null);
   const allDayRef  = useRef<HTMLDivElement | null>(null);
@@ -83,8 +83,9 @@ export default function WeekView({
     return eachDayOfInterval({ start, end });
   }, [currentDate, weekStartDay]);
 
-  const weekStart = days[0];
-  const weekEnd   = days[6];
+  // days is built by generating exactly 7 entries above, so [0] and [6] are safe.
+  const weekStart = days[0]!;
+  const weekEnd   = days[6]!;
 
   // Slot hours = hours that have a full 1-hour slot below them
   const slotHours = useMemo(() => {
@@ -159,7 +160,7 @@ export default function WeekView({
     return bizDays.includes(day.getDay()) && h >= bizHours.start && h < bizHours.end;
   }
 
-  const displayTz = ctx?.displayTimezone ?? null;
+  const displayTz = ctx?.['displayTimezone'] ?? null;
 
   function eventPosition(start: Date, end: Date) {
     const startH = displayTz ? hoursInTimezone(start, displayTz) : getHours(start) + getMinutes(start) / 60;
@@ -186,9 +187,10 @@ export default function WeekView({
 
   const handleGridPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    if (!ctx?.permissions?.canAddEvent) return;
+    if (!ctx?.['permissions']?.canAddEvent) return;
+    if (!gridRef.current) return;
     drag.startCreate(e, gridRef.current, days, GUTTER_W);
-  }, [drag.startCreate, days, ctx?.permissions?.canAddEvent]);
+  }, [drag.startCreate, days, ctx?.['permissions']?.canAddEvent]);
 
   const handleGridPointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
     drag.onPointerMove(e);
@@ -213,8 +215,9 @@ export default function WeekView({
   // Drags are excluded via wasDragRef (set true in handleGridPointerUp for real drags).
   const handleGridClick = useCallback((e: MouseEvent<HTMLDivElement>) => {
     if (wasDragRef.current) return;
-    if (!ctx?.permissions?.canAddEvent) return;
+    if (!ctx?.['permissions']?.canAddEvent) return;
     if ((e.target as HTMLElement | null)?.closest?.('[data-event]')) return; // click was on an event, not empty space
+    if (!gridRef.current) return;
     const rect = gridRef.current.getBoundingClientRect();
     const colWidth = (rect.width - GUTTER_W) / days.length;
     const relX = e.clientX - rect.left - GUTTER_W;
@@ -222,10 +225,12 @@ export default function WeekView({
     const dayIdx = clamp(Math.floor(relX / colWidth), 0, days.length - 1);
     const clickedHour = Math.floor(relY / pxPerHour) + dayStart;
     const h = clamp(clickedHour, dayStart, dayEnd - 1);
-    const start = new Date(days[dayIdx]); start.setHours(h, 0, 0, 0);
-    const end   = new Date(days[dayIdx]); end.setHours(h + 1, 0, 0, 0);
+    const day = days[dayIdx];
+    if (day === undefined) return;
+    const start = new Date(day); start.setHours(h, 0, 0, 0);
+    const end   = new Date(day); end.setHours(h + 1, 0, 0, 0);
     onDateSelect?.(start, end);
-  }, [ctx?.permissions?.canAddEvent, days, dayStart, dayEnd, pxPerHour, onDateSelect]);
+  }, [ctx?.['permissions']?.canAddEvent, days, dayStart, dayEnd, pxPerHour, onDateSelect]);
 
   // ── All-day bar drag ──────────────────────────────────────────────────────
   type AllDayDragState = {
@@ -256,6 +261,7 @@ export default function WeekView({
     e.preventDefault();
     e.stopPropagation();
     const grid     = allDayRef.current;
+    if (!grid) return;
     const rect     = grid.getBoundingClientRect();
     const colWidth = rect.width / 7;
     const relX     = e.clientX - rect.left;
@@ -273,6 +279,7 @@ export default function WeekView({
   function handleAllDayPointerMove(e: PointerEvent<HTMLDivElement>) {
     const d = allDayDragRef.current;
     if (!d) return;
+    if (!allDayRef.current) return;
     const rect       = allDayRef.current.getBoundingClientRect();
     const relX       = e.clientX - rect.left;
     const currentCol = clamp(Math.floor(relX / d.colWidth), 0, 6);
@@ -308,7 +315,7 @@ export default function WeekView({
 
   function renderTimedEvent(ev: WeekViewEvent) {
     const isDimmed = drag.draggedId === ev.id;
-    const color    = resolveColor(ev as never, ctx?.colorRules);
+    const color    = resolveColor(ev as never, ctx?.['colorRules']);
     const onClick  = () => !wasDragRef.current && onEventClick?.(ev);
     const pos = eventPosition(ev.start, ev.end);
     if (!pos) return null;
@@ -317,8 +324,8 @@ export default function WeekView({
     const col      = ev._col     ?? 0;
     const pctLeft  = (col / numCols) * 100;
     const pctWidth = (1 / numCols) * 100;
-    const statusClass = ev.status === 'cancelled' ? styles.cancelled
-      : ev.status === 'tentative' ? styles.tentative : '';
+    const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+      : ev.status === 'tentative' ? styles['tentative'] : '';
     const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
     const display = ((ev.meta ?? {}) as { _display?: { large?: boolean; bold?: boolean } })._display ?? {};
     const isUltraCompact = height < 42;
@@ -332,11 +339,11 @@ export default function WeekView({
     return (
       <div key={ev.id} data-event="1"
         className={[
-          styles.event, statusClass,
-          isCompact && styles.eventCompact,
-          isUltraCompact && styles.eventUltraCompact,
-          isDimmed && styles.dragging,
-          ctx?.editMode && styles.editModeEvent,
+          styles['event'], statusClass,
+          isCompact && styles['eventCompact'],
+          isUltraCompact && styles['eventUltraCompact'],
+          isDimmed && styles['dragging'],
+          ctx?.['editMode'] && styles['editModeEvent'],
         ].filter(Boolean).join(' ')}
         data-wc-priority={ev.visualPriority ?? undefined}
         style={{
@@ -348,30 +355,30 @@ export default function WeekView({
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as never, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={e => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as never, e, gridRef.current, days, GUTTER_W); }}
       >
-        <div className={styles.resizeHandleTop}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as never, e, gridRef.current, days, GUTTER_W); }}
+        <div className={styles['resizeHandleTop']}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as never, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
         {inner ?? (
           <>
-            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>
+            <span className={styles['evTitle']} style={{ fontWeight: display.bold ? '700' : undefined }}>
               {ev.title}
             </span>
             {isUltraCompact ? null : (
-              <span className={styles.evTimeRange}>{timeRangeLabel}</span>
+              <span className={styles['evTimeRange']}>{timeRangeLabel}</span>
             )}
             {isCompact ? null : (
               <>
-                <span className={styles.evTime}>Start: {format(ev.start, 'h:mm a')}</span>
-                <span className={styles.evTime}>End: {format(ev.end, 'h:mm a')}</span>
-                <span className={styles.evMeta}>Resource: {pillResource(ev)}</span>
+                <span className={styles['evTime']}>Start: {format(ev.start, 'h:mm a')}</span>
+                <span className={styles['evTime']}>End: {format(ev.end, 'h:mm a')}</span>
+                <span className={styles['evMeta']}>Resource: {pillResource(ev)}</span>
               </>
             )}
           </>
         )}
-        <div className={styles.resizeHandle}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as never, e, gridRef.current, days, GUTTER_W); }}
+        <div className={styles['resizeHandle']}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResize(ev as never, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
       </div>
     );
@@ -393,9 +400,9 @@ export default function WeekView({
       left  = '2px';
       width = 'calc(100% - 4px)';
     }
-    const color = g.ev ? resolveColor(g.ev as never, ctx?.colorRules) : undefined;
+    const color = g.ev ? resolveColor(g.ev as never, ctx?.['colorRules']) : undefined;
     return (
-      <div key="ghost" className={[styles.ghost, !g.ev && styles.ghostCreate].filter(Boolean).join(' ')}
+      <div key="ghost" className={[styles['ghost'], !g.ev && styles['ghostCreate']].filter(Boolean).join(' ')}
         aria-hidden="true"
         style={{ top, height, '--ev-color': color, left, width }}
       />
@@ -404,20 +411,20 @@ export default function WeekView({
 
   return (
     <div
-      className={styles.week}
+      className={styles['week']}
       role="grid"
       aria-label={`Week of ${format(weekStart, 'MMMM d')} – ${format(weekEnd, 'MMMM d, yyyy')}`}
     >
       {/* ── Header row ── */}
-      <div className={styles.headerRow} role="row" aria-rowindex={1}>
-        <div className={styles.timeGutter} role="presentation" />
+      <div className={styles['headerRow']} role="row" aria-rowindex={1}>
+        <div className={styles['timeGutter']} role="presentation" />
         {days.map(day => (
           <div key={format(day, 'yyyy-MM-dd')}
             role="columnheader"
             aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
-            className={[styles.dayHead, isToday(day) && styles.todayHead].filter(Boolean).join(' ')}>
-            <span className={styles.dayAbbr} aria-hidden="true">{format(day, 'EEE')}</span>
-            <span className={[styles.dayNum, isToday(day) && styles.todayNum].filter(Boolean).join(' ')} aria-hidden="true">
+            className={[styles['dayHead'], isToday(day) && styles['todayHead']].filter(Boolean).join(' ')}>
+            <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
+            <span className={[styles['dayNum'], isToday(day) && styles['todayNum']].filter(Boolean).join(' ')} aria-hidden="true">
               {format(day, 'd')}
             </span>
           </div>
@@ -426,12 +433,12 @@ export default function WeekView({
 
       {/* ── All-day / multi-day row ── */}
       {allDayLanes > 0 && (
-        <div className={styles.allDayRow} role="row" aria-rowindex={2}>
-          <div className={styles.timeGutter} role="rowheader" aria-label="All-day events">
+        <div className={styles['allDayRow']} role="row" aria-rowindex={2}>
+          <div className={styles['timeGutter']} role="rowheader" aria-label="All-day events">
             <span aria-hidden="true">all&#8209;day</span>
           </div>
           <div
-            className={styles.allDayGrid}
+            className={styles['allDayGrid']}
             style={{ height: allDayHeight }}
             ref={allDayRef}
             role="gridcell"
@@ -443,11 +450,11 @@ export default function WeekView({
             {allDaySpans
               .filter(s => s.lane < MAX_SPANS)
               .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                const color = resolveColor(ev as never, ctx?.colorRules);
+                const color = resolveColor(ev as never, ctx?.['colorRules']);
                 const pctLeft  = (startCol / 7) * 100;
                 const pctWidth = ((endCol - startCol + 1) / 7) * 100;
-                const statusClass = ev.status === 'cancelled' ? styles.cancelled
-                  : ev.status === 'tentative' ? styles.tentative : '';
+                const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+                  : ev.status === 'tentative' ? styles['tentative'] : '';
                 const isDimmedBar = allDayGhost?.ev?.id === ev.id;
                 const startLabel = formatPillDate(ev.start);
                 const endLabel = formatPillDate(ev.end);
@@ -456,11 +463,11 @@ export default function WeekView({
                 return (
                   <button key={ev.id}
                     className={[
-                      styles.allDaySpan,
-                      continuesBefore && styles.continuesBefore,
-                      continuesAfter  && styles.continuesAfter,
+                      styles['allDaySpan'],
+                      continuesBefore && styles['continuesBefore'],
+                      continuesAfter  && styles['continuesAfter'],
                       statusClass,
-                      isDimmedBar && styles.dragging,
+                      isDimmedBar && styles['dragging'],
                     ].filter(Boolean).join(' ')}
                     style={{
                       '--ev-color': color,
@@ -474,8 +481,8 @@ export default function WeekView({
                     onClick={() => !isDimmedBar && onEventClick?.(ev)}
                     onPointerDown={e => startAllDayBarDrag(ev, e, startCol, endCol)}
                   >
-                    <span className={styles.allDayTitleLine}>Title: {ev.title}</span>
-                    <span className={styles.allDayMetaLine}>
+                    <span className={styles['allDayTitleLine']}>Title: {ev.title}</span>
+                    <span className={styles['allDayMetaLine']}>
                       <span>Start: {startLabel}</span>
                       <span>End: {endLabel}</span>
                       <span>Resource: {resourceLabel}</span>
@@ -487,9 +494,9 @@ export default function WeekView({
             {/* All-day drag ghost */}
             {allDayGhost && (() => {
               const g = allDayGhost;
-              const color = resolveColor(g.ev as never, ctx?.colorRules);
+              const color = resolveColor(g.ev as never, ctx?.['colorRules']);
               return (
-                <div key="allday-ghost" className={styles.allDayGhost} aria-hidden="true"
+                <div key="allday-ghost" className={styles['allDayGhost']} aria-hidden="true"
                   style={{
                     '--ev-color': color,
                     left:   `${(g.startCol / 7) * 100}%`,
@@ -503,9 +510,9 @@ export default function WeekView({
 
             {/* Overflow button + popover */}
             {overflowCount > 0 && (
-              <div className={styles.allDayMoreWrapper}>
+              <div className={styles['allDayMoreWrapper']}>
                 <button
-                  className={styles.allDayMore}
+                  className={styles['allDayMore']}
                   aria-label={`${overflowCount} more all-day event${overflowCount === 1 ? '' : 's'}, ${allDayOverflowOpen ? 'expanded' : 'collapsed'}`}
                   aria-expanded={allDayOverflowOpen}
                   aria-controls="wc-allday-overflow"
@@ -521,13 +528,13 @@ export default function WeekView({
                     role="dialog"
                     aria-modal="true"
                     aria-label="Hidden all-day events"
-                    className={styles.allDayOverflowPopover}
+                    className={styles['allDayOverflowPopover']}
                     onClick={e => e.stopPropagation()}
                   >
-                    <div className={styles.allDayOverflowHead}>
+                    <div className={styles['allDayOverflowHead']}>
                       <span>All-day events</span>
                       <button
-                        className={styles.allDayOverflowClose}
+                        className={styles['allDayOverflowClose']}
                         onClick={() => setAllDayOverflowOpen(false)}
                         aria-label="Close"
                       >×</button>
@@ -535,11 +542,11 @@ export default function WeekView({
                     {allDaySpans
                       .filter(s => s.lane >= MAX_SPANS)
                       .map(({ ev }) => {
-                        const color = resolveColor(ev as never, ctx?.colorRules);
+                        const color = resolveColor(ev as never, ctx?.['colorRules']);
                         return (
                           <button
                             key={ev.id}
-                            className={styles.allDayOverflowItem}
+                            className={styles['allDayOverflowItem']}
                             style={{ '--ev-color': color }}
                             aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}`}
                             onClick={() => { onEventClick?.(ev); setAllDayOverflowOpen(false); }}
@@ -558,7 +565,7 @@ export default function WeekView({
 
       {/* ── Time grid ── */}
       <div
-        className={styles.grid}
+        className={styles['grid']}
         ref={gridRef}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
@@ -566,9 +573,9 @@ export default function WeekView({
         onPointerCancel={drag.cancel}
         onClick={handleGridClick}
       >
-        <div className={styles.timeCol} role="presentation">
+        <div className={styles['timeCol']} role="presentation">
           {hours.map(h => (
-            <div key={h} className={styles.hourLabel} style={{ height: pxPerHour }} aria-hidden="true">
+            <div key={h} className={styles['hourLabel']} style={{ height: pxPerHour }} aria-hidden="true">
               {h === dayStart ? '' : format(new Date().setHours(h, 0, 0, 0), 'h a')}
             </div>
           ))}
@@ -579,15 +586,15 @@ export default function WeekView({
           const dayEvs = timedByDay.get(key) || [];
           return (
             <div key={key}
-              className={[styles.dayCol, isToday(day) && styles.todayCol].filter(Boolean).join(' ')}
+              className={[styles['dayCol'], isToday(day) && styles['todayCol']].filter(Boolean).join(' ')}
               style={{ height: totalHours * pxPerHour }}
             >
               {/* Background hour lines */}
               {hours.map(h => (
                 <div key={h}
                   className={[
-                    styles.hourLine,
-                    bizHours && !isBizHour(h, day) && styles.offHour,
+                    styles['hourLine'],
+                    bizHours && !isBizHour(h, day) && styles['offHour'],
                   ].filter(Boolean).join(' ')}
                   style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
                 />
@@ -607,7 +614,7 @@ export default function WeekView({
                     aria-label={`${format(day, 'EEEE, MMMM d')}, ${format(slotStart, 'h:mm a')}${isToday(day) ? ', today' : ''}`}
                     aria-rowindex={hi + 3}
                     aria-colindex={di + 1}
-                    className={styles.slotCell}
+                    className={styles['slotCell']}
                     style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
                     onKeyDown={e => handleSlotKeyDown(e, di, hi, slotStart, slotEnd)}
                   />
@@ -616,8 +623,8 @@ export default function WeekView({
 
               {/* Now line */}
               {isToday(day) && showNowLine && (
-                <div className={styles.nowLine} style={{ top: nowTop }}>
-                  <div className={styles.nowDot} />
+                <div className={styles['nowLine']} style={{ top: nowTop }}>
+                  <div className={styles['nowDot']} />
                 </div>
               )}
 

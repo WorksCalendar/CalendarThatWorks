@@ -191,7 +191,7 @@ export class ICSAdapter implements CalendarAdapter {
     rangeEnd?: Date,
     signal?: AbortSignal,
   ): Promise<CalendarEventV1[]> {
-    const res = await this._fetch(this._url, { signal });
+    const res = await this._fetch(this._url, signal ? { signal } : {});
     if (!res.ok) throw new Error(`ICSAdapter: fetch failed ${res.status} ${res.statusText}`);
     const text = await res.text();
 

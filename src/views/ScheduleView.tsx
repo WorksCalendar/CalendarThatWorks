@@ -39,13 +39,13 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
 
   if (resources.length === 0) {
     return (
-      <div className={styles.fallback}>
-        <p className={styles.hint}>Schedule view groups events by resource. Add a <code>resource</code> field to your events.</p>
-        <div className={styles.simpleList}>
+      <div className={styles['fallback']}>
+        <p className={styles['hint']}>Schedule view groups events by resource. Add a <code>resource</code> field to your events.</p>
+        <div className={styles['simpleList']}>
           {events.slice(0, 40).map((ev: ScheduleEvent) => {
-            const color = resolveColor(ev as any, ctx?.colorRules);
+            const color = resolveColor(ev as any, ctx?.['colorRules']);
             return (
-              <button key={ev.id} className={styles.simpleEvent} onClick={() => onEventClick?.(ev)}
+              <button key={ev.id} className={styles['simpleEvent']} onClick={() => onEventClick?.(ev)}
                 style={{ '--ev-color': color }}>
                 <span>{format(ev.start, 'MMM d')}</span>
                 <span>{ev.title}</span>
@@ -58,38 +58,38 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
   }
 
   return (
-    <div className={styles.schedule}>
+    <div className={styles['schedule']}>
       {/* Header */}
-      <div className={styles.header} style={{ gridTemplateColumns: `120px repeat(${resources.length}, minmax(100px, 1fr))` }}>
-        <div className={styles.cornerCell} />
+      <div className={styles['header']} style={{ gridTemplateColumns: `120px repeat(${resources.length}, minmax(100px, 1fr))` }}>
+        <div className={styles['cornerCell']} />
         {resources.map(r => (
-          <div key={r} className={styles.resourceHead}>{r}</div>
+          <div key={r} className={styles['resourceHead']}>{r}</div>
         ))}
       </div>
 
       {/* Body */}
-      <div className={styles.body}>
+      <div className={styles['body']}>
         {days.map(day => {
           const key = format(day, 'yyyy-MM-dd');
           const isWeekStart = day.getDay() === weekStartDay;
 
           return (
             <div key={key}
-              className={[styles.row, isWeekStart && styles.weekStart, isToday(day) && styles.todayRow].filter(Boolean).join(' ')}
+              className={[styles['row'], isWeekStart && styles['weekStart'], isToday(day) && styles['todayRow']].filter(Boolean).join(' ')}
               style={{ gridTemplateColumns: `120px repeat(${resources.length}, minmax(100px, 1fr))` }}
             >
-              <div className={[styles.dateCell, isToday(day) && styles.todayDate].filter(Boolean).join(' ')}>
-                <span className={styles.weekDay}>{format(day, 'EEE')}</span>
-                <span className={styles.dayNum}>{format(day, 'MMM d')}</span>
+              <div className={[styles['dateCell'], isToday(day) && styles['todayDate']].filter(Boolean).join(' ')}>
+                <span className={styles['weekDay']}>{format(day, 'EEE')}</span>
+                <span className={styles['dayNum']}>{format(day, 'MMM d')}</span>
               </div>
               {resources.map(res => {
                 const cellEvents = events.filter((e: ScheduleEvent) => e.resource === res && isSameDay(e.start, day));
                 return (
-                  <div key={res} className={styles.cell}>
+                  <div key={res} className={styles['cell']}>
                     {cellEvents.map(ev => {
-                      const color = resolveColor(ev as any, ctx?.colorRules);
-                      const statusClass = ev.status === 'cancelled' ? styles.cancelled
-                        : ev.status === 'tentative' ? styles.tentative : '';
+                      const color = resolveColor(ev as any, ctx?.['colorRules']);
+                      const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+                        : ev.status === 'tentative' ? styles['tentative'] : '';
 
                       if (ctx?.renderEvent) {
                         const custom = ctx.renderEvent(ev, {
@@ -98,9 +98,9 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                         });
                         if (custom != null) {
                           return (
-                            <div key={ev.id} className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
+                            <div key={ev.id} className={[styles['eventPill'], statusClass].filter(Boolean).join(' ')}
                               style={{ '--ev-color': color }}
-                              data-wc-priority={ev.visualPriority as string | undefined}
+                              data-wc-priority={ev['visualPriority'] as string | undefined}
                               onClick={() => onEventClick?.(ev)}>
                               {custom}
                             </div>
@@ -110,9 +110,9 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
 
                       return (
                         <button key={ev.id}
-                          className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
+                          className={[styles['eventPill'], statusClass].filter(Boolean).join(' ')}
                           style={{ '--ev-color': color }}
-                          data-wc-priority={ev.visualPriority as string | undefined}
+                          data-wc-priority={ev['visualPriority'] as string | undefined}
                           onClick={() => onEventClick?.(ev)}
                           title={ev.title}
                         >

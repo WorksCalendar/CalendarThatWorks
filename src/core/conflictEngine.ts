@@ -30,9 +30,9 @@ export interface ConflictEvent {
   readonly id: string
   readonly start: Date | string | number
   readonly end: Date | string | number
-  readonly resource?: string | null
-  readonly category?: string | null
-  readonly meta?: Readonly<Record<string, unknown>>
+  readonly resource?: string | null | undefined
+  readonly category?: string | null | undefined
+  readonly meta?: Readonly<Record<string, unknown>> | undefined
 }
 
 /** Data-driven rule configuration persisted to `config.conflicts.rules`. */
@@ -143,28 +143,28 @@ export interface EvaluateConflictsInput {
   /** Active rule set (owner-configured). */
   readonly rules: readonly ConflictRule[]
   /** Master switch — when false, returns `VALID` without running any rule. */
-  readonly enabled?: boolean
+  readonly enabled?: boolean | undefined
   /**
    * Resource records keyed by id. Required for `capacity-overflow` and
    * `outside-business-hours` rules; other rules ignore this map. When the
    * proposed event's resource is not in the map, capacity/hours rules skip
    * silently (unknown capacity / hours ⇒ cannot evaluate ⇒ no violation).
    */
-  readonly resources?: ReadonlyMap<string, EngineResource>
+  readonly resources?: ReadonlyMap<string, EngineResource> | undefined
   /**
    * Assignment records keyed by assignment id. When provided, the
    * capacity-overflow rule sums `units` per overlapping same-resource
    * assignment; when absent, each overlapping event is assumed to occupy
    * 100 units (one full slot).
    */
-  readonly assignments?: ReadonlyMap<string, Assignment>
+  readonly assignments?: ReadonlyMap<string, Assignment> | undefined
   /**
    * Category definitions keyed by category id. Required for the
    * `policy-violation` rule (#213); ignored by every other rule. When
    * the proposed event's category is not in the map or has no `policy`
    * block, the rule skips silently.
    */
-  readonly categories?: ReadonlyMap<string, CategoryDef>
+  readonly categories?: ReadonlyMap<string, CategoryDef> | undefined
   /**
    * "Now" reference for time-based policy checks (min-lead-time,
    * max-advance). Defaults to `Date.now()`. Overridable for

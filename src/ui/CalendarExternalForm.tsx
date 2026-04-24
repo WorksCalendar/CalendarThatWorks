@@ -117,10 +117,10 @@ function defaultValidate(values: ExternalFormValues, fields: ExternalFormField[]
     return null;
   };
 
-  const start = toDate(values.start);
-  const end = toDate(values.end);
+  const start = toDate(values['start']);
+  const end = toDate(values['end']);
   if (start && end && start > end) {
-    errors.end = 'End must be after start.';
+    errors['end'] = 'End must be after start.';
   }
 
   return errors;
@@ -208,18 +208,18 @@ export default function CalendarExternalForm({
   }
 
   return (
-    <div className={styles.wrapper}>
-      <form className={styles.form} onSubmit={handleSubmit} noValidate>
+    <div className={styles['wrapper']}>
+      <form className={styles['form']} onSubmit={handleSubmit} noValidate>
         {normalizedFields.map((field) => {
           const inputId = `external-${field.name}`;
           const value = values[field.name];
           return (
-            <div className={styles.row} key={field.name}>
-              <label className={styles.label} htmlFor={inputId}>{field.label}</label>
+            <div className={styles['row']} key={field.name}>
+              <label className={styles['label']} htmlFor={inputId}>{field.label}</label>
               {field.type === 'textarea' && (
                 <textarea
                   id={inputId}
-                  className={styles.textarea}
+                  className={styles['textarea']}
                   value={toInputValue(value)}
                   placeholder={field.placeholder}
                   onChange={(e) => setValue(field.name, e.target.value)}
@@ -229,7 +229,7 @@ export default function CalendarExternalForm({
               {field.type === 'select' && (
                 <select
                   id={inputId}
-                  className={styles.select}
+                  className={styles['select']}
                   value={toInputValue(value)}
                   onChange={(e) => setValue(field.name, e.target.value)}
                 >
@@ -250,22 +250,22 @@ export default function CalendarExternalForm({
               {field.type !== 'textarea' && field.type !== 'select' && field.type !== 'checkbox' && (
                 <input
                   id={inputId}
-                  className={styles.input}
+                  className={styles['input']}
                   type={field.type}
                   value={toInputValue(value)}
                   placeholder={field.placeholder ?? ''}
                   onChange={(e) => setValue(field.name, e.target.value)}
                 />
               )}
-              {errors[field.name] && <span className={styles.error}>{errors[field.name]}</span>}
+              {errors[field.name] && <span className={styles['error']}>{errors[field.name]}</span>}
             </div>
           );
         })}
 
-        {submitError && <div className={styles.globalError} role="alert">{submitError}</div>}
+        {submitError && <div className={styles['globalError']} role="alert">{submitError}</div>}
 
-        <div className={styles.actions}>
-          <button className={styles.button} type="submit" disabled={isSubmitting}>
+        <div className={styles['actions']}>
+          <button className={styles['button']} type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Submitting…' : submitLabel}
           </button>
         </div>

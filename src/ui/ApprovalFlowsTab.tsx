@@ -110,8 +110,8 @@ export function ApprovalFlowsTab({ calendarId }: ApprovalFlowsTabProps) {
   };
 
   return (
-    <div className={styles.section}>
-      <p className={styles.sectionDesc}>
+    <div className={styles['section']}>
+      <p className={styles['sectionDesc']}>
         Author approval workflows visually — fork a starter template, build a new flow from
         scratch, or tweak one you saved earlier. Saved flows persist per calendar in this browser.
       </p>
@@ -142,7 +142,7 @@ export function ApprovalFlowsTab({ calendarId }: ApprovalFlowsTabProps) {
                 </span>
               </div>
               <button
-                className={styles.addFieldBtn}
+                className={styles['addFieldBtn']}
                 style={{ marginTop: 0 }}
                 onClick={() => editTemplate(t)}
                 data-testid={`edit-template-${t.id}`}
@@ -160,7 +160,7 @@ export function ApprovalFlowsTab({ calendarId }: ApprovalFlowsTabProps) {
             My workflows
           </h4>
           <button
-            className={styles.addFieldBtn}
+            className={styles['addFieldBtn']}
             style={{ marginTop: 0 }}
             onClick={createBlank}
             data-testid="create-blank-workflow"
@@ -201,7 +201,7 @@ export function ApprovalFlowsTab({ calendarId }: ApprovalFlowsTabProps) {
                   </div>
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button
-                      className={styles.addFieldBtn}
+                      className={styles['addFieldBtn']}
                       style={{ marginTop: 0 }}
                       onClick={() => editSaved(s)}
                       data-testid={`edit-saved-${s.id}`}
@@ -212,14 +212,14 @@ export function ApprovalFlowsTab({ calendarId }: ApprovalFlowsTabProps) {
                       ? (
                         <>
                           <button
-                            className={styles.removeBtn}
+                            className={styles['removeBtn']}
                             onClick={() => { deleteWorkflow(s.id); setConfirmDel(null); }}
                             data-testid={`confirm-delete-saved-${s.id}`}
                           >
                             Confirm
                           </button>
                           <button
-                            className={styles.addFieldBtn}
+                            className={styles['addFieldBtn']}
                             style={{ marginTop: 0 }}
                             onClick={() => setConfirmDel(null)}
                           >
@@ -229,7 +229,7 @@ export function ApprovalFlowsTab({ calendarId }: ApprovalFlowsTabProps) {
                       )
                       : (
                         <button
-                          className={styles.removeBtn}
+                          className={styles['removeBtn']}
                           onClick={() => setConfirmDel(s.id)}
                           aria-label={`Delete ${s.name}`}
                           data-testid={`delete-saved-${s.id}`}

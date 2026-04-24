@@ -49,21 +49,21 @@ type CsvSource = {
 type CalendarSource = {
   id: string;
   type: string;
-  label?: string;
-  color?: string;
-  enabled?: boolean;
-  addedAt?: string;
-  url?: string;
-  refreshInterval?: number;
-  events?: WorksCalendarEvent[];
-  importedAt?: string;
+  label?: string | undefined;
+  color?: string | undefined;
+  enabled?: boolean | undefined;
+  addedAt?: string | undefined;
+  url?: string | undefined;
+  refreshInterval?: number | undefined;
+  events?: WorksCalendarEvent[] | undefined;
+  importedAt?: string | undefined;
 };
 type SourcePatch = Partial<Omit<CalendarSource, 'id'>>;
-type NewSource = Partial<CalendarSource> & { type?: string };
+type NewSource = Partial<CalendarSource> & { type?: string | undefined };
 type ActiveIcsSource = {
   url: string;
-  label?: string;
-  refreshInterval?: number;
+  label?: string | undefined;
+  refreshInterval?: number | undefined;
 };
 
 function sourceKey(calendarId: string): string { return `${SOURCE_PREFIX}${calendarId}`; }
@@ -167,7 +167,7 @@ export function useSourceStore(calendarId: string): {
 
   // CSV datasets with at least one event
   const activeCsvSources = useMemo<CsvSource[]>(
-    () => sources.filter((s): s is CsvSource => s.type === 'csv' && s.enabled && (s.events?.length ?? 0) > 0),
+    () => sources.filter((s): s is CsvSource => s.type === 'csv' && s.enabled === true && (s.events?.length ?? 0) > 0),
     [sources],
   );
 

@@ -100,6 +100,7 @@ describe('TimelineView touch DnD', () => {
   it('rows lack data-wc-drop when onEventGroupChange is absent', () => {
     renderTimeline();
     const aliceRow = screen.getByRole('rowheader', { name: 'Alice Chen' }).closest('[role="row"]');
+    if (!aliceRow) throw new Error('aliceRow not found');
     expect(aliceRow.hasAttribute('data-wc-drop')).toBe(false);
   });
 });

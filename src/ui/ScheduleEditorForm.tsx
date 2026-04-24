@@ -161,25 +161,25 @@ export default function ScheduleEditorForm({
 
   function validate(): boolean {
     const nextErrors: ScheduleEditorErrors = {};
-    if (!title.trim()) nextErrors.title = 'Title is required';
+    if (!title.trim()) nextErrors['title'] = 'Title is required';
     if (!start) {
-      nextErrors.start = 'Start is required';
+      nextErrors['start'] = 'Start is required';
     } else if (!fromInput(start, false)) {
-      nextErrors.start = 'Enter a valid start date/time';
+      nextErrors['start'] = 'Enter a valid start date/time';
     }
 
     if (mode !== 'template') {
       if (!end) {
-        nextErrors.end = 'End is required';
+        nextErrors['end'] = 'End is required';
       } else if (!fromInput(end, false)) {
-        nextErrors.end = 'Enter a valid end date/time';
+        nextErrors['end'] = 'Enter a valid end date/time';
       } else {
         const rangeValidation = validateDateRange(start, end);
-        if (!rangeValidation.isValid) nextErrors.end = rangeValidation.message;
+        if (!rangeValidation.isValid) nextErrors['end'] = rangeValidation.message;
       }
     }
     if (mode === 'recurring' && rrulePreset === 'custom' && !customRrule.trim()) {
-      nextErrors.rrule = 'Enter a valid RRULE string';
+      nextErrors['rrule'] = 'Enter a valid RRULE string';
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -240,31 +240,31 @@ export default function ScheduleEditorForm({
   }
 
   return (
-    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className={styles['overlay']} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={trapRef}
-        className={styles.modal}
+        className={styles['modal']}
         role="dialog"
         aria-modal="true"
         aria-label={`Create schedule for ${emp.name}`}
       >
-        <div className={styles.header}>
-          <div className={styles.headerInfo}>
-            <h2 className={styles.title}>Create Shift Schedule</h2>
-            <span className={styles.empName}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
+        <div className={styles['header']}>
+          <div className={styles['headerInfo']}>
+            <h2 className={styles['title']}>Create Shift Schedule</h2>
+            <span className={styles['empName']}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <button type="button" className={styles['closeBtn']} onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
 
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          <div className={styles.modeTabs} role="group" aria-label="Shift type">
+        <form className={styles['form']} onSubmit={handleSubmit} noValidate>
+          <div className={styles['modeTabs']} role="group" aria-label="Shift type">
             {(['onetime', 'recurring', 'template'] as const).map((tabMode) => (
               <button
                 key={tabMode}
                 type="button"
-                className={[styles.modeTab, mode === tabMode && styles.modeTabActive].filter(Boolean).join(' ')}
+                className={[styles['modeTab'], mode === tabMode && styles['modeTabActive']].filter(Boolean).join(' ')}
                 onClick={() => setMode(tabMode)}
                 aria-pressed={mode === tabMode}
               >
@@ -273,13 +273,13 @@ export default function ScheduleEditorForm({
             ))}
           </div>
 
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="sef-title">
-              Shift Title <span className={styles.req}>*</span>
+          <div className={styles['field']}>
+            <label className={styles['label']} htmlFor="sef-title">
+              Shift Title <span className={styles['req']}>*</span>
             </label>
             <input
               id="sef-title"
-              className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
+              className={[styles['input'], errors['title'] && styles['inputError']].filter(Boolean).join(' ')}
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
@@ -287,52 +287,52 @@ export default function ScheduleEditorForm({
               }}
               autoFocus
             />
-            {errors.title && <span className={styles.error}>{errors.title}</span>}
+            {errors['title'] && <span className={styles['error']}>{errors['title']}</span>}
           </div>
 
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="sef-start">
+          <div className={styles['field']}>
+            <label className={styles['label']} htmlFor="sef-start">
               {mode === 'template' ? 'First Shift Start' : 'Start'}{' '}
-              <span className={styles.req}>*</span>
+              <span className={styles['req']}>*</span>
             </label>
             <input
               id="sef-start"
               type="datetime-local"
-              className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
+              className={[styles['input'], errors['start'] && styles['inputError']].filter(Boolean).join(' ')}
               value={start}
               onChange={(e) => {
                 setStart(e.target.value);
                 setErrors((currentErrors) => withoutErrorKeys(currentErrors, 'start', 'end'));
               }}
             />
-            {errors.start && <span className={styles.error}>{errors.start}</span>}
+            {errors['start'] && <span className={styles['error']}>{errors['start']}</span>}
           </div>
 
           {mode !== 'template' && (
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="sef-end">
-                End <span className={styles.req}>*</span>
+            <div className={styles['field']}>
+              <label className={styles['label']} htmlFor="sef-end">
+                End <span className={styles['req']}>*</span>
               </label>
               <input
                 id="sef-end"
                 type="datetime-local"
-                className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
+                className={[styles['input'], errors['end'] && styles['inputError']].filter(Boolean).join(' ')}
                 value={end}
                 onChange={(e) => {
                   setEnd(e.target.value);
                   setErrors((currentErrors) => withoutErrorKeys(currentErrors, 'end'));
                 }}
               />
-              {errors.end && <span className={styles.error}>{errors.end}</span>}
+              {errors['end'] && <span className={styles['error']}>{errors['end']}</span>}
             </div>
           )}
 
           {mode === 'recurring' && (
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="sef-rrule">Repeat Pattern</label>
+            <div className={styles['field']}>
+              <label className={styles['label']} htmlFor="sef-rrule">Repeat Pattern</label>
               <select
                 id="sef-rrule"
-                className={styles.select}
+                className={styles['select']}
                 value={rrulePreset}
                 onChange={(e) => {
                   setRrulePreset(e.target.value as RrulePresetId);
@@ -345,7 +345,7 @@ export default function ScheduleEditorForm({
               </select>
               {rrulePreset === 'custom' && (
                 <input
-                  className={[styles.input, errors.rrule && styles.inputError].filter(Boolean).join(' ')}
+                  className={[styles['input'], errors['rrule'] && styles['inputError']].filter(Boolean).join(' ')}
                   value={customRrule}
                   onChange={(e) => {
                     setCustomRrule(e.target.value);
@@ -355,43 +355,43 @@ export default function ScheduleEditorForm({
                   aria-label="Custom RRULE string"
                 />
               )}
-              {errors.rrule && <span className={styles.error}>{errors.rrule}</span>}
-              <span className={styles.helperText}>Uses RFC 5545 RRULE format.</span>
+              {errors['rrule'] && <span className={styles['error']}>{errors['rrule']}</span>}
+              <span className={styles['helperText']}>Uses RFC 5545 RRULE format.</span>
             </div>
           )}
 
           {mode === 'template' && (
-            <div className={styles.field}>
-              <label className={styles.label}>Schedule Template</label>
-              <div className={styles.templateGrid}>
+            <div className={styles['field']}>
+              <label className={styles['label']}>Schedule Template</label>
+              <div className={styles['templateGrid']}>
                 {SHIFT_TEMPLATES.map((template) => (
                   <button
                     key={template.id}
                     type="button"
                     className={[
-                      styles.templateCard,
-                      templateId === template.id && styles.templateCardActive,
+                      styles['templateCard'],
+                      templateId === template.id && styles['templateCardActive'],
                     ].filter(Boolean).join(' ')}
                     onClick={() => setTemplateId(template.id)}
                     aria-pressed={templateId === template.id}
                   >
-                    <span className={styles.templateLabel}>{template.label}</span>
-                    <span className={styles.templateDesc}>{template.description}</span>
+                    <span className={styles['templateLabel']}>{template.label}</span>
+                    <span className={styles['templateDesc']}>{template.description}</span>
                     {template.note && (
-                      <span className={styles.templateNote}>{template.note}</span>
+                      <span className={styles['templateNote']}>{template.note}</span>
                     )}
                   </button>
                 ))}
               </div>
-              <p className={styles.helperText}>
+              <p className={styles['helperText']}>
                 Duration: {selectedTemplate.durationHours}h per shift
               </p>
             </div>
           )}
 
-          <div className={styles.actions}>
-            <button type="button" className={styles.btnCancel} onClick={onClose}>Cancel</button>
-            <button type="submit" className={styles.btnSave}>
+          <div className={styles['actions']}>
+            <button type="button" className={styles['btnCancel']} onClick={onClose}>Cancel</button>
+            <button type="submit" className={styles['btnSave']}>
               {mode === 'template' && selectedTemplate.id === '7on7off'
                 ? 'Create 7-Day Block'
                 : 'Create Shift'}

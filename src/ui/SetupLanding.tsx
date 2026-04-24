@@ -181,31 +181,31 @@ export default function SetupLanding({
   /* ── Welcome ─────────────────────────────────────────────────────────── */
   if (step === 0) {
     return (
-      <div className={styles.landing} data-wc-theme={resolveCssTheme(theme)} role="region" aria-label="Calendar setup">
-        <div className={styles.hero}>
-          <div className={styles.heroIcon}><Rocket size={40} aria-hidden="true" /></div>
-          <h1 className={styles.heroTitle}>Let’s set up your calendar</h1>
-          <p className={styles.heroLead}>
+      <div className={styles['landing']} data-wc-theme={resolveCssTheme(theme)} role="region" aria-label="Calendar setup">
+        <div className={styles['hero']}>
+          <div className={styles['heroIcon']}><Rocket size={40} aria-hidden="true" /></div>
+          <h1 className={styles['heroTitle']}>Let’s set up your calendar</h1>
+          <p className={styles['heroLead']}>
             Answer a few easy questions and we’ll pick good settings for you.
             No tech words. No guessing. You can change anything later.
           </p>
 
-          <div className={styles.heroBullets}>
-            <div className={styles.heroBullet}><Palette size={16} aria-hidden="true" /> Pick how it looks</div>
-            <div className={styles.heroBullet}><LayoutGrid size={16} aria-hidden="true" /> Pick what you see first</div>
-            <div className={styles.heroBullet}><Users size={16} aria-hidden="true" /> Add your team</div>
-            <div className={styles.heroBullet}><Wand2 size={16} aria-hidden="true" /> Make a smart view</div>
+          <div className={styles['heroBullets']}>
+            <div className={styles['heroBullet']}><Palette size={16} aria-hidden="true" /> Pick how it looks</div>
+            <div className={styles['heroBullet']}><LayoutGrid size={16} aria-hidden="true" /> Pick what you see first</div>
+            <div className={styles['heroBullet']}><Users size={16} aria-hidden="true" /> Add your team</div>
+            <div className={styles['heroBullet']}><Wand2 size={16} aria-hidden="true" /> Make a smart view</div>
           </div>
 
-          <div className={styles.heroActions}>
-            <button className={styles.primaryBtn} onClick={() => setStep(1)} type="button">
+          <div className={styles['heroActions']}>
+            <button className={styles['primaryBtn']} onClick={() => setStep(1)} type="button">
               <Sparkles size={16} aria-hidden="true" /> Start setup guide
             </button>
-            <button className={styles.skipBtn} onClick={onSkip} type="button">
+            <button className={styles['skipBtn']} onClick={onSkip} type="button">
               Skip setup guide
             </button>
           </div>
-          <p className={styles.heroFine}>
+          <p className={styles['heroFine']}>
             Skip if you already know how this calendar works. You can open setup again from the settings gear.
           </p>
         </div>
@@ -215,21 +215,21 @@ export default function SetupLanding({
 
   /* ── Steps ───────────────────────────────────────────────────────────── */
   return (
-    <div className={styles.landing} data-wc-theme={resolveCssTheme(theme)} role="region" aria-label="Calendar setup">
-      <div className={styles.shell}>
-        <header className={styles.topBar}>
-          <span className={styles.brand}><Sparkles size={14} aria-hidden="true" /> Calendar setup</span>
-          <span className={styles.stepPill}>Step {step} of {TOTAL_STEPS}</span>
-          <button className={styles.skipTextBtn} onClick={onSkip} type="button">
+    <div className={styles['landing']} data-wc-theme={resolveCssTheme(theme)} role="region" aria-label="Calendar setup">
+      <div className={styles['shell']}>
+        <header className={styles['topBar']}>
+          <span className={styles['brand']}><Sparkles size={14} aria-hidden="true" /> Calendar setup</span>
+          <span className={styles['stepPill']}>Step {step} of {TOTAL_STEPS}</span>
+          <button className={styles['skipTextBtn']} onClick={onSkip} type="button">
             Skip setup guide
           </button>
         </header>
 
-        <div className={styles.progressTrack} role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={TOTAL_STEPS}>
-          <div className={styles.progressFill} style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+        <div className={styles['progressTrack']} role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={TOTAL_STEPS}>
+          <div className={styles['progressFill']} style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
         </div>
 
-        <main className={styles.body}>
+        <main className={styles['body']}>
           {step === 1 && (
             <StepName name={calendarName} onChange={setCalendarName} />
           )}
@@ -260,9 +260,9 @@ export default function SetupLanding({
           )}
         </main>
 
-        <footer className={styles.footer}>
+        <footer className={styles['footer']}>
           <button
-            className={styles.backBtn}
+            className={styles['backBtn']}
             onClick={back}
             type="button"
             disabled={step === 1}
@@ -271,11 +271,11 @@ export default function SetupLanding({
           </button>
 
           {step < TOTAL_STEPS ? (
-            <button className={styles.primaryBtn} onClick={next} type="button">
+            <button className={styles['primaryBtn']} onClick={next} type="button">
               Next <ChevronRight size={15} aria-hidden="true" />
             </button>
           ) : (
-            <button className={styles.primaryBtn} onClick={handleFinish} type="button">
+            <button className={styles['primaryBtn']} onClick={handleFinish} type="button">
               <Check size={15} aria-hidden="true" /> I’m done
             </button>
           )}
@@ -291,16 +291,16 @@ export default function SetupLanding({
 
 function StepName({ name, onChange }: { name: string; onChange: (v: string) => void }) {
   return (
-    <section className={styles.step}>
-      <h2 className={styles.stepTitle}>What should we call your calendar?</h2>
-      <p className={styles.stepPlain}>
+    <section className={styles['step']}>
+      <h2 className={styles['stepTitle']}>What should we call your calendar?</h2>
+      <p className={styles['stepPlain']}>
         Pick a name your team will know. It shows up at the top of the page.
         Something like <em>“Team Calendar”</em> or <em>“Kitchen Schedule”</em> works great.
       </p>
-      <label className={styles.field}>
-        <span className={styles.fieldLabel}>Calendar name</span>
+      <label className={styles['field']}>
+        <span className={styles['fieldLabel']}>Calendar name</span>
         <input
-          className={styles.input}
+          className={styles['input']}
           type="text"
           value={name}
           onChange={e => onChange(e.target.value)}
@@ -309,7 +309,7 @@ function StepName({ name, onChange }: { name: string; onChange: (v: string) => v
           autoFocus
         />
       </label>
-      <p className={styles.stepTip}>
+      <p className={styles['stepTip']}>
         Tip: Don’t worry — you can rename it any time from the settings gear.
       </p>
     </section>
@@ -322,14 +322,14 @@ function StepTheme({ current, onChange }: { current: string; onChange: (id: stri
   // card still renders as selected.
   const normalizedCurrent = normalizeTheme(current);
   return (
-    <section className={styles.step}>
-      <h2 className={styles.stepTitle}>How should it look?</h2>
-      <p className={styles.stepPlain}>
+    <section className={styles['step']}>
+      <h2 className={styles['stepTitle']}>How should it look?</h2>
+      <p className={styles['stepPlain']}>
         Pick a look that feels right for your team. You are only picking colors here.
         You can switch any time.
       </p>
 
-      <div className={styles.themeGrid}>
+      <div className={styles['themeGrid']}>
         {THEMES.map(id => {
           const t = THEME_META[id];
           const selected = normalizedCurrent === t.id;
@@ -338,7 +338,7 @@ function StepTheme({ current, onChange }: { current: string; onChange: (id: stri
               key={t.id}
               type="button"
               onClick={() => onChange(t.id)}
-              className={[styles.themeCard, selected && styles.cardSelected].filter(Boolean).join(' ')}
+              className={[styles['themeCard'], selected && styles['cardSelected']].filter(Boolean).join(' ')}
               aria-pressed={selected}
               title={t.description}
             >
@@ -349,12 +349,12 @@ function StepTheme({ current, onChange }: { current: string; onChange: (id: stri
                 text={t.preview.text}
                 border={t.preview.border}
               />
-              <div className={styles.themeMeta}>
-                <span className={styles.themeLabel}>{t.label}</span>
-                {t.dark && <span className={styles.themeBadge}>dark</span>}
-                {selected && <span className={styles.selectedMark}><Check size={12} aria-hidden="true" /></span>}
+              <div className={styles['themeMeta']}>
+                <span className={styles['themeLabel']}>{t.label}</span>
+                {t.dark && <span className={styles['themeBadge']}>dark</span>}
+                {selected && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>}
               </div>
-              <span className={styles.themeBlurb}>{simpleBlurb(t.description)}</span>
+              <span className={styles['themeBlurb']}>{simpleBlurb(t.description)}</span>
             </button>
           );
         })}
@@ -375,14 +375,14 @@ function StepTabs({
   onLocationLabelChange: (v: 'Base' | 'Region') => void;
 }) {
   return (
-    <section className={styles.step}>
-      <h2 className={styles.stepTitle}>Which tabs do you want?</h2>
-      <p className={styles.stepPlain}>
+    <section className={styles['step']}>
+      <h2 className={styles['stepTitle']}>Which tabs do you want?</h2>
+      <p className={styles['stepPlain']}>
         Keep only the tabs you need. <strong>Month</strong> and <strong>Week</strong> are always on.
         You can turn any of the others off now — and flip them back on later from settings.
       </p>
 
-      <div className={styles.viewGrid}>
+      <div className={styles['viewGrid']}>
         {VIEW_CHOICES.map(v => {
           const isOptional = !v.alwaysOn;
           const isOn = v.alwaysOn || enabled.includes(v.id as OptionalViewId);
@@ -392,18 +392,18 @@ function StepTabs({
               key={v.id}
               type="button"
               onClick={() => isOptional && onToggle(v.id as OptionalViewId)}
-              className={[styles.viewCard, isOn && styles.cardSelected].filter(Boolean).join(' ')}
+              className={[styles['viewCard'], isOn && styles['cardSelected']].filter(Boolean).join(' ')}
               aria-pressed={isOn}
               aria-disabled={!isOptional}
               disabled={!isOptional}
               title={!isOptional ? 'Always on' : undefined}
             >
               <IllustrationView kind={illustrationKindFor(v.id)} />
-              <div className={styles.viewMeta}>
-                <span className={styles.viewLabel}>{label}</span>
-                {isOn && <span className={styles.selectedMark}><Check size={12} aria-hidden="true" /></span>}
+              <div className={styles['viewMeta']}>
+                <span className={styles['viewLabel']}>{label}</span>
+                {isOn && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>}
               </div>
-              <span className={styles.viewBlurb}>
+              <span className={styles['viewBlurb']}>
                 {!isOptional ? `${v.plain} (always on)` : v.plain}
               </span>
             </button>
@@ -412,23 +412,23 @@ function StepTabs({
       </div>
 
       {enabled.includes('base') && (
-        <div className={styles.locationLabelBlock}>
-          <div className={styles.locationLabelHeader}>
+        <div className={styles['locationLabelBlock']}>
+          <div className={styles['locationLabelHeader']}>
             <MapPin size={14} aria-hidden="true" />
-            <span className={styles.fieldLabel}>What do you call your locations?</span>
+            <span className={styles['fieldLabel']}>What do you call your locations?</span>
           </div>
-          <p className={styles.stepPlain}>
+          <p className={styles['stepPlain']}>
             Pick the word that matches how your team talks. This shows up as the tab name
             and in saved views.
           </p>
-          <div className={styles.locationLabelChoices}>
+          <div className={styles['locationLabelChoices']}>
             {(['Base', 'Region'] as const).map(value => {
               const selected = locationLabel === value;
               return (
                 <button
                   key={value}
                   type="button"
-                  className={[styles.chipRadio, selected && styles.chipRadioSelected].filter(Boolean).join(' ')}
+                  className={[styles['chipRadio'], selected && styles['chipRadioSelected']].filter(Boolean).join(' ')}
                   aria-pressed={selected}
                   onClick={() => onLocationLabelChange(value)}
                 >
@@ -455,13 +455,13 @@ function StepView({
   locationLabel: 'Base' | 'Region';
 }) {
   return (
-    <section className={styles.step}>
-      <h2 className={styles.stepTitle}>What should you see first?</h2>
-      <p className={styles.stepPlain}>
+    <section className={styles['step']}>
+      <h2 className={styles['stepTitle']}>What should you see first?</h2>
+      <p className={styles['stepPlain']}>
         This is the view your calendar opens to. You can switch views any time with the buttons up top.
       </p>
 
-      <div className={styles.viewGrid}>
+      <div className={styles['viewGrid']}>
         {choices.map(v => {
           const selected = current === v.id;
           const label = v.id === 'base' ? locationLabel : v.label;
@@ -470,15 +470,15 @@ function StepView({
               key={v.id}
               type="button"
               onClick={() => onChange(v.id)}
-              className={[styles.viewCard, selected && styles.cardSelected].filter(Boolean).join(' ')}
+              className={[styles['viewCard'], selected && styles['cardSelected']].filter(Boolean).join(' ')}
               aria-pressed={selected}
             >
               <IllustrationView kind={illustrationKindFor(v.id)} />
-              <div className={styles.viewMeta}>
-                <span className={styles.viewLabel}>{label}</span>
-                {selected && <span className={styles.selectedMark}><Check size={12} aria-hidden="true" /></span>}
+              <div className={styles['viewMeta']}>
+                <span className={styles['viewLabel']}>{label}</span>
+                {selected && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>}
               </div>
-              <span className={styles.viewBlurb}>{v.plain}</span>
+              <span className={styles['viewBlurb']}>{v.plain}</span>
             </button>
           );
         })}
@@ -499,7 +499,7 @@ function StepTeam({
   };
   const add = () => {
     const colors = ['#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899', '#14b8a6'];
-    const nextColor = colors[team.length % colors.length];
+    const nextColor = colors[team.length % colors.length]!;
     onChange([...team, { id: `t${Date.now()}`, name: '', color: nextColor }]);
   };
   const remove = (id: string) => {
@@ -507,23 +507,23 @@ function StepTeam({
   };
 
   return (
-    <section className={styles.step}>
-      <h2 className={styles.stepTitle}>Who is on your team?</h2>
-      <p className={styles.stepPlain}>
+    <section className={styles['step']}>
+      <h2 className={styles['stepTitle']}>Who is on your team?</h2>
+      <p className={styles['stepPlain']}>
         Add the people who show up on your calendar. Just first names are fine.
         Leave a row blank to skip that person. You can add, rename, or remove people later.
       </p>
 
-      <div className={styles.teamIllustrationRow}>
+      <div className={styles['teamIllustrationRow']}>
         <IllustrationTeam members={team.filter(m => m.name.trim()).slice(0, 4)} />
       </div>
 
-      <ul className={styles.teamList}>
+      <ul className={styles['teamList']}>
         {team.map(m => (
-          <li key={m.id} className={styles.teamRow}>
-            <span className={styles.dot} style={{ background: m.color }} aria-hidden="true" />
+          <li key={m.id} className={styles['teamRow']}>
+            <span className={styles['dot']} style={{ background: m.color }} aria-hidden="true" />
             <input
-              className={styles.input}
+              className={styles['input']}
               type="text"
               value={m.name}
               onChange={e => update(m.id, e.target.value)}
@@ -532,7 +532,7 @@ function StepTeam({
             />
             {team.length > 1 && (
               <button
-                className={styles.rowRemoveBtn}
+                className={styles['rowRemoveBtn']}
                 type="button"
                 onClick={() => remove(m.id)}
                 aria-label={`Remove ${m.name || 'this person'}`}
@@ -544,7 +544,7 @@ function StepTeam({
         ))}
       </ul>
 
-      <button className={styles.secondaryBtn} type="button" onClick={add}>
+      <button className={styles['secondaryBtn']} type="button" onClick={add}>
         + Add another person
       </button>
     </section>
@@ -559,14 +559,14 @@ function StepRecipes({
   onToggle: (id: SetupRecipeId) => void;
 }) {
   return (
-    <section className={styles.step}>
-      <h2 className={styles.stepTitle}>Pick a smart view or two</h2>
-      <p className={styles.stepPlain}>
+    <section className={styles['step']}>
+      <h2 className={styles['stepTitle']}>Pick a smart view or two</h2>
+      <p className={styles['stepPlain']}>
         A smart view is a saved way to look at your calendar. We made some for you.
         Tap any box to turn it on. You can always add more, or make your own, later.
       </p>
 
-      <div className={styles.recipeGrid}>
+      <div className={styles['recipeGrid']}>
         {RECIPE_CHOICES.map(r => {
           const isOn = selected.includes(r.id);
           return (
@@ -574,22 +574,22 @@ function StepRecipes({
               key={r.id}
               type="button"
               onClick={() => onToggle(r.id)}
-              className={[styles.recipeCard, isOn && styles.cardSelected].filter(Boolean).join(' ')}
+              className={[styles['recipeCard'], isOn && styles['cardSelected']].filter(Boolean).join(' ')}
               aria-pressed={isOn}
             >
               <IllustrationRecipe kind={r.id} />
-              <div className={styles.recipeMeta}>
-                <span className={styles.recipeTitle}>{r.title}</span>
-                {isOn && <span className={styles.selectedMark}><Check size={12} aria-hidden="true" /></span>}
+              <div className={styles['recipeMeta']}>
+                <span className={styles['recipeTitle']}>{r.title}</span>
+                {isOn && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>}
               </div>
-              <span className={styles.recipePlain}>{r.plain}</span>
-              <span className={styles.recipeExample}>{r.example}</span>
+              <span className={styles['recipePlain']}>{r.plain}</span>
+              <span className={styles['recipeExample']}>{r.example}</span>
             </button>
           );
         })}
       </div>
 
-      <p className={styles.stepTip}>
+      <p className={styles['stepTip']}>
         Not sure? Leave <strong>Show everything</strong> on. You can add more views later from the views bar.
       </p>
     </section>

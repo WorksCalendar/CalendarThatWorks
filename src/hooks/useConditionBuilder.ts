@@ -23,8 +23,8 @@ function makeCondition(logic: 'AND' | 'OR' = 'AND', firstFieldKey = 'categories'
 }
 
 export type UseConditionBuilderOptions = {
-  schema?: FilterField[];
-  initialConditions?: Condition[] | null;
+  schema?: FilterField[] | undefined;
+  initialConditions?: Condition[] | null | undefined;
 };
 
 export type UseConditionBuilderResult = {

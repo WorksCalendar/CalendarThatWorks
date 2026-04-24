@@ -147,7 +147,7 @@ export default function MonthView({
   const [dragTarget, setDragTarget] = useState<Date | null>(null); // Date | null
 
   function startPillDrag(ev: NormalizedEvent, e: ReactPointerEvent<HTMLElement>) {
-    if (e.button !== 0 || !ctx?.permissions?.canDrag) return;
+    if (e.button !== 0 || !ctx?.['permissions']?.canDrag) return;
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = { ev, moved: false, targetDay: null };
@@ -192,7 +192,7 @@ export default function MonthView({
     const wks  = [];
     for (let i = 0; i < days.length; i += 7) wks.push(days.slice(i, i + 7));
     const names = [];
-    for (let i = 0; i < 7; i++) names.push(format(days[i], 'EEE'));
+    for (let i = 0; i < 7; i++) names.push(format(days[i]!, 'EEE'));
     return { weeks: wks, dayNames: names };
   }, [currentDate, weekStartDay]);
 
@@ -207,8 +207,12 @@ export default function MonthView({
     const map = new Map<string, NormalizedEvent[]>();
     singleDay.forEach(ev => {
       const key = format(ev.start, 'yyyy-MM-dd');
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(ev);
+      let bucket = map.get(key);
+      if (!bucket) {
+        bucket = [];
+        map.set(key, bucket);
+      }
+      bucket.push(ev);
     });
 
     map.forEach((dayEvents, key) => {
@@ -246,7 +250,7 @@ export default function MonthView({
         : `${format(ev.start, 'EEE, MMM d, h:mm a')} – ${format(ev.end, 'EEE, MMM d, h:mm a')}`);
 
     const rawNotes = (ev._raw as { notes?: unknown } | undefined)?.notes;
-    const notes = ev.meta?.notes ?? rawNotes ?? '';
+    const notes = ev.meta?.['notes'] ?? rawNotes ?? '';
 
     return {
       title: ev.title,
@@ -296,18 +300,18 @@ export default function MonthView({
 
   // ── Renderers ─────────────────────────────────────────────────────────────
   function renderPill(ev: NormalizedEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null) {
-    const color       = resolveColor(ev, ctx?.colorRules);
+    const color       = resolveColor(ev, ctx?.['colorRules']);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
-    const statusClass = ev.status === 'cancelled' ? styles.cancelled
-      : ev.status === 'tentative' ? styles.tentative : '';
-    const display = (ev.meta?._display as { bold?: boolean; large?: boolean } | undefined) ?? {};
+    const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+      : ev.status === 'tentative' ? styles['tentative'] : '';
+    const display = (ev.meta?.['_display'] as { bold?: boolean; large?: boolean } | undefined) ?? {};
 
     function handlePillMouseEnter(e: ReactMouseEvent<HTMLElement>) {
       if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
       if (pillHoverTitle) {
         const r = e.currentTarget.getBoundingClientRect();
-        setTitleHover(buildHoverProjection(ev, color, r));
+        setTitleHover(buildHoverProjection(ev, color ?? '', r));
       }
     }
     function handlePillMouseLeave() {
@@ -320,7 +324,7 @@ export default function MonthView({
       if (custom != null) {
         return (
           <div key={ev.id}
-            className={[styles.eventPill, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
+            className={[styles['eventPill'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
             role="button"
             tabIndex={0}
             data-wc-priority={ev.visualPriority ?? undefined}
@@ -344,10 +348,10 @@ export default function MonthView({
     return (
       <button key={ev.id}
         className={[
-          styles.eventPill,
+          styles['eventPill'],
           statusClass,
-          isDimmed && styles.dragging,
-          ctx?.editMode && styles.editModePill,
+          isDimmed && styles['dragging'],
+          ctx?.['editMode'] && styles['editModePill'],
         ].filter(Boolean).join(' ')}
         data-wc-priority={ev.visualPriority ?? undefined}
         style={{
@@ -371,10 +375,10 @@ export default function MonthView({
   function renderGhostPill() {
     const d = dragRef.current;
     if (!d || !dragTarget) return null;
-    const color = resolveColor(d.ev, ctx?.colorRules);
+    const color = resolveColor(d.ev, ctx?.['colorRules']);
     return (
       <div
-        className={[styles.eventPill, styles.ghost].filter(Boolean).join(' ')}
+        className={[styles['eventPill'], styles['ghost']].filter(Boolean).join(' ')}
         style={{ '--ev-color': color }}
         aria-hidden="true"
       >
@@ -386,7 +390,7 @@ export default function MonthView({
   return (
     <>
     <div
-      className={styles.month}
+      className={styles['month']}
       onPointerUp={commitDrag}
       onPointerLeave={cancelDrag}
       role="grid"
@@ -395,21 +399,22 @@ export default function MonthView({
     >
       {/* Day name header */}
       <div
-        className={styles.header}
+        className={styles['header']}
         role="row"
         aria-rowindex={1}
         style={{ gridTemplateColumns: showWeekNumbers ? `32px repeat(7, 1fr)` : `repeat(7, 1fr)` }}
       >
-        {showWeekNumbers && <div className={styles.weekNumHead} role="presentation" />}
+        {showWeekNumbers && <div className={styles['weekNumHead']} role="presentation" />}
         {dayNames.map(n => (
-          <div key={n} className={styles.dayName} role="columnheader" aria-label={n}>{n}</div>
+          <div key={n} className={styles['dayName']} role="columnheader" aria-label={n}>{n}</div>
         ))}
       </div>
 
-      <div className={styles.grid}>
+      <div className={styles['grid']}>
         {weeks.map((week, wi) => {
-          const weekStart = week[0];
-          const weekEnd   = week[6];
+          // Each `week` is a 7-element slice from the weekly grouping above.
+          const weekStart = week[0]!;
+          const weekEnd   = week[6]!;
 
           const spans = layoutSpans(multiDay, weekStart, weekEnd);
           const laneCount   = spans.length ? Math.max(...spans.map(s => s.lane)) + 1 : 0;
@@ -424,16 +429,16 @@ export default function MonthView({
           return (
             <div
               key={wi}
-              className={[styles.weekRow, isHovered && styles.weekRowHovered].filter(Boolean).join(' ')}
+              className={[styles['weekRow'], isHovered && styles['weekRowHovered']].filter(Boolean).join(' ')}
               style={{ minHeight: rowMinH }}
             >
               {showWeekNumbers && (
-                <div className={styles.weekNum}>{getISOWeek(week[0])}</div>
+                <div className={styles['weekNum']}>{getISOWeek(week[0]!)}</div>
               )}
 
-              <div className={styles.daysArea}>
+              <div className={styles['daysArea']}>
                 {/* ── Day cells (base layer — fills full daysArea height) ── */}
-                <div className={styles.weekCells} role="row" aria-rowindex={wi + 2}>
+                <div className={styles['weekCells']} role="row" aria-rowindex={wi + 2}>
                   {week.map((day, di) => {
                     const dayKey     = format(day, 'yyyy-MM-dd');
                     const daySingles = singleByDay.get(dayKey) || [];
@@ -459,10 +464,10 @@ export default function MonthView({
                         aria-label={cellLabel}
                         aria-selected={isFocused}
                         className={[
-                          styles.cell,
-                          !isSameMonth(day, currentDate) && styles.otherMonth,
-                          isToday(day) && styles.today,
-                          isDropTarget && styles.dropTarget,
+                          styles['cell'],
+                          !isSameMonth(day, currentDate) && styles['otherMonth'],
+                          isToday(day) && styles['today'],
+                          isDropTarget && styles['dropTarget'],
                         ].filter(Boolean).join(' ')}
                         onClick={() => {
                           setFocusedDay(startOfDay(day));
@@ -474,11 +479,11 @@ export default function MonthView({
                         onKeyDown={e => handleCellKeyDown(e, day)}
                         onPointerEnter={() => handleCellPointerEnter(day)}
                       >
-                        <div className={styles.cellHead}>
-                          <span className={styles.dayNum}>{format(day, 'd')}</span>
+                        <div className={styles['cellHead']}>
+                          <span className={styles['dayNum']}>{format(day, 'd')}</span>
                           {overflowCount > 0 && (
                             <button
-                              className={styles.moreLink}
+                              className={styles['moreLink']}
                               data-month-more-trigger="true"
                               aria-label={`${overflowCount} more event${overflowCount === 1 ? '' : 's'} on ${format(day, 'MMMM d')}`}
                               aria-expanded={!!isPopoverOpen}
@@ -495,7 +500,7 @@ export default function MonthView({
                         </div>
 
                         {/* paddingTop reserves space for the absolutely-positioned spansLayer */}
-                        <div className={styles.events} style={{ paddingTop: spansHeight }}>
+                        <div className={styles['events']} style={{ paddingTop: spansHeight }}>
                           {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
                           {isDropTarget && renderGhostPill()}
                         </div>
@@ -507,25 +512,25 @@ export default function MonthView({
 
                 {/* ── Spanning event bars (overlaid below date numbers, above pills) ── */}
                 {laneCount > 0 && (
-                  <div className={styles.spansLayer} style={{ top: layoutMetrics.dayNumTrackH, height: spansHeight }}>
+                  <div className={styles['spansLayer']} style={{ top: layoutMetrics.dayNumTrackH, height: spansHeight }}>
                     {spans
                       .filter(s => s.lane < MAX_SPANS_VISIBLE)
                       .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                        const color = resolveColor(ev, ctx?.colorRules);
+                        const color = resolveColor(ev, ctx?.['colorRules']);
                         const pctLeft  = (startCol / 7) * 100;
                         const pctWidth = ((endCol - startCol + 1) / 7) * 100;
-                        const statusClass = ev.status === 'cancelled' ? styles.cancelled
-                          : ev.status === 'tentative' ? styles.tentative : '';
+                        const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+                          : ev.status === 'tentative' ? styles['tentative'] : '';
                         const isDimmed = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
                         return (
                           <button
                             key={`${ev.id}-w${wi}`}
                             className={[
-                              styles.spanBar,
-                              continuesBefore && styles.continuesBefore,
-                              continuesAfter  && styles.continuesAfter,
+                              styles['spanBar'],
+                              continuesBefore && styles['continuesBefore'],
+                              continuesAfter  && styles['continuesAfter'],
                               statusClass,
-                              isDimmed && styles.dragging,
+                              isDimmed && styles['dragging'],
                             ].filter(Boolean).join(' ')}
                             style={{
                               '--ev-color': color,
@@ -540,7 +545,7 @@ export default function MonthView({
                               if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
                               if (pillHoverTitle) {
                                 const r = e.currentTarget.getBoundingClientRect();
-                                setTitleHover(buildHoverProjection(ev, color, r));
+                                setTitleHover(buildHoverProjection(ev, color ?? '', r));
                               }
                             }}
                             onMouseLeave={() => {
@@ -565,12 +570,12 @@ export default function MonthView({
     {popoverState && popoverStyle && (
       <div
         id={`wc-popover-${format(popoverState.day, 'yyyy-MM-dd')}`}
-        className={styles.popover}
+        className={styles['popover']}
         data-month-popover="true"
         style={popoverStyle}
         onClick={e => e.stopPropagation()}
       >
-        <div className={styles.popoverHead}>
+        <div className={styles['popoverHead']}>
           <span>{format(popoverState.day, 'MMMM d')}</span>
           <button onClick={() => setPopoverState(null)} aria-label="Close expanded day events">×</button>
         </div>
@@ -584,12 +589,12 @@ export default function MonthView({
     {popoverState && popoverStyle && (
       <div
         id={`wc-popover-${format(popoverState.day, 'yyyy-MM-dd')}`}
-        className={styles.popover}
+        className={styles['popover']}
         data-month-popover="true"
         style={popoverStyle}
         onClick={e => e.stopPropagation()}
       >
-        <div className={styles.popoverHead}>
+        <div className={styles['popoverHead']}>
           <span>{format(popoverState.day, 'MMMM d')}</span>
           <button onClick={() => setPopoverState(null)} aria-label="Close expanded day events">×</button>
         </div>

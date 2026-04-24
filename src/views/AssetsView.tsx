@@ -84,26 +84,26 @@ type AssetsViewEvent = CalendarViewEvent & {
 interface AssetsViewProps {
   currentDate: Date;
   events: AssetsViewEvent[];
-  onEventClick?: (event: AssetsViewEvent) => void;
-  onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
-  groupBy?: GroupByInput;
-  onGroupByChange?: (value: GroupByInput) => void;
-  categoriesConfig?: { categories?: Array<{ id?: string; color?: string }>; pillStyle?: string };
-  locationProvider?: LocationProvider | null;
-  renderAssetLocation?: (locationData: LocationData | null, asset: { id: string }) => ReactNode;
-  collapsedGroups?: Set<string> | string[];
-  onCollapsedGroupsChange?: (next: Set<string>) => void;
-  assets?: AssetRowDef[];
-  onEditAssets?: () => void;
-  onRequestAsset?: () => void;
+  onEventClick?: ((event: AssetsViewEvent) => void) | undefined;
+  onDateSelect?: ((start: Date, end: Date, resourceId?: string) => void) | undefined;
+  groupBy?: GroupByInput | undefined;
+  onGroupByChange?: ((value: GroupByInput) => void) | undefined;
+  categoriesConfig?: { categories?: Array<{ id?: string; color?: string }>; pillStyle?: string } | undefined;
+  locationProvider?: LocationProvider | null | undefined;
+  renderAssetLocation?: ((locationData: LocationData | null, asset: { id: string }) => ReactNode) | undefined;
+  collapsedGroups?: Set<string> | string[] | undefined;
+  onCollapsedGroupsChange?: ((next: Set<string>) => void) | undefined;
+  assets?: AssetRowDef[] | undefined;
+  onEditAssets?: (() => void) | undefined;
+  onRequestAsset?: (() => void) | undefined;
   approvalsConfig?: unknown;
-  onApprovalAction?: (event: AssetsViewEvent, action: string) => void;
-  resolveResourceLabel?: (resourceId: string) => string;
-  strictAssetFiltering?: boolean;
-  zoomLevel?: string;
-  onZoomChange?: (zoom: AssetsZoomLevel) => void;
-  pools?: readonly ResourcePool[];
-  onPoolDateSelect?: (start: Date, end: Date, poolId: string) => void;
+  onApprovalAction?: ((event: AssetsViewEvent, action: string) => void | Promise<void>) | undefined;
+  resolveResourceLabel?: ((resourceId: string) => string) | undefined;
+  strictAssetFiltering?: boolean | undefined;
+  zoomLevel?: string | undefined;
+  onZoomChange?: ((zoom: AssetsZoomLevel) => void) | undefined;
+  pools?: readonly ResourcePool[] | undefined;
+  onPoolDateSelect?: ((start: Date, end: Date, poolId: string) => void) | undefined;
 }
 
 type AssetRow = {
@@ -197,7 +197,7 @@ function assignLanes(events: AssetsViewEvent[], monthStart: Date, monthEnd: Date
   for (const ev of clipped) {
     let placed = false;
     for (let i = 0; i < laneEnd.length; i++) {
-      if (laneEnd[i] < ev._dayStart) {
+      if (laneEnd[i]! < ev._dayStart) {
         ev._lane = i;
         laneEnd[i] = ev._dayEnd;
         placed = true;
@@ -263,11 +263,11 @@ function getApprovalStage(ev: AssetsViewEvent): ApprovalStage | null {
  */
 function approvalClass(stage: ApprovalStage | null) {
   switch (stage) {
-    case 'requested':      return styles.stageRequested;
-    case 'approved':       return styles.stageApproved;
-    case 'finalized':      return styles.stageFinalized;
-    case 'pending_higher': return styles.stagePendingHigher;
-    case 'denied':         return styles.stageDenied;
+    case 'requested':      return styles['stageRequested'];
+    case 'approved':       return styles['stageApproved'];
+    case 'finalized':      return styles['stageFinalized'];
+    case 'pending_higher': return styles['stagePendingHigher'];
+    case 'denied':         return styles['stageDenied'];
     default:               return '';
   }
 }
@@ -387,8 +387,8 @@ export default function AssetsView({
   // ── Keyboard grid navigation ───────────────────────────────────────────────
   const [focusedCell, setFocusedCell] = useState({ rowIdx: 0, dayIdx: 0 });
   const lastKeyNavCell = useRef(false);
-  const gridRef        = useRef(null);
-  const wrapRef        = useRef(null);
+  const gridRef        = useRef<HTMLDivElement | null>(null);
+  const wrapRef        = useRef<HTMLDivElement | null>(null);
 
   // ── Virtualization ─────────────────────────────────────────────────────────
   const [scrollState, setScrollState] = useState({ top: 0, height: 2000, left: 0, width: 1200 });
@@ -725,7 +725,7 @@ export default function AssetsView({
   // ── Cumulative row offsets ─────────────────────────────────────────────────
   const rowOffsets = useMemo(() => {
     const offsets = [0];
-    for (const row of flatRows) offsets.push(offsets[offsets.length - 1] + row.rowH);
+    for (const row of flatRows) offsets.push((offsets[offsets.length - 1] ?? 0) + row.rowH);
     return offsets;
   }, [flatRows]);
 
@@ -740,13 +740,13 @@ export default function AssetsView({
     let lo = 0, hi = flatRows.length - 1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (rowOffsets[mid + 1] <= top) { s = mid + 1; lo = mid + 1; } else hi = mid - 1;
+      if ((rowOffsets[mid + 1] ?? Infinity) <= top) { s = mid + 1; lo = mid + 1; } else hi = mid - 1;
     }
     // Binary search for last visible row
     lo = 0; hi = flatRows.length - 1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (rowOffsets[mid] < top + viewH) { e = mid; lo = mid + 1; } else hi = mid - 1;
+      if ((rowOffsets[mid] ?? 0) < top + viewH) { e = mid; lo = mid + 1; } else hi = mid - 1;
     }
     return [
       Math.max(0, s - OVERSCAN_ROWS),
@@ -779,10 +779,12 @@ export default function AssetsView({
     if (wrap && rowOffsets.length > rowIdx + 1) {
       const rowTop    = rowOffsets[rowIdx];
       const rowBottom = rowOffsets[rowIdx + 1];
-      if (rowTop < wrap.scrollTop) {
-        wrap.scrollTop = rowTop;
-      } else if (rowBottom > wrap.scrollTop + wrap.clientHeight) {
-        wrap.scrollTop = rowBottom - wrap.clientHeight;
+      if (rowTop !== undefined && rowBottom !== undefined) {
+        if (rowTop < wrap.scrollTop) {
+          wrap.scrollTop = rowTop;
+        } else if (rowBottom > wrap.scrollTop + wrap.clientHeight) {
+          wrap.scrollTop = rowBottom - wrap.clientHeight;
+        }
       }
     }
 
@@ -792,7 +794,7 @@ export default function AssetsView({
       : `[data-cell="${rowIdx}-${dayIdx}"]`;
     const tryFocus = () => {
       const el = gridRef.current?.querySelector(selector);
-      el?.focus({ preventScroll: false });
+      if (el instanceof HTMLElement) el.focus({ preventScroll: false });
     };
     tryFocus();
     if (!gridRef.current?.querySelector(selector)) {
@@ -829,14 +831,16 @@ export default function AssetsView({
         // the resolver can pick a free member at submit time.
         if (hit && !isPoolRow) {
           const hitStage = getApprovalStage(hit);
-          if (AUDIT_STAGES.has(hitStage)) openAudit(hit, e.currentTarget);
+          if (hitStage !== null && AUDIT_STAGES.has(hitStage)) openAudit(hit, e.currentTarget);
           else onEventClick?.(hit);
         } else {
           const dayDate = days[di];
-          const from = startOfDay(dayDate);
-          const to   = addDays(startOfDay(dayDate), 1);
-          if (isPoolRow) onPoolDateSelect?.(from, to, resourceId);
-          else           onDateSelect?.(from, to, resourceId);
+          if (dayDate !== undefined) {
+            const from = startOfDay(dayDate);
+            const to   = addDays(startOfDay(dayDate), 1);
+            if (isPoolRow) onPoolDateSelect?.(from, to, resourceId);
+            else           onDateSelect?.(from, to, resourceId);
+          }
         }
         return;
       }
@@ -889,12 +893,12 @@ export default function AssetsView({
   // ── Toolbar (declared above the empty-state branch so owners can still
   // reach the Edit-assets deep-link when the registry has no rows yet) ──
   const toolbarNode = showToolbar && (
-    <div className={styles.toolbar} role="toolbar" aria-label="Assets view controls">
-      <div className={styles.toolbarGroup}>
-        <label className={styles.toolbarLabel} htmlFor="assets-group-by">Group by</label>
+    <div className={styles['toolbar']} role="toolbar" aria-label="Assets view controls">
+      <div className={styles['toolbarGroup']}>
+        <label className={styles['toolbarLabel']} htmlFor="assets-group-by">Group by</label>
         <select
           id="assets-group-by"
-          className={styles.toolbarSelect}
+          className={styles['toolbarSelect']}
           value={currentGroupByValue}
           onChange={(e) => onGroupByChange?.(e.target.value || null)}
           disabled={!onGroupByChange || groupByOptions.length <= 1}
@@ -904,11 +908,11 @@ export default function AssetsView({
           ))}
         </select>
       </div>
-      <div className={styles.toolbarGroup}>
-        <label className={styles.toolbarLabel} htmlFor="assets-sort-by">Sort by</label>
+      <div className={styles['toolbarGroup']}>
+        <label className={styles['toolbarLabel']} htmlFor="assets-sort-by">Sort by</label>
         <select
           id="assets-sort-by"
-          className={styles.toolbarSelect}
+          className={styles['toolbarSelect']}
           value={sortMode}
           onChange={(e) => {
             const next = e.target.value;
@@ -924,11 +928,11 @@ export default function AssetsView({
           <option value="lastEvent">Last event date</option>
         </select>
       </div>
-      <div className={styles.toolbarSpacer} />
+      <div className={styles['toolbarSpacer']} />
       {onRequestAsset && (
         <button
           type="button"
-          className={styles.toolbarBtnPrimary}
+          className={styles['toolbarBtnPrimary']}
           onClick={onRequestAsset}
           aria-label="Request asset"
         >
@@ -938,7 +942,7 @@ export default function AssetsView({
       {onEditAssets && (
         <button
           type="button"
-          className={styles.toolbarBtn}
+          className={styles['toolbarBtn']}
           onClick={onEditAssets}
           aria-label="Edit assets"
         >
@@ -951,12 +955,12 @@ export default function AssetsView({
   // ── Empty state ────────────────────────────────────────────────────────────
   if (resourceList.length === 0) {
     return (
-      <div className={styles.wrap} ref={wrapRef} data-zoom={activeZoom}>
+      <div className={styles['wrap']} ref={wrapRef} data-zoom={activeZoom}>
         {toolbarNode}
-        {ctx?.emptyState
-          ? ctx.emptyState
+        {ctx?.['emptyState']
+          ? ctx['emptyState']
           : (
-            <div className={styles.empty}>
+            <div className={styles['empty']}>
               <p>No assets to display in {format(currentDate, 'MMMM yyyy')}.</p>
             </div>
           )}
@@ -971,10 +975,10 @@ export default function AssetsView({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className={styles.wrap} ref={wrapRef} data-zoom={activeZoom}>
+    <div className={styles['wrap']} ref={wrapRef} data-zoom={activeZoom}>
       {toolbarNode}
       <div
-        className={styles.inner}
+        className={styles['inner']}
         style={{ width: NAME_W + totalDays * dayColW }}
         role="grid"
         aria-label={`Assets timeline for ${format(currentDate, 'MMMM yyyy')}`}
@@ -983,19 +987,19 @@ export default function AssetsView({
         ref={gridRef}
       >
         {/* ── Sticky header ── */}
-        <div className={styles.headerRow} role="row" aria-rowindex={1}>
+        <div className={styles['headerRow']} role="row" aria-rowindex={1}>
           <div
-            className={styles.cornerCell}
+            className={styles['cornerCell']}
             style={{ width: NAME_W, minWidth: NAME_W }}
             role="columnheader"
             aria-label={`Assets — ${format(currentDate, 'MMMM yyyy')}`}
           >
-            <span className={styles.cornerTitle}>
+            <span className={styles['cornerTitle']}>
               {format(currentDate, 'MMM yyyy')}
             </span>
           </div>
           <div
-            className={styles.dayHeads}
+            className={styles['dayHeads']}
             role="presentation"
             style={{ position: 'relative', width: totalDays * dayColW, flexShrink: 0 }}
           >
@@ -1008,17 +1012,17 @@ export default function AssetsView({
                   aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
                   aria-colindex={di + 2}
                   className={[
-                    styles.dayHead,
-                    isToday(day)   && styles.todayHead,
-                    isWeekend(day) && styles.weekendHead,
+                    styles['dayHead'],
+                    isToday(day)   && styles['todayHead'],
+                    isWeekend(day) && styles['weekendHead'],
                   ].filter(Boolean).join(' ')}
                   style={{ position: 'absolute', left: di * dayColW, width: dayColW }}
                 >
                   {showDayNum && (
-                    <span className={styles.dayNum} aria-hidden="true">{format(day, 'd')}</span>
+                    <span className={styles['dayNum']} aria-hidden="true">{format(day, 'd')}</span>
                   )}
                   {showDayAbbr && (
-                    <span className={styles.dayAbbr} aria-hidden="true">{format(day, 'EEE')}</span>
+                    <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
                   )}
                 </div>
               );
@@ -1028,7 +1032,7 @@ export default function AssetsView({
 
         {/* ── Body ── */}
         <div
-          className={styles.body}
+          className={styles['body']}
           role="presentation"
           style={{ position: 'relative', height: totalBodyH }}
         >
@@ -1040,7 +1044,7 @@ export default function AssetsView({
               return (
                 <div
                   key={`gh-${rowData.groupPath}`}
-                  className={styles.groupHeaderRow}
+                  className={styles['groupHeaderRow']}
                   style={{ position: 'absolute', top: topOffset, left: 0, right: 0, height: rowData.rowH }}
                   role="row"
                   aria-rowindex={rowIdx + 2}
@@ -1049,7 +1053,7 @@ export default function AssetsView({
                   data-header-idx={rowIdx}
                 >
                   <div
-                    className={styles.groupHeaderCell}
+                    className={styles['groupHeaderCell']}
                     style={{ width: NAME_W + totalDays * dayColW }}
                   >
                     <GroupHeader
@@ -1086,7 +1090,7 @@ export default function AssetsView({
             return (
               <div
                 key={key}
-                className={[styles.row, isPool && styles.poolRow].filter(Boolean).join(' ')}
+                className={[styles['row'], isPool && styles['poolRow']].filter(Boolean).join(' ')}
                 style={{
                   position: 'absolute',
                   top:      topOffset,
@@ -1101,25 +1105,25 @@ export default function AssetsView({
               >
                 {/* Sticky asset cell — row header */}
                 <div
-                  className={styles.nameCell}
+                  className={styles['nameCell']}
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
                   role="rowheader"
                   aria-label={isPool ? `Pool: ${displayLabel}` : displayLabel}
                   data-resource={resource}
                   title={memberTooltip}
                 >
-                  <div className={styles.assetMeta}>
-                    <span className={styles.assetRegistration}>
-                      {isPool && <span className={styles.poolChip} aria-hidden="true">POOL</span>}
+                  <div className={styles['assetMeta']}>
+                    <span className={styles['assetRegistration']}>
+                      {isPool && <span className={styles['poolChip']} aria-hidden="true">POOL</span>}
                       {displayLabel}
                     </span>
                     {sublabel && (
-                      <span className={styles.assetSublabel}>{sublabel}</span>
+                      <span className={styles['assetSublabel']}>{sublabel}</span>
                     )}
                   </div>
                   {!isPool && (
                     <div
-                      className={styles.locationBanner}
+                      className={styles['locationBanner']}
                       aria-label={locationData
                         ? `Asset location: ${locationData.text} (${locationData.status})`
                         : 'Asset location'}
@@ -1128,8 +1132,8 @@ export default function AssetsView({
                       {renderAssetLocation
                         ? renderAssetLocation(locationData, { id: resource })
                         : locationData
-                          ? <span className={styles.locationText}>{locationData.text}</span>
-                          : <span className={styles.locationPlaceholder}>Location —</span>
+                          ? <span className={styles['locationText']}>{locationData.text}</span>
+                          : <span className={styles['locationPlaceholder']}>Location —</span>
                       }
                     </div>
                   )}
@@ -1137,7 +1141,7 @@ export default function AssetsView({
 
                 {/* Event zone */}
                 <div
-                  className={styles.eventZone}
+                  className={styles['eventZone']}
                   style={{ width: totalDays * dayColW, height: rowH, position: 'relative' }}
                   role="presentation"
                 >
@@ -1147,9 +1151,9 @@ export default function AssetsView({
                       <div
                         key={di}
                         className={[
-                          styles.dayCol,
-                          isToday(day)   && styles.todayCol,
-                          isWeekend(day) && styles.weekendCol,
+                          styles['dayCol'],
+                          isToday(day)   && styles['todayCol'],
+                          isWeekend(day) && styles['weekendCol'],
                         ].filter(Boolean).join(' ')}
                         style={{ left: di * dayColW, width: dayColW, height: rowH }}
                       />
@@ -1180,7 +1184,7 @@ export default function AssetsView({
                         })()}
                         aria-rowindex={rowIdx + 2}
                         aria-colindex={di + 2}
-                        className={styles.kbCell}
+                        className={styles['kbCell']}
                         style={{ left: di * dayColW, width: dayColW, top: 0, height: rowH }}
                         onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents, resourceId, isPool)}
                         onClick={() => {
@@ -1203,18 +1207,18 @@ export default function AssetsView({
 
                   {/* Event pills */}
                   {rowEvents.map(ev => {
-                    const evColor = resolveAssetColor(ev, categoryColorMap, ctx?.colorRules);
+                    const evColor = resolveAssetColor(ev, categoryColorMap, ctx?.['colorRules']);
                     const left    = ev._dayStart * dayColW + 2;
                     const width   = Math.max(dayColW - 4, (ev._dayEnd - ev._dayStart + 1) * dayColW - 4);
                     const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
                     const stage       = getApprovalStage(ev);
                     const onClick = (e: MouseEvent<HTMLButtonElement>) => {
-                      if (AUDIT_STAGES.has(stage)) openAudit(ev, e.currentTarget);
+                      if (stage !== null && AUDIT_STAGES.has(stage)) openAudit(ev, e.currentTarget);
                       else onEventClick?.(ev);
                     };
                     const prefix      = approvalPrefix(stage);
-                    const statusClass = ev.status === 'cancelled' ? styles.cancelled
-                      : ev.status === 'tentative' ? styles.tentative : '';
+                    const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+                      : ev.status === 'tentative' ? styles['tentative'] : '';
 
                     const approvalActions = stage
                       ? allowedActionsFor(stage, approvalsConfig)
@@ -1258,8 +1262,8 @@ export default function AssetsView({
                       <div key={ev.id} style={{ display: 'contents' }}>
                         <button
                           className={[
-                            styles.event,
-                            styles[`pill_${pillStyle}`] || styles.pill_hue,
+                            styles['event'],
+                            styles[`pill_${pillStyle}`] || styles['pill_hue'],
                             approvalClass(stage),
                             statusClass,
                           ].filter(Boolean).join(' ')}
@@ -1270,16 +1274,16 @@ export default function AssetsView({
                           data-stage={stage || undefined}
                         >
                           {prefix && (
-                            <span className={styles.stagePrefix} aria-hidden="true">{prefix}</span>
+                            <span className={styles['stagePrefix']} aria-hidden="true">{prefix}</span>
                           )}
-                          <span className={styles.evTitle}>{ev.title}</span>
+                          <span className={styles['evTitle']}>{ev.title}</span>
                           {(ev._dayEnd - ev._dayStart + 1) * dayColW >= 60 && ev.category && (
-                            <span className={styles.evCat} aria-hidden="true">{ev.category}</span>
+                            <span className={styles['evCat']} aria-hidden="true">{ev.category}</span>
                           )}
                         </button>
                         {showCaret && (
                           <button
-                            className={styles.stageCaret}
+                            className={styles['stageCaret']}
                             style={{
                               left: left + width - 18,
                               top:  top + (LANE_H - 16) / 2,
@@ -1326,7 +1330,7 @@ export default function AssetsView({
         />
       )}
       <div
-        className={styles.srOnly}
+        className={styles['srOnly']}
         role="status"
         aria-live="polite"
         aria-atomic="true"

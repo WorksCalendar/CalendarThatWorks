@@ -147,7 +147,7 @@ export default function RequestForm({
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={(e) => e.target === e.currentTarget && onCancel()}
     >
       <form
@@ -155,17 +155,17 @@ export default function RequestForm({
         role="dialog"
         aria-modal="true"
         aria-labelledby="request-form-title"
-        className={styles.panel}
+        className={styles['panel']}
         onSubmit={handleSubmit}
         noValidate
       >
-        <div className={styles.head}>
-          <h2 id="request-form-title" className={styles.title}>{title}</h2>
+        <div className={styles['head']}>
+          <h2 id="request-form-title" className={styles['title']}>{title}</h2>
         </div>
 
-        <div className={styles.body}>
+        <div className={styles['body']}>
           {fields.length === 0 && (
-            <p className={styles.empty} role="note">
+            <p className={styles['empty']} role="note">
               No request fields configured. Ask your owner to add fields in
               ConfigPanel → Request Form.
             </p>
@@ -177,10 +177,10 @@ export default function RequestForm({
 
             if (field.type === 'textarea') {
               return (
-                <label key={field.key} className={styles.formRow}>
+                <label key={field.key} className={styles['formRow']}>
                   <span>{field.label}{field.required ? ' *' : ''}</span>
                   <textarea
-                    className={styles.textarea}
+                    className={styles['textarea']}
                     value={toInputValue(values[field.key])}
                     onChange={e => setValue(field.key, e.target.value)}
                     placeholder={field.placeholder}
@@ -188,7 +188,7 @@ export default function RequestForm({
                     aria-invalid={ariaInvalid}
                     rows={3}
                   />
-                  {err && <span className={styles.err} role="alert">{err}</span>}
+                  {err && <span className={styles['err']} role="alert">{err}</span>}
                 </label>
               );
             }
@@ -196,10 +196,10 @@ export default function RequestForm({
             if (field.type === 'select') {
               const opts = parseOptions(field.options);
               return (
-                <label key={field.key} className={styles.formRow}>
+                <label key={field.key} className={styles['formRow']}>
                   <span>{field.label}{field.required ? ' *' : ''}</span>
                   <select
-                    className={styles.select}
+                    className={styles['select']}
                     value={toInputValue(values[field.key])}
                     onChange={e => setValue(field.key, e.target.value)}
                     aria-label={field.label}
@@ -208,14 +208,14 @@ export default function RequestForm({
                     <option value="">{field.placeholder || 'Select…'}</option>
                     {opts.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
-                  {err && <span className={styles.err} role="alert">{err}</span>}
+                  {err && <span className={styles['err']} role="alert">{err}</span>}
                 </label>
               );
             }
 
             if (field.type === 'checkbox') {
               return (
-                <label key={field.key} className={styles.toggle}>
+                <label key={field.key} className={styles['toggle']}>
                   <span>{field.label}{field.required ? ' *' : ''}</span>
                   <input
                     type="checkbox"
@@ -224,7 +224,7 @@ export default function RequestForm({
                     aria-label={field.label}
                     aria-invalid={ariaInvalid}
                   />
-                  {err && <span className={styles.err} role="alert">{err}</span>}
+                  {err && <span className={styles['err']} role="alert">{err}</span>}
                 </label>
               );
             }
@@ -236,32 +236,32 @@ export default function RequestForm({
               : 'text';
 
             return (
-              <label key={field.key} className={styles.formRow}>
+              <label key={field.key} className={styles['formRow']}>
                 <span>{field.label}{field.required ? ' *' : ''}</span>
                 <input
                   type={htmlType}
-                  className={styles.input}
+                  className={styles['input']}
                   value={toInputValue(values[field.key])}
                   onChange={e => setValue(field.key, e.target.value)}
                   placeholder={field.placeholder}
                   aria-label={field.label}
                   aria-invalid={ariaInvalid}
                 />
-                {err && <span className={styles.err} role="alert">{err}</span>}
+                {err && <span className={styles['err']} role="alert">{err}</span>}
               </label>
             );
           })}
         </div>
 
-        <div className={styles.footer}>
+        <div className={styles['footer']}>
           <button
             type="button"
-            className={styles.btnSecondary}
+            className={styles['btnSecondary']}
             onClick={onCancel}
           >Cancel</button>
           <button
             type="submit"
-            className={styles.btnPrimary}
+            className={styles['btnPrimary']}
             disabled={fields.length === 0}
           >Submit request</button>
         </div>

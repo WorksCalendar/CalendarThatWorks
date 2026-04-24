@@ -18,22 +18,22 @@ export default function ConfirmDialog({ message, confirmLabel = 'Delete', onConf
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
         ref={trapRef}
-        className={styles.dialog}
+        className={styles['dialog']}
         role="alertdialog"
         aria-modal="true"
         aria-label="Confirm action"
       >
-        <div className={styles.body}>
-          <p className={styles.message}>{message}</p>
+        <div className={styles['body']}>
+          <p className={styles['message']}>{message}</p>
         </div>
-        <div className={styles.actions}>
-          <button className={styles.cancelBtn} onClick={onCancel}>Cancel</button>
-          <button className={styles.confirmBtn} onClick={onConfirm}>{confirmLabel}</button>
+        <div className={styles['actions']}>
+          <button className={styles['cancelBtn']} onClick={onCancel}>Cancel</button>
+          <button className={styles['confirmBtn']} onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </div>

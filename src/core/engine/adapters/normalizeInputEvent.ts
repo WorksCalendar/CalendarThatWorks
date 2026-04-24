@@ -57,10 +57,10 @@ function toConstraints(v: unknown): readonly EventConstraint[] {
   for (const item of v) {
     if (!item || typeof item !== 'object') continue;
     const c = item as Record<string, unknown>;
-    if (!VALID_CONSTRAINT_TYPES.includes(c.type as ConstraintType)) continue;
-    const d = c.date ? toDate(c.date) : null;
+    if (!VALID_CONSTRAINT_TYPES.includes(c['type'] as ConstraintType)) continue;
+    const d = c['date'] ? toDate(c['date']) : null;
     result.push({
-      type: c.type as ConstraintType,
+      type: c['type'] as ConstraintType,
       ...(d !== null && { date: d }),
     });
   }
@@ -90,41 +90,41 @@ export type RawInputEvent = Record<string, unknown>;
  * Returns a fully-populated EngineEvent with no undefined fields.
  */
 export function normalizeInputEvent(raw: RawInputEvent): EngineEvent {
-  const rawId = raw.id != null ? String(raw.id) : null;
+  const rawId = raw['id'] != null ? String(raw['id']) : null;
   const id    = rawId ?? nextEngineId();
 
-  const start = toDate(raw.start) ?? new Date();
-  const end   = toDate(raw.end) ?? addHours(start, 1);
+  const start = toDate(raw['start']) ?? new Date();
+  const end   = toDate(raw['end']) ?? addHours(start, 1);
 
   // Handle seriesId: if the event has rrule, it IS a series master → seriesId === id
-  const hasRrule = typeof raw.rrule === 'string' && raw.rrule.length > 0;
+  const hasRrule = typeof raw['rrule'] === 'string' && raw['rrule'].length > 0;
   const seriesId =
-    raw.seriesId != null ? String(raw.seriesId) :
+    raw['seriesId'] != null ? String(raw['seriesId']) :
     hasRrule             ? id :
     null;
 
   return {
     id,
     seriesId,
-    occurrenceId:  raw.occurrenceId  != null ? String(raw.occurrenceId)  : null,
-    detachedFrom:  raw.detachedFrom  != null ? String(raw.detachedFrom)  : null,
+    occurrenceId:  raw['occurrenceId']  != null ? String(raw['occurrenceId'])  : null,
+    detachedFrom:  raw['detachedFrom']  != null ? String(raw['detachedFrom'])  : null,
     start,
     end,
-    timezone:      typeof raw.timezone === 'string' && raw.timezone ? raw.timezone : null,
-    allDay:        raw.allDay === true,
-    title:         typeof raw.title === 'string' && raw.title ? raw.title : '(untitled)',
-    category:      typeof raw.category === 'string' ? raw.category : null,
-    resourceId:    raw.resourceId != null ? String(raw.resourceId)
-                   : raw.resource != null ? String(raw.resource)   // legacy field
+    timezone:      typeof raw['timezone'] === 'string' && raw['timezone'] ? raw['timezone'] : null,
+    allDay:        raw['allDay'] === true,
+    title:         typeof raw['title'] === 'string' && raw['title'] ? raw['title'] : '(untitled)',
+    category:      typeof raw['category'] === 'string' ? raw['category'] : null,
+    resourceId:    raw['resourceId'] != null ? String(raw['resourceId'])
+                   : raw['resource'] != null ? String(raw['resource'])   // legacy field
                    : null,
-    resourcePoolId: raw.resourcePoolId != null ? String(raw.resourcePoolId) : null,
-    status:        toStatus(raw.status),
-    color:         typeof raw.color === 'string' ? raw.color : null,
-    rrule:         hasRrule ? String(raw.rrule) : null,
-    exdates:       toDateArray(raw.exdates),
-    constraints:   toConstraints(raw.constraints),
-    meta:          raw.meta != null && typeof raw.meta === 'object' && !Array.isArray(raw.meta)
-                   ? raw.meta as Record<string, unknown>
+    resourcePoolId: raw['resourcePoolId'] != null ? String(raw['resourcePoolId']) : null,
+    status:        toStatus(raw['status']),
+    color:         typeof raw['color'] === 'string' ? raw['color'] : null,
+    rrule:         hasRrule ? String(raw['rrule']) : null,
+    exdates:       toDateArray(raw['exdates']),
+    constraints:   toConstraints(raw['constraints']),
+    meta:          raw['meta'] != null && typeof raw['meta'] === 'object' && !Array.isArray(raw['meta'])
+                   ? raw['meta'] as Record<string, unknown>
                    : {},
   };
 }

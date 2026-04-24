@@ -107,27 +107,27 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
       data-testid="audit-drawer-overlay"
     >
       <aside
-        className={styles.drawer}
+        className={styles['drawer']}
         role="dialog"
         aria-modal="true"
         aria-label={`Audit history for ${event.title}`}
       >
-        <header className={styles.head}>
+        <header className={styles['head']}>
           <div>
-            <h2 className={styles.title}>{event.title}</h2>
+            <h2 className={styles['title']}>{event.title}</h2>
             {stageData?.stage && (
-              <span className={styles.stageTag} data-stage={stageData.stage}>
+              <span className={styles['stageTag']} data-stage={stageData.stage}>
                 {stageData.stage.replace('_', ' ')}
               </span>
             )}
             {sla && (
               <span
-                className={styles.slaPill}
+                className={styles['slaPill']}
                 data-testid="audit-sla-pill"
                 data-sla-expired={sla.expired ? 'true' : 'false'}
                 title={`SLA ${sla.slaMinutes}m · onTimeout=${sla.onTimeout}`}
@@ -151,7 +151,7 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
           </div>
           <button
             ref={closeRef}
-            className={styles.closeBtn}
+            className={styles['closeBtn']}
             onClick={() => onClose?.()}
             aria-label="Close audit history"
           >
@@ -159,31 +159,31 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
           </button>
         </header>
 
-        <div className={styles.body}>
+        <div className={styles['body']}>
           {history.length === 0 ? (
-            <p className={styles.empty}>No history recorded for this request.</p>
+            <p className={styles['empty']}>No history recorded for this request.</p>
           ) : (
-            <ol className={styles.timeline}>
+            <ol className={styles['timeline']}>
               {history.map((entry: any, i: number) => (
                 <li
                   key={`${entry.at}-${entry.action}-${i}`}
-                  className={styles.entry}
+                  className={styles['entry']}
                   data-action={entry.action}
                 >
-                  <div className={styles.entryHead}>
-                    <span className={styles.entryAction}>
+                  <div className={styles['entryHead']}>
+                    <span className={styles['entryAction']}>
                       {ACTION_LABELS[entry.action as keyof typeof ACTION_LABELS] ?? entry.action}
                     </span>
                     {entry.tier != null && (
-                      <span className={styles.entryTier}>Tier {entry.tier}</span>
+                      <span className={styles['entryTier']}>Tier {entry.tier}</span>
                     )}
                   </div>
-                  <div className={styles.entryMeta}>
+                  <div className={styles['entryMeta']}>
                     <span>{formatAt(entry.at)}</span>
                     {entry.actor && <span> · {entry.actor}</span>}
                   </div>
                   {entry.reason && (
-                    <p className={styles.entryReason}>{entry.reason}</p>
+                    <p className={styles['entryReason']}>{entry.reason}</p>
                   )}
                 </li>
               ))}

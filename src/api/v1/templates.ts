@@ -52,12 +52,12 @@ export interface ScheduleTemplateViewerContext {
 }
 
 export interface ScheduleInstantiationRequestV1 {
-  readonly templateId?: string;
+  readonly templateId?: string | undefined;
   readonly anchor: Date | string | number;
-  readonly resource?: string;
-  readonly category?: string;
-  readonly timezone?: string;
-  readonly meta?: Record<string, unknown>;
+  readonly resource?: string | undefined;
+  readonly category?: string | undefined;
+  readonly timezone?: string | undefined;
+  readonly meta?: Record<string, unknown> | undefined;
 }
 
 export interface ScheduleInstantiationResultV1 {

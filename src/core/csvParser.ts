@@ -52,12 +52,13 @@ export function parseCSV(text: string): { headers: string[]; rows: CsvRow[] } {
   const firstNonBlank = lines.findIndex(l => l.trim() !== '');
   if (firstNonBlank === -1) return { headers: [], rows: [] };
 
-  const headers = _parseLine(lines[firstNonBlank]).map(h => h.trim());
+  const headers = _parseLine(lines[firstNonBlank]!).map(h => h.trim());
   const rows: CsvRow[] = [];
 
   for (let i = firstNonBlank + 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const values = _parseLine(lines[i]);
+    const line = lines[i];
+    if (!line || !line.trim()) continue;
+    const values = _parseLine(line);
     const row: CsvRow = {};
     headers.forEach((h, j) => { row[h] = (values[j] ?? '').trim(); });
     rows.push(row);
@@ -158,8 +159,8 @@ export function mapToEvents(
 
   rows.forEach((row, index) => {
     try {
-      const title = _field(row, mapping.title);
-      const startRaw = _field(row, mapping.start);
+      const title = _field(row, mapping['title']);
+      const startRaw = _field(row, mapping['start']);
 
       if (!title)    throw new Error('Title is empty');
       if (!startRaw) throw new Error('Start date is empty');
@@ -169,10 +170,10 @@ export function mapToEvents(
         throw new Error(`Cannot parse start date: "${startRaw}"`);
       }
 
-      const endRaw = _field(row, mapping.end);
+      const endRaw = _field(row, mapping['end']);
       const end = endRaw ? _parseDate(endRaw, dateFormat) : null;
 
-      const allDayRaw = _field(row, mapping.allDay);
+      const allDayRaw = _field(row, mapping['allDay']);
       const allDay = allDayRaw
         ? ['true', '1', 'yes', 'y'].includes(allDayRaw.toLowerCase())
         : (!endRaw && !startRaw.includes(':') && !startRaw.includes('T'));
@@ -182,11 +183,11 @@ export function mapToEvents(
         start,
         ...(end && !isNaN(end.getTime()) && { end }),
         ...(allDay && { allDay: true }),
-        ...(_field(row, mapping.category) && { category: _field(row, mapping.category) }),
-        ...(_field(row, mapping.resource) && { resource:  _field(row, mapping.resource) }),
-        ...(_field(row, mapping.status)   && { status:    _field(row, mapping.status) }),
-        ...(_field(row, mapping.color)    && { color:     _field(row, mapping.color) }),
-        id: _field(row, mapping.id) || `csv-${Date.now()}-${autoId++}`,
+        ...(_field(row, mapping['category']) && { category: _field(row, mapping['category']) }),
+        ...(_field(row, mapping['resource']) && { resource:  _field(row, mapping['resource']) }),
+        ...(_field(row, mapping['status'])   && { status:    _field(row, mapping['status']) }),
+        ...(_field(row, mapping['color'])    && { color:     _field(row, mapping['color']) }),
+        id: _field(row, mapping['id']) || `csv-${Date.now()}-${autoId++}`,
       };
 
       events.push(event);
@@ -234,9 +235,11 @@ function _looksISO(v: string): boolean {
 function _parseMDY(v: string): Date {
   // MM/DD/YYYY or MM/DD/YYYY HH:MM[:SS]
   const [datePart, timePart] = v.split(/[\sT]/);
+  if (datePart === undefined) return new Date(v);
   const parts = datePart.split('/');
   if (parts.length !== 3) return new Date(v);
   const [m, d, y] = parts;
+  if (m === undefined || d === undefined || y === undefined) return new Date(v);
   const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}${timePart ? 'T' + timePart : ''}`;
   return new Date(iso);
 }
@@ -244,9 +247,11 @@ function _parseMDY(v: string): Date {
 function _parseDMY(v: string): Date {
   // DD/MM/YYYY or DD/MM/YYYY HH:MM[:SS]
   const [datePart, timePart] = v.split(/[\sT]/);
+  if (datePart === undefined) return new Date(v);
   const parts = datePart.split('/');
   if (parts.length !== 3) return new Date(v);
   const [d, m, y] = parts;
+  if (m === undefined || d === undefined || y === undefined) return new Date(v);
   const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}${timePart ? 'T' + timePart : ''}`;
   return new Date(iso);
 }

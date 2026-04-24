@@ -44,8 +44,8 @@ function LiveRegion({ politeness, slots }: { politeness: 'polite' | 'assertive';
   );
 }
 
-type AnnouncePoliteness = 'polite' | 'assertive';
-type AnnouncerRef = { announce: (message: string, politeness?: AnnouncePoliteness) => void };
+export type AnnouncePoliteness = 'polite' | 'assertive';
+export type AnnouncerRef = { announce: (message: string, politeness?: AnnouncePoliteness) => void };
 
 const ScreenReaderAnnouncer = forwardRef<AnnouncerRef, object>(function ScreenReaderAnnouncer(_, ref) {
   // Separate state for polite and assertive regions.

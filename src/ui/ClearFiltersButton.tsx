@@ -15,7 +15,7 @@ export default function ClearFiltersButton({
   return (
     <button
       type="button"
-      className={styles.headerBtn}
+      className={styles['headerBtn']}
       onClick={onClear}
       disabled={!hasActiveFilters}
       title={hasActiveFilters ? 'Clear all filters' : 'No filters to clear'}

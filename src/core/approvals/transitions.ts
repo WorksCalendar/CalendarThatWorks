@@ -133,21 +133,21 @@ function resolveApproveTarget(
 
 export interface TransitionInput {
   readonly action: ApprovalActionId | 'revoke'
-  readonly actor?: string
-  readonly tier?: number
-  readonly reason?: string
+  readonly actor?: string | undefined
+  readonly tier?: number | undefined
+  readonly reason?: string | undefined
   /** ISO timestamp for determinism in tests; defaults to `new Date().toISOString()`. */
-  readonly at?: string
+  readonly at?: string | undefined
   /**
    * Optional workflow DSL integration (#219). When supplied alongside
    * `workflowInstance`, the reducer advances the interpreter in lockstep
    * with the approval stage. Submit/approve/deny map to start/approve/deny
    * workflow actions; revoke/downgrade/finalize pass through unchanged.
    */
-  readonly workflow?: Workflow
-  readonly workflowInstance?: WorkflowInstance | null
+  readonly workflow?: Workflow | undefined
+  readonly workflowInstance?: WorkflowInstance | null | undefined
   /** Variables exposed to `condition` node expressions. */
-  readonly variables?: Readonly<Record<string, unknown>>
+  readonly variables?: Readonly<Record<string, unknown>> | undefined
 }
 
 /**

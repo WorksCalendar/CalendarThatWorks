@@ -45,13 +45,13 @@ const REFRESH_OPTIONS = [
 type CalendarSource = {
   id: string;
   type: string;
-  label?: string;
-  color?: string;
-  enabled?: boolean;
-  url?: string;
-  refreshInterval?: number | null;
-  events?: WorksCalendarEvent[];
-  importedAt?: string;
+  label?: string | undefined;
+  color?: string | undefined;
+  enabled?: boolean | undefined;
+  url?: string | undefined;
+  refreshInterval?: number | null | undefined;
+  events?: WorksCalendarEvent[] | undefined;
+  importedAt?: string | undefined;
 };
 
 type FeedErrorEntry = {
@@ -105,12 +105,12 @@ function ColorDot({ color, size = 12, onClick }: { color: string; size?: number;
 function ToggleSwitch({ checked, onChange, title }: { checked: boolean; onChange: () => void; title: string }) {
   return (
     <label
-      className={styles.toggle}
+      className={styles['toggle']}
       style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}
       title={title}
     >
       <input type="checkbox" checked={checked} onChange={onChange} style={{ display: 'none' }} />
-      <span className={styles.toggleTrack} />
+      <span className={styles['toggleTrack']} />
     </label>
   );
 }
@@ -118,7 +118,7 @@ function ToggleSwitch({ checked, onChange, title }: { checked: boolean; onChange
 function RemoveBtn({ onClick, title = 'Remove' }: { onClick: () => void; title?: string }) {
   return (
     <button
-      className={styles.removeBtn}
+      className={styles['removeBtn']}
       onClick={onClick}
       title={title}
       style={{ flexShrink: 0 }}
@@ -167,11 +167,12 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: C
   return (
     <div style={rowStyle(enabled)}>
       <ColorDot
-        color={source.color ?? PRESET_COLORS[0]}
+        color={source.color ?? PRESET_COLORS[0]!}
         onClick={() => {
-          const currentColor = source.color ?? PRESET_COLORS[0];
+          const currentColor = source.color ?? PRESET_COLORS[0]!;
           const idx = PRESET_COLORS.indexOf(currentColor);
-          onUpdate(source.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
+          const nextColor = PRESET_COLORS[(idx + 1) % PRESET_COLORS.length];
+          if (nextColor !== undefined) onUpdate(source.id, { color: nextColor });
         }}
       />
 
@@ -180,7 +181,7 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: C
           <input
             ref={inputRef}
             autoFocus
-            className={styles.input}
+            className={styles['input']}
             value={draft}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
             onBlur={commitEdit}
@@ -253,9 +254,10 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: Calen
       <ColorDot
         color={source.color ?? '#8b5cf6'}
         onClick={() => {
-          const currentColor = source.color ?? PRESET_COLORS[0];
+          const currentColor = source.color ?? PRESET_COLORS[0]!;
           const idx = PRESET_COLORS.indexOf(currentColor);
-          onUpdate(source.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
+          const nextColor = PRESET_COLORS[(idx + 1) % PRESET_COLORS.length];
+          if (nextColor !== undefined) onUpdate(source.id, { color: nextColor });
         }}
       />
 
@@ -263,7 +265,7 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: Calen
         {editing ? (
           <input
             autoFocus
-            className={styles.input}
+            className={styles['input']}
             value={draft}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
             onBlur={commitEdit}
@@ -360,7 +362,7 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
 
   if (!open) {
     return (
-      <button className={styles.addFieldBtn} onClick={() => setOpen(true)}>
+      <button className={styles['addFieldBtn']} onClick={() => setOpen(true)}>
         <Plus size={13} /> Add iCal feed
       </button>
     );
@@ -380,7 +382,7 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
 
       <div style={{ display: 'flex', gap: 6 }}>
         <input
-          className={styles.input}
+          className={styles['input']}
           style={{ flex: 1, fontSize: 12 }}
           type="url"
           value={url}
@@ -432,7 +434,7 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 11, color: 'var(--wc-text-muted)', fontWeight: 500 }}>Feed name</span>
         <input
-          className={styles.input}
+          className={styles['input']}
           style={{ fontSize: 12 }}
           type="text"
           value={label}
@@ -462,7 +464,7 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           <span style={{ fontSize: 11, color: 'var(--wc-text-muted)', fontWeight: 500 }}>Refresh every</span>
           <select
-            className={styles.select}
+            className={styles['select']}
             style={{ fontSize: 12 }}
             value={refreshInterval ?? 'null'}
             onChange={e => setRefreshInterval(e.target.value === 'null' ? null : +e.target.value)}
@@ -509,8 +511,8 @@ function SectionHeading({
 }: {
   icon: typeof Link;
   label: string;
-  count?: number;
-  errors?: number;
+  count?: number | undefined;
+  errors?: number | undefined;
 }) {
   return (
     <div style={{
@@ -538,8 +540,8 @@ function SectionHeading({
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 type SourcePanelProps = {
-  sources?: Array<Partial<CalendarSource>>;
-  feedErrors?: unknown[];
+  sources?: Array<Record<string, any>> | undefined;
+  feedErrors?: unknown[] | undefined;
   onAdd: (source: Partial<CalendarSource>) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string) => void;
@@ -570,8 +572,8 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
   const hasSources = icsSources.length > 0 || csvSources.length > 0;
 
   return (
-    <div className={styles.section}>
-      <p className={styles.sectionDesc}>
+    <div className={styles['section']}>
+      <p className={styles['sectionDesc']}>
         Combine iCal feeds and imported CSV datasets into one calendar.
         Toggle any source to show or hide its events instantly.
         {hasSources && (

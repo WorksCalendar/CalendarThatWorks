@@ -321,10 +321,10 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
   const viewBox = `${rendered.origin.x} ${rendered.origin.y} ${rendered.size.w} ${rendered.size.h}`
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles['wrap']}>
       <svg
         ref={svgRef}
-        className={styles.canvas}
+        className={styles['canvas']}
         viewBox={viewBox}
         role="application"
         aria-label="Workflow graph editor"
@@ -348,10 +348,10 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
         </defs>
 
         {rendered.edgePaths.map((edge, idx) => (
-          <g key={`e-${idx}`} className={styles.edge} data-edge-index={idx}>
+          <g key={`e-${idx}`} className={styles['edge']} data-edge-index={idx}>
             <path
               d={edge.d}
-              className={styles.edge}
+              className={styles['edge']}
               markerEnd="url(#wc-edge-arrow)"
               data-edge-from={edge.from}
               data-edge-to={edge.to}
@@ -359,7 +359,7 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
             {edge.guard && edge.guard !== 'default' ? (
               <>
                 <rect
-                  className={styles.edgeGuardBg}
+                  className={styles['edgeGuardBg']}
                   x={edge.midpoint.x - 26}
                   y={edge.midpoint.y - 8}
                   width={52}
@@ -368,7 +368,7 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
                   ry={3}
                 />
                 <text
-                  className={styles.edgeGuard}
+                  className={styles['edgeGuard']}
                   x={edge.midpoint.x}
                   y={edge.midpoint.y + 4}
                   textAnchor="middle"
@@ -385,19 +385,19 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
           if (!pos) return null
           const live = drag && drag.nodeId === node.id ? drag.currentPos : pos
           const kindClass =
-            node.type === 'approval'  ? styles.nodeKindApproval  :
-            node.type === 'condition' ? styles.nodeKindCondition :
-            node.type === 'notify'    ? styles.nodeKindNotify    :
-            node.type === 'parallel'  ? styles.nodeKindParallel  :
-            node.type === 'join'      ? styles.nodeKindJoin      :
-                                        styles.nodeKindTerminal
+            node.type === 'approval'  ? styles['nodeKindApproval']  :
+            node.type === 'condition' ? styles['nodeKindCondition'] :
+            node.type === 'notify'    ? styles['nodeKindNotify']    :
+            node.type === 'parallel'  ? styles['nodeKindParallel']  :
+            node.type === 'join'      ? styles['nodeKindJoin']      :
+                                        styles['nodeKindTerminal']
           const classes = [
-            styles.node,
+            styles['node'],
             kindClass,
-            selectedNodeId === node.id ? styles.nodeSelected : '',
-            activeNodeId === node.id ? styles.nodeActive : '',
-            pendingEdgeFrom === node.id ? styles.edgeDrawSource : '',
-            drag?.nodeId === node.id ? styles.dragging : '',
+            selectedNodeId === node.id ? styles['nodeSelected'] : '',
+            activeNodeId === node.id ? styles['nodeActive'] : '',
+            pendingEdgeFrom === node.id ? styles['edgeDrawSource'] : '',
+            drag?.nodeId === node.id ? styles['dragging'] : '',
           ].filter(Boolean).join(' ')
 
           return (
@@ -419,7 +419,7 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
               onDoubleClick={() => onOpenInspector(node.id)}
             >
               <rect
-                className={styles.nodeRect}
+                className={styles['nodeRect']}
                 x={0}
                 y={0}
                 width={NODE_WIDTH}
@@ -427,15 +427,15 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
                 rx={6}
                 ry={6}
               />
-              <text x={10} y={18} className={styles.nodeKind}>{node.type}</text>
-              <text x={10} y={38} className={styles.nodeLabel}>
+              <text x={10} y={18} className={styles['nodeKind']}>{node.type}</text>
+              <text x={10} y={38} className={styles['nodeLabel']}>
                 {displayLabel(node).length > 22
                   ? displayLabel(node).slice(0, 21) + '…'
                   : displayLabel(node)}
               </text>
               {node.type !== 'terminal' ? (
                 <circle
-                  className={styles.handle}
+                  className={styles['handle']}
                   cx={NODE_WIDTH / 2}
                   cy={NODE_HEIGHT}
                   r={5}
@@ -450,7 +450,7 @@ export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
         })}
       </svg>
       <div
-        className={styles.liveRegion}
+        className={styles['liveRegion']}
         role="status"
         aria-live="polite"
         data-testid="workflow-canvas-live"

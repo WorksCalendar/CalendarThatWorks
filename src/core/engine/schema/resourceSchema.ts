@@ -12,13 +12,13 @@ import type { AvailabilityRule } from '../../availability/availabilityRule';
 export interface EngineResource {
   readonly id: string;
   readonly name: string;
-  readonly color?: string;
+  readonly color?: string | undefined;
   /** Maximum number of simultaneous bookings (1 = exclusive, null = unlimited). */
-  readonly capacity?: number | null;
+  readonly capacity?: number | null | undefined;
   /** IANA timezone override for this resource. */
-  readonly timezone?: string;
+  readonly timezone?: string | undefined;
   /** Resource-specific working hours (overrides calendar-level businessHours). */
-  readonly businessHours?: ResourceBusinessHours | null;
+  readonly businessHours?: ResourceBusinessHours | null | undefined;
   /**
    * Fine-grained availability — layered on top of `businessHours`. Each
    * rule is either a weekly `open` window or an absolute `blackout`
@@ -26,12 +26,12 @@ export interface EngineResource {
    * (#214). Optional; when absent or empty, only `businessHours`
    * governs availability.
    */
-  readonly availability?: readonly AvailabilityRule[];
+  readonly availability?: readonly AvailabilityRule[] | undefined;
   /**
    * Opaque tenant/workspace identifier (issue #218). Optional; unset =
    * global/shared resource visible to every tenant.
    */
-  readonly tenantId?: string;
+  readonly tenantId?: string | undefined;
   readonly meta?: Readonly<Record<string, unknown>>;
 }
 

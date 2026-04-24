@@ -13,20 +13,20 @@ export { isVisualPriority };
 export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
 export interface WorksCalendarEvent {
-  id?: string;
+  id?: string | undefined;
   title: string;
   start: Date | string;
-  end?: Date | string;
-  allDay?: boolean;
-  category?: string;
-  color?: string;
-  resource?: string;
-  status?: EventStatus;
+  end?: Date | string | undefined;
+  allDay?: boolean | undefined;
+  category?: string | undefined;
+  color?: string | undefined;
+  resource?: string | undefined;
+  status?: EventStatus | undefined;
   /** Importance signal: 'muted' = normal recurring ops; 'high' = planning exceptions. */
-  visualPriority?: EventVisualPriority;
-  meta?: Record<string, unknown>;
-  rrule?: string;
-  exdates?: Array<Date | string>;
+  visualPriority?: EventVisualPriority | undefined;
+  meta?: Record<string, unknown> | undefined;
+  rrule?: string | undefined;
+  exdates?: Array<Date | string> | undefined;
 }
 
 export interface NormalizedEvent {
@@ -40,14 +40,14 @@ export interface NormalizedEvent {
   resource: string | null;
   status: EventStatus;
   /** Present when the raw event supplies visualPriority; null otherwise. */
-  visualPriority?: EventVisualPriority | null;
+  visualPriority?: EventVisualPriority | null | undefined;
   meta: Record<string, unknown>;
   rrule: string | null;
   exdates: Array<Date | string>;
   _raw: WorksCalendarEvent;
-  _recurring?: boolean;
-  _seriesId?: string;
-  _feedLabel?: string;
-  _col?: number;
-  _numCols?: number;
+  _recurring?: boolean | undefined;
+  _seriesId?: string | undefined;
+  _feedLabel?: string | undefined;
+  _col?: number | undefined;
+  _numCols?: number | undefined;
 }

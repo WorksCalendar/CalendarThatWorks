@@ -43,7 +43,7 @@ export interface EngineSnapshot {
 }
 
 export interface HistoryEntry {
-  readonly label?: string;
+  readonly label?: string | undefined;
   readonly snapshot: EngineSnapshot;
 }
 

@@ -34,6 +34,8 @@ import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import type { LegacyEvent } from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
+import type { OperationContext } from './core/engine/validation/validationTypes';
+import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
 import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
@@ -124,32 +126,32 @@ type AvailabilitySavePayload = {
   [key: string]: unknown;
 };
 type ScheduleDialogRequest = {
-  templateId?: string;
+  templateId?: string | undefined;
   anchor: Date;
-  resource?: string;
-  category?: string;
+  resource?: string | undefined;
+  category?: string | undefined;
 };
 type SchedulePreviewConflict = {
   index: number;
   title: string;
   severity: string;
-  violations: Array<{ rule?: string; message?: string }>;
+  violations: Array<{ rule?: string | undefined; message?: string | undefined }>;
 };
 type SchedulePreviewResult = {
   generated: Array<{
-    id?: string;
-    title?: string;
-    start?: string | number | Date;
-    end?: string | Date;
-    startOffsetMinutes?: number;
-    durationMinutes?: number;
-    category?: string | null;
-    resource?: string | null;
-    status?: EventStatus;
-    color?: string | null;
-    rrule?: string;
-    exdates?: Array<string | Date>;
-    meta?: Record<string, unknown>;
+    id?: string | undefined;
+    title?: string | undefined;
+    start?: string | number | Date | undefined;
+    end?: string | Date | undefined;
+    startOffsetMinutes?: number | undefined;
+    durationMinutes?: number | undefined;
+    category?: string | null | undefined;
+    resource?: string | null | undefined;
+    status?: EventStatus | undefined;
+    color?: string | null | undefined;
+    rrule?: string | undefined;
+    exdates?: Array<string | Date> | undefined;
+    meta?: Record<string, unknown> | undefined;
   }>;
   conflicts: SchedulePreviewConflict[];
   error: string;
@@ -506,36 +508,36 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── View / date / filter state ───────────────────────────────────────────
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
-  const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
-  const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
+  const weekStartDay = weekStartDayProp ?? ownerCfg.config?.['display']?.weekStartDay ?? 0;
+  const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.['customTheme']), [ownerCfg.config?.['customTheme']]);
   // The raw theme value (from props, owner config, or default). The new theme
   // system uses `family-mode` IDs (see src/styles/themes.ts); the CSS runtime
   // still matches the historical single-word selectors, so we resolve the
   // user-facing ID to a CSS selector via resolveCssTheme().
-  const rawTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'canvas-light';
+  const rawTheme = theme || ownerCfg.config?.['setup']?.preferredTheme || 'canvas-light';
   const effectiveTheme = resolveCssTheme(rawTheme);
   const themeId = normalizeTheme(rawTheme);
   const themeFamily = THEME_META[themeId].family;
   const themeMode   = THEME_META[themeId].mode;
-  const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
+  const calendarTitle = ownerCfg.config?.['title'] || 'My WorksCalendar';
   // Merge parent's employees prop with owner-config team.members so edits
   // made from the Settings → Employees tab (e.g. renaming a member) are
   // reflected live in the schedule, even when the parent's prop is stale.
   // Config entries take precedence for matching ids; parent-only entries
   // (not yet mirrored into config) are preserved.
   const configuredEmployees = useMemo(() => {
-    const configMembers = ownerCfg.config?.team?.members ?? [];
+    const configMembers = ownerCfg.config?.['team']?.members ?? [];
     const parentMembers = Array.isArray(employees) ? employees : [];
     if (configMembers.length === 0) return parentMembers;
     if (parentMembers.length === 0) return configMembers;
     const configById = new Map(configMembers.map((m: LooseValue) => [String(m.id), m]));
     const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
     return [...configMembers, ...parentOnly];
-  }, [employees, ownerCfg.config?.team?.members]);
+  }, [employees, ownerCfg.config?.['team']?.members]);
 
   // Resolve resource ids (e.g. "emp-sarah") to human-readable labels
   // (e.g. "Sarah Chen") using merged employees + assets directory.
-  const effectiveAssets = assets ?? ownerCfg.config?.assets;
+  const effectiveAssets = assets ?? ownerCfg.config?.['assets'];
   const resolveResourceLabel = useMemo(
     () => makeResourceResolver({ employees: configuredEmployees, assets: effectiveAssets }),
     [configuredEmployees, effectiveAssets],
@@ -555,12 +557,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // config. Keeps TeamTab and the live schedule in sync. See issue #101.
   const handleEmployeeAddInternal = useCallback((member: LooseValue) => {
     ownerCfg.updateConfig(c => {
-      const existing = c.team?.members ?? [];
+      const existing = c['team']?.members ?? [];
       if (existing.some((m: LooseValue) => String(m.id) === String(member.id))) return c;
       return {
         ...c,
-        team: { ...(c.team ?? {}), members: [...existing, member] },
-        setup: { ...(c.setup ?? {}), completed: true },
+        team: { ...(c['team'] ?? {}), members: [...existing, member] },
+        setup: { ...(c['setup'] ?? {}), completed: true },
       };
     });
     onEmployeeAdd?.(member);
@@ -569,7 +571,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleEmployeeDeleteInternal = useCallback((id: LooseValue) => {
     ownerCfg.updateConfig(c => ({
       ...c,
-      team: { ...(c.team ?? {}), members: (c.team?.members ?? []).filter((m: LooseValue) => String(m.id) !== String(id)) },
+      team: { ...(c['team'] ?? {}), members: (c['team']?.members ?? []).filter((m: LooseValue) => String(m.id) !== String(id)) },
     }));
     onEmployeeDelete?.(id);
   }, [ownerCfg.updateConfig, onEmployeeDelete]);
@@ -580,12 +582,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const defaultViewApplied = useRef(false);
   useEffect(() => {
     if (initialView) return;
-    const defaultView = ownerCfg.config?.display?.defaultView;
+    const defaultView = ownerCfg.config?.['display']?.defaultView;
     if (defaultView && !defaultViewApplied.current) {
       defaultViewApplied.current = true;
       cal.setView(defaultView);
     }
-  }, [ownerCfg.config?.display?.defaultView, initialView]);
+  }, [ownerCfg.config?.['display']?.defaultView, initialView]);
 
   // ── Permissions ──────────────────────────────────────────────────────────
   const perms = usePermissions(role);
@@ -594,7 +596,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const eventOptions = useEventOptions(calendarId);
 
   // ── Saved view active state ──────────────────────────────────────────────
-  const [savedViewActiveId, setSavedViewActiveId] = useState(null);
+  const [savedViewActiveId, setSavedViewActiveId] = useState<string | null>(null);
   const [savedViewDirty,    setSavedViewDirty]    = useState(false);
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
@@ -604,13 +606,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // skip the guide. The landing persists its decision via setup.completed;
   // this session flag is just for "show on demand" re-opens later.
   const [setupDismissed, setSetupDismissed] = useState(false);
-  const setupCompleted  = !!ownerCfg.config?.setup?.completed;
+  const setupCompleted  = !!ownerCfg.config?.['setup']?.completed;
   const shouldShowSetup = showSetupLanding && !setupCompleted && !setupDismissed;
 
   const handleSetupSkip = useCallback(() => {
     ownerCfg.updateConfig(prev => ({
       ...prev,
-      setup: { ...(prev.setup ?? {}), completed: true },
+      setup: { ...(prev['setup'] ?? {}), completed: true },
     }));
     setSetupDismissed(true);
   }, [ownerCfg.updateConfig]);
@@ -621,20 +623,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       ...prev,
       title: result.calendarName,
       setup: {
-        ...(prev.setup ?? {}),
+        ...(prev['setup'] ?? {}),
         completed: true,
         preferredTheme: result.theme,
       },
       display: {
-        ...(prev.display ?? {}),
+        ...(prev['display'] ?? {}),
         defaultView: result.defaultView,
         enabledViews: result.enabledViews,
       },
       team: {
-        ...(prev.team ?? {}),
+        ...(prev['team'] ?? {}),
         locationLabel: result.locationLabel,
         members: [
-          ...((prev.team?.members ?? []) as Array<{ id: unknown }>)
+          ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
             .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
           ...result.teamMembers,
         ],
@@ -691,7 +693,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (levels.length === 0) {
       setActiveGroupBy(null);
     } else if (levels.length === 1) {
-      setActiveGroupBy(levels[0].field);
+      setActiveGroupBy(levels[0]!.field);
     } else {
       setActiveGroupBy(levels.map(l => ({ field: l.field, showEmpty: l.showEmpty })));
     }
@@ -798,7 +800,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   });
 
   // ── Supabase Realtime ────────────────────────────────────────────────────
-  const [supabaseClient, setSupabaseClient] = useState(null);
+  const [supabaseClient, setSupabaseClient] = useState<LooseValue | null>(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
     import('@supabase/supabase-js')
@@ -828,9 +830,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
 
   // ── CalendarEngine — single source of truth for mutations & expansions ───
-  const engineRef      = useRef(null);
-  const undoManagerRef = useRef(null);
-  const announcerRef   = useRef(null);
+  const engineRef      = useRef<CalendarEngine | null>(null);
+  const undoManagerRef = useRef<UndoRedoManager | null>(null);
+  const announcerRef   = useRef<AnnouncerRef | null>(null);
   // Tracks the pools map we last emitted so subsequent engine _notify calls
   // only fire onPoolsChange on real pool mutations (e.g. round-robin cursor
   // advance), not on every state tick.
@@ -842,6 +844,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
     lastPoolsRef.current = engineRef.current.state.pools;
   }
+  // Narrow refs into non-null locals for the rest of render. The init block
+  // above runs synchronously and makes both refs singletons across renders.
+  const engine = engineRef.current;
+  const undoManager = undoManagerRef.current;
+  if (engine === null || undoManager === null) {
+    throw new Error('CalendarEngine/UndoRedoManager failed to initialize');
+  }
 
   // Counts how many onEventSave-triggered prop updates to suppress clear() for.
   // Scope ops (single/following) emit multiple onEventSave calls; each one
@@ -850,7 +859,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // Version counter: increments whenever the engine emits a state change.
   const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
-  useEffect(() => engineRef.current.subscribe(() => tickEngine()), []);
+  useEffect(() => engine.subscribe(() => tickEngine()), [engine]);
 
   // Keep engine pools in sync when the host rewrites the prop (controlled
   // pattern: demo persists to localStorage in onPoolsChange, then re-renders
@@ -859,60 +868,63 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // latest onPoolsChange payload back in.
   useEffect(() => {
     if (!rawPools) return;
-    engineRef.current.setPools(rawPools);
-    lastPoolsRef.current = engineRef.current.state.pools;
-  }, [rawPools]);
+    engine.setPools(rawPools);
+    lastPoolsRef.current = engine.state.pools;
+  }, [engine, rawPools]);
 
   // Emit onPoolsChange whenever the engine commits a new pools map (typically
   // a round-robin cursor advance during applyMutation). Suppress emissions
   // driven by the host's own setPools round-trip above.
   useEffect(() => {
     if (!onPoolsChange) return;
-    const current = engineRef.current.state.pools;
+    const current = engine.state.pools;
     if (current === lastPoolsRef.current) return;
     lastPoolsRef.current = current;
     onPoolsChange(Array.from(current.values()));
-  }, [engineVer, onPoolsChange]);
+  }, [engine, engineVer, onPoolsChange]);
 
   // Keep engine in sync with the merged+normalized event list from all sources.
   // Skip clear() when the change was triggered by our own onEventSave so the
   // undo stack survives the controlled-events prop round-trip.
   useEffect(() => {
-    engineRef.current.setEvents(fromLegacyEvents(allNormalized as any));
+    engine.setEvents(fromLegacyEvents(allNormalized as any));
     if (engineMutationPendingRef.current > 0) {
       engineMutationPendingRef.current -= 1;
     } else {
-      undoManagerRef.current.clear();
+      undoManager.clear();
     }
-  }, [allNormalized]);
+  }, [engine, undoManager, allNormalized]);
 
   // ── Expand recurring events within the visible range (via engine) ────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const expandedEvents = useMemo(
-    () => engineRef.current.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
-    [engineVer, range],
+  // Cast preserves the file's existing loose typing pattern — expandedEvents
+  // was previously inferred as `any` via a nullable ref, and many consumers
+  // still rely on that looseness. Tightening is out of scope for this PR.
+  const expandedEvents: LooseValue[] = useMemo(
+    () => engine.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
+    [engine, engineVer, range],
   );
 
   // ── Base/Region view config ───────────────────────────────────────────────
-  const configuredBases = ownerCfg.config?.team?.bases ?? [];
-  const locationLabel   = ownerCfg.config?.team?.locationLabel ?? 'Base';
+  const configuredBases = ownerCfg.config?.['team']?.bases ?? [];
+  const locationLabel   = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
 
   // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
   const VIEWS = useMemo(() => {
-    const enabled = new Set<string>(ownerCfg.config?.display?.enabledViews ?? []);
+    const enabled = new Set<string>(ownerCfg.config?.['display']?.enabledViews ?? []);
     return ALL_VIEWS
       .filter(v => v.alwaysOn || enabled.has(v.id))
       .map(v => v.id === 'base' ? { ...v, label: locationLabel } : v);
-  }, [ownerCfg.config?.display?.enabledViews, locationLabel]);
+  }, [ownerCfg.config?.['display']?.enabledViews, locationLabel]);
 
   // Self-heal: if the active tab is no longer enabled, fall back to default/month.
   useEffect(() => {
     if (VIEWS.some(v => v.id === cal.view)) return;
-    const fallback = (ownerCfg.config?.display?.defaultView as ViewId) ?? 'month';
+    const fallback = (ownerCfg.config?.['display']?.defaultView as ViewId) ?? 'month';
     const target = VIEWS.some(v => v.id === fallback) ? fallback : 'month';
     if (cal.view !== target) cal.setView(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [VIEWS, cal.view, ownerCfg.config?.display?.defaultView]);
+  }, [VIEWS, cal.view, ownerCfg.config?.['display']?.defaultView]);
 
   // ── Derive categories / resources / filtered events ──────────────────────
   // Events scoped to the active tab — drives BOTH FilterBar option lists and
@@ -937,7 +949,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // the modal never renders a blank dropdown.
   const resolvedAssetRequestCategories = useMemo(() => {
     if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
-    const cfg = categoriesConfig ?? ownerCfg.config?.categoriesConfig;
+    const cfg = categoriesConfig ?? ownerCfg.config?.['categoriesConfig'];
     const defs = (Array.isArray(cfg?.categories) ? cfg.categories : []) as Array<{
       id: string
       label?: string
@@ -948,7 +960,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       const def = byId.get(id);
       return { id, label: def?.label ?? id, color: def?.color };
     });
-  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.categoriesConfig]);
+  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.['categoriesConfig']]);
 
   const canRequestAsset =
     resolvedAssetRequestCategories.length > 0 &&
@@ -972,30 +984,32 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
   // Stable ref so applyEngineOp closure never goes stale.
-  const opCtxRef = useRef(null);
+  // Cast preserves the prior loose-typed assignment — the prop shapes for
+  // businessHours/blockedWindows don't yet match OperationContext's structured
+  // type. Narrowing those prop types is out of scope for this PR.
+  const opCtxRef = useRef<OperationContext | null>(null);
   opCtxRef.current = {
-    businessHours:  ownerCfg.config?.businessHours ?? businessHours ?? null,
+    businessHours:  ownerCfg.config?.['businessHours'] ?? businessHours ?? null,
     blockedWindows: blockedWindows ?? [],
-  };
+  } as unknown as OperationContext;
 
-  const [pendingAlert,      setPendingAlert]      = useState(null); // { violations, isHard, onConfirm }
+  const [pendingAlert,      setPendingAlert]      = useState<LooseValue | null>(null); // { violations, isHard, onConfirm }
   // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
-  const [recurringPrompt, setRecurringPrompt] = useState(null);
+  const [recurringPrompt, setRecurringPrompt] = useState<LooseValue | null>(null);
 
   const applyEngineOp = useCallback((op: LooseValue, onAccepted: LooseValue) => {
-    const engine  = engineRef.current;
-    const undoMgr = undoManagerRef.current;
-    const ctx     = opCtxRef.current;
+    const ctx = opCtxRef.current;
+    if (ctx === null) return;
 
     // Pre-capture the state BEFORE mutation. We only record this to the undo
     // stack on acceptance to keep the history free of rejected operations.
-    const preSnap = undoMgr.captureSnapshot();
+    const preSnap = undoManager.captureSnapshot();
 
     const result = engine.applyMutation(op, ctx);
 
     if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
       // State has changed — record the pre-mutation snapshot.
-      undoMgr.record(preSnap, op.type);
+      undoManager.record(preSnap, op.type);
       announcerRef.current?.announce(opAnnouncement(op));
       // Each emitted onEventSave call will trigger an allNormalized update; count
       // them so the effect can skip clear() for all of them.
@@ -1011,7 +1025,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         onConfirm: () => {
           const confirmed = engine.applyMutation(op, ctx, { overrideSoftViolations: true });
           if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
-            undoMgr.record(preSnap, op.type);
+            undoManager.record(preSnap, op.type);
             announcerRef.current?.announce(opAnnouncement(op));
             engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
             onAccepted(confirmed);
@@ -1023,28 +1037,28 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // Rejected — state unchanged, nothing to record.
       setPendingAlert({ violations: result.validation.violations, isHard: true, onConfirm: null });
     }
-  }, []); // stable — reads from refs
+  }, [engine, undoManager]); // engine/undoManager are singleton refs — stable
 
   // ── Local UI state ───────────────────────────────────────────────────────
-  const [selectedEvent,  setSelectedEvent]  = useState(null);
-  const [formEvent,        setFormEvent]        = useState(null);
+  const [selectedEvent,  setSelectedEvent]  = useState<LooseValue | null>(null);
+  const [formEvent,        setFormEvent]        = useState<LooseValue | null>(null);
   const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
-  const [availabilityState, setAvailabilityState] = useState(null);
+  const [availabilityState, setAvailabilityState] = useState<LooseValue | null>(null);
   // { emp: { id, name, role? }, start?: Date, end?: Date }
-  const [scheduleEditorState, setScheduleEditorState] = useState(null);
+  const [scheduleEditorState, setScheduleEditorState] = useState<LooseValue | null>(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
   const [helpOpen,         setHelpOpen]         = useState(false);
   // { event, x, y } — set when an event is clicked in edit mode
-  const [inlineEditTarget, setInlineEditTarget] = useState(null);
+  const [inlineEditTarget, setInlineEditTarget] = useState<LooseValue | null>(null);
   // Capture last click coords so InlineEventEditor can position near the pill
   const lastClickCoordsRef = useRef({ x: 0, y: 0 });
   const editModeRef = useRef(false);
   editModeRef.current = editMode;
-  const [remoteTemplates, setRemoteTemplates] = useState([]);
+  const [remoteTemplates, setRemoteTemplates] = useState<LooseValue[]>([]);
   const [templateError, setTemplateError] = useState('');
 
   const resolvedScheduleLimits = useMemo(() => {
@@ -1104,21 +1118,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // Undo: Ctrl+Z / Cmd+Z
       if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        const did = undoManagerRef.current.undo();
+        const did = undoManager.undo();
         if (did) announcerRef.current?.announce('Undo.');
         return;
       }
       // Redo: Ctrl+Y / Cmd+Y  or  Ctrl+Shift+Z / Cmd+Shift+Z
       if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
         e.preventDefault();
-        const did = undoManagerRef.current.redo();
+        const did = undoManager.redo();
         if (did) announcerRef.current?.announce('Redo.');
         return;
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [undoManager]);
 
   // ── CalendarApi / imperative handle ─────────────────────────────────────
   const api = useMemo(() => ({
@@ -1132,11 +1146,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     getVisibleEvents: ()     => visibleEvents,
     clearFilters:     ()     => cal.clearFilters(),
     addEvent:         (d={}) => setFormEvent(d),
-    undo:             ()     => undoManagerRef.current.undo(),
-    redo:             ()     => undoManagerRef.current.redo(),
-    get canUndo()            { return undoManagerRef.current?.canUndo ?? false; },
-    get canRedo()            { return undoManagerRef.current?.canRedo ?? false; },
-  }), [cal, expandedEvents, visibleEvents]);
+    undo:             ()     => undoManager.undo(),
+    redo:             ()     => undoManager.redo(),
+    get canUndo()            { return undoManager.canUndo; },
+    get canRedo()            { return undoManager.canRedo; },
+  }), [cal, expandedEvents, visibleEvents, undoManager]);
 
   useImperativeHandle(ref, () => api, [api]);
 
@@ -1158,12 +1172,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const getSavedEventPayload = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const normalizedId = eventId == null ? '' : String(eventId);
     if (normalizedId) {
-      const saved = engineRef.current.state.events.get(normalizedId);
+      const saved = engine.state.events.get(normalizedId);
       if (saved) return toLegacyEvent(saved);
     }
     if (!fallbackEvent) return null;
     return fallbackPatch ? { ...fallbackEvent, ...fallbackPatch } : fallbackEvent;
-  }, []);
+  }, [engine]);
 
   const emitEventSave = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const savedPayload = getSavedEventPayload(eventId, fallbackEvent, fallbackPatch);
@@ -1250,6 +1264,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // 2. If there is a linked open-shift record, mark it as covered too
     if (primaryOpenShift) {
       const [openShiftEv, ...duplicateOpenShifts] = openShiftCandidates;
+      if (openShiftEv === undefined) return;
       duplicateOpenShifts.forEach((duplicateOpenShift) => {
         const duplicateId = resolveEventId(duplicateOpenShift);
         if (!duplicateId) return;
@@ -1279,7 +1294,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     //    Clamp the mirrored event to the PTO request window (meta.requestStart/End)
     //    when available, so the coverage bar only spans the days actually needing
     //    coverage — not the entire underlying shift.
-    const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+    const onCallCat = ownerCfg.config?.['onCallCategory'] ?? 'on-call';
     const shiftStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
     const shiftEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
     const requestStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : shiftStart;
@@ -1314,7 +1329,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         () => emitEventSave(mirrorId, mirroredPatch, { id: mirrorId }),
       );
     }
-  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete, ownerCfg.config?.onCallCategory]);
+  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete, ownerCfg.config?.['onCallCategory']]);
 
   /**
    * Handle employee action card clicks.
@@ -1402,7 +1417,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // 2. Detect overlapping shifts and auto-create open-shift records
     const isLeave = availEv.kind === 'pto' || availEv.kind === 'unavailable';
     if (isLeave) {
-      const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+      const onCallCat = ownerCfg.config?.['onCallCategory'] ?? 'on-call';
       const { conflictingEvents } = detectShiftConflicts({
         employeeId:    String(availEv.employeeId ?? availEv.resource ?? ''),
         requestStart:  availEv.start instanceof Date ? availEv.start : new Date(availEv.start),
@@ -1436,7 +1451,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         } else {
           applyEngineOp(
             { type: 'create', event: openShift, source: 'api' },
-            () => emitEventSave(openShift.id, openShift),
+            () => emitEventSave(openShift['id'], openShift),
           );
         }
 
@@ -1444,7 +1459,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         const updatedMeta = {
           ...(shiftEv.meta ?? {}),
           shiftStatus:  availEv.kind,   // 'pto' | 'unavailable'
-          openShiftId:  openShift.id,
+          openShiftId:  openShift['id'],
           coveredBy:    null as LooseValue,
           requestStart: availEv.start instanceof Date ? availEv.start.toISOString() : String(availEv.start),
           requestEnd:   availEv.end   instanceof Date ? availEv.end.toISOString()   : String(availEv.end),
@@ -1457,7 +1472,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
 
     setAvailabilityState(null);
-  }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerCfg.config?.onCallCategory]);
+  }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerCfg.config?.['onCallCategory']]);
 
   /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
   const handleScheduleEditorSave = useCallback((shiftEvOrArr: LooseValue) => {
@@ -1514,7 +1529,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // Defensive RRULE preservation: if a recurring edit payload arrives with a
     // missing RRULE (e.g. an occurrence shape that lost series fields), keep
     // the series master cadence instead of accidentally stripping recurrence.
-    const existingMaster = recurringMasterId ? engineRef.current?.state?.events?.get(String(recurringMasterId)) : null;
+    const existingMaster = recurringMasterId ? engine.state.events.get(String(recurringMasterId)) : null;
     const resolvedRrule = rawEv.rrule ?? existingMaster?.rrule ?? null;
 
     if (!eventId) {
@@ -1719,6 +1734,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
 
     result.generated.forEach((ev, index) => {
+      if (ev.start == null || ev.end == null) return;
       const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
       const end = ev.end instanceof Date ? ev.end : new Date(ev.end);
       const templateEventId = String(ev.id ?? createId(`template-${template.id}-${index}`));
@@ -1791,7 +1807,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
 
     const ctx = opCtxRef.current;
-    const seededEvents = [...engineRef.current.state.events.values()];
+    const seededEvents = [...engine.state.events.values()];
     const conflicts: SchedulePreviewConflict[] = [];
 
     generated.forEach((ev, index) => {
@@ -1816,6 +1832,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         meta: typeof ev.meta === 'object' && ev.meta ? ev.meta as Record<string, unknown> : {},
       }];
       const previewEvent = fromLegacyEvents(legacy)[0];
+      if (previewEvent === undefined) return;
       const op = { type: 'create' as const, event: previewEvent };
       const validation = validateOperation(op, { ...ctx, events: seededEvents }, seededEvents);
       if (validation.violations.length > 0) {
@@ -1842,7 +1859,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       ...ev,
       end: ev.end instanceof Date || typeof ev.end === 'string'
         ? ev.end
-        : new Date(ev.end),
+        : new Date(ev.end ?? 0),
     }));
     return { generated: normalizedPreview, conflicts, error: '' };
   }, [resolvedScheduleLimits.previewMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
@@ -1875,13 +1892,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // Recurring occurrences carry rrule:null — look up the series master so the
     // EventForm shows the correct repeat cadence and preserves it on save.
     if (ev._recurring && ev._eventId) {
-      const master = engineRef.current?.state?.events?.get(ev._eventId);
+      const master = engine.state.events.get(ev._eventId);
       if (master?.rrule) {
         formEv = { ...formEv, rrule: master.rrule };
       }
     }
     setFormEvent(formEv);
-  }, []);
+  }, [engine]);
 
   /** Save quick display customizations from InlineEventEditor. */
   const handleInlineSave = useCallback((patch: LooseValue) => {
@@ -1927,7 +1944,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }
 
-  const swipeAreaRef = useRef(null);
+  const swipeAreaRef = useRef<HTMLDivElement | null>(null);
   const swipeNavigationEnabled = cal.view === 'month' || cal.view === 'schedule';
   useTouchSwipe({
     targetRef: swipeAreaRef,
@@ -2014,7 +2031,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return (
       <CalendarErrorBoundary>
         <div
-          className={styles.root}
+          className={styles['root']}
           data-wc-theme={effectiveTheme}
           data-wc-theme-family={themeFamily}
           data-wc-theme-mode={themeMode}
@@ -2024,8 +2041,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           <SetupLanding
             onSkip={handleSetupSkip}
             onFinish={handleSetupFinish}
-            initialName={ownerCfg.config?.title}
-            initialTheme={ownerCfg.config?.setup?.preferredTheme ?? rawTheme}
+            initialName={ownerCfg.config?.['title']}
+            initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
           />
         </div>
       </CalendarErrorBoundary>
@@ -2035,41 +2052,41 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
+        <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
-          <div className={styles.customToolbar}>{renderToolbar(api)}</div>
+          <div className={styles['customToolbar']}>{renderToolbar(api)}</div>
         ) : (
-          <div className={styles.toolbar} role="toolbar" aria-label="Calendar navigation">
-            <div className={styles.navGroup}>
+          <div className={styles['toolbar']} role="toolbar" aria-label="Calendar navigation">
+            <div className={styles['navGroup']}>
               <button
-                className={styles.navBtn}
+                className={styles['navBtn']}
                 onClick={() => cal.navigate(-1)}
                 aria-label="Previous"
                 title={`Previous ${cal.view}`}
               >
                 <ChevronLeft size={18} aria-hidden="true" />
               </button>
-              <button className={styles.todayBtn} onClick={cal.goToToday}>Today</button>
+              <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
               <button
-                className={styles.navBtn}
+                className={styles['navBtn']}
                 onClick={() => cal.navigate(1)}
                 aria-label="Next"
                 title={`Next ${cal.view}`}
               >
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
-              <span className={styles.dateLabel} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
-              <span className={styles.calendarTitle}>{calendarTitle}</span>
-              {fetchLoading && <span className={styles.loadingDot} title="Loading…" aria-label="Loading events" role="status" />}
+              <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+              <span className={styles['calendarTitle']}>{calendarTitle}</span>
+              {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
             </div>
 
-            <div className={styles.viewGroup} role="group" aria-label="Calendar view">
+            <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
               {VIEWS.map(v => (
                 <button
                   key={v.id}
-                  className={[styles.viewBtn, cal.view === v.id && styles.activeView].filter(Boolean).join(' ')}
+                  className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
                   onClick={() => cal.setView(v.id)}
                   aria-pressed={cal.view === v.id}
                   title={v.hint}
@@ -2079,17 +2096,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               ))}
             </div>
 
-            <div className={styles.actions}>
+            <div className={styles['actions']}>
               <SidebarToggleButton
                 isOpen={sidebarOpen}
                 onClick={() => setSidebarOpen(v => !v)}
                 filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
                 groupCount={sidebarGroupLevels.length}
               />
-              {devMode && <span className={styles.devBadge}>Dev</span>}
+              {devMode && <span className={styles['devBadge']}>Dev</span>}
               {(ownerCfg.isOwner || devMode) && (
                 <button
-                  className={[styles.wandBtn, editMode && styles.wandBtnActive].filter(Boolean).join(' ')}
+                  className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
                   onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
                   aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
                   title={editMode ? 'Exit edit mode' : 'Customize events'}
@@ -2098,13 +2115,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 </button>
               )}
               {hasAddButton && cal.view !== 'schedule' && (
-                <button className={styles.addBtn} onClick={() => setFormEvent({})} aria-label="Add new event">
-                  <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Event</span>
+                <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
+                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
                 </button>
               )}
               {hasAddButton && hasScheduleTemplates && (
                 <button
-                  className={styles.addBtn}
+                  className={styles['addBtn']}
                   onClick={() => {
                     setScheduleOpen(true);
                     trackScheduleTemplateAnalytics('schedule_dialog_opened', {
@@ -2113,15 +2130,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   }}
                   aria-label="Add schedule from template"
                 >
-                  <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Schedule</span>
+                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
                 </button>
               )}
               {hasImport && (
-                <button className={styles.exportBtn} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
+                <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
                   <Upload size={15} aria-hidden="true" />
                 </button>
               )}
-              <button className={styles.exportBtn} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
+              <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
                 <Download size={15} aria-hidden="true" />
               </button>
               {ownerPassword && (
@@ -2139,11 +2156,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
         {/* ── Edit mode banner ── */}
         {editMode && (
-          <div className={styles.editModeBanner} role="status" aria-live="polite">
+          <div className={styles['editModeBanner']} role="status" aria-live="polite">
             <Sparkles size={13} aria-hidden="true" />
             <span>Edit mode — click any event to customize it</span>
             <button
-              className={styles.editModeExit}
+              className={styles['editModeExit']}
               onClick={() => { setEditMode(false); setInlineEditTarget(null); }}
               aria-label="Exit edit mode"
             >
@@ -2201,7 +2218,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           const resolvedChips: FocusChipDef[] = Array.isArray(focusChips)
             ? focusChips
             : DEFAULT_FOCUS_CHIPS;
-          const activeCategories = cal.filters?.categories as Set<string> | undefined;
+          const activeCategories = cal.filters?.['categories'] as Set<string> | undefined;
           return (
             <>
               <ContextSummary
@@ -2260,13 +2277,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── View area ── */}
         <div
           ref={swipeAreaRef}
-          className={styles.viewArea}
+          className={styles['viewArea']}
           onClickCapture={editMode ? (e) => {
             lastClickCoordsRef.current = { x: e.clientX, y: e.clientY };
           } : undefined}
         >
           {isEmpty && emptyState ? (
-            <div className={styles.emptyStateWrap}>{emptyState}</div>
+            <div className={styles['emptyStateWrap']}>{emptyState}</div>
           ) : (
             <>
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
@@ -2288,8 +2305,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEmployeeAction={handleEmployeeAction}
                   groupBy={activeGroupBy}
                   sort={activeSort}
-                  roles={ownerCfg.config?.team?.roles ?? []}
-                  bases={ownerCfg.config?.team?.bases ?? []}
+                  roles={ownerCfg.config?.['team']?.roles ?? []}
+                  bases={ownerCfg.config?.['team']?.bases ?? []}
                 />
               )}
               {cal.view === 'base' && (
@@ -2314,7 +2331,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onPoolDateSelect={handlePoolDateSelect}
                   groupBy={activeGroupBy}
                   onGroupByChange={setActiveGroupBy}
-                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
+                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.['categoriesConfig']}
                   assets={effectiveAssets}
                   pools={rawPools ?? []}
                   strictAssetFiltering={strictAssetFiltering}
@@ -2327,8 +2344,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   renderAssetLocation={renderAssetLocation}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
-                  approvalsConfig={ownerCfg.config?.approvals}
-                  onApprovalAction={onApprovalAction}
+                  approvalsConfig={ownerCfg.config?.['approvals']}
+                  onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
                 />
               )}
             </>
@@ -2405,7 +2422,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             emp={scheduleEditorState.emp}
             initialStart={scheduleEditorState.start}
             initialEnd={scheduleEditorState.end}
-            onCallCategory={ownerCfg.config?.onCallCategory ?? 'on-call'}
+            onCallCategory={ownerCfg.config?.['onCallCategory'] ?? 'on-call'}
             onSave={handleScheduleEditorSave}
             onClose={() => setScheduleEditorState(null)}
           />
@@ -2458,7 +2475,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             resources={resources}
             schema={schema}
             items={expandedEvents}
-            initialTab={ownerCfg.configInitialTab}
+            initialTab={ownerCfg.configInitialTab ?? undefined}
             initialSmartViewEditId={ownerCfg.smartViewEditId}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}

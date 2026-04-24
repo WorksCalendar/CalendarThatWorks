@@ -153,30 +153,30 @@ export default function FilterBar({
     return (
       <button
         key={`${field.key}-${String(opt.value)}`}
-        className={[styles.optionRow, active && styles.optionRowActive].filter(Boolean).join(' ')}
+        className={[styles['optionRow'], active && styles['optionRowActive']].filter(Boolean).join(' ')}
         onClick={() => handleToggle(field.key, opt.value)}
         type="button"
       >
-        <span className={styles.optionCheck}>{active ? '✓' : ''}</span>
+        <span className={styles['optionCheck']}>{active ? '✓' : ''}</span>
 
         {isSourceField && (
           <span
-            className={styles.sourceDot}
+            className={styles['sourceDot']}
             style={{ background: src?.color ?? opt.color ?? '#3b82f6' }}
           />
         )}
 
-        <span className={styles.optionLabel}>{opt.label}</span>
+        <span className={styles['optionLabel']}>{opt.label}</span>
 
         {isSourceField && src?.type && (
-          <span className={styles.optionMeta}>{src.type}</span>
+          <span className={styles['optionMeta']}>{src.type}</span>
         )}
       </button>
     );
   }
 
   return (
-    <div className={styles.bar}>
+    <div className={styles['bar']}>
       {Object.entries(groupedFields).map(([groupKey, fields]) => {
         if (!fields.length) return null;
 
@@ -186,29 +186,29 @@ export default function FilterBar({
         return (
           <div
             key={groupKey}
-            className={styles.dropdownWrap}
+            className={styles['dropdownWrap']}
             ref={(el) => { dropdownRefs.current[typedGroupKey] = el; }}
           >
             <button
               type="button"
-              className={[styles.dropdownBtn, openGroup === groupKey && styles.dropdownBtnOpen].filter(Boolean).join(' ')}
+              className={[styles['dropdownBtn'], openGroup === groupKey && styles['dropdownBtnOpen']].filter(Boolean).join(' ')}
               onClick={() => setOpenGroup(openGroup === groupKey ? null : typedGroupKey)}
             >
               <span>{mergedGroupLabels[typedGroupKey] ?? DEFAULT_GROUP_LABELS[typedGroupKey] ?? typedGroupKey}</span>
-              {count > 0 && <span className={styles.countBadge}>{count}</span>}
-              <span className={styles.chevronIcon}><ChevronDown size={14} /></span>
+              {count > 0 && <span className={styles['countBadge']}>{count}</span>}
+              <span className={styles['chevronIcon']}><ChevronDown size={14} /></span>
             </button>
 
             {openGroup === groupKey && (
-              <div className={styles.dropdownMenu}>
+              <div className={styles['dropdownMenu']}>
                 {fields.map(field => {
                   const options = field.getOptions ? field.getOptions(items) : (field.options ?? []);
                   if (!options.length) return null;
 
                   return (
-                    <div key={field.key} className={styles.menuSection}>
-                      <div className={styles.menuHead}>{field.label ?? field.key}</div>
-                      <div className={styles.menuOptions}>
+                    <div key={field.key} className={styles['menuSection']}>
+                      <div className={styles['menuHead']}>{field.label ?? field.key}</div>
+                      <div className={styles['menuOptions']}>
                         {options.map(opt => renderOption(field, opt))}
                       </div>
                     </div>
@@ -226,18 +226,18 @@ export default function FilterBar({
           const rawValue = filters[field.key];
           const value = rawValue == null ? '' : String(rawValue);
           return (
-            <div key={field.key} className={styles.searchWrap}>
-              <Search size={14} className={styles.searchIcon} />
+            <div key={field.key} className={styles['searchWrap']}>
+              <Search size={14} className={styles['searchIcon']} />
               <input
                 type="text"
-                className={styles.search}
+                className={styles['search']}
                 placeholder={field.placeholder ?? 'Search…'}
                 value={value}
                 onChange={e => onChange?.(field.key, e.target.value)}
               />
               {value && (
                 <button
-                  className={styles.clearSearch}
+                  className={styles['clearSearch']}
                   onClick={() => onChange?.(field.key, '')}
                   aria-label="Clear search"
                   type="button"
@@ -255,7 +255,7 @@ export default function FilterBar({
         return (
           <select
             key={field.key}
-            className={styles.selectInput}
+            className={styles['selectInput']}
             value={value == null ? '' : String(value)}
             onChange={e => onChange?.(field.key, e.target.value || null)}
           >
@@ -274,11 +274,11 @@ export default function FilterBar({
         return (
           <label
             key={field.key}
-            className={[styles.boolLabel, value && styles.boolLabelActive].filter(Boolean).join(' ')}
+            className={[styles['boolLabel'], value && styles['boolLabelActive']].filter(Boolean).join(' ')}
           >
             <input
               type="checkbox"
-              className={styles.boolCheck}
+              className={styles['boolCheck']}
               checked={Boolean(value)}
               onChange={e => onChange?.(field.key, e.target.checked || null)}
             />
@@ -293,11 +293,11 @@ export default function FilterBar({
         const endVal   = range?.end   ? formatDateInput(range.end)   : '';
 
         return (
-          <div key={field.key} className={styles.dateRange}>
-            <span className={styles.fieldLabel}>{field.label ?? 'Date'}</span>
+          <div key={field.key} className={styles['dateRange']}>
+            <span className={styles['fieldLabel']}>{field.label ?? 'Date'}</span>
             <input
               type="date"
-              className={styles.dateInput}
+              className={styles['dateInput']}
               value={startVal}
               aria-label={`${field.label ?? 'Date'} from`}
               onChange={e => {
@@ -305,10 +305,10 @@ export default function FilterBar({
                 onChange?.(field.key, d || range?.end ? { start: d, end: range?.end ?? null } : null);
               }}
             />
-            <span className={styles.dateSep}>–</span>
+            <span className={styles['dateSep']}>–</span>
             <input
               type="date"
-              className={styles.dateInput}
+              className={styles['dateInput']}
               value={endVal}
               aria-label={`${field.label ?? 'Date'} to`}
               onChange={e => {
@@ -318,7 +318,7 @@ export default function FilterBar({
             />
             {(startVal || endVal) && (
               <button
-                className={styles.dateClear}
+                className={styles['dateClear']}
                 onClick={() => onChange?.(field.key, null)}
                 aria-label="Clear date range"
                 type="button"
@@ -331,20 +331,20 @@ export default function FilterBar({
       })}
 
       {hasActiveFilters && (
-        <button className={styles.clearAll} onClick={onClearAll} type="button">
+        <button className={styles['clearAll']} onClick={onClearAll} type="button">
           Clear filters
         </button>
       )}
 
       {activePills.length > 0 && (
-        <div className={styles.activePills}>
+        <div className={styles['activePills']}>
           {activePills.map((pill, i) => {
             const schemaField = schema.find(f => f.key === pill.key);
             return (
-              <span key={`${pill.key}-${i}`} className={styles.activePill}>
+              <span key={`${pill.key}-${i}`} className={styles['activePill']}>
                 {pill.fieldLabel}: {pill.displayValue ?? String(pill.value)}
                 <button
-                  className={styles.pillRemove}
+                  className={styles['pillRemove']}
                   onClick={() => {
                     const current = filters[pill.key];
                     if (current instanceof Set) {
@@ -368,7 +368,7 @@ export default function FilterBar({
 
       {onPillHoverTitleToggle && (
         <button
-          className={[styles.hoverToggle, pillHoverTitle && styles.hoverToggleActive].filter(Boolean).join(' ')}
+          className={[styles['hoverToggle'], pillHoverTitle && styles['hoverToggleActive']].filter(Boolean).join(' ')}
           onClick={onPillHoverTitleToggle}
           aria-pressed={pillHoverTitle}
           title={pillHoverTitle ? 'Disable hover details projection' : 'Project date, category, resource, and notes when hovering events'}

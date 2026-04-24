@@ -66,14 +66,14 @@ function extractSync(meta: Readonly<Record<string, unknown>>): SyncMetadata | un
   const raw = meta[SYNC_META_KEY];
   if (!raw || typeof raw !== 'object') return undefined;
   const s = raw as Record<string, unknown>;
-  if (typeof s.externalId !== 'string' || typeof s.syncSource !== 'string') return undefined;
+  if (typeof s['externalId'] !== 'string' || typeof s['syncSource'] !== 'string') return undefined;
   const sync: SyncMetadata = {
-    externalId: s.externalId,
-    syncSource: s.syncSource,
-    ...(typeof s.syncToken === 'string'       && { syncToken:    s.syncToken }),
-    ...(s.lastSyncedAt instanceof Date        && { lastSyncedAt: s.lastSyncedAt }),
-    ...(typeof s.version === 'number'         && { version:      s.version }),
-    ...(s.updatedAt instanceof Date           && { updatedAt:    s.updatedAt }),
+    externalId: s['externalId'],
+    syncSource: s['syncSource'],
+    ...(typeof s['syncToken'] === 'string'       && { syncToken:    s['syncToken'] }),
+    ...(s['lastSyncedAt'] instanceof Date        && { lastSyncedAt: s['lastSyncedAt'] }),
+    ...(typeof s['version'] === 'number'         && { version:      s['version'] }),
+    ...(s['updatedAt'] instanceof Date           && { updatedAt:    s['updatedAt'] }),
   };
   return sync;
 }
@@ -243,18 +243,18 @@ export function legacyToV1(ev: {
  * when `resource` is not already set.
  */
 export function v1ToLegacy(ev: CalendarEventV1): {
-  id?: string;
+  id?: string | undefined;
   title: string;
   start: Date | string | number;
-  end?: Date | string | number;
-  allDay?: boolean;
-  category?: string;
-  color?: string;
-  resource?: string;
-  status?: EventStatus;
-  rrule?: string;
-  exdates?: Array<Date | string>;
-  meta?: Record<string, unknown>;
+  end?: Date | string | number | undefined;
+  allDay?: boolean | undefined;
+  category?: string | undefined;
+  color?: string | undefined;
+  resource?: string | undefined;
+  status?: EventStatus | undefined;
+  rrule?: string | undefined;
+  exdates?: Array<Date | string> | undefined;
+  meta?: Record<string, unknown> | undefined;
 } {
   return {
     id:       ev.id,

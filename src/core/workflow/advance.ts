@@ -110,7 +110,7 @@ interface RunState {
   emit: WorkflowEmitEvent[]
   currentNodeId: string | null
   status: WorkflowInstance['status']
-  outcome?: WorkflowOutcome
+  outcome?: WorkflowOutcome | undefined
   parallelFrames: MutableParallelFrame[]
 }
 
@@ -275,10 +275,11 @@ function closeHistoryFor(
   nodeId: string,
   signal: EdgeGuard,
   at: string,
-  meta?: { actor?: string; reason?: string },
+  meta?: { actor?: string | undefined; reason?: string | undefined },
 ): void {
   for (let i = state.history.length - 1; i >= 0; i--) {
     const entry = state.history[i]
+    if (entry === undefined) continue
     if (entry.nodeId !== nodeId) continue
     if (entry.exitedAt !== undefined) continue
     state.history[i] = {
@@ -297,11 +298,12 @@ function exitCurrent(
   state: RunState,
   signal: EdgeGuard,
   at: string,
-  meta?: { actor?: string; reason?: string },
+  meta?: { actor?: string | undefined; reason?: string | undefined },
 ): void {
   const idx = findLastUnclosedHistoryIndex(state.history)
   if (idx < 0) return
   const entry = state.history[idx]
+  if (entry === undefined) return
   state.history[idx] = {
     ...entry,
     exitedAt: at,
@@ -314,7 +316,7 @@ function exitCurrent(
 
 function findLastUnclosedHistoryIndex(h: readonly WorkflowHistoryEntry[]): number {
   for (let i = h.length - 1; i >= 0; i--) {
-    if (h[i].exitedAt === undefined) return i
+    if (h[i]?.exitedAt === undefined) return i
   }
   return -1
 }
@@ -430,7 +432,7 @@ function autoAdvance(
 
 function emitNotify(
   state: RunState,
-  node: { id: string; channel: string; template?: string },
+  node: { id: string; channel: string; template?: string | undefined },
   vars: Readonly<Record<string, unknown>>,
   at: string,
 ): void {
@@ -533,6 +535,7 @@ function initBranch(
   at: string,
 ): void {
   const branch = frame.branches[branchIdx]
+  if (branch === undefined) return
   if (branch.branchEntryId === frame.joinId) {
     branch.activeNodeId = null
     branch.completedAt = at
@@ -562,6 +565,7 @@ function walkBranchForward(
   at: string,
 ): void {
   const branch = frame.branches[branchIdx]
+  if (branch === undefined) return
   const limit = workflow.nodes.length * 2 + 4
   let lastSignal: EdgeGuard = 'default'
 
@@ -680,8 +684,9 @@ function locateBranch(
   if (targetNodeId !== undefined) {
     for (let f = 0; f < state.parallelFrames.length; f++) {
       const frame = state.parallelFrames[f]
+      if (frame === undefined) continue
       for (let b = 0; b < frame.branches.length; b++) {
-        if (frame.branches[b].activeNodeId === targetNodeId) {
+        if (frame.branches[b]?.activeNodeId === targetNodeId) {
           return { frameIdx: f, branchIdx: b }
         }
       }
@@ -692,11 +697,15 @@ function locateBranch(
   const pending: Array<{ frameIdx: number; branchIdx: number }> = []
   for (let f = 0; f < state.parallelFrames.length; f++) {
     const frame = state.parallelFrames[f]
+    if (frame === undefined) continue
     for (let b = 0; b < frame.branches.length; b++) {
-      if (frame.branches[b].activeNodeId) pending.push({ frameIdx: f, branchIdx: b })
+      if (frame.branches[b]?.activeNodeId) pending.push({ frameIdx: f, branchIdx: b })
     }
   }
-  if (pending.length === 1) return pending[0]
+  if (pending.length === 1) {
+    const p = pending[0]
+    if (p !== undefined) return p
+  }
   if (pending.length === 0) return { error: 'no branch is awaiting an action' }
   return { error: `${pending.length} branches awaiting — supply targetNodeId` }
 }
@@ -707,13 +716,15 @@ function applyBranchAction(
   vars: Readonly<Record<string, unknown>>,
   signal: EdgeGuard,
   at: string,
-  meta: { actor?: string; reason?: string; targetNodeId?: string },
+  meta: { actor?: string | undefined; reason?: string | undefined; targetNodeId?: string | undefined },
 ): string | null {
   const located = locateBranch(state, meta.targetNodeId)
   if ('error' in located) return located.error
 
   const frame = state.parallelFrames[located.frameIdx]
+  if (frame === undefined) return 'internal: frame index out of range'
   const branch = frame.branches[located.branchIdx]
+  if (branch === undefined) return 'internal: branch index out of range'
   const approvalId = branch.activeNodeId!
 
   // Close the approval's open history entry with the branch's signal
@@ -745,7 +756,9 @@ function applyBranchTimeout(
   if ('error' in located) return located.error
 
   const frame = state.parallelFrames[located.frameIdx]
+  if (frame === undefined) return 'internal: frame index out of range'
   const branch = frame.branches[located.branchIdx]
+  if (branch === undefined) return 'internal: branch index out of range'
   const approvalId = branch.activeNodeId!
   const approval = findNode(workflow, approvalId)
   if (!approval || approval.type !== 'approval') {
@@ -810,6 +823,7 @@ function settleFrame(
 ): void {
   while (state.parallelFrames.length > 0 && state.status !== 'failed') {
     const frame = state.parallelFrames[state.parallelFrames.length - 1]
+    if (frame === undefined) return
     const verdict = checkQuorum(frame)
     if (verdict === 'pending') {
       state.status = 'awaiting'
@@ -1019,6 +1033,7 @@ function latestEnteredAt(
 ): string | null {
   for (let i = instance.history.length - 1; i >= 0; i--) {
     const entry = instance.history[i]
+    if (entry === undefined) continue
     if (entry.nodeId !== nodeId) continue
     if (entry.exitedAt !== undefined) continue
     return entry.enteredAt

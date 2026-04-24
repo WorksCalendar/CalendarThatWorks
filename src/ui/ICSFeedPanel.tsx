@@ -42,16 +42,16 @@ type FeedValidationState = {
 
 type StoredFeed = {
   id: string;
-  label?: string;
-  url?: string;
-  color?: string;
-  enabled?: boolean;
-  refreshInterval?: number | null;
+  label?: string | undefined;
+  url?: string | undefined;
+  color?: string | undefined;
+  enabled?: boolean | undefined;
+  refreshInterval?: number | null | undefined;
 };
 
 type FeedRowProps = {
   feed: StoredFeed;
-  error?: Error;
+  error?: Error | undefined;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, patch: Partial<StoredFeed>) => void;
@@ -92,7 +92,7 @@ function colorDot(color: string, size = 10) {
 
 function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: FeedRowProps) {
   const enabled = isFeedEnabled(feed);
-  const currentColor = feed.color ?? PRESET_COLORS[0];
+  const currentColor = feed.color ?? PRESET_COLORS[0]!;
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(feed.label ?? '');
   const inputRef = useRef(null);
@@ -124,7 +124,8 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: FeedRowProps) {
         title="Change colour"
         onClick={() => {
           const idx = PRESET_COLORS.indexOf(currentColor);
-          onUpdate(feed.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
+          const nextColor = PRESET_COLORS[(idx + 1) % PRESET_COLORS.length];
+          if (nextColor !== undefined) onUpdate(feed.id, { color: nextColor });
         }}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
@@ -140,7 +141,7 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: FeedRowProps) {
           <input
             ref={inputRef}
             autoFocus
-            className={styles.input}
+            className={styles['input']}
             value={draft}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
             onBlur={commitEdit}
@@ -176,11 +177,11 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: FeedRowProps) {
       {/* Enable toggle */}
       <label style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }} title={enabled ? 'Disable feed' : 'Enable feed'}>
         <input type="checkbox" checked={enabled} onChange={() => onToggle(feed.id)} style={{ display: 'none' }} />
-        <span className={styles.toggleTrack} />
+        <span className={styles['toggleTrack']} />
       </label>
 
       {/* Remove */}
-      <button className={styles.removeBtn} onClick={() => onRemove(feed.id)} title="Remove feed" style={{ flexShrink: 0 }}>
+      <button className={styles['removeBtn']} onClick={() => onRemove(feed.id)} title="Remove feed" style={{ flexShrink: 0 }}>
         <Trash2 size={13} />
       </button>
     </div>
@@ -243,7 +244,7 @@ function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void 
 
   if (!open) {
     return (
-      <button className={styles.addFieldBtn} onClick={() => setOpen(true)}>
+      <button className={styles['addFieldBtn']} onClick={() => setOpen(true)}>
         <Plus size={13} /> Add iCal feed
       </button>
     );
@@ -287,7 +288,7 @@ function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void 
       {/* URL input + validate */}
       <div style={{ display: 'flex', gap: 6 }}>
         <input
-          className={styles.input}
+          className={styles['input']}
           style={{ flex: 1, fontSize: 12 }}
           type="url"
           value={url}
@@ -331,7 +332,7 @@ function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void 
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 11, color: 'var(--wc-text-muted)', fontWeight: 500 }}>Feed name</span>
         <input
-          className={styles.input}
+          className={styles['input']}
           style={{ fontSize: 12 }}
           type="text"
           value={label}
@@ -364,7 +365,7 @@ function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           <span style={{ fontSize: 11, color: 'var(--wc-text-muted)', fontWeight: 500 }}>Refresh every</span>
           <select
-            className={styles.select}
+            className={styles['select']}
             style={{ fontSize: 12 }}
             value={refreshInterval ?? 'null'}
             onChange={(e: ChangeEvent<HTMLSelectElement>) => setRefreshInterval(e.target.value === 'null' ? null : +e.target.value)}
@@ -428,8 +429,8 @@ export default function ICSFeedPanel({
   const errorCount    = Object.keys(errorByUrl).length;
 
   return (
-    <div className={styles.section}>
-      <p className={styles.sectionDesc}>
+    <div className={styles['section']}>
+      <p className={styles['sectionDesc']}>
         Connect iCal feeds (Google Calendar, Outlook, ICS URLs) to pull events from external sources.
         {feeds.length > 0 && (
           <span style={{ marginLeft: 6 }}>

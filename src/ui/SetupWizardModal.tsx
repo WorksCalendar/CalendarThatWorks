@@ -108,37 +108,37 @@ export default function SetupWizardModal({
 
   return (
     <div
-      className={styles.overlay}
+      className={styles['overlay']}
       onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose?.()}
     >
       <div
         ref={trapRef}
-        className={styles.modal}
+        className={styles['modal']}
         role="dialog"
         aria-modal="true"
         aria-label="Calendar setup wizard"
       >
         {/* ── Header ── */}
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <span className={styles.headerIcon}><Sparkles size={16} /></span>
-            <h2 className={styles.title}>Calendar Setup</h2>
+        <div className={styles['header']}>
+          <div className={styles['headerLeft']}>
+            <span className={styles['headerIcon']}><Sparkles size={16} /></span>
+            <h2 className={styles['title']}>Calendar Setup</h2>
           </div>
-          <div className={styles.headerRight}>
-            <span className={styles.stepPill}>Step {step} of {TOTAL_STEPS}</span>
-            <button className={styles.closeBtn} onClick={onClose} aria-label="Close setup wizard">
+          <div className={styles['headerRight']}>
+            <span className={styles['stepPill']}>Step {step} of {TOTAL_STEPS}</span>
+            <button className={styles['closeBtn']} onClick={onClose} aria-label="Close setup wizard">
               <X size={17} />
             </button>
           </div>
         </div>
 
         {/* ── Progress bar ── */}
-        <div className={styles.progressTrack} role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={TOTAL_STEPS}>
-          <div className={styles.progressFill} style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+        <div className={styles['progressTrack']} role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={TOTAL_STEPS}>
+          <div className={styles['progressFill']} style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
         </div>
 
         {/* ── Step content ── */}
-        <div className={styles.body}>
+        <div className={styles['body']}>
           {step === 1 && (
             <Step1
               calendarName={calendarName}
@@ -177,20 +177,20 @@ export default function SetupWizardModal({
         </div>
 
         {/* ── Footer ── */}
-        <div className={styles.footer}>
-          <div className={styles.footerLeft}>
+        <div className={styles['footer']}>
+          <div className={styles['footerLeft']}>
             {step > 1 && (
-              <button className={styles.backBtn} onClick={goBack}>Back</button>
+              <button className={styles['backBtn']} onClick={goBack}>Back</button>
             )}
           </div>
-          <div className={styles.footerRight}>
+          <div className={styles['footerRight']}>
             {step < TOTAL_STEPS ? (
-              <button className={styles.nextBtn} onClick={goNext}>
+              <button className={styles['nextBtn']} onClick={goNext}>
                 {step === 3 ? 'Continue' : 'Next'}
                 <ChevronRight size={15} />
               </button>
             ) : (
-              <button className={styles.finishBtn} onClick={handleFinish}>
+              <button className={styles['finishBtn']} onClick={handleFinish}>
                 <Check size={14} />
                 Finish Setup
               </button>
@@ -216,17 +216,17 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
   // so the matching theme-family card shows as selected on first render.
   const normalizedSelected = normalizeTheme(selectedTheme);
   return (
-    <div className={styles.step}>
-      <div className={styles.stepHeader}>
-        <h3 className={styles.stepTitle}>Name your calendar</h3>
-        <p className={styles.stepDesc}>Give your calendar a name and pick a visual theme for your team.</p>
+    <div className={styles['step']}>
+      <div className={styles['stepHeader']}>
+        <h3 className={styles['stepTitle']}>Name your calendar</h3>
+        <p className={styles['stepDesc']}>Give your calendar a name and pick a visual theme for your team.</p>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.fieldLabel} htmlFor="swm-cal-name">Calendar name</label>
+      <div className={styles['field']}>
+        <label className={styles['fieldLabel']} htmlFor="swm-cal-name">Calendar name</label>
         <input
           id="swm-cal-name"
-          className={styles.input}
+          className={styles['input']}
           type="text"
           value={calendarName}
           onChange={e => onCalendarNameChange(e.target.value)}
@@ -235,35 +235,35 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
         />
       </div>
 
-      <div className={styles.field}>
-        <fieldset className={styles.fieldset}>
-          <legend className={styles.fieldLabel}>Theme</legend>
-          <div className={styles.themeGrid}>
+      <div className={styles['field']}>
+        <fieldset className={styles['fieldset']}>
+          <legend className={styles['fieldLabel']}>Theme</legend>
+          <div className={styles['themeGrid']}>
           {THEMES.map(id => {
             const theme = THEME_META[id];
             const selected = normalizedSelected === theme.id;
             return (
               <button
                 key={theme.id}
-                className={[styles.themeCard, selected && styles.themeCardSelected].filter(Boolean).join(' ')}
+                className={[styles['themeCard'], selected && styles['themeCardSelected']].filter(Boolean).join(' ')}
                 onClick={() => onThemeChange(theme.id)}
                 title={theme.description}
                 aria-pressed={selected}
               >
                 {/* Mini preview swatch */}
                 <div
-                  className={styles.themeSwatch}
+                  className={styles['themeSwatch']}
                   style={{ background: theme.preview.bg, borderColor: theme.preview.border }}
                 >
-                  <div className={styles.swatchAccent} style={{ background: theme.preview.accent }} />
-                  <div className={styles.swatchLines}>
+                  <div className={styles['swatchAccent']} style={{ background: theme.preview.accent }} />
+                  <div className={styles['swatchLines']}>
                     <span style={{ background: theme.preview.text }} />
                     <span style={{ background: theme.preview.text, width: '60%' }} />
                   </div>
                 </div>
-                <span className={styles.themeLabel}>{theme.label}</span>
+                <span className={styles['themeLabel']}>{theme.label}</span>
                 {selected && (
-                  <span className={styles.themeCheck}><Check size={10} /></span>
+                  <span className={styles['themeCheck']}><Check size={10} /></span>
                 )}
               </button>
             );
@@ -285,21 +285,21 @@ type Step2TeamProps = {
 
 function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }: Step2TeamProps) {
   return (
-    <div className={styles.step}>
-      <div className={styles.stepHeader}>
-        <h3 className={styles.stepTitle}>Team Members &amp; Profiles</h3>
-        <p className={styles.stepDesc}>Add names and optional profile images used across setup and handoff views.</p>
+    <div className={styles['step']}>
+      <div className={styles['stepHeader']}>
+        <h3 className={styles['stepTitle']}>Team Members &amp; Profiles</h3>
+        <p className={styles['stepDesc']}>Add names and optional profile images used across setup and handoff views.</p>
       </div>
 
-      <div className={styles.memberList}>
+      <div className={styles['memberList']}>
         {teamMembers.map((member) => (
-          <div key={member.id} className={styles.memberCard}>
-            <label className={styles.avatarPicker}>
-              <div className={styles.avatarFrame}>
+          <div key={member.id} className={styles['memberCard']}>
+            <label className={styles['avatarPicker']}>
+              <div className={styles['avatarFrame']}>
                 {member.avatar ? (
-                  <img src={member.avatar} alt={`${member.name} avatar`} className={styles.avatarImg} />
+                  <img src={member.avatar} alt={`${member.name} avatar`} className={styles['avatarImg']} />
                 ) : (
-                  <div className={styles.avatarFallback} style={{ backgroundColor: member.color }}>
+                  <div className={styles['avatarFallback']} style={{ backgroundColor: member.color }}>
                     {(member.name?.trim()?.[0] ?? '?').toUpperCase()}
                   </div>
                 )}
@@ -308,20 +308,20 @@ function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }: Step2TeamP
                 id={`swm-photo-${member.id}`}
                 type="file"
                 accept="image/*"
-                className={styles.fileInput}
+                className={styles['fileInput']}
                 aria-label={`Upload photo for ${member.name || `team member ${member.id}`}`}
                 onChange={(e) => onUpload(member.id, e)}
               />
-              <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
+              <span className={styles['avatarBadge']}><Camera size={11} /> Photo</span>
             </label>
 
-            <label htmlFor={`swm-member-${member.id}`} className={styles.fieldLabel}>
+            <label htmlFor={`swm-member-${member.id}`} className={styles['fieldLabel']}>
               Team member name
             </label>
             <input
               type="text"
               id={`swm-member-${member.id}`}
-              className={styles.input}
+              className={styles['input']}
               value={member.name}
               onChange={(e) => onTeamMemberNameChange(member.id, e.target.value)}
               maxLength={40}
@@ -345,10 +345,10 @@ type Step2Props = {
 
 function Step2({ categories, resources, createdViews, onSaveView }: Step2Props) {
   return (
-    <div className={styles.step}>
-      <div className={styles.stepHeader}>
-        <h3 className={styles.stepTitle}>Create Smart Views</h3>
-        <p className={styles.stepDesc}>
+    <div className={styles['step']}>
+      <div className={styles['stepHeader']}>
+        <h3 className={styles['stepTitle']}>Create Smart Views</h3>
+        <p className={styles['stepDesc']}>
           Build filter presets with AND / OR logic — e.g. "On-Call OR Incident for Alice".
           You can skip this and add views later from the saved-views bar.
         </p>
@@ -363,11 +363,11 @@ function Step2({ categories, resources, createdViews, onSaveView }: Step2Props) 
       />
 
       {createdViews.length > 0 && (
-        <div className={styles.createdList}>
-          <span className={styles.createdLabel}>Created this session:</span>
-          <div className={styles.createdChips}>
+        <div className={styles['createdList']}>
+          <span className={styles['createdLabel']}>Created this session:</span>
+          <div className={styles['createdChips']}>
             {createdViews.map((v: CreatedView, i: number) => (
-              <span key={i} className={styles.createdChip}>
+              <span key={i} className={styles['createdChip']}>
                 <Check size={11} />{v.name}
               </span>
             ))}
@@ -395,50 +395,50 @@ function Step3({ calendarName, selectedTheme, teamMembers, createdViews }: Step3
     : undefined;
 
   return (
-    <div className={[styles.step, styles.stepDone].join(' ')}>
-      <div className={styles.doneIcon}>
+    <div className={[styles['step'], styles['stepDone']].join(' ')}>
+      <div className={styles['doneIcon']}>
         <Check size={28} />
       </div>
 
-      <div className={styles.stepHeader}>
-        <h3 className={styles.stepTitle}>You're all set!</h3>
-        <p className={styles.stepDesc}>
+      <div className={styles['stepHeader']}>
+        <h3 className={styles['stepTitle']}>You're all set!</h3>
+        <p className={styles['stepDesc']}>
           <strong>{calendarName || 'Your calendar'}</strong> is configured and ready to go.
         </p>
       </div>
 
-      <div className={styles.summaryGrid}>
-        <div className={styles.summaryCard}>
-          <span className={styles.summaryCardLabel}>Theme</span>
-          <div className={styles.summaryCardValue}>
+      <div className={styles['summaryGrid']}>
+        <div className={styles['summaryCard']}>
+          <span className={styles['summaryCardLabel']}>Theme</span>
+          <div className={styles['summaryCardValue']}>
             {theme && (
               <span
-                className={styles.themeColorDot}
+                className={styles['themeColorDot']}
                 style={{ background: theme.preview.accent }}
               />
             )}
             {theme?.label ?? selectedTheme}
           </div>
         </div>
-        <div className={styles.summaryCard}>
-          <span className={styles.summaryCardLabel}>Smart Views</span>
-          <div className={styles.summaryCardValue}>
+        <div className={styles['summaryCard']}>
+          <span className={styles['summaryCardLabel']}>Smart Views</span>
+          <div className={styles['summaryCardValue']}>
             {createdViews.length === 0 ? 'None created' : `${createdViews.length} created`}
           </div>
         </div>
-        <div className={styles.summaryCard}>
-          <span className={styles.summaryCardLabel}>Team Members</span>
-          <div className={styles.summaryCardValue}>
+        <div className={styles['summaryCard']}>
+          <span className={styles['summaryCardLabel']}>Team Members</span>
+          <div className={styles['summaryCardValue']}>
             {teamMembers.filter(member => member.name.trim()).length}
           </div>
         </div>
       </div>
 
       {theme && (
-        <div className={styles.themeNote}>
+        <div className={styles['themeNote']}>
           To apply the <strong>{theme.label}</strong> theme pass{' '}
-          <code className={styles.code}>theme="{selectedTheme}"</code> to your{' '}
-          <code className={styles.code}>WorksCalendar</code> component.
+          <code className={styles['code']}>theme="{selectedTheme}"</code> to your{' '}
+          <code className={styles['code']}>WorksCalendar</code> component.
         </div>
       )}
     </div>

@@ -94,13 +94,13 @@ export interface LocationData {
   /** Human-readable location string (e.g. "KPHX", "Depot 3", "In transit"). */
   text: string;
   /** Optional structured coordinates for hosts that want a map link. */
-  coords?: { lat: number; lon: number };
+  coords?: { lat: number; lon: number } | undefined;
   /** ISO timestamp — used to show staleness in the banner. */
   asOf: string;
   /** Provider-specific status flag. */
   status: 'live' | 'stale' | 'unknown' | 'error';
   /** Optional provider-specific metadata (speed, heading, battery, etc). */
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -136,19 +136,19 @@ export interface LocationProvider {
    * subscribe(resourceId, cb) instead of polling that resource. The
    * returned function must unsubscribe cleanly.
    */
-  subscribe?(
+  subscribe?: ((
     resourceId: string,
     onUpdate: (data: LocationData) => void,
-  ): () => void;
+  ) => () => void) | undefined;
 
   /**
    * Optional lifecycle hook called once per provider instance when the
    * Assets view mounts. Use for auth handshakes, socket connection, etc.
    */
-  init?(): Promise<void>;
+  init?: (() => Promise<void>) | undefined;
 
   /** Optional cleanup hook called on unmount or provider swap. */
-  dispose?(): void;
+  dispose?: (() => void) | undefined;
 }
 
 export interface ManualLocationProviderOptions {
@@ -286,12 +286,12 @@ export interface CategoriesConfig {
    * Fallback category applied when event.category is unset or unknown.
    * Defaults to the first enabled category.
    */
-  defaultCategoryId?: string;
+  defaultCategoryId?: string | undefined;
   /**
    * Pill render style: 'hue' (full fill), 'stripe' (left edge),
    * 'border' (thin border only). Default 'hue'.
    */
-  pillStyle?: 'hue' | 'stripe' | 'border';
+  pillStyle?: 'hue' | 'stripe' | 'border' | undefined;
 }
 
 /**

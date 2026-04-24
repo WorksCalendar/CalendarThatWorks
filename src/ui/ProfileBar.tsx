@@ -91,8 +91,8 @@ export default function ProfileBar({
   const nonEmpty = [...grouped.entries()].filter(([, list]) => list.length > 0);
 
   return (
-    <div className={styles.bar}>
-      <div className={styles.headerRow}>
+    <div className={styles['bar']}>
+      <div className={styles['headerRow']}>
         <ViewsDropdown
           views={views}
           activeId={activeId}
@@ -117,7 +117,7 @@ export default function ProfileBar({
 
         <button
           type="button"
-          className={styles.addChip}
+          className={styles['addChip']}
           onClick={() => setSaveOpen(v => !v)}
           title="Save current filters as a new saved view"
         >
@@ -127,7 +127,7 @@ export default function ProfileBar({
       </div>
 
       {nonEmpty.length > 0 && (
-        <div className={styles.strip}>
+        <div className={styles['strip']}>
           {nonEmpty.map(([key, list], idx) => {
             const meta = key === GLOBAL_GROUP_KEY
               ? { Icon: Bookmark, label: 'All views' }
@@ -136,10 +136,10 @@ export default function ProfileBar({
             const groupEnabled = key === GLOBAL_GROUP_KEY || isViewEnabled(key);
             const isCurrent = key === currentView;
             return (
-              <div key={key} className={styles.group} data-active={isCurrent ? 'true' : 'false'}>
-                {idx > 0 && <span className={styles.groupDivider} aria-hidden="true" />}
+              <div key={key} className={styles['group']} data-active={isCurrent ? 'true' : 'false'}>
+                {idx > 0 && <span className={styles['groupDivider']} aria-hidden="true" />}
                 <div
-                  className={styles.groupHeader}
+                  className={styles['groupHeader']}
                   title={groupEnabled ? undefined : `${headerLabel} is hidden in Setup`}
                 >
                   <meta.Icon size={11} aria-hidden="true" />
@@ -178,13 +178,13 @@ function ViewChip({ savedView, isActive, isDirty, isEnabled = true, onApply }: a
   const color = savedView.color ?? '#64748b';
   const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
 
-  const chipClass = [styles.chip, isDirty && styles.dirty, !isEnabled && styles.chipDimmed]
+  const chipClass = [styles['chip'], isDirty && styles['dirty'], !isEnabled && styles['chipDimmed']]
     .filter(Boolean).join(' ');
   const wrapClass = [
-    styles.chipWrap,
-    isActive && styles.chipWrapActive,
-    isDirty && styles.chipWrapDirty,
-    !isEnabled && styles.chipWrapDimmed,
+    styles['chipWrap'],
+    isActive && styles['chipWrapActive'],
+    isDirty && styles['chipWrapDirty'],
+    !isEnabled && styles['chipWrapDimmed'],
   ].filter(Boolean).join(' ');
 
   return (
@@ -202,20 +202,20 @@ function ViewChip({ savedView, isActive, isDirty, isEnabled = true, onApply }: a
           : `${savedView.name} — ${savedView.view ?? ''} tab is hidden in Setup`}
       >
         {isActive
-          ? <BookmarkCheck size={12} className={styles.chipIcon} />
-          : <Bookmark size={12} className={styles.chipIcon} />
+          ? <BookmarkCheck size={12} className={styles['chipIcon']} />
+          : <Bookmark size={12} className={styles['chipIcon']} />
         }
-        <span className={styles.chipName}>{savedView.name}</span>
+        <span className={styles['chipName']}>{savedView.name}</span>
         {isDirty && (
-          <span className={styles.dirtyTag} title="Filters changed since saved">
-            <span className={styles.dirtyDot} />
-            <span className={styles.dirtyText}>unsaved</span>
+          <span className={styles['dirtyTag']} title="Filters changed since saved">
+            <span className={styles['dirtyDot']} />
+            <span className={styles['dirtyText']}>unsaved</span>
           </span>
         )}
         {viewIcon && (
           <viewIcon.Icon
             size={11}
-            className={styles.viewIcon}
+            className={styles['viewIcon']}
             aria-hidden="true"
           />
         )}
@@ -239,22 +239,22 @@ function SaveForm({ onSave, onCancel }: any) {
   }
 
   return (
-    <div className={styles.saveForm}>
+    <div className={styles['saveForm']}>
       <input
         ref={inputRef}
-        className={styles.nameInput}
+        className={styles['nameInput']}
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onCancel(); }}
         placeholder="View name, e.g. Agusta Inspections…"
       />
 
-      <div className={styles.colorRow}>
+      <div className={styles['colorRow']}>
         {PROFILE_COLORS.map(c => (
           <button
             key={c}
             type="button"
-            className={[styles.colorDot, color === c && styles.colorDotActive].filter(Boolean).join(' ')}
+            className={[styles['colorDot'], color === c && styles['colorDotActive']].filter(Boolean).join(' ')}
             style={{ background: c }}
             onClick={() => setColor(c)}
             aria-label={`Choose color ${c}`}
@@ -262,11 +262,11 @@ function SaveForm({ onSave, onCancel }: any) {
         ))}
       </div>
 
-      <div className={styles.saveActions}>
-        <button type="button" className={styles.btnSave} onClick={handleSave} disabled={!name.trim()}>
+      <div className={styles['saveActions']}>
+        <button type="button" className={styles['btnSave']} onClick={handleSave} disabled={!name.trim()}>
           Save view
         </button>
-        <button type="button" className={styles.btnCancel} onClick={onCancel}>Cancel</button>
+        <button type="button" className={styles['btnCancel']} onClick={onCancel}>Cancel</button>
       </div>
     </div>
   );

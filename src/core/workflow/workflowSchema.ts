@@ -28,7 +28,7 @@ export interface WorkflowConditionNode {
   readonly type: 'condition'
   /** Expression evaluated against the action's variables. See `expression.ts`. */
   readonly expr: string
-  readonly label?: string
+  readonly label?: string | undefined
 }
 
 export type TimeoutBehavior = 'escalate' | 'auto-approve' | 'auto-deny'
@@ -38,18 +38,18 @@ export interface WorkflowApprovalNode {
   readonly type: 'approval'
   /** Routing hint — e.g. "role:director", "user:alice". Host interprets. */
   readonly assignTo: string
-  readonly label?: string
+  readonly label?: string | undefined
   /** Phase-3 fields; schema-only in Phase 1. */
-  readonly slaMinutes?: number
-  readonly onTimeout?: TimeoutBehavior
+  readonly slaMinutes?: number | undefined
+  readonly onTimeout?: TimeoutBehavior | undefined
 }
 
 export interface WorkflowNotifyNode {
   readonly id: string
   readonly type: 'notify'
   readonly channel: string
-  readonly template?: string
-  readonly label?: string
+  readonly template?: string | undefined
+  readonly label?: string | undefined
 }
 
 export type WorkflowOutcome = 'finalized' | 'denied' | 'cancelled'
@@ -58,7 +58,7 @@ export interface WorkflowTerminalNode {
   readonly id: string
   readonly type: 'terminal'
   readonly outcome: WorkflowOutcome
-  readonly label?: string
+  readonly label?: string | undefined
 }
 
 // ─── Parallel / join (Phase 4, issue #223) ────────────────────────────────
@@ -79,8 +79,8 @@ export interface WorkflowParallelNode {
   readonly branches: readonly string[]
   readonly mode: ParallelMode
   /** Required approvals when `mode === 'requireN'`. Must satisfy `1 ≤ n ≤ branches.length`. */
-  readonly n?: number
-  readonly label?: string
+  readonly n?: number | undefined
+  readonly label?: string | undefined
 }
 
 export interface WorkflowJoinNode {
@@ -88,7 +88,7 @@ export interface WorkflowJoinNode {
   readonly type: 'join'
   /** Id of the paired `parallel` node. Runtime enforces one-to-one pairing. */
   readonly pairedWith: string
-  readonly label?: string
+  readonly label?: string | undefined
 }
 
 export type WorkflowNode =
@@ -184,7 +184,7 @@ export interface WorkflowParallelFrame {
   readonly parallelId: string
   readonly joinId: string
   readonly mode: ParallelMode
-  readonly n?: number
+  readonly n?: number | undefined
   readonly branches: readonly ParallelBranchState[]
 }
 

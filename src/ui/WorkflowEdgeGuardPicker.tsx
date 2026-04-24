@@ -60,7 +60,7 @@ const GUARD_LABELS: Readonly<Record<EdgeGuard, string>> = {
  */
 export function guardsForSource(
   sourceType: WorkflowNode['type'],
-  options?: { readonly hasSla?: boolean },
+  options?: { readonly hasSla?: boolean | undefined },
 ): readonly EdgeGuard[] {
   switch (sourceType) {
     case 'condition': return ['true', 'false', 'default']
@@ -131,7 +131,7 @@ export function WorkflowEdgeGuardPicker(
       ref={ref}
       role="menu"
       aria-label="Pick edge guard"
-      className={styles.menu}
+      className={styles['menu']}
       data-testid="workflow-edge-guard-picker"
       style={style}
     >
@@ -140,7 +140,7 @@ export function WorkflowEdgeGuardPicker(
           key={g}
           type="button"
           role="menuitem"
-          className={styles.menuItem}
+          className={styles['menuItem']}
           data-guard={g}
           onClick={e => {
             e.stopPropagation()

@@ -70,36 +70,36 @@ export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose 
   return (
     <div
       ref={cardRef}
-      className={styles.card}
+      className={styles['card']}
       style={{ top: pos.top, left: pos.left, visibility: pos.visible ? 'visible' : 'hidden' }}
       role="menu"
       aria-label={`Actions for ${emp.name}`}
     >
-      <div className={styles.header}>
-        <span className={styles.empName}>{emp.name}</span>
-        {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+      <div className={styles['header']}>
+        <span className={styles['empName']}>{emp.name}</span>
+        {emp.role && <span className={styles['empRole']}>{emp.role}</span>}
       </div>
-      <div className={styles.actions}>
+      <div className={styles['actions']}>
         <button
-          className={styles.actionBtn}
+          className={styles['actionBtn']}
           onClick={() => handleAction('schedule')}
         >
           Create Schedule
         </button>
         <button
-          className={styles.actionBtn}
+          className={styles['actionBtn']}
           onClick={() => handleAction('pto')}
         >
           Request PTO
         </button>
         <button
-          className={styles.actionBtn}
+          className={styles['actionBtn']}
           onClick={() => handleAction('unavailable')}
         >
           Mark Unavailable
         </button>
         <button
-          className={styles.actionBtn}
+          className={styles['actionBtn']}
           onClick={() => handleAction('availability')}
         >
           Set Availability

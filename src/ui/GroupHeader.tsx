@@ -76,20 +76,20 @@ export default function GroupHeader({
       aria-label={ariaLabel}
       data-depth={depth}
       data-collapsed={collapsed || undefined}
-      className={[styles.header, className].filter(Boolean).join(' ')}
+      className={[styles['header'], className].filter(Boolean).join(' ')}
       style={{ paddingLeft }}
       onClick={onToggle}
       onKeyDown={handleKeyDown}
     >
       <span
-        className={styles.chevron}
+        className={styles['chevron']}
         data-collapsed={collapsed || undefined}
         aria-hidden="true"
       >
         <ChevronRight size={14} />
       </span>
-      <span className={styles.label}>{label}</span>
-      <span className={styles.count} aria-hidden="true">
+      <span className={styles['label']}>{label}</span>
+      <span className={styles['count']} aria-hidden="true">
         {count}
       </span>
     </div>

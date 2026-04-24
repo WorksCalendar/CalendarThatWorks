@@ -13,8 +13,8 @@ import { fetchAndParseICS } from '../core/icalParser';
 
 type ICalFeedInput = {
   url: string;
-  label?: string;
-  refreshInterval?: number;
+  label?: string | undefined;
+  refreshInterval?: number | undefined;
 };
 
 type FeedEvent = Record<string, any> & { _feedLabel: string };

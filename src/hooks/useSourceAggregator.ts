@@ -18,20 +18,20 @@
 import { useMemo } from 'react';
 import { useFeedEvents } from './useFeedEvents';
 
-type FeedLike = Record<string, any> & { url?: string; label?: string; refreshInterval?: number };
+type FeedLike = Record<string, any> & { url?: string | undefined; label?: string | undefined; refreshInterval?: number | undefined };
 type SourceEvent = Record<string, any>;
-type CsvSource = { id: string; label?: string; enabled?: boolean; events?: SourceEvent[] };
+type CsvSource = { id: string; label?: string | undefined; enabled?: boolean | undefined; events?: SourceEvent[] | undefined };
 type SourceStoreLike = {
   activeIcsSources: FeedLike[];
   activeCsvSources: CsvSource[];
 };
 
 export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
-  icalFeedsProp?: FeedLike[];
+  icalFeedsProp?: FeedLike[] | undefined;
   sourceStore: SourceStoreLike;
 }): {
   events: SourceEvent[];
-  feedErrors: Array<{ feed: { url: string; label?: string; refreshInterval?: number }; err: unknown }>;
+  feedErrors: Array<{ feed: { url: string; label?: string | undefined; refreshInterval?: number | undefined }; err: unknown }>;
 } {
   // Merge prop-level feeds + store-managed ICS feeds for the polling hook.
   // We use a stable JSON key so that referentially-new but semantically-identical

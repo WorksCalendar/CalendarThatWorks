@@ -89,7 +89,7 @@ const PRESETS: ViewPreset[] = [
 function levelsMatch(a: GroupLevel[], b: GroupLevel[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
-    if (a[i].field !== b[i].field) return false;
+    if (a[i]!.field !== b[i]!.field) return false;
   }
   return true;
 }
@@ -114,15 +114,15 @@ export default function ViewPanel(props: ViewPanelProps) {
   }, [levels]);
 
   return (
-    <div className={styles.root}>
-      <div className={styles.introRow}>
-        <span className={styles.introLabel}>Pick a perspective</span>
-        <span className={styles.introHint}>
+    <div className={styles['root']}>
+      <div className={styles['introRow']}>
+        <span className={styles['introLabel']}>Pick a perspective</span>
+        <span className={styles['introHint']}>
           One click sets the grouping. Fine-tune in Advanced.
         </span>
       </div>
 
-      <div className={styles.grid}>
+      <div className={styles['grid']}>
         {PRESETS.map(preset => {
           const Icon = preset.icon;
           const selected = activePresetId === preset.id;
@@ -130,15 +130,15 @@ export default function ViewPanel(props: ViewPanelProps) {
             <button
               key={preset.id}
               type="button"
-              className={[styles.card, selected && styles.cardSelected].filter(Boolean).join(' ')}
+              className={[styles['card'], selected && styles['cardSelected']].filter(Boolean).join(' ')}
               onClick={() => onLevelsChange(preset.levels)}
               aria-pressed={selected}
               title={preset.description}
             >
-              <span className={styles.cardIcon}><Icon size={14} aria-hidden="true" /></span>
-              <span className={styles.cardLabel}>{preset.label}</span>
-              {selected && <span className={styles.cardCheck}><Check size={12} aria-hidden="true" /></span>}
-              <span className={styles.cardDesc}>{preset.description}</span>
+              <span className={styles['cardIcon']}><Icon size={14} aria-hidden="true" /></span>
+              <span className={styles['cardLabel']}>{preset.label}</span>
+              {selected && <span className={styles['cardCheck']}><Check size={12} aria-hidden="true" /></span>}
+              <span className={styles['cardDesc']}>{preset.description}</span>
             </button>
           );
         })}
@@ -146,7 +146,7 @@ export default function ViewPanel(props: ViewPanelProps) {
 
       <button
         type="button"
-        className={styles.advancedToggle}
+        className={styles['advancedToggle']}
         onClick={() => setAdvancedOpen(v => !v)}
         aria-expanded={advancedOpen}
       >
@@ -155,7 +155,7 @@ export default function ViewPanel(props: ViewPanelProps) {
       </button>
 
       {advancedOpen && (
-        <div className={styles.advancedBody}>
+        <div className={styles['advancedBody']}>
           <GroupsPanel {...props} />
         </div>
       )}
