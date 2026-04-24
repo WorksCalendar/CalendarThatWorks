@@ -26,7 +26,7 @@ export interface EdgePath {
   readonly to: string
   readonly d: string
   readonly midpoint: NodePosition
-  readonly guard?: string
+  readonly guard?: string | undefined
 }
 
 export interface LayoutResult {

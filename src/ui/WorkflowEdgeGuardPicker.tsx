@@ -60,7 +60,7 @@ const GUARD_LABELS: Readonly<Record<EdgeGuard, string>> = {
  */
 export function guardsForSource(
   sourceType: WorkflowNode['type'],
-  options?: { readonly hasSla?: boolean },
+  options?: { readonly hasSla?: boolean | undefined },
 ): readonly EdgeGuard[] {
   switch (sourceType) {
     case 'condition': return ['true', 'false', 'default']

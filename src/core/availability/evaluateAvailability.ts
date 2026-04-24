@@ -49,8 +49,8 @@ export interface EvaluateAvailabilityInput {
   readonly window: AvailabilityWindow
   readonly rules: readonly AvailabilityRule[]
   /** Resource's IANA timezone. Defaults to UTC. */
-  readonly timezone?: string
-  readonly resourceName?: string
+  readonly timezone?: string | undefined
+  readonly resourceName?: string | undefined
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

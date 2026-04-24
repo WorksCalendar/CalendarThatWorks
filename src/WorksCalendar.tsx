@@ -126,32 +126,32 @@ type AvailabilitySavePayload = {
   [key: string]: unknown;
 };
 type ScheduleDialogRequest = {
-  templateId?: string;
+  templateId?: string | undefined;
   anchor: Date;
-  resource?: string;
-  category?: string;
+  resource?: string | undefined;
+  category?: string | undefined;
 };
 type SchedulePreviewConflict = {
   index: number;
   title: string;
   severity: string;
-  violations: Array<{ rule?: string; message?: string }>;
+  violations: Array<{ rule?: string | undefined; message?: string | undefined }>;
 };
 type SchedulePreviewResult = {
   generated: Array<{
-    id?: string;
-    title?: string;
-    start?: string | number | Date;
-    end?: string | Date;
-    startOffsetMinutes?: number;
-    durationMinutes?: number;
-    category?: string | null;
-    resource?: string | null;
-    status?: EventStatus;
-    color?: string | null;
-    rrule?: string;
-    exdates?: Array<string | Date>;
-    meta?: Record<string, unknown>;
+    id?: string | undefined;
+    title?: string | undefined;
+    start?: string | number | Date | undefined;
+    end?: string | Date | undefined;
+    startOffsetMinutes?: number | undefined;
+    durationMinutes?: number | undefined;
+    category?: string | null | undefined;
+    resource?: string | null | undefined;
+    status?: EventStatus | undefined;
+    color?: string | null | undefined;
+    rrule?: string | undefined;
+    exdates?: Array<string | Date> | undefined;
+    meta?: Record<string, unknown> | undefined;
   }>;
   conflicts: SchedulePreviewConflict[];
   error: string;

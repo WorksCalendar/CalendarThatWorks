@@ -13,9 +13,9 @@ async function sha256(text: string): Promise<string> {
 
 export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode = false }: {
   calendarId: string;
-  ownerPassword?: string;
-  onConfigSave?: (config: OwnerConfig) => void;
-  devMode?: boolean;
+  ownerPassword?: string | undefined;
+  onConfigSave?: ((config: OwnerConfig) => void) | undefined;
+  devMode?: boolean | undefined;
 }): {
   config: OwnerConfig;
   isOwner: boolean;

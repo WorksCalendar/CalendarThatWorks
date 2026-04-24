@@ -17,6 +17,7 @@
     "strictNullChecks": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "isolatedModules": true,
     "esModuleInterop": true,

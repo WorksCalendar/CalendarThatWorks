@@ -36,7 +36,7 @@ export interface ScopeResolutionResult {
  *   - series-wide operations (caller applies patch directly to master)
  */
 export function resolveOperationScope(
-  op: Extract<EngineOperation, { scope?: RecurringEditScope; occurrenceDate?: Date }>,
+  op: Extract<EngineOperation, { scope?: RecurringEditScope | undefined; occurrenceDate?: Date | undefined }>,
   master: EngineEvent,
   allEvents: readonly EngineEvent[],
 ): ScopeResolutionResult {
@@ -69,7 +69,7 @@ export function resolveOperationScope(
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function buildPatchFromOp(
-  op: Extract<EngineOperation, { scope?: RecurringEditScope }>,
+  op: Extract<EngineOperation, { scope?: RecurringEditScope | undefined }>,
 ): RecurringEditPatch {
   if (op.type === 'move' || op.type === 'resize') {
     return { newStart: op.newStart, newEnd: op.newEnd };

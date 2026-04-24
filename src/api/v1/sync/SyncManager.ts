@@ -50,7 +50,7 @@ export interface SyncManagerOptions {
    * Pass a named strategy string or a custom ConflictResolver function.
    * Default: 'server-wins'.
    */
-  conflictResolution?: ConflictStrategy | ConflictResolver;
+  conflictResolution?: ConflictStrategy | ConflictResolver | undefined;
 
   /**
    * Called when a conflict is detected.  Required when `conflictResolution`
@@ -59,26 +59,26 @@ export interface SyncManagerOptions {
    * Receives the local (optimistic) and server events; returns the resolved
    * event.  May be async (e.g. show a UI modal).
    */
-  onConflict?: ConflictResolver;
+  onConflict?: ConflictResolver | undefined;
 
   /**
    * Called after each failed adapter call.
    * @param opId   The operation id from SyncQueue.
    * @param err    The error thrown by the adapter.
    */
-  onError?: (opId: string, err: Error) => void;
+  onError?: ((opId: string, err: Error) => void) | undefined;
 
   /**
    * Maximum number of automatic retry attempts per operation before giving up.
    * Default: 3.  Set to 0 to disable automatic retries.
    */
-  maxRetries?: number;
+  maxRetries?: number | undefined;
 
   /**
    * Delay in ms before each retry attempt, doubling after each failure
    * (exponential backoff).  Default: 1000 ms.
    */
-  retryBaseDelay?: number;
+  retryBaseDelay?: number | undefined;
 }
 
 /** Snapshot of sync state emitted to subscribers on every change. */
@@ -106,8 +106,8 @@ export type SyncUnsubscribe = () => void;
 export class SyncManager {
   private readonly _adapter:       CalendarAdapter;
   private readonly _resolver:      ConflictResolver;
-  private readonly _onConflict?:   ConflictResolver;
-  private readonly _onError?:      (opId: string, err: Error) => void;
+  private readonly _onConflict?:   ConflictResolver | undefined;
+  private readonly _onError?:      ((opId: string, err: Error) => void) | undefined;
   private readonly _maxRetries:    number;
   private readonly _retryBaseDelay: number;
 

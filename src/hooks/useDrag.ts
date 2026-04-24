@@ -33,11 +33,11 @@ const SNAP_MIN    = 15;
 const MIN_DRAG_PX = 4;
 
 type DragEventBase = {
-  id?: string | number;
+  id?: string | number | undefined;
   start: Date;
   end: Date;
-  _numCols?: number;
-  _col?: number;
+  _numCols?: number | undefined;
+  _col?: number | undefined;
 };
 type DragGhost<TEvent extends DragEventBase> = { ev: TEvent | null; start: Date; end: Date } | null;
 type DragMode = 'move' | 'resize' | 'resize-top' | 'create';

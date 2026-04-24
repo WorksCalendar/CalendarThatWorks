@@ -89,13 +89,13 @@ type ConfigPanelSectionProps = {
 type SmartViewsTabProps = {
   categories: string[];
   resources: string[];
-  schema?: AnyRecord[] | AnyRecord;
-  items?: AnyRecord[];
+  schema?: AnyRecord[] | AnyRecord | undefined;
+  items?: AnyRecord[] | undefined;
   onSaveView?: ConfigPanelProps['onSaveView'];
-  savedViews?: SavedViewDraft[];
+  savedViews?: SavedViewDraft[] | undefined;
   onUpdateView?: ConfigPanelProps['onUpdateView'];
   onDeleteView?: ConfigPanelProps['onDeleteView'];
-  initialEditingId?: string | null;
+  initialEditingId?: string | null | undefined;
 };
 
 type TeamTabProps = ConfigPanelSectionProps & {
@@ -107,7 +107,7 @@ type TemplateTabProps = {
   templates: NonNullable<ConfigPanelProps['scheduleTemplates']>;
   onCreate?: ConfigPanelProps['onCreateScheduleTemplate'];
   onDelete?: ConfigPanelProps['onDeleteScheduleTemplate'];
-  error?: string | null;
+  error?: string | null | undefined;
 };
 
 type AssetsTabProps = ConfigPanelSectionProps & {
@@ -143,17 +143,17 @@ type AssetDraft = {
 type AssetPatch = Partial<Omit<AssetDraft, 'meta'>>;
 type AssetMetaPatch = Partial<AssetMeta>;
 type SmartViewFilters = Record<string, unknown>;
-type ManagerAssignment = { title?: string; phone?: string };
+type ManagerAssignment = { title?: string | undefined; phone?: string | undefined };
 type TeamBaseDraft = { id: string; name: string };
 type TeamMemberDraft = {
   id: number;
-  name?: string;
-  color?: string;
-  avatar?: string | null;
-  role?: string;
-  base?: string;
-  phone?: string;
-  accountableManagers?: ManagerAssignment[];
+  name?: string | undefined;
+  color?: string | undefined;
+  avatar?: string | null | undefined;
+  role?: string | undefined;
+  base?: string | undefined;
+  phone?: string | undefined;
+  accountableManagers?: ManagerAssignment[] | undefined;
 };
 type TeamConfigPatch = {
   members?: TeamMemberDraft[];
@@ -191,10 +191,10 @@ type ConflictRuleType = (typeof CONFLICT_RULE_TYPES)[number];
 type ConflictRuleDraft = {
   id: string;
   type: ConflictRuleType;
-  severity?: 'hard' | 'soft';
-  categories?: string[];
-  minutes?: number;
-  ignoreCategories?: string[];
+  severity?: 'hard' | 'soft' | undefined;
+  categories?: string[] | undefined;
+  minutes?: number | undefined;
+  ignoreCategories?: string[] | undefined;
 };
 type ConflictsPatch = {
   enabled?: boolean;
@@ -769,7 +769,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
         view header so every point-of-contact for a base is one tap away.
       </p>
       {teamMembers.map((member) => {
-        const managers: Array<{ title?: string; phone?: string }> =
+        const managers: Array<{ title?: string | undefined; phone?: string | undefined }> =
           Array.isArray(member.accountableManagers) ? member.accountableManagers : [];
 
         const setManagers = (next: ManagerAssignment[]) => updateMember(member.id, { accountableManagers: next });

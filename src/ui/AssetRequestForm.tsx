@@ -16,8 +16,8 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 import { toDatetimeLocal, fromDatetimeLocal } from '../hooks/useEventDraftState';
 import styles from './EventForm.module.css';
 
-type AssetEntry = { id: string; label: string; group?: string; meta?: Record<string, unknown> };
-type CategoryEntry = { id: string; label?: string; color?: string };
+type AssetEntry = { id: string; label: string; group?: string | undefined; meta?: Record<string, unknown> | undefined };
+type CategoryEntry = { id: string; label?: string | undefined; color?: string | undefined };
 
 type AssetRequestPayload = {
   title: string;
@@ -32,8 +32,8 @@ type AssetRequestPayload = {
 type AssetRequestFormProps = {
   assets: AssetEntry[];
   categories: CategoryEntry[];
-  initialStart?: Date;
-  initialAssetId?: string;
+  initialStart?: Date | undefined;
+  initialAssetId?: string | undefined;
   onSubmit: (payload: AssetRequestPayload) => void;
   onClose: () => void;
 };

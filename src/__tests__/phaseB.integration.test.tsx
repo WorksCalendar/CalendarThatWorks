@@ -41,14 +41,14 @@ type EventLike = {
   start: Date;
   end: Date;
   resource: string;
-  category?: string;
+  category?: string | undefined;
   meta?: {
     approvalStage?: {
       stage: string;
       updatedAt: string;
       history: unknown[];
-    };
-  };
+    } | undefined;
+  } | undefined;
 };
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────

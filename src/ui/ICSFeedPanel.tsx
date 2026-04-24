@@ -42,16 +42,16 @@ type FeedValidationState = {
 
 type StoredFeed = {
   id: string;
-  label?: string;
-  url?: string;
-  color?: string;
-  enabled?: boolean;
-  refreshInterval?: number | null;
+  label?: string | undefined;
+  url?: string | undefined;
+  color?: string | undefined;
+  enabled?: boolean | undefined;
+  refreshInterval?: number | null | undefined;
 };
 
 type FeedRowProps = {
   feed: StoredFeed;
-  error?: Error;
+  error?: Error | undefined;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, patch: Partial<StoredFeed>) => void;

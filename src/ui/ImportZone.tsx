@@ -13,20 +13,20 @@ import CSVImportDialog from './CSVImportDialog';
 import styles from './ImportZone.module.css';
 
 type ImportedEvent = {
-  id?: string;
+  id?: string | undefined;
   title: string;
   start: Date | string;
-  end?: Date | string;
-  category?: string;
-  resource?: string;
-  status?: string;
-  color?: string;
-  allDay?: boolean;
-  meta?: Record<string, unknown>;
+  end?: Date | string | undefined;
+  category?: string | undefined;
+  resource?: string | undefined;
+  status?: string | undefined;
+  color?: string | undefined;
+  allDay?: boolean | undefined;
+  meta?: Record<string, unknown> | undefined;
 };
 
 type ImportZoneProps = {
-  onImport: (events: ImportedEvent[], metadata?: { label?: string }) => void;
+  onImport: (events: ImportedEvent[], metadata?: { label?: string | undefined }) => void;
   onClose: () => void;
 };
 

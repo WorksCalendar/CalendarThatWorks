@@ -45,13 +45,13 @@ const REFRESH_OPTIONS = [
 type CalendarSource = {
   id: string;
   type: string;
-  label?: string;
-  color?: string;
-  enabled?: boolean;
-  url?: string;
-  refreshInterval?: number | null;
-  events?: WorksCalendarEvent[];
-  importedAt?: string;
+  label?: string | undefined;
+  color?: string | undefined;
+  enabled?: boolean | undefined;
+  url?: string | undefined;
+  refreshInterval?: number | null | undefined;
+  events?: WorksCalendarEvent[] | undefined;
+  importedAt?: string | undefined;
 };
 
 type FeedErrorEntry = {
@@ -509,8 +509,8 @@ function SectionHeading({
 }: {
   icon: typeof Link;
   label: string;
-  count?: number;
-  errors?: number;
+  count?: number | undefined;
+  errors?: number | undefined;
 }) {
   return (
     <div style={{
@@ -538,8 +538,8 @@ function SectionHeading({
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 type SourcePanelProps = {
-  sources?: Array<Partial<CalendarSource>>;
-  feedErrors?: unknown[];
+  sources?: Array<Record<string, any>> | undefined;
+  feedErrors?: unknown[] | undefined;
   onAdd: (source: Partial<CalendarSource>) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string) => void;

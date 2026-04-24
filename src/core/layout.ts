@@ -9,7 +9,7 @@ import { startOfDay, differenceInCalendarDays, addDays, isSameDay } from 'date-f
 type LayoutEvent = {
   start: Date;
   end: Date;
-  allDay?: boolean;
+  allDay?: boolean | undefined;
   [k: string]: any;
 };
 

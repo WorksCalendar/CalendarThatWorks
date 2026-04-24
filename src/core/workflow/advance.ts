@@ -110,7 +110,7 @@ interface RunState {
   emit: WorkflowEmitEvent[]
   currentNodeId: string | null
   status: WorkflowInstance['status']
-  outcome?: WorkflowOutcome
+  outcome?: WorkflowOutcome | undefined
   parallelFrames: MutableParallelFrame[]
 }
 
@@ -275,7 +275,7 @@ function closeHistoryFor(
   nodeId: string,
   signal: EdgeGuard,
   at: string,
-  meta?: { actor?: string; reason?: string },
+  meta?: { actor?: string | undefined; reason?: string | undefined },
 ): void {
   for (let i = state.history.length - 1; i >= 0; i--) {
     const entry = state.history[i]
@@ -297,7 +297,7 @@ function exitCurrent(
   state: RunState,
   signal: EdgeGuard,
   at: string,
-  meta?: { actor?: string; reason?: string },
+  meta?: { actor?: string | undefined; reason?: string | undefined },
 ): void {
   const idx = findLastUnclosedHistoryIndex(state.history)
   if (idx < 0) return
@@ -430,7 +430,7 @@ function autoAdvance(
 
 function emitNotify(
   state: RunState,
-  node: { id: string; channel: string; template?: string },
+  node: { id: string; channel: string; template?: string | undefined },
   vars: Readonly<Record<string, unknown>>,
   at: string,
 ): void {
@@ -707,7 +707,7 @@ function applyBranchAction(
   vars: Readonly<Record<string, unknown>>,
   signal: EdgeGuard,
   at: string,
-  meta: { actor?: string; reason?: string; targetNodeId?: string },
+  meta: { actor?: string | undefined; reason?: string | undefined; targetNodeId?: string | undefined },
 ): string | null {
   const located = locateBranch(state, meta.targetNodeId)
   if ('error' in located) return located.error

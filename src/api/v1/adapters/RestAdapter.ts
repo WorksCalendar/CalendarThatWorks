@@ -116,7 +116,7 @@ export class RestAdapter implements CalendarAdapter {
     url.searchParams.set(this._startParam, start.toISOString());
     url.searchParams.set(this._endParam,   end.toISOString());
 
-    const res = await fetch(url.toString(), { headers: this._headers, signal });
+    const res = await fetch(url.toString(), signal ? { headers: this._headers, signal } : { headers: this._headers });
     if (!res.ok) throw new Error(`RestAdapter.loadRange: ${res.status} ${res.statusText}`);
 
     const json = await res.json() as unknown[];

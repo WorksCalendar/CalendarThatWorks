@@ -16,24 +16,24 @@ type ScheduleTemplate = {
 };
 
 type GeneratedEvent = {
-  id?: string;
-  title?: string;
-  start?: string | number | Date;
-  end?: string | Date;
-  startOffsetMinutes?: number;
-  durationMinutes?: number;
-  category?: string | null;
-  resource?: string | null;
-  status?: EventStatus;
-  color?: string | null;
-  rrule?: string;
-  exdates?: Array<string | Date>;
-  meta?: Record<string, unknown>;
+  id?: string | undefined;
+  title?: string | undefined;
+  start?: string | number | Date | undefined;
+  end?: string | Date | undefined;
+  startOffsetMinutes?: number | undefined;
+  durationMinutes?: number | undefined;
+  category?: string | null | undefined;
+  resource?: string | null | undefined;
+  status?: EventStatus | undefined;
+  color?: string | null | undefined;
+  rrule?: string | undefined;
+  exdates?: Array<string | Date> | undefined;
+  meta?: Record<string, unknown> | undefined;
 };
 
 type PreviewConflict = {
-  index?: number;
-  violations?: Array<{ rule?: string; message?: string }>;
+  index?: number | undefined;
+  violations?: Array<{ rule?: string | undefined; message?: string | undefined }> | undefined;
 };
 
 type PreviewResult = {
@@ -43,17 +43,17 @@ type PreviewResult = {
 };
 
 type InstantiateRequest = {
-  templateId?: string;
+  templateId?: string | undefined;
   anchor: Date;
-  resource?: string;
-  category?: string;
+  resource?: string | undefined;
+  category?: string | undefined;
 };
 
 type ScheduleTemplateDialogProps = {
-  templates?: ScheduleTemplate[];
-  onInstantiate?: (request: InstantiateRequest) => void;
-  onPreview?: (request: InstantiateRequest) => { generated?: GeneratedEvent[]; conflicts?: PreviewConflict[]; error?: string };
-  onClose?: () => void;
+  templates?: ScheduleTemplate[] | undefined;
+  onInstantiate?: ((request: InstantiateRequest) => void) | undefined;
+  onPreview?: ((request: InstantiateRequest) => { generated?: GeneratedEvent[] | undefined; conflicts?: PreviewConflict[] | undefined; error?: string | undefined }) | undefined;
+  onClose?: (() => void) | undefined;
 };
 
 function toDatetimeLocal(date: string | number | Date): string {

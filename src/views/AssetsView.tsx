@@ -84,26 +84,26 @@ type AssetsViewEvent = CalendarViewEvent & {
 interface AssetsViewProps {
   currentDate: Date;
   events: AssetsViewEvent[];
-  onEventClick?: (event: AssetsViewEvent) => void;
-  onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
-  groupBy?: GroupByInput;
-  onGroupByChange?: (value: GroupByInput) => void;
-  categoriesConfig?: { categories?: Array<{ id?: string; color?: string }>; pillStyle?: string };
-  locationProvider?: LocationProvider | null;
-  renderAssetLocation?: (locationData: LocationData | null, asset: { id: string }) => ReactNode;
-  collapsedGroups?: Set<string> | string[];
-  onCollapsedGroupsChange?: (next: Set<string>) => void;
-  assets?: AssetRowDef[];
-  onEditAssets?: () => void;
-  onRequestAsset?: () => void;
+  onEventClick?: ((event: AssetsViewEvent) => void) | undefined;
+  onDateSelect?: ((start: Date, end: Date, resourceId?: string) => void) | undefined;
+  groupBy?: GroupByInput | undefined;
+  onGroupByChange?: ((value: GroupByInput) => void) | undefined;
+  categoriesConfig?: { categories?: Array<{ id?: string; color?: string }>; pillStyle?: string } | undefined;
+  locationProvider?: LocationProvider | null | undefined;
+  renderAssetLocation?: ((locationData: LocationData | null, asset: { id: string }) => ReactNode) | undefined;
+  collapsedGroups?: Set<string> | string[] | undefined;
+  onCollapsedGroupsChange?: ((next: Set<string>) => void) | undefined;
+  assets?: AssetRowDef[] | undefined;
+  onEditAssets?: (() => void) | undefined;
+  onRequestAsset?: (() => void) | undefined;
   approvalsConfig?: unknown;
-  onApprovalAction?: (event: AssetsViewEvent, action: string) => void | Promise<void>;
-  resolveResourceLabel?: (resourceId: string) => string;
-  strictAssetFiltering?: boolean;
-  zoomLevel?: string;
-  onZoomChange?: (zoom: AssetsZoomLevel) => void;
-  pools?: readonly ResourcePool[];
-  onPoolDateSelect?: (start: Date, end: Date, poolId: string) => void;
+  onApprovalAction?: ((event: AssetsViewEvent, action: string) => void | Promise<void>) | undefined;
+  resolveResourceLabel?: ((resourceId: string) => string) | undefined;
+  strictAssetFiltering?: boolean | undefined;
+  zoomLevel?: string | undefined;
+  onZoomChange?: ((zoom: AssetsZoomLevel) => void) | undefined;
+  pools?: readonly ResourcePool[] | undefined;
+  onPoolDateSelect?: ((start: Date, end: Date, poolId: string) => void) | undefined;
 }
 
 type AssetRow = {

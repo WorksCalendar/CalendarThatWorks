@@ -39,7 +39,7 @@ export type ExpressionErrorKind =
 
 export class ExpressionError extends Error {
   readonly kind: ExpressionErrorKind
-  readonly position?: number
+  readonly position?: number | undefined
   constructor(
     message: string,
     kindOrPosition?: ExpressionErrorKind | number,

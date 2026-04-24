@@ -57,44 +57,44 @@ import type { EventStatus } from '../../core/engine/schema/eventSchema';
  * that pass plain WorksCalendarEvent objects continue to work unchanged.
  */
 export interface CalendarEventV1 {
-  id?: string;
+  id?: string | undefined;
   title: string;
   start: Date | string | number;
-  end?: Date | string | number;
-  allDay?: boolean;
-  category?: string;
+  end?: Date | string | number | undefined;
+  allDay?: boolean | undefined;
+  category?: string | undefined;
   /** Hex color override.  If omitted, derived from category. */
-  color?: string;
+  color?: string | undefined;
   /** Tail number, person, room, etc. (legacy single-resource display field). */
-  resource?: string;
+  resource?: string | undefined;
   /**
    * IANA timezone for this event, e.g. "America/Denver".
    * Overrides the calendar's display timezone for this event's wall-clock time.
    */
-  timezone?: string;
+  timezone?: string | undefined;
   /**
    * Primary resource ID (links to a Resource record).
    * Prefer explicit Assignment records for multi-resource events.
    */
-  resourceId?: string;
+  resourceId?: string | undefined;
   /**
    * Virtual `ResourcePool` id (issue #212). Mutually exclusive with
    * `resourceId` at submit time — the engine resolves the pool to a
    * concrete member and fills in `resourceId` on the stored event.
    */
-  resourcePoolId?: string;
+  resourcePoolId?: string | undefined;
   /** 'confirmed' (default) | 'tentative' (striped) | 'cancelled' (strikethrough) */
-  status?: EventStatus;
+  status?: EventStatus | undefined;
   /** iCal RRULE string, e.g. "FREQ=MONTHLY;INTERVAL=3;COUNT=8" */
-  rrule?: string;
+  rrule?: string | undefined;
   /** Dates excluded from the recurrence rule (ISO strings or Date objects). */
-  exdates?: Array<Date | string>;
+  exdates?: Array<Date | string> | undefined;
   /** Scheduling constraints (pin start/end to a date, ASAP/ALAP, etc.). */
-  constraints?: EventConstraint[];
+  constraints?: EventConstraint[] | undefined;
   /** Sync metadata for external calendar integrations. */
-  sync?: SyncMetadata;
+  sync?: SyncMetadata | undefined;
   /** Any extra fields — shown in hover card and available to renderEvent. */
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown> | undefined;
 }
 
 /**

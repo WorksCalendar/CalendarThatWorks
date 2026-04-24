@@ -33,9 +33,9 @@ type SavedView = {
   filters: Record<string, unknown>;
 };
 type SaveViewOptions = {
-  color?: string | null;
-  view?: string | null;
-  conditions?: unknown[] | null;
+  color?: string | null | undefined;
+  view?: string | null | undefined;
+  conditions?: unknown[] | null | undefined;
   groupBy?: unknown;
   sort?: unknown;
   sortBy?: unknown;

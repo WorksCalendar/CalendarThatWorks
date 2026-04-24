@@ -66,20 +66,20 @@ type TimelineBase = { id: string; name: string };
 interface TimelineViewProps {
   currentDate: Date;
   events: LooseEvent[];
-  onEventClick?: (event: LooseEvent) => void;
-  onEventGroupChange?: (event: LooseEvent, patch: { resource: string | null }) => void;
-  onDateSelect?: (start: Date, end: Date, resourceId?: string | null) => void;
-  employees?: TimelineEmployee[];
-  onCallCategory?: string;
-  onEmployeeAdd?: (employee: { id: string; name: string; role?: string; base?: string }) => void;
-  onEmployeeDelete?: (employeeId: string) => void;
-  onShiftStatusChange?: (event: LooseEvent, status: 'pto' | 'unavailable' | null) => void;
-  onCoverageAssign?: (event: LooseEvent, employeeId: string | null) => void;
-  onEmployeeAction?: (employeeId: string, action: Record<string, unknown>) => void;
+  onEventClick?: ((event: LooseEvent) => void) | undefined;
+  onEventGroupChange?: ((event: LooseEvent, patch: { resource: string | null }) => void) | undefined;
+  onDateSelect?: ((start: Date, end: Date, resourceId?: string | null) => void) | undefined;
+  employees?: TimelineEmployee[] | undefined;
+  onCallCategory?: string | undefined;
+  onEmployeeAdd?: ((employee: { id: string; name: string; role?: string | undefined; base?: string | undefined }) => void) | undefined;
+  onEmployeeDelete?: ((employeeId: string) => void) | undefined;
+  onShiftStatusChange?: ((event: LooseEvent, status: 'pto' | 'unavailable' | null) => void) | undefined;
+  onCoverageAssign?: ((event: LooseEvent, employeeId: string | null) => void) | undefined;
+  onEmployeeAction?: ((employeeId: string, action: Record<string, unknown>) => void) | undefined;
   groupBy?: any;
   sort?: unknown;
-  roles?: string[];
-  bases?: TimelineBase[];
+  roles?: string[] | undefined;
+  bases?: TimelineBase[] | undefined;
 }
 
 type TimelineContextValue = {

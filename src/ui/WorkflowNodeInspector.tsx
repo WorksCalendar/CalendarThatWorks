@@ -398,7 +398,7 @@ function JoinFields({
 }: {
   node: WorkflowJoinNode
   onChange: (patch: Partial<WorkflowJoinNode>) => void
-  parallelNodeIds?: readonly string[]
+  parallelNodeIds?: readonly string[] | undefined
 }): JSX.Element {
   const useDropdown = parallelNodeIds !== undefined
   return (

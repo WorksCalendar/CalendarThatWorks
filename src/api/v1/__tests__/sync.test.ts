@@ -298,7 +298,8 @@ describe('SyncManager', () => {
   });
 
   it('createEvent with no adapter.createEvent marks synced immediately', async () => {
-    const readOnlyAdapter = makeAdapter({ createEvent: undefined });
+    const readOnlyAdapter = makeAdapter({});
+    (readOnlyAdapter as unknown as { createEvent?: unknown }).createEvent = undefined;
     const m = new SyncManager({ adapter: readOnlyAdapter });
     await m.createEvent(ev());
     expect(m.queue.pendingCount).toBe(0);

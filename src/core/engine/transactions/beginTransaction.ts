@@ -44,7 +44,7 @@ export interface TransactionHandle {
  */
 export function beginTransaction(
   events: ReadonlyMap<string, EngineEvent>,
-  labelOrPools?: string | { pools?: ReadonlyMap<string, ResourcePool>; label?: string },
+  labelOrPools?: string | { pools?: ReadonlyMap<string, ResourcePool> | undefined; label?: string | undefined },
 ): TransactionHandle {
   const opts = typeof labelOrPools === 'string'
     ? { label: labelOrPools }

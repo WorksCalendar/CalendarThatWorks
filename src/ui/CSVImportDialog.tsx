@@ -64,7 +64,7 @@ type PreviewStepProps = {
 };
 
 type CSVImportDialogProps = {
-  onImport: (events: CsvEvent[], metadata?: { label?: string }) => void;
+  onImport: (events: CsvEvent[], metadata?: { label?: string | undefined }) => void;
   onClose: () => void;
 };
 
