@@ -116,9 +116,24 @@ engine advances the cursor atomically with the booking commit and
 includes the updated pool in the next `onPoolsChange`.
 
 If every member is in hard conflict, the submit is rejected with a
-`POOL_EXHAUSTED` violation — nothing is written and no member rotates.
-An unknown pool id rejects with `POOL_UNKNOWN`; a disabled pool rejects
-with `POOL_DISABLED`.
+`NO_AVAILABLE_MEMBER` violation — nothing is written and no member
+rotates. An unknown pool id rejects with `POOL_UNKNOWN`; a disabled
+pool rejects with `POOL_DISABLED`; a pool with zero members rejects
+with `POOL_EMPTY`. Every rejection carries `details.evaluated`, the
+ordered list of members the resolver actually attempted (empty for
+`POOL_DISABLED` / `POOL_EMPTY`, populated for `NO_AVAILABLE_MEMBER`).
+
+## Sharing members across pools
+
+Two pools may list the same member id. Pools are independent: the
+resolver for pool A does not know or care that member `M` also belongs
+to pool B. If your host submits two pool-backed bookings in parallel
+against overlapping time windows and both happen to resolve to `M`,
+the normal `resource-overlap` rule will reject the second submit —
+but only when the second submit actually runs. There is **no
+cross-pool mutual exclusion or holding phase**; if you need one, do
+it at your host layer (queue submits, or wrap them in an optimistic
+transaction).
 
 ## Disabled pools
 

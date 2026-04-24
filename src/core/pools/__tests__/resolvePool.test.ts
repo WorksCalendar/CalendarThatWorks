@@ -197,4 +197,62 @@ describe('resolvePool — evaluated trail', () => {
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.evaluated).toEqual(['a', 'b', 'c'])
   })
+
+  it('returns an empty evaluated trail on POOL_DISABLED (no member attempted)', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'Off', memberIds: ['a', 'b'], strategy: 'first-available', disabled: true,
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [] })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('POOL_DISABLED')
+      expect(result.error.evaluated).toEqual([])
+    }
+  })
+
+  it('returns an empty evaluated trail on POOL_EMPTY (no member to attempt)', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'Empty', memberIds: [], strategy: 'first-available',
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [] })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('POOL_EMPTY')
+      expect(result.error.evaluated).toEqual([])
+    }
+  })
+
+  it('returns the full attempt list on NO_AVAILABLE_MEMBER', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'Slammed', memberIds: ['a', 'b', 'c'], strategy: 'first-available',
+    }
+    const events: ConflictEvent[] = [
+      { id: 'e1', start: winStart, end: winEnd, resource: 'a' },
+      { id: 'e2', start: winStart, end: winEnd, resource: 'b' },
+      { id: 'e3', start: winStart, end: winEnd, resource: 'c' },
+    ]
+    const result = resolvePool({ pool, proposed, events, rules: [overlapRule] })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('NO_AVAILABLE_MEMBER')
+      expect(result.error.evaluated).toEqual(['a', 'b', 'c'])
+    }
+  })
+})
+
+describe('resolvePool — round-robin cursor normalization', () => {
+  it('wraps a stale cursor that points past the end of the member list', () => {
+    // Pool was 5 members when cursor was stored as 4; members have
+    // since been trimmed to 3. `((4 ?? -1) + 1) % 3 === 2` → start at c.
+    const pool: ResourcePool = {
+      id: 'p', name: 'Shrunk', memberIds: ['a', 'b', 'c'],
+      strategy: 'round-robin', rrCursor: 4,
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [] })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.resourceId).toBe('c')
+      expect(result.rrCursor).toBe(2)
+    }
+  })
 })
