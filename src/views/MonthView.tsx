@@ -192,7 +192,7 @@ export default function MonthView({
     const wks  = [];
     for (let i = 0; i < days.length; i += 7) wks.push(days.slice(i, i + 7));
     const names = [];
-    for (let i = 0; i < 7; i++) names.push(format(days[i], 'EEE'));
+    for (let i = 0; i < 7; i++) names.push(format(days[i]!, 'EEE'));
     return { weeks: wks, dayNames: names };
   }, [currentDate, weekStartDay]);
 
@@ -412,8 +412,9 @@ export default function MonthView({
 
       <div className={styles.grid}>
         {weeks.map((week, wi) => {
-          const weekStart = week[0];
-          const weekEnd   = week[6];
+          // Each `week` is a 7-element slice from the weekly grouping above.
+          const weekStart = week[0]!;
+          const weekEnd   = week[6]!;
 
           const spans = layoutSpans(multiDay, weekStart, weekEnd);
           const laneCount   = spans.length ? Math.max(...spans.map(s => s.lane)) + 1 : 0;
@@ -432,7 +433,7 @@ export default function MonthView({
               style={{ minHeight: rowMinH }}
             >
               {showWeekNumbers && (
-                <div className={styles.weekNum}>{getISOWeek(week[0])}</div>
+                <div className={styles.weekNum}>{getISOWeek(week[0]!)}</div>
               )}
 
               <div className={styles.daysArea}>

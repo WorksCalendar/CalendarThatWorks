@@ -499,7 +499,7 @@ function StepTeam({
   };
   const add = () => {
     const colors = ['#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899', '#14b8a6'];
-    const nextColor = colors[team.length % colors.length];
+    const nextColor = colors[team.length % colors.length]!;
     onChange([...team, { id: `t${Date.now()}`, name: '', color: nextColor }]);
   };
   const remove = (id: string) => {

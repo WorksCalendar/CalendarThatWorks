@@ -447,8 +447,8 @@ function groupIssuesByNode(
   const acc: Record<string, ValidationIssue[]> = {}
   for (const i of issues) {
     if (!i.nodeId) continue
-    if (!acc[i.nodeId]) acc[i.nodeId] = []
-    acc[i.nodeId].push(i)
+    const bucket = acc[i.nodeId] ?? (acc[i.nodeId] = [])
+    bucket.push(i)
   }
   return acc
 }

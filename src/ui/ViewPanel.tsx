@@ -89,7 +89,7 @@ const PRESETS: ViewPreset[] = [
 function levelsMatch(a: GroupLevel[], b: GroupLevel[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
-    if (a[i].field !== b[i].field) return false;
+    if (a[i]!.field !== b[i]!.field) return false;
   }
   return true;
 }

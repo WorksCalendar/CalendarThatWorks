@@ -92,7 +92,7 @@ function colorDot(color: string, size = 10) {
 
 function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: FeedRowProps) {
   const enabled = isFeedEnabled(feed);
-  const currentColor = feed.color ?? PRESET_COLORS[0];
+  const currentColor = feed.color ?? PRESET_COLORS[0]!;
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(feed.label ?? '');
   const inputRef = useRef(null);
@@ -124,7 +124,8 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: FeedRowProps) {
         title="Change colour"
         onClick={() => {
           const idx = PRESET_COLORS.indexOf(currentColor);
-          onUpdate(feed.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
+          const nextColor = PRESET_COLORS[(idx + 1) % PRESET_COLORS.length];
+          if (nextColor !== undefined) onUpdate(feed.id, { color: nextColor });
         }}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',

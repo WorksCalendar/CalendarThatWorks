@@ -295,7 +295,7 @@ export default function AgendaView({
 
     // When showAllGroups is on, a leaf bucket renders every leaf event that
     // exists in this day's tree — with non-matching events marked crossGroup.
-    const dayKey = path.split('/')[0];
+    const dayKey = path.split('/')[0] ?? null;
     const renderedEvents = (() => {
       if (!isLeaf) return null;
       if (!showAllGroups) return group.events.map((ev) => renderEventItem(ev, { nativePath: path, dayTree, dayKey }));
@@ -334,6 +334,7 @@ export default function AgendaView({
           setDropTargetPath(null);
           if (!drag) return;
           if (drag.nativePath === path) return;
+          if (dayKey === null) return;
           const patch = resolveDropPatch(dayTree, path, dayKey);
           if (!patch) return;
           onEventGroupChange(drag.ev, patch);

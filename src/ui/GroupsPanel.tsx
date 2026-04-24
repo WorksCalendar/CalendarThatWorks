@@ -84,6 +84,7 @@ export default function GroupsPanel({
     const usedFields = new Set(levels.map(l => l.field));
     const nextField = groupableFields.find(f => !usedFields.has(f.key))
       ?? groupableFields[0];
+    if (nextField === undefined) return;
     onLevelsChange([...levels, { field: nextField.key, showEmpty: false }]);
   };
 

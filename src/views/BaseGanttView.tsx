@@ -91,7 +91,7 @@ function assignLanes(events: BaseGanttEvent[], rangeStart: Date, rangeEnd: Date)
   for (const ev of clipped) {
     let placed = false;
     for (let i = 0; i < laneEnd.length; i++) {
-      if (laneEnd[i] < ev._dayStart) {
+      if (laneEnd[i]! < ev._dayStart) {
         ev._lane = i;
         laneEnd[i] = ev._dayEnd;
         placed = true;

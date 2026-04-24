@@ -167,11 +167,12 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: C
   return (
     <div style={rowStyle(enabled)}>
       <ColorDot
-        color={source.color ?? PRESET_COLORS[0]}
+        color={source.color ?? PRESET_COLORS[0]!}
         onClick={() => {
-          const currentColor = source.color ?? PRESET_COLORS[0];
+          const currentColor = source.color ?? PRESET_COLORS[0]!;
           const idx = PRESET_COLORS.indexOf(currentColor);
-          onUpdate(source.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
+          const nextColor = PRESET_COLORS[(idx + 1) % PRESET_COLORS.length];
+          if (nextColor !== undefined) onUpdate(source.id, { color: nextColor });
         }}
       />
 
@@ -253,9 +254,10 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: Calen
       <ColorDot
         color={source.color ?? '#8b5cf6'}
         onClick={() => {
-          const currentColor = source.color ?? PRESET_COLORS[0];
+          const currentColor = source.color ?? PRESET_COLORS[0]!;
           const idx = PRESET_COLORS.indexOf(currentColor);
-          onUpdate(source.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
+          const nextColor = PRESET_COLORS[(idx + 1) % PRESET_COLORS.length];
+          if (nextColor !== undefined) onUpdate(source.id, { color: nextColor });
         }}
       />
 

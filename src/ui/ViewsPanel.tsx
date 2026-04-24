@@ -61,7 +61,7 @@ export default function ViewsPanel({
 }: ViewsPanelProps) {
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
-  const [saveColor, setSaveColor] = useState<string>(PROFILE_COLORS[0]);
+  const [saveColor, setSaveColor] = useState<string>(PROFILE_COLORS[0]!);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);

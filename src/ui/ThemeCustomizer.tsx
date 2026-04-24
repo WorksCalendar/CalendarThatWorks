@@ -150,7 +150,7 @@ function relativeLuminance(hex: string): number | null {
     const c = channel / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   });
-  return 0.2126 * map[0] + 0.7152 * map[1] + 0.0722 * map[2];
+  return 0.2126 * map[0]! + 0.7152 * map[1]! + 0.0722 * map[2]!;
 }
 
 function contrastRatio(hexA: string, hexB: string): number | null {
