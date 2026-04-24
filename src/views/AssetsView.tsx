@@ -387,8 +387,8 @@ export default function AssetsView({
   // ── Keyboard grid navigation ───────────────────────────────────────────────
   const [focusedCell, setFocusedCell] = useState({ rowIdx: 0, dayIdx: 0 });
   const lastKeyNavCell = useRef(false);
-  const gridRef        = useRef(null);
-  const wrapRef        = useRef(null);
+  const gridRef        = useRef<HTMLDivElement | null>(null);
+  const wrapRef        = useRef<HTMLDivElement | null>(null);
 
   // ── Virtualization ─────────────────────────────────────────────────────────
   const [scrollState, setScrollState] = useState({ top: 0, height: 2000, left: 0, width: 1200 });
@@ -792,7 +792,7 @@ export default function AssetsView({
       : `[data-cell="${rowIdx}-${dayIdx}"]`;
     const tryFocus = () => {
       const el = gridRef.current?.querySelector(selector);
-      el?.focus({ preventScroll: false });
+      if (el instanceof HTMLElement) el.focus({ preventScroll: false });
     };
     tryFocus();
     if (!gridRef.current?.querySelector(selector)) {
@@ -829,7 +829,7 @@ export default function AssetsView({
         // the resolver can pick a free member at submit time.
         if (hit && !isPoolRow) {
           const hitStage = getApprovalStage(hit);
-          if (AUDIT_STAGES.has(hitStage)) openAudit(hit, e.currentTarget);
+          if (hitStage !== null && AUDIT_STAGES.has(hitStage)) openAudit(hit, e.currentTarget);
           else onEventClick?.(hit);
         } else {
           const dayDate = days[di];
@@ -1209,7 +1209,7 @@ export default function AssetsView({
                     const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
                     const stage       = getApprovalStage(ev);
                     const onClick = (e: MouseEvent<HTMLButtonElement>) => {
-                      if (AUDIT_STAGES.has(stage)) openAudit(ev, e.currentTarget);
+                      if (stage !== null && AUDIT_STAGES.has(stage)) openAudit(ev, e.currentTarget);
                       else onEventClick?.(ev);
                     };
                     const prefix      = approvalPrefix(stage);

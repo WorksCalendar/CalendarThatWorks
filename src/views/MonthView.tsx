@@ -207,8 +207,12 @@ export default function MonthView({
     const map = new Map<string, NormalizedEvent[]>();
     singleDay.forEach(ev => {
       const key = format(ev.start, 'yyyy-MM-dd');
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(ev);
+      let bucket = map.get(key);
+      if (!bucket) {
+        bucket = [];
+        map.set(key, bucket);
+      }
+      bucket.push(ev);
     });
 
     map.forEach((dayEvents, key) => {
@@ -307,7 +311,7 @@ export default function MonthView({
       if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
       if (pillHoverTitle) {
         const r = e.currentTarget.getBoundingClientRect();
-        setTitleHover(buildHoverProjection(ev, color, r));
+        setTitleHover(buildHoverProjection(ev, color ?? '', r));
       }
     }
     function handlePillMouseLeave() {
@@ -540,7 +544,7 @@ export default function MonthView({
                               if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
                               if (pillHoverTitle) {
                                 const r = e.currentTarget.getBoundingClientRect();
-                                setTitleHover(buildHoverProjection(ev, color, r));
+                                setTitleHover(buildHoverProjection(ev, color ?? '', r));
                               }
                             }}
                             onMouseLeave={() => {
