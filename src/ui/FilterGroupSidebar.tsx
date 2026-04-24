@@ -111,12 +111,12 @@ export default function FilterGroupSidebar({
   const [activeTab, setActiveTab] = useState<SidebarTab>(initialTab ?? 'view');
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Reset to the requested initial tab every time the sidebar opens, so
-  // callers can deep-link to a tab (e.g. clicking "Focus" in ContextSummary).
+  // Sync the active tab with the requested initialTab whenever the sidebar
+  // opens AND whenever the caller retargets initialTab while already open
+  // (e.g. clicking a different ContextSummary segment).
   useEffect(() => {
     if (open) setActiveTab(initialTab ?? 'view');
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reset only on each open
-  }, [open]);
+  }, [open, initialTab]);
 
   // Condition builder for the Filters tab
   const conditionBuilder = useConditionBuilder({
