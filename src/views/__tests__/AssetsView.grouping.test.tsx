@@ -90,6 +90,7 @@ describe('AssetsView grouping — 1-level tree', () => {
     const west = screen.getAllByRole('treeitem').find(
       i => i.getAttribute('aria-label')?.startsWith('region: West'),
     );
+    if (!west) throw new Error('West treeitem not found');
     expect(west).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('rowheader', { name: 'N100AA' })).toBeInTheDocument();
 
@@ -130,6 +131,7 @@ describe('AssetsView grouping — 2-level tree', () => {
       i => i.getAttribute('aria-label')?.startsWith('region: West')
         && i.getAttribute('aria-level') === '1',
     );
+    if (!west) throw new Error('West treeitem not found');
     fireEvent.click(west);
     // Nested training/maintenance under West are gone.
     const remaining = screen.getAllByRole('treeitem').filter(
@@ -173,6 +175,7 @@ describe('AssetsView grouping — controlled collapsedGroups', () => {
     const west = screen.getAllByRole('treeitem').find(
       i => i.getAttribute('aria-label')?.startsWith('region: West'),
     );
+    if (!west) throw new Error('West treeitem not found');
     expect(west).toHaveAttribute('aria-expanded', 'true');
     fireEvent.click(west);
     expect(west).toHaveAttribute('aria-expanded', 'false');

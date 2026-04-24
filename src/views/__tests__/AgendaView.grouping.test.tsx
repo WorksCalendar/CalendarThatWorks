@@ -63,6 +63,7 @@ describe('AgendaView grouping', () => {
   it('clicking a group header toggles collapse state', () => {
     renderAgenda({ groupBy: 'category' });
     const exerciseHeader = screen.getAllByRole('treeitem').find(i => i.textContent?.startsWith('Exercise'));
+    if (!exerciseHeader) throw new Error('Exercise header not found');
     expect(exerciseHeader).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Morning Run')).toBeInTheDocument();
 
@@ -205,8 +206,10 @@ describe('AgendaView grouping', () => {
       const exerciseItem = screen.getAllByRole('treeitem').find(
         i => i.textContent?.startsWith('Exercise'),
       );
+      if (!exerciseItem) throw new Error('Exercise treeitem not found');
       const target = exerciseItem.closest('[role="group"]');
       expect(target).toBeTruthy();
+      if (!source || !target) throw new Error('source/target missing');
 
       dragAndDrop(source, target);
 
@@ -235,7 +238,9 @@ describe('AgendaView grouping', () => {
       const exerciseItem = screen.getAllByRole('treeitem').find(
         i => i.textContent?.startsWith('Exercise'),
       );
+      if (!exerciseItem) throw new Error('Exercise treeitem not found');
       const target = exerciseItem.closest('[role="group"]');
+      if (!source || !target) throw new Error('source/target missing');
 
       dragAndDrop(source, target);
 
@@ -269,6 +274,7 @@ describe('AgendaView grouping', () => {
       // exists under Exercise, so there's exactly one).
       const target = exerciseBob[0].closest('[role="group"]');
       expect(target).toBeTruthy();
+      if (!source || !target) throw new Error('source/target missing');
 
       dragAndDrop(source, target);
 

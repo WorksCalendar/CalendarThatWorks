@@ -66,6 +66,7 @@ describe('AssetsView keyboard — header focus + arrow key contract', () => {
     // day columns. We pick the first day cell (data-cell ends in "-0").
     const firstDataCell = document.querySelector('[data-cell$="-0"]');
     expect(firstDataCell).toBeTruthy();
+    if (!firstDataCell) throw new Error('firstDataCell not found');
     (firstDataCell as HTMLElement).focus();
     fireEvent.keyDown(firstDataCell, { key: 'ArrowUp' });
     expect(document.activeElement?.id).toBe(firstHeaderId);
