@@ -50,6 +50,7 @@ export default function ProfileBar({
   enabledViews,
   locationLabel = 'Base',
   hasActiveFilters = false,
+  compact = false,
   onApply,
   onAdd,
   onResave,
@@ -91,40 +92,42 @@ export default function ProfileBar({
   const nonEmpty = [...grouped.entries()].filter(([, list]) => list.length > 0);
 
   return (
-    <div className={styles['bar']}>
-      <div className={styles['headerRow']}>
-        <ViewsDropdown
-          views={views}
-          activeId={activeId}
-          onApply={(sv: any) => { onApply(sv); setSaveOpen(false); }}
-          onToggleVisibility={onToggleVisibility}
-        />
+    <div className={[styles['bar'], compact && styles['barCompact']].filter(Boolean).join(' ')}>
+      {!compact && (
+        <div className={styles['headerRow']}>
+          <ViewsDropdown
+            views={views}
+            activeId={activeId}
+            onApply={(sv: any) => { onApply(sv); setSaveOpen(false); }}
+            onToggleVisibility={onToggleVisibility}
+          />
 
-        <CustomizeQuickViewsPanel
-          views={views}
-          onRename={(id: string, name: string) => onUpdate(id, { name })}
-          onColorChange={(id: string, color: string) => onUpdate(id, { color })}
-          onResave={(id: string) => onResave(id)}
-          onDelete={(id: string) => onDelete(id)}
-          onToggleVisibility={onToggleVisibility}
-          onEditConditions={onEditConditions}
-        />
+          <CustomizeQuickViewsPanel
+            views={views}
+            onRename={(id: string, name: string) => onUpdate(id, { name })}
+            onColorChange={(id: string, color: string) => onUpdate(id, { color })}
+            onResave={(id: string) => onResave(id)}
+            onDelete={(id: string) => onDelete(id)}
+            onToggleVisibility={onToggleVisibility}
+            onEditConditions={onEditConditions}
+          />
 
-        <ClearFiltersButton
-          hasActiveFilters={hasActiveFilters}
-          onClear={onClearFilters}
-        />
+          <ClearFiltersButton
+            hasActiveFilters={hasActiveFilters}
+            onClear={onClearFilters}
+          />
 
-        <button
-          type="button"
-          className={styles['addChip']}
-          onClick={() => setSaveOpen(v => !v)}
-          title="Save current filters as a new saved view"
-        >
-          <Plus size={13} />
-          Save view
-        </button>
-      </div>
+          <button
+            type="button"
+            className={styles['addChip']}
+            onClick={() => setSaveOpen(v => !v)}
+            title="Save current filters as a new saved view"
+          >
+            <Plus size={13} />
+            Save view
+          </button>
+        </div>
+      )}
 
       {nonEmpty.length > 0 && (
         <div className={styles['strip']}>
@@ -160,6 +163,55 @@ export default function ProfileBar({
               </div>
             );
           })}
+          {compact && (
+            <div className={styles['stripTail']}>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  className={styles['tailClearBtn']}
+                  onClick={onClearFilters}
+                  title="Clear all filters"
+                >
+                  Clear filters
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles['tailSaveBtn']}
+                onClick={() => setSaveOpen(v => !v)}
+                title="Save current filters as a new saved view"
+                aria-label="Save current view"
+              >
+                <Plus size={13} aria-hidden="true" />
+                <span>Save</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {compact && nonEmpty.length === 0 && (
+        <div className={styles['strip']}>
+          <div className={styles['stripTail']}>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className={styles['tailClearBtn']}
+                onClick={onClearFilters}
+                title="Clear all filters"
+              >
+                Clear filters
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles['tailSaveBtn']}
+              onClick={() => setSaveOpen(v => !v)}
+              title="Save current filters as a new saved view"
+            >
+              <Plus size={13} aria-hidden="true" />
+              <span>Save view</span>
+            </button>
+          </div>
         </div>
       )}
 
