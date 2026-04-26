@@ -986,14 +986,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const configuredBases   = ownerCfg.config?.['team']?.bases ?? [];
   const configuredRegions = ownerCfg.config?.['team']?.regions ?? [];
   const locationLabel     = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
+  const assetsLabel       = ownerCfg.config?.['team']?.assetsLabel   ?? 'Asset';
 
   // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
   const VIEWS = useMemo(() => {
     const enabled = new Set<string>(ownerCfg.config?.['display']?.enabledViews ?? []);
     return ALL_VIEWS
       .filter(v => v.alwaysOn || enabled.has(v.id))
-      .map(v => v.id === 'base' ? { ...v, label: locationLabel } : v);
-  }, [ownerCfg.config?.['display']?.enabledViews, locationLabel]);
+      .map(v => {
+        if (v.id === 'base')   return { ...v, label: locationLabel };
+        if (v.id === 'assets') return { ...v, label: `${assetsLabel}s` };
+        return v;
+      });
+  }, [ownerCfg.config?.['display']?.enabledViews, locationLabel, assetsLabel]);
 
   // Self-heal: if the active tab is no longer enabled, fall back to default/month.
   useEffect(() => {
@@ -2300,6 +2305,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 viewOrder={ALL_VIEWS.map(v => v.id)}
                 enabledViews={VIEWS.map(v => v.id)}
                 locationLabel={locationLabel}
+                assetsLabel={assetsLabel}
                 hasActiveFilters={hasActiveFilters(cal.filters, schema)}
                 tailSlot={tailSlot}
                 onApply={handleApplyView}
@@ -2355,6 +2361,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           onUpdateView={savedViews.updateView}
           onDeleteView={handleDeleteView}
           onToggleViewVisibility={savedViews.toggleStripVisibility}
+          locationLabel={locationLabel}
+          assetsLabel={assetsLabel}
         />
 
         {/* ── View area ── */}
@@ -2402,6 +2410,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   bases={configuredBases}
                   regions={configuredRegions}
                   locationLabel={locationLabel}
+                  assetsLabel={assetsLabel}
                   selectedBaseIds={selectedBaseIds}
                   onBaseSelectionChange={setSelectedBaseIds}
                 />
@@ -2430,6 +2439,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
                   approvalsConfig={ownerCfg.config?.['approvals']}
                   onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
+                  label={assetsLabel}
                 />
               )}
               {cal.view === 'dispatch' && (
@@ -2439,6 +2449,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   assets={effectiveAssets ?? []}
                   bases={configuredBases}
                   locationLabel={locationLabel}
+                  label={assetsLabel}
                   onEventClick={handleEventClick}
                   missions={dispatchMissions}
                   evaluateForMission={dispatchEvaluator}
@@ -2604,7 +2615,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         )}
 
         {/* ── Keyboard shortcuts cheat sheet ── */}
-        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} />}
+        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} assetsLabel={assetsLabel} />}
 
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />
