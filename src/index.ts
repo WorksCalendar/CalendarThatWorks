@@ -34,6 +34,8 @@ export { MaintenanceBadge }       from './ui/MaintenanceBadge';
 export type { MaintenanceBadgeProps } from './ui/MaintenanceBadge';
 export { AssetMaintenanceBadges } from './ui/AssetMaintenanceBadges';
 export type { AssetMaintenanceBadgesProps } from './ui/AssetMaintenanceBadges';
+export { MaintenanceSection }     from './ui/EventFormSections/MaintenanceSection';
+export type { MaintenanceSectionProps } from './ui/EventFormSections/MaintenanceSection';
 export type {
   ConfigPanelProps,
   ConfigPanelTabId,
