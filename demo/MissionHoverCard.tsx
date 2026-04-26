@@ -46,7 +46,7 @@ function aircraftById(id: string, fleet: DemoAircraft[]): DemoAircraft | undefin
   return fleet.find(a => a.id === id);
 }
 
-function meetsAircraftReqs(ac: DemoAircraft, mission: DemoMissionRequest): boolean {
+export function meetsAircraftReqs(ac: DemoAircraft, mission: DemoMissionRequest): boolean {
   if (ac.hoursRemaining < mission.requirements.aircraft.minHoursRemaining) return false;
   const caps = mission.requirements.aircraft.requiredCapabilities ?? [];
   return caps.every(c => ac.capabilities.includes(c));

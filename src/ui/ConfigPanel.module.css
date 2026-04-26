@@ -574,6 +574,94 @@
   gap: 10px;
 }
 
+/* Setup essentials hub — three jump-cards from the Setup tab to the
+   tabs that already host these editors (Display / Team / SmartViews).
+   The Setup tab keeps its name + theme controls inline and delegates
+   the rest, so nothing is duplicated and everything is one click away. */
+.setupHubGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.setupHubCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.setupHubCard:hover {
+  border-color: var(--wc-accent);
+  background: var(--wc-surface-2, var(--wc-surface));
+}
+.setupHubCard:active {
+  transform: translateY(1px);
+}
+
+.setupHubTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wc-text);
+}
+
+.setupHubMeta {
+  font-size: 11px;
+  color: var(--wc-text-muted);
+}
+
+/* Restart-setup row — surfaced at the bottom of the Setup tab so owners
+   can re-enter the guided flow (tabs, default view, team, smart-view
+   recipes) that the inline tab here doesn't otherwise cover. */
+.setupReopenRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+}
+
+.setupReopenText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--wc-text-muted);
+}
+.setupReopenText strong {
+  color: var(--wc-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.setupReopenBtn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: var(--wc-radius-sm);
+  border: 1px solid var(--wc-accent);
+  background: var(--wc-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.setupReopenBtn:hover { opacity: 0.85; }
+
 .themeFamilyCard {
   display: flex;
   flex-direction: column;

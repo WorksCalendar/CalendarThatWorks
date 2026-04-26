@@ -10,7 +10,7 @@
  * and drops the owner straight into the calendar with default config.
  */
 import { useMemo, useState } from 'react';
-import { ChevronRight, ChevronLeft, Check, Sparkles, Rocket, Users, Palette, LayoutGrid, Wand2, MapPin } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, Sparkles, Rocket, Users, Palette, LayoutGrid, Wand2, MapPin, Plane, Plus, Trash2, ShieldCheck } from 'lucide-react';
 import { THEMES, THEME_META, normalizeTheme, resolveCssTheme } from '../styles/themes';
 import styles from './SetupLanding.module.css';
 import {
@@ -31,16 +31,38 @@ export type SetupRecipeId =
   | 'on-call'
   | 'this-week';
 
-export type OptionalViewId = 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
+export type OptionalViewId = 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch';
+
+/** A category of bookable resource. Drives requirement templates. */
+export type AssetTypeDef = { id: string; label: string };
+
+/** A concrete asset created in the wizard. Linked to an AssetTypeDef. */
+export type AssetSeed = { id: string; label: string; assetTypeId: string };
+
+/** A required role on a request, e.g. Pilot, Medic. */
+export type RoleDef = { id: string; label: string };
+
+/**
+ * Per-type rules that asset-request flows read at submit time. The wizard
+ * captures the minimum needed for v1: required role slots and an
+ * approval-before-scheduling toggle.
+ */
+export type RequirementTemplate = {
+  roles: RoleDef[];
+  requiresApproval: boolean;
+};
 
 export type SetupLandingResult = {
   calendarName: string;
   theme: string;
-  defaultView: 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
+  defaultView: 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch';
   enabledViews: OptionalViewId[];
   locationLabel: 'Base' | 'Region';
   teamMembers: Array<{ id: string; name: string; color: string }>;
   recipes: SetupRecipeId[];
+  assetTypes: AssetTypeDef[];
+  assetSeeds: AssetSeed[];
+  requirementTemplates: Record<string, RequirementTemplate>;
 };
 
 export type SetupLandingProps = {
@@ -52,13 +74,44 @@ export type SetupLandingProps = {
   initialName?: string;
   /** Initial theme (from config.setup.preferredTheme). */
   initialTheme?: string;
+  /**
+   * Initial asset types. When omitted, the wizard seeds a sensible default
+   * list. Pass `config.assetTypes` so re-running setup on an already-
+   * configured calendar shows the existing types (and the finish-write
+   * doesn't silently destroy them).
+   */
+  initialAssetTypes?: AssetTypeDef[];
+  /**
+   * Initial requirement templates, keyed by asset type id. Pass
+   * `config.requirementTemplates` so re-running setup preserves the
+   * owner's existing role/approval rules instead of overwriting them
+   * with empty defaults.
+   */
+  initialRequirementTemplates?: Record<string, RequirementTemplate>;
 };
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  Constants                                                                 */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
+
+const DEFAULT_ASSET_TYPES: AssetTypeDef[] = [
+  { id: 'aircraft',  label: 'Aircraft' },
+  { id: 'vehicle',   label: 'Vehicle' },
+  { id: 'equipment', label: 'Equipment' },
+  { id: 'room',      label: 'Room' },
+];
+
+/** Common role suggestions surfaced as quick-add chips. */
+const SUGGESTED_ROLES: RoleDef[] = [
+  { id: 'pilot',      label: 'Pilot' },
+  { id: 'co-pilot',   label: 'Co-pilot' },
+  { id: 'medic',      label: 'Medic' },
+  { id: 'driver',     label: 'Driver' },
+  { id: 'crew',       label: 'Crew' },
+  { id: 'technician', label: 'Technician' },
+];
 
 type ViewChoice = {
   id: SetupLandingResult['defaultView'];
@@ -75,9 +128,10 @@ const VIEW_CHOICES: ViewChoice[] = [
   { id: 'schedule', label: 'Schedule', plain: 'One row per person. Great for shifts and coverage.' },
   { id: 'base',     label: 'Base',     plain: 'One row per location. Shows the assets, people, and events at each base.' },
   { id: 'assets',   label: 'Assets',   plain: 'One row per asset — vehicles, rooms, equipment.' },
+  { id: 'dispatch', label: 'Dispatch', plain: 'A live readiness board — which assets can launch right now.' },
 ];
 
-const OPTIONAL_VIEW_IDS: OptionalViewId[] = ['day', 'agenda', 'schedule', 'base', 'assets'];
+const OPTIONAL_VIEW_IDS: OptionalViewId[] = ['day', 'agenda', 'schedule', 'base', 'assets', 'dispatch'];
 
 const RECIPE_CHOICES: Array<{
   id: SetupRecipeId;
@@ -132,6 +186,8 @@ export default function SetupLanding({
   onSkip,
   initialName = 'My Calendar',
   initialTheme = 'corporate',
+  initialAssetTypes,
+  initialRequirementTemplates,
 }: SetupLandingProps) {
   // Step 0 is the welcome screen. Steps 1..TOTAL_STEPS are the form.
   const [step, setStep] = useState(0);
@@ -142,6 +198,22 @@ export default function SetupLanding({
   const [locationLabel, setLocationLabel] = useState<'Base' | 'Region'>('Base');
   const [team, setTeam] = useState(STARTER_TEAM);
   const [recipes, setRecipes] = useState<SetupRecipeId[]>(['everything']);
+  // Hydrate from existing config when re-running setup so the finish-write
+  // does not destroy previously-configured types or templates. An owner who
+  // already set up Aircraft + Pilot + approval should see those in the
+  // wizard, not the hardcoded defaults. Falsy / empty inputs fall back to
+  // the defaults so the first-run experience is unchanged.
+  const [assetTypes, setAssetTypes] = useState<AssetTypeDef[]>(() =>
+    Array.isArray(initialAssetTypes) && initialAssetTypes.length > 0
+      ? initialAssetTypes
+      : DEFAULT_ASSET_TYPES,
+  );
+  const [assetSeeds, setAssetSeeds] = useState<AssetSeed[]>([]);
+  const [requirementTemplates, setRequirementTemplates] = useState<Record<string, RequirementTemplate>>(() =>
+    initialRequirementTemplates && typeof initialRequirementTemplates === 'object'
+      ? initialRequirementTemplates
+      : {},
+  );
 
   const next = () => setStep(s => Math.min(TOTAL_STEPS, s + 1));
   const back = () => setStep(s => Math.max(0, s - 1));
@@ -165,6 +237,23 @@ export default function SetupLanding({
     defaultViewChoices.some(v => v.id === defaultView) ? defaultView : 'month';
 
   const handleFinish = () => {
+    // Drop empty type slots and any seed pointing at a deleted type so the
+    // host never has to defensively filter the result.
+    const cleanTypes = assetTypes.filter(t => t.label.trim());
+    const validTypeIds = new Set(cleanTypes.map(t => t.id));
+    const cleanSeeds = assetSeeds
+      .filter(a => a.label.trim() && validTypeIds.has(a.assetTypeId))
+      .map(a => ({ ...a, label: a.label.trim() }));
+    const cleanTemplates: Record<string, RequirementTemplate> = {};
+    for (const typeId of validTypeIds) {
+      const template = requirementTemplates[typeId];
+      if (!template) continue;
+      const roles = template.roles.filter(r => r.label.trim());
+      // Only emit a template entry if it actually constrains something.
+      if (roles.length === 0 && !template.requiresApproval) continue;
+      cleanTemplates[typeId] = { roles, requiresApproval: template.requiresApproval };
+    }
+
     onFinish({
       calendarName: calendarName.trim() || 'My Calendar',
       theme,
@@ -175,6 +264,9 @@ export default function SetupLanding({
         .filter(m => m.name.trim())
         .map(m => ({ id: m.id, name: m.name.trim(), color: m.color })),
       recipes,
+      assetTypes: cleanTypes,
+      assetSeeds: cleanSeeds,
+      requirementTemplates: cleanTemplates,
     });
   };
 
@@ -258,6 +350,16 @@ export default function SetupLanding({
           {step === 6 && (
             <StepRecipes selected={recipes} onToggle={toggleRecipe} />
           )}
+          {step === 7 && (
+            <StepAssets
+              assetTypes={assetTypes}
+              onAssetTypesChange={setAssetTypes}
+              assetSeeds={assetSeeds}
+              onAssetSeedsChange={setAssetSeeds}
+              requirementTemplates={requirementTemplates}
+              onRequirementTemplatesChange={setRequirementTemplates}
+            />
+          )}
         </main>
 
         <footer className={styles['footer']}>
@@ -265,9 +367,10 @@ export default function SetupLanding({
             className={styles['backBtn']}
             onClick={back}
             type="button"
-            disabled={step === 1}
+            title={step === 1 ? 'Back to welcome' : 'Previous step'}
           >
-            <ChevronLeft size={15} aria-hidden="true" /> Back
+            <ChevronLeft size={15} aria-hidden="true" />
+            {step === 1 ? ' Welcome' : ' Back'}
           </button>
 
           {step < TOTAL_STEPS ? (
@@ -391,21 +494,26 @@ function StepTabs({
             <button
               key={v.id}
               type="button"
-              onClick={() => isOptional && onToggle(v.id as OptionalViewId)}
-              className={[styles['viewCard'], isOn && styles['cardSelected']].filter(Boolean).join(' ')}
-              aria-pressed={isOn}
-              aria-disabled={!isOptional}
-              disabled={!isOptional}
-              title={!isOptional ? 'Always on' : undefined}
+              onClick={isOptional ? () => onToggle(v.id as OptionalViewId) : undefined}
+              className={[
+                styles['viewCard'],
+                isOn && styles['cardSelected'],
+                !isOptional && styles['viewCardLocked'],
+              ].filter(Boolean).join(' ')}
+              aria-pressed={isOptional ? isOn : undefined}
+              aria-disabled={!isOptional || undefined}
+              title={!isOptional ? 'Always on — Month and Week are required' : undefined}
             >
               <IllustrationView kind={illustrationKindFor(v.id)} />
               <div className={styles['viewMeta']}>
                 <span className={styles['viewLabel']}>{label}</span>
-                {isOn && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>}
+                {!isOptional ? (
+                  <span className={styles['alwaysOnBadge']}>Always on</span>
+                ) : (
+                  isOn && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>
+                )}
               </div>
-              <span className={styles['viewBlurb']}>
-                {!isOptional ? `${v.plain} (always on)` : v.plain}
-              </span>
+              <span className={styles['viewBlurb']}>{v.plain}</span>
             </button>
           );
         })}
@@ -596,13 +704,278 @@ function StepRecipes({
   );
 }
 
+/* ── Step 7: Assets & Requirements ───────────────────────────────────────── */
+
+type StepAssetsProps = {
+  assetTypes: AssetTypeDef[];
+  onAssetTypesChange: (next: AssetTypeDef[]) => void;
+  assetSeeds: AssetSeed[];
+  onAssetSeedsChange: (next: AssetSeed[]) => void;
+  requirementTemplates: Record<string, RequirementTemplate>;
+  onRequirementTemplatesChange: (next: Record<string, RequirementTemplate>) => void;
+};
+
+function StepAssets({
+  assetTypes,
+  onAssetTypesChange,
+  assetSeeds,
+  onAssetSeedsChange,
+  requirementTemplates,
+  onRequirementTemplatesChange,
+}: StepAssetsProps) {
+  const [newTypeLabel, setNewTypeLabel] = useState('');
+
+  const addType = () => {
+    const label = newTypeLabel.trim();
+    if (!label) return;
+    const id = slugifyTypeId(label, assetTypes);
+    onAssetTypesChange([...assetTypes, { id, label }]);
+    setNewTypeLabel('');
+  };
+
+  const removeType = (typeId: string) => {
+    onAssetTypesChange(assetTypes.filter(t => t.id !== typeId));
+    onAssetSeedsChange(assetSeeds.filter(a => a.assetTypeId !== typeId));
+    const { [typeId]: _removed, ...rest } = requirementTemplates;
+    onRequirementTemplatesChange(rest);
+  };
+
+  const renameType = (typeId: string, label: string) => {
+    onAssetTypesChange(assetTypes.map(t => (t.id === typeId ? { ...t, label } : t)));
+  };
+
+  const addAsset = (typeId: string) => {
+    const seed: AssetSeed = {
+      id: `asset-${Date.now()}-${assetSeeds.length}`,
+      label: '',
+      assetTypeId: typeId,
+    };
+    onAssetSeedsChange([...assetSeeds, seed]);
+  };
+
+  const updateAsset = (id: string, label: string) => {
+    onAssetSeedsChange(assetSeeds.map(a => (a.id === id ? { ...a, label } : a)));
+  };
+
+  const removeAsset = (id: string) => {
+    onAssetSeedsChange(assetSeeds.filter(a => a.id !== id));
+  };
+
+  const getTemplate = (typeId: string): RequirementTemplate =>
+    requirementTemplates[typeId] ?? { roles: [], requiresApproval: false };
+
+  const writeTemplate = (typeId: string, patch: Partial<RequirementTemplate>) => {
+    const current = getTemplate(typeId);
+    onRequirementTemplatesChange({
+      ...requirementTemplates,
+      [typeId]: { ...current, ...patch },
+    });
+  };
+
+  const addRole = (typeId: string, role: RoleDef) => {
+    const current = getTemplate(typeId);
+    if (current.roles.some(r => r.id === role.id)) return;
+    writeTemplate(typeId, { roles: [...current.roles, role] });
+  };
+
+  const removeRole = (typeId: string, roleId: string) => {
+    const current = getTemplate(typeId);
+    writeTemplate(typeId, { roles: current.roles.filter(r => r.id !== roleId) });
+  };
+
+  return (
+    <section className={styles['step']}>
+      <h2 className={styles['stepTitle']}>What do you book, and what does each booking need?</h2>
+      <p className={styles['stepPlain']}>
+        An <em>asset</em> is anything you book — a vehicle, a room, a piece of gear.
+        Tell us what kinds you have, then say what each kind needs (a pilot, a medic,
+        approval before it’s confirmed). This is the part most calendars miss.
+      </p>
+
+      {assetTypes.length === 0 && (
+        <p className={styles['stepTip']}>
+          No types yet. Add one below to get started — or skip this step entirely
+          and come back later from the settings gear.
+        </p>
+      )}
+
+      {assetTypes.map(type => {
+        const seedsOfType = assetSeeds.filter(a => a.assetTypeId === type.id);
+        const template = getTemplate(type.id);
+        return (
+          <div key={type.id} className={styles['assetTypeCard']}>
+            <header className={styles['assetTypeHeader']}>
+              <Plane size={14} aria-hidden="true" />
+              <input
+                className={styles['assetTypeName']}
+                value={type.label}
+                onChange={e => renameType(type.id, e.target.value)}
+                aria-label={`Rename ${type.label || type.id}`}
+                placeholder="Type name"
+              />
+              <button
+                type="button"
+                className={styles['rowRemoveBtn']}
+                onClick={() => removeType(type.id)}
+                aria-label={`Remove ${type.label || type.id}`}
+              >
+                <Trash2 size={12} aria-hidden="true" /> Remove type
+              </button>
+            </header>
+
+            {/* Assets of this type */}
+            <div className={styles['assetSubsection']}>
+              <span className={styles['fieldLabel']}>Your {(type.label || 'assets').toLowerCase()}</span>
+              {seedsOfType.length === 0 && (
+                <p className={styles['assetEmpty']}>None added yet.</p>
+              )}
+              <ul className={styles['assetSeedList']}>
+                {seedsOfType.map(seed => (
+                  <li key={seed.id} className={styles['assetSeedRow']}>
+                    <input
+                      className={styles['input']}
+                      value={seed.label}
+                      placeholder={`e.g. ${exampleNameFor(type.label)}`}
+                      onChange={e => updateAsset(seed.id, e.target.value)}
+                      aria-label={`Name for asset ${seed.id}`}
+                    />
+                    <button
+                      type="button"
+                      className={styles['rowRemoveBtn']}
+                      onClick={() => removeAsset(seed.id)}
+                      aria-label={`Remove asset ${seed.label || seed.id}`}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className={styles['secondaryBtn']}
+                onClick={() => addAsset(type.id)}
+              >
+                <Plus size={13} aria-hidden="true" /> Add {(type.label || 'asset').toLowerCase()}
+              </button>
+            </div>
+
+            {/* Required roles */}
+            <div className={styles['assetSubsection']}>
+              <span className={styles['fieldLabel']}>What does a request need?</span>
+              <p className={styles['assetSubDesc']}>
+                Pick the roles a booking must fill. The request form will show one slot
+                per role so the dispatcher fills them in before submitting.
+              </p>
+              <div className={styles['rolePillRow']}>
+                {template.roles.map(role => (
+                  <span key={role.id} className={styles['rolePillSelected']}>
+                    {role.label}
+                    <button
+                      type="button"
+                      onClick={() => removeRole(type.id, role.id)}
+                      aria-label={`Remove role ${role.label}`}
+                      className={styles['rolePillRemove']}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {template.roles.length === 0 && (
+                  <span className={styles['assetEmpty']}>No roles required yet.</span>
+                )}
+              </div>
+              <div className={styles['rolePillSuggestRow']}>
+                {SUGGESTED_ROLES.filter(r => !template.roles.some(t => t.id === r.id)).map(role => (
+                  <button
+                    key={role.id}
+                    type="button"
+                    className={styles['rolePillSuggest']}
+                    onClick={() => addRole(type.id, role)}
+                  >
+                    <Plus size={11} aria-hidden="true" /> {role.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Approval rule */}
+            <div className={styles['assetSubsection']}>
+              <label className={styles['approvalToggleRow']}>
+                <input
+                  type="checkbox"
+                  checked={template.requiresApproval}
+                  onChange={e => writeTemplate(type.id, { requiresApproval: e.target.checked })}
+                />
+                <ShieldCheck size={14} aria-hidden="true" />
+                <span>Requires approval before it’s confirmed</span>
+              </label>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Add new asset type */}
+      <div className={styles['addTypeRow']}>
+        <input
+          className={styles['input']}
+          value={newTypeLabel}
+          onChange={e => setNewTypeLabel(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addType();
+            }
+          }}
+          placeholder="Add another type — e.g. Boat, Drone, Studio…"
+          aria-label="New asset type name"
+        />
+        <button
+          type="button"
+          className={styles['secondaryBtn']}
+          onClick={addType}
+          disabled={!newTypeLabel.trim()}
+        >
+          <Plus size={13} aria-hidden="true" /> Add type
+        </button>
+      </div>
+
+      <p className={styles['stepTip']}>
+        Tip: leave anything blank to skip it. You can edit assets, roles, and approval
+        rules any time from <strong>Settings → Assets</strong>.
+      </p>
+    </section>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  Utilities                                                                 */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-/** Map setup view ids to illustration kinds. Base/assets reuse the schedule illustration. */
+/** Generate a stable id slug from a free-text type label. */
+function slugifyTypeId(label: string, existing: AssetTypeDef[]): string {
+  const base = label
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') || 'type';
+  if (!existing.some(t => t.id === base)) return base;
+  let n = 2;
+  while (existing.some(t => t.id === `${base}-${n}`)) n++;
+  return `${base}-${n}`;
+}
+
+/** Friendly placeholder for asset name input, picked from the type label. */
+function exampleNameFor(typeLabel: string): string {
+  const lc = typeLabel.toLowerCase();
+  if (lc.includes('aircraft')) return 'N100AA';
+  if (lc.includes('vehicle'))  return 'Truck 12';
+  if (lc.includes('room'))     return 'Studio A';
+  return `${typeLabel} 1`;
+}
+
+/** Map setup view ids to illustration kinds. Base/assets/dispatch reuse the schedule illustration. */
 function illustrationKindFor(id: SetupLandingResult['defaultView']): 'month' | 'week' | 'day' | 'agenda' | 'schedule' {
-  if (id === 'base' || id === 'assets') return 'schedule';
+  if (id === 'base' || id === 'assets' || id === 'dispatch') return 'schedule';
   return id;
 }
 

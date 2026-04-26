@@ -88,6 +88,15 @@ import AgendaView             from './views/AgendaView';
 import TimelineView           from './views/TimelineView';
 import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
+import DispatchView           from './views/DispatchView';
+import type { DispatchMissionCandidate, DispatchMissionReadiness } from './views/DispatchView';
+
+type DispatchEvaluator = (
+  assetId: string,
+  missionId: string,
+  asOf: Date,
+) => DispatchMissionReadiness;
+export type { DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator };
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
@@ -223,6 +232,19 @@ export type WorksCalendarProps = {
    * no-op chip (harmless).
    */
   focusChips?: FocusChipDef[] | boolean;
+  /**
+   * Pending missions/requests offered as the "For mission" picker on the
+   * Dispatch view. Empty/undefined hides the picker (the view falls back
+   * to generic readiness). Pair with `dispatchEvaluator` — the picker is
+   * also hidden when no evaluator is wired.
+   */
+  dispatchMissions?: DispatchMissionCandidate[];
+  /**
+   * Per-(asset, mission) readiness evaluator for the Dispatch view. Hosts
+   * translate their domain primitives (cert matching, capability checks,
+   * hours remaining, etc.) into the readiness shape the table expects.
+   */
+  dispatchEvaluator?: DispatchEvaluator;
   emptyState?: ReactNode;
   filterSchema?: FilterField[];
   showAddButton?: boolean;
@@ -306,6 +328,7 @@ const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status' },
   { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false },
+  { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?' },
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -472,6 +495,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderFilterBar,
     renderSavedViewsBar,
     focusChips,
+    dispatchMissions,
+    dispatchEvaluator,
     emptyState,
 
     // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
@@ -632,31 +657,62 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setSetupDismissed(true);
   }, [ownerCfg.updateConfig]);
 
-  const handleSetupFinish = useCallback((result: SetupLandingResult) => {
-    // 1) Persist title / theme / default view / team / setup.completed.
+  // Re-trigger the SetupLanding guide on demand. Setting completed=false
+  // alone is not enough because setupDismissed is a session flag set when
+  // the guide was last finished/skipped — both must be reset to put the
+  // user back on the landing page. Closing the config panel ensures the
+  // landing has the screen to itself.
+  const handleReopenSetup = useCallback(() => {
     ownerCfg.updateConfig(prev => ({
       ...prev,
-      title: result.calendarName,
-      setup: {
-        ...(prev['setup'] ?? {}),
-        completed: true,
-        preferredTheme: result.theme,
-      },
-      display: {
-        ...(prev['display'] ?? {}),
-        defaultView: result.defaultView,
-        enabledViews: result.enabledViews,
-      },
-      team: {
-        ...(prev['team'] ?? {}),
-        locationLabel: result.locationLabel,
-        members: [
-          ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
-            .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
-          ...result.teamMembers,
-        ],
-      },
+      setup: { ...(prev['setup'] ?? {}), completed: false },
     }));
+    setSetupDismissed(false);
+    ownerCfg.closeConfig();
+  }, [ownerCfg.updateConfig, ownerCfg.closeConfig]);
+
+  const handleSetupFinish = useCallback((result: SetupLandingResult) => {
+    // 1) Persist title / theme / default view / team / setup.completed.
+    ownerCfg.updateConfig(prev => {
+      // Merge wizard-seeded assets without clobbering existing entries (so
+      // re-opening the wizard never blows away assets configured later).
+      const existingAssets = (Array.isArray(prev['assets']) ? prev['assets'] : []) as Array<{ id: string }>;
+      const existingIds = new Set(existingAssets.map(a => a.id));
+      const seededAssets = result.assetSeeds
+        .filter(seed => !existingIds.has(seed.id))
+        .map(seed => ({
+          id: seed.id,
+          label: seed.label,
+          meta: { assetTypeId: seed.assetTypeId },
+        }));
+
+      return {
+        ...prev,
+        title: result.calendarName,
+        setup: {
+          ...(prev['setup'] ?? {}),
+          completed: true,
+          preferredTheme: result.theme,
+        },
+        display: {
+          ...(prev['display'] ?? {}),
+          defaultView: result.defaultView,
+          enabledViews: result.enabledViews,
+        },
+        team: {
+          ...(prev['team'] ?? {}),
+          locationLabel: result.locationLabel,
+          members: [
+            ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
+              .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
+            ...result.teamMembers,
+          ],
+        },
+        assetTypes: result.assetTypes,
+        assets: [...existingAssets, ...seededAssets],
+        requirementTemplates: result.requirementTemplates,
+      };
+    });
 
     // 2) Save each chosen recipe as a Smart View so it shows up in the
     //    views bar. Recipes map to real filter + groupBy state; the owner
@@ -2070,6 +2126,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onFinish={handleSetupFinish}
             initialName={ownerCfg.config?.['title']}
             initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
+            initialAssetTypes={ownerCfg.config?.['assetTypes']}
+            initialRequirementTemplates={ownerCfg.config?.['requirementTemplates']}
           />
         </div>
       </CalendarErrorBoundary>
@@ -2384,6 +2442,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   label={assetsLabel}
                 />
               )}
+              {cal.view === 'dispatch' && (
+                <DispatchView
+                  events={expandedEvents}
+                  employees={configuredEmployees}
+                  assets={effectiveAssets ?? []}
+                  bases={configuredBases}
+                  locationLabel={locationLabel}
+                  onEventClick={handleEventClick}
+                  missions={dispatchMissions}
+                  evaluateForMission={dispatchEvaluator}
+                  // Sync the calendar's currentDate with the dispatcher's chosen
+                  // as-of moment so recurring-event expansion + fetch ranges
+                  // re-anchor around it. Without this, a far-future as-of would
+                  // see no overlapping events (since they were never expanded
+                  // for the original currentDate range) and the row would be
+                  // wrongly classified Available.
+                  onAsOfChange={cal.setCurrentDate}
+                />
+              )}
             </>
           )}
         </div>
@@ -2432,6 +2509,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             categories={resolvedAssetRequestCategories}
             initialStart={cal.currentDate}
             initialAssetId={undefined}
+            requirementTemplates={ownerCfg.config?.['requirementTemplates'] as Record<string, { roles: { id: string; label: string }[]; requiresApproval: boolean }> | undefined}
             onSubmit={(payload: LooseValue) => {
               handleEventSave(payload);
               setAssetRequestOpen(false);
@@ -2515,6 +2593,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             initialSmartViewEditId={ownerCfg.smartViewEditId}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
+            onReopenSetup={showSetupLanding ? handleReopenSetup : undefined}
             onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
             savedViews={savedViews.views}
             onUpdateView={savedViews.updateView}

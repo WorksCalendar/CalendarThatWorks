@@ -279,6 +279,8 @@ export default function ConfigPanel({
   // Per-calendar scope for workflow persistence. Defaults to 'default'
   // so hosts that don't multiplex calendars still get stable storage.
   calendarId = 'default',
+  // Restart the guided setup; the SetupTab renders a button when set.
+  onReopenSetup,
 }: ConfigPanelProps) {
   const [tab, setTab] = useState<string>(() =>
     initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
@@ -447,7 +449,7 @@ export default function ConfigPanel({
 
           <div className={styles['body']} aria-label={activeTabLabel}>
           {tab === 'overview'    && <OverviewTab goTo={goTo} />}
-          {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} />}
+          {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} onReopenSetup={onReopenSetup} goToTab={setTab} savedViewCount={savedViews?.length ?? 0} />}
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'categories'  && <CategoriesTab   config={config} onUpdate={onUpdate} />}
@@ -611,10 +613,33 @@ function OverviewTab({ goTo }: { goTo: (tabId: string) => void }) {
   );
 }
 
-function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
+type SetupTabProps = ConfigPanelSectionProps & {
+  onReopenSetup?: (() => void) | undefined;
+  goToTab: (id: string) => void;
+  savedViewCount: number;
+};
+
+function SetupTab({
+  config,
+  onUpdate,
+  onReopenSetup,
+  goToTab,
+  savedViewCount,
+}: SetupTabProps) {
   const selectedTheme = normalizeTheme(config['setup']?.preferredTheme ?? 'canvas-light');
   const selectedMeta  = THEME_META[selectedTheme];
   const calendarName  = config['title'] ?? 'My WorksCalendar';
+
+  // Live counts so the hub doubles as an at-a-glance status panel.
+  const display       = config['display'] ?? {};
+  const team          = config['team'] ?? {};
+  const defaultView   = (display['defaultView'] as string | undefined) ?? 'month';
+  const enabledViews  = Array.isArray(display['enabledViews']) ? (display['enabledViews'] as string[]) : [];
+  const baseLabel     = (team['locationLabel'] as string | undefined) ?? 'Base';
+  const formatViewLabel = (id: string) => id === 'base' ? baseLabel : id.charAt(0).toUpperCase() + id.slice(1);
+  const visibleViewCount = enabledViews.length > 0 ? enabledViews.length + 2 : 8; // +2 = always-on Month/Week; total = 8
+  const baseCount     = Array.isArray(team['bases']) ? (team['bases'] as unknown[]).length : 0;
+  const employeeCount = Array.isArray(team['employees']) ? (team['employees'] as unknown[]).length : 0;
 
   const setCalendarName = (name: string) => onUpdate(c => ({ ...c, title: name }));
 
@@ -702,6 +727,52 @@ function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
           );
         })}
       </div>
+
+      {/* ── Setup essentials hub ── */}
+      <p className={styles['fieldGroupLabel']} style={{ marginTop: 22 }}>Setup essentials</p>
+      <p className={styles['sectionDesc']}>Quick access to the rest of what the guide configures.</p>
+      <div className={styles['setupHubGrid']}>
+        <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('display')}>
+          <span className={styles['setupHubTitle']}>Default view &amp; visible tabs</span>
+          <span className={styles['setupHubMeta']}>
+            Default: {formatViewLabel(defaultView)} · {visibleViewCount} of 8 tabs shown
+          </span>
+        </button>
+        <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('team')}>
+          <span className={styles['setupHubTitle']}>Team &amp; {baseLabel.toLowerCase()}s</span>
+          <span className={styles['setupHubMeta']}>
+            {employeeCount} {employeeCount === 1 ? 'employee' : 'employees'}
+            {' · '}
+            {baseCount} {baseCount === 1 ? baseLabel.toLowerCase() : `${baseLabel.toLowerCase()}s`}
+          </span>
+        </button>
+        <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('smartViews')}>
+          <span className={styles['setupHubTitle']}>Smart views</span>
+          <span className={styles['setupHubMeta']}>
+            {savedViewCount} saved {savedViewCount === 1 ? 'view' : 'views'}
+          </span>
+        </button>
+      </div>
+
+      {onReopenSetup && (
+        <div className={styles['setupReopenRow']}>
+          <div className={styles['setupReopenText']}>
+            <strong>Restart setup guide</strong>
+            <span>
+              Reopens the guided welcome flow with tabs, default view, team,
+              and smart-view recipes. Existing settings stay until you change
+              them in the guide.
+            </span>
+          </div>
+          <button
+            type="button"
+            className={styles['setupReopenBtn']}
+            onClick={onReopenSetup}
+          >
+            Restart setup
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1900,7 +1971,7 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
       <div className={styles['formRow']}>
         <span>Default view</span>
         <select className={styles['select']} value={d.defaultView} onChange={e => set('defaultView', e.target.value)}>
-          {['month','week','day','agenda','schedule','base','assets'].map(v => (
+          {['month','week','day','agenda','schedule','base','assets','dispatch'].map(v => (
             <option key={v} value={v}>
               {v === 'base'
                 ? (config['team']?.locationLabel ?? 'Base')
@@ -1919,6 +1990,7 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
         { id: 'schedule', label: 'Schedule (gantt)' },
         { id: 'base',     label: `${config['team']?.locationLabel ?? 'Base'} (location-first)` },
         { id: 'assets',   label: `${config['team']?.assetsLabel ?? 'Asset'}s` },
+        { id: 'dispatch', label: 'Dispatch (readiness board)' },
       ].map(v => (
         <label key={v.id} className={styles['toggle']}>
           <span>{v.label}</span>
