@@ -89,6 +89,14 @@ import TimelineView           from './views/TimelineView';
 import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
 import DispatchView           from './views/DispatchView';
+import type { DispatchMissionCandidate, DispatchMissionReadiness } from './views/DispatchView';
+
+type DispatchEvaluator = (
+  assetId: string,
+  missionId: string,
+  asOf: Date,
+) => DispatchMissionReadiness;
+export type { DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator };
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
@@ -224,6 +232,19 @@ export type WorksCalendarProps = {
    * no-op chip (harmless).
    */
   focusChips?: FocusChipDef[] | boolean;
+  /**
+   * Pending missions/requests offered as the "For mission" picker on the
+   * Dispatch view. Empty/undefined hides the picker (the view falls back
+   * to generic readiness). Pair with `dispatchEvaluator` — the picker is
+   * also hidden when no evaluator is wired.
+   */
+  dispatchMissions?: DispatchMissionCandidate[];
+  /**
+   * Per-(asset, mission) readiness evaluator for the Dispatch view. Hosts
+   * translate their domain primitives (cert matching, capability checks,
+   * hours remaining, etc.) into the readiness shape the table expects.
+   */
+  dispatchEvaluator?: DispatchEvaluator;
   emptyState?: ReactNode;
   filterSchema?: FilterField[];
   showAddButton?: boolean;
@@ -474,6 +495,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderFilterBar,
     renderSavedViewsBar,
     focusChips,
+    dispatchMissions,
+    dispatchEvaluator,
     emptyState,
 
     // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
@@ -2417,6 +2440,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   bases={configuredBases}
                   locationLabel={locationLabel}
                   onEventClick={handleEventClick}
+                  missions={dispatchMissions}
+                  evaluateForMission={dispatchEvaluator}
                 />
               )}
             </>

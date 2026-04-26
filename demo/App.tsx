@@ -24,6 +24,7 @@ import {
 } from './emsData';
 import MissionHoverCard, { allRequirementsMet } from './MissionHoverCard';
 import missionStyles from './MissionHoverCard.module.css';
+import { makeDispatchEvaluator } from './dispatchEvaluator';
 
 /* ─── Demo identity ─────────────────────────────────────────────── */
 // Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
@@ -361,6 +362,38 @@ function App() {
     [],
   );
 
+  // ── Dispatch view wiring ────────────────────────────────────────
+  // The library's DispatchView is generic — it knows nothing about
+  // pilots, certs, aircraft hours, etc. Air EMS specifics live in
+  // ./dispatchEvaluator and feed in via these two props.
+  const dispatchMissions = useMemo(() => ([
+    { id: mission.id, label: mission.title, sublabel: 'Pending — needs aircraft' },
+  ]), []);
+
+  const dispatchEvaluator = useMemo(() => {
+    const missionsById = { [mission.id]: mission };
+    // isBookedAt — quick scan of the live event store. Events without a
+    // resource binding (base-wide events) don't lock individual crew.
+    const isBookedAt = (resourceId, at) => {
+      const t = at.getTime();
+      for (const ev of events) {
+        if (ev?.resource == null) continue;
+        if (String(ev.resource) !== resourceId) continue;
+        const s = new Date(ev.start).getTime();
+        const e = new Date(ev.end).getTime();
+        if (s <= t && e >= t) return true;
+      }
+      return false;
+    };
+    return makeDispatchEvaluator({
+      aircraft: EMS_ASSETS,
+      pilots: crew,
+      medicalCrew,
+      missionsById,
+      isBookedAt,
+    });
+  }, [events]);
+
   const [updateSW] = useState(() =>
     registerSW({
       onNeedRefresh()  { setNeedsRefresh(true); },
@@ -492,6 +525,8 @@ function App() {
             categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
             locationProvider={assetLocationProvider}
             filterSchema={DEMO_FILTER_SCHEMA}
+            dispatchMissions={dispatchMissions}
+            dispatchEvaluator={dispatchEvaluator}
           />
         </div>
       </div>

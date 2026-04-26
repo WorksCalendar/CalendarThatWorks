@@ -55,6 +55,30 @@ type Asset = {
 
 type Base = { id: string; name: string };
 
+/**
+ * A pending mission/request the dispatcher might launch. Hosts compute
+ * this list from their own event semantics (typically open requests with
+ * no assignment yet) and pass it in. Empty/undefined hides the picker.
+ */
+export type DispatchMissionCandidate = {
+  id: string;
+  label: string;
+  /** Optional sublabel — e.g. priority, ETA, route. */
+  sublabel?: string;
+};
+
+/**
+ * Per-asset readiness for a specific mission. Hosts return whatever their
+ * own validation primitives report (cert matches, aircraft capability
+ * checks, hours remaining, etc.) translated into the same shape the
+ * generic readiness pipeline produces.
+ */
+export type DispatchMissionReadiness = {
+  crewReady: boolean;
+  equipmentReady: boolean;
+  missing: string[];
+};
+
 export type DispatchViewProps = {
   events: LooseEvent[];
   employees: Employee[];
@@ -64,6 +88,24 @@ export type DispatchViewProps = {
   onEventClick?: (id: string | number) => void;
   /** Default as-of time. Component manages its own state from this seed. */
   initialAsOf?: Date;
+  /**
+   * Optional list of pending missions/requests. When present, the toolbar
+   * surfaces a "For mission" picker; selecting one routes each row's
+   * readiness through `evaluateForMission` instead of the generic checks.
+   */
+  missions?: DispatchMissionCandidate[] | undefined;
+  /**
+   * Per-(asset, mission) readiness evaluator. Required for the picker to
+   * do anything useful — without it the picker is hidden even when
+   * `missions` is non-empty. The view passes the chosen as-of time so the
+   * host can re-validate cert lapses, aircraft hours, etc. at that
+   * moment.
+   */
+  evaluateForMission?: ((
+    assetId: string,
+    missionId: string,
+    asOf: Date,
+  ) => DispatchMissionReadiness) | undefined;
 };
 
 type Status = 'available' | 'busy' | 'maintenance';
@@ -228,13 +270,38 @@ export default function DispatchView({
   locationLabel = 'Base',
   onEventClick,
   initialAsOf,
+  missions,
+  evaluateForMission,
 }: DispatchViewProps) {
   const [asOf, setAsOf] = useState<Date>(() => initialAsOf ?? new Date());
+  const [forMissionId, setForMissionId] = useState<string | null>(null);
+
+  const missionPickerEnabled = !!(missions && missions.length > 0 && evaluateForMission);
+  const activeMission = missionPickerEnabled && forMissionId
+    ? missions!.find(m => m.id === forMissionId) ?? null
+    : null;
 
   const rows = useMemo(() => {
     const skel = computeDispatchRows(asOf, assets, employees, bases, locationLabel);
-    return decorateDispatchRows(skel, asOf, events, employees);
-  }, [asOf, assets, employees, bases, events, locationLabel]);
+    const base = decorateDispatchRows(skel, asOf, events, employees);
+    if (!activeMission || !evaluateForMission) return base;
+    // When a mission is selected, the host's evaluator owns crew/equipment/
+    // missing semantics. Status (busy/maintenance/available) is still driven
+    // by the calendar — a maintenance asset can't fly even if it'd otherwise
+    // fit the mission profile, and the dispatcher needs to see that fact.
+    return base.map(row => {
+      const verdict = evaluateForMission(String(row.asset.id), activeMission.id, asOf);
+      const baseMissing = row.status === 'maintenance' || row.status === 'busy'
+        ? row.missing
+        : [];
+      return {
+        ...row,
+        crewReady: verdict.crewReady,
+        equipmentReady: verdict.equipmentReady,
+        missing: [...baseMissing, ...verdict.missing],
+      };
+    });
+  }, [asOf, assets, employees, bases, events, locationLabel, activeMission, evaluateForMission]);
 
   const summary = useMemo(() => {
     let available = 0, busy = 0, maintenance = 0;
@@ -280,6 +347,28 @@ export default function DispatchView({
             Now
           </button>
         </div>
+
+        {missionPickerEnabled && (
+          <div className={styles['missionBlock']}>
+            <label className={styles['asOfLabel']} htmlFor="dispatch-mission">
+              For mission
+            </label>
+            <select
+              id="dispatch-mission"
+              className={styles['asOfInput']}
+              value={forMissionId ?? ''}
+              onChange={e => setForMissionId(e.target.value || null)}
+              aria-label="Evaluate readiness against a specific mission"
+            >
+              <option value="">Generic readiness</option>
+              {missions!.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.label}{m.sublabel ? ` — ${m.sublabel}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className={styles['summary']}>
           <span className={[styles['summaryPill'], styles['summaryAvailable']].join(' ')}>
@@ -362,6 +451,7 @@ export default function DispatchView({
                         row={row}
                         blockingId={blockingId != null ? String(blockingId) : null}
                         onView={onEventClick}
+                        missionLabel={activeMission?.label}
                       />
                     </td>
                   </tr>
@@ -410,10 +500,12 @@ function ActionButton({
   row,
   blockingId,
   onView,
+  missionLabel,
 }: {
   row: Row;
   blockingId: string | null;
   onView?: ((id: string | number) => void) | undefined;
+  missionLabel?: string | undefined;
 }) {
   if (row.status === 'maintenance') {
     return blockingId
@@ -428,5 +520,9 @@ function ActionButton({
   if (!row.crewReady && row.baseId) {
     return <button type="button" className={[styles['actionBtn'], styles['actionWarn']].join(' ')}>Find crew</button>;
   }
-  return <button type="button" className={[styles['actionBtn'], styles['actionPrimary']].join(' ')}>Assign</button>;
+  if (!row.equipmentReady) {
+    return <span className={styles['actionMuted']}>Not eligible</span>;
+  }
+  const assignLabel = missionLabel ? `Assign to ${missionLabel}` : 'Assign';
+  return <button type="button" className={[styles['actionBtn'], styles['actionPrimary']].join(' ')}>{assignLabel}</button>;
 }
