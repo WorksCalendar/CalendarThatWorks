@@ -2303,6 +2303,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           onUpdateView={savedViews.updateView}
           onDeleteView={handleDeleteView}
           onToggleViewVisibility={savedViews.toggleStripVisibility}
+          locationLabel={locationLabel}
+          assetsLabel={assetsLabel}
         />
 
         {/* ── View area ── */}
@@ -2533,7 +2535,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         )}
 
         {/* ── Keyboard shortcuts cheat sheet ── */}
-        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} />}
+        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} assetsLabel={assetsLabel} />}
 
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />
