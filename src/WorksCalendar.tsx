@@ -88,6 +88,7 @@ import AgendaView             from './views/AgendaView';
 import TimelineView           from './views/TimelineView';
 import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
+import DispatchView           from './views/DispatchView';
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
@@ -306,6 +307,7 @@ const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status' },
   { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false },
+  { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?' },
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -2405,6 +2407,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
                   approvalsConfig={ownerCfg.config?.['approvals']}
                   onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
+                />
+              )}
+              {cal.view === 'dispatch' && (
+                <DispatchView
+                  events={expandedEvents}
+                  employees={configuredEmployees}
+                  assets={effectiveAssets ?? []}
+                  bases={configuredBases}
+                  locationLabel={locationLabel}
+                  onEventClick={handleEventClick}
                 />
               )}
             </>

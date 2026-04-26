@@ -8,7 +8,7 @@
  */
 import { isScheduleWorkflowEvent, SCHEDULE_TAB_CATEGORY_SEEDS } from './scheduleModel';
 
-export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
+export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch';
 
 export type ViewScopeContext = {
   employees: Array<{ id: string; base?: string | null }>;
@@ -92,6 +92,10 @@ export const VIEW_SCOPES: Record<ViewId, ViewScope> = Object.freeze({
     includes: () => true,
     persistedFields: ['groupBy', 'sort', 'zoomLevel', 'collapsedGroups'],
   },
+  // Dispatch reads the full event pool to compute per-asset readiness at a
+  // user-chosen as-of time, so we accept everything here. Filters still
+  // apply via the host pipeline; this just makes scoping a no-op.
+  dispatch: { id: 'dispatch', includes: () => true },
 });
 
 export function getViewScope(view: string): ViewScope {

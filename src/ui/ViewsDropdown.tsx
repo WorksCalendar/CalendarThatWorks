@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   BookmarkCheck, Bookmark, Eye, EyeOff, ChevronDown,
-  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes,
+  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes, Radio,
 } from 'lucide-react';
 import styles from './ProfileBar.module.css';
 
@@ -20,6 +20,7 @@ const VIEW_ICON_MAP = {
   agenda:   List,
   schedule: CalendarRange,
   assets:   Boxes,
+  dispatch: Radio,
 };
 type ViewKey = keyof typeof VIEW_ICON_MAP;
 
