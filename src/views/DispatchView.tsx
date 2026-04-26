@@ -110,7 +110,7 @@ export type DispatchViewProps = {
 
 type Status = 'available' | 'busy' | 'maintenance';
 
-type Row = {
+export type DispatchRow = {
   asset: Asset;
   baseId: string;
   baseName: string;
@@ -120,6 +120,9 @@ type Row = {
   equipmentReady: boolean;
   missing: string[];
 };
+
+// Internal alias kept short to avoid churn in the existing call sites.
+type Row = DispatchRow;
 
 function toDate(value: string | Date | undefined): Date | null {
   if (!value) return null;
@@ -256,6 +259,35 @@ export function decorateDispatchRows(
   });
 }
 
+/**
+ * Replace generic crew/equipment readiness on each row with the host
+ * evaluator's verdict for a specific mission.
+ *
+ * Status (busy / maintenance / available) is preserved verbatim — a
+ * mission-eligible aircraft that is currently in maintenance still
+ * needs to read as Maintenance, not Available. We also keep any base
+ * `missing` notes that explain a non-available status (e.g. "Busy:
+ * Trauma transport") so the dispatcher sees both the blocking
+ * calendar event AND the mission-fit gaps in one cell.
+ */
+export function applyMissionOverride(
+  rows: DispatchRow[],
+  evaluate: (assetId: string, missionId: string, asOf: Date) => DispatchMissionReadiness,
+  missionId: string,
+  asOf: Date,
+): DispatchRow[] {
+  return rows.map(row => {
+    const verdict = evaluate(String(row.asset.id), missionId, asOf);
+    const blockingNotes = row.status === 'available' ? [] : row.missing;
+    return {
+      ...row,
+      crewReady: verdict.crewReady,
+      equipmentReady: verdict.equipmentReady,
+      missing: [...blockingNotes, ...verdict.missing],
+    };
+  });
+}
+
 function formatDateTimeLocal(d: Date): string {
   // <input type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in local time.
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -285,22 +317,7 @@ export default function DispatchView({
     const skel = computeDispatchRows(asOf, assets, employees, bases, locationLabel);
     const base = decorateDispatchRows(skel, asOf, events, employees);
     if (!activeMission || !evaluateForMission) return base;
-    // When a mission is selected, the host's evaluator owns crew/equipment/
-    // missing semantics. Status (busy/maintenance/available) is still driven
-    // by the calendar — a maintenance asset can't fly even if it'd otherwise
-    // fit the mission profile, and the dispatcher needs to see that fact.
-    return base.map(row => {
-      const verdict = evaluateForMission(String(row.asset.id), activeMission.id, asOf);
-      const baseMissing = row.status === 'maintenance' || row.status === 'busy'
-        ? row.missing
-        : [];
-      return {
-        ...row,
-        crewReady: verdict.crewReady,
-        equipmentReady: verdict.equipmentReady,
-        missing: [...baseMissing, ...verdict.missing],
-      };
-    });
+    return applyMissionOverride(base, evaluateForMission, activeMission.id, asOf);
   }, [asOf, assets, employees, bases, events, locationLabel, activeMission, evaluateForMission]);
 
   const summary = useMemo(() => {
