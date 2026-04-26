@@ -265,9 +265,10 @@ export default function SetupLanding({
             className={styles['backBtn']}
             onClick={back}
             type="button"
-            disabled={step === 1}
+            title={step === 1 ? 'Back to welcome' : 'Previous step'}
           >
-            <ChevronLeft size={15} aria-hidden="true" /> Back
+            <ChevronLeft size={15} aria-hidden="true" />
+            {step === 1 ? ' Welcome' : ' Back'}
           </button>
 
           {step < TOTAL_STEPS ? (
@@ -391,21 +392,26 @@ function StepTabs({
             <button
               key={v.id}
               type="button"
-              onClick={() => isOptional && onToggle(v.id as OptionalViewId)}
-              className={[styles['viewCard'], isOn && styles['cardSelected']].filter(Boolean).join(' ')}
-              aria-pressed={isOn}
-              aria-disabled={!isOptional}
-              disabled={!isOptional}
-              title={!isOptional ? 'Always on' : undefined}
+              onClick={isOptional ? () => onToggle(v.id as OptionalViewId) : undefined}
+              className={[
+                styles['viewCard'],
+                isOn && styles['cardSelected'],
+                !isOptional && styles['viewCardLocked'],
+              ].filter(Boolean).join(' ')}
+              aria-pressed={isOptional ? isOn : undefined}
+              aria-disabled={!isOptional || undefined}
+              title={!isOptional ? 'Always on — Month and Week are required' : undefined}
             >
               <IllustrationView kind={illustrationKindFor(v.id)} />
               <div className={styles['viewMeta']}>
                 <span className={styles['viewLabel']}>{label}</span>
-                {isOn && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>}
+                {!isOptional ? (
+                  <span className={styles['alwaysOnBadge']}>Always on</span>
+                ) : (
+                  isOn && <span className={styles['selectedMark']}><Check size={12} aria-hidden="true" /></span>
+                )}
               </div>
-              <span className={styles['viewBlurb']}>
-                {!isOptional ? `${v.plain} (always on)` : v.plain}
-              </span>
+              <span className={styles['viewBlurb']}>{v.plain}</span>
             </button>
           );
         })}
