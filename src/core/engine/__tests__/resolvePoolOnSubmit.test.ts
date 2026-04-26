@@ -214,4 +214,40 @@ describe('applyMutation — pool resolve on submit', () => {
     expect(engine.state.events.size).toBe(0);
     expect(engine.getPool('agents')?.rrCursor).toBeUndefined();
   });
+
+  it('rejects a submit against an empty pool with POOL_EMPTY and an empty evaluated trail', () => {
+    const engine = new CalendarEngine({
+      pools: [pool({ id: 'drivers', memberIds: [] })],
+    });
+
+    const before = engine.state.events;
+    const result = engine.applyMutation(createOp({ resourcePoolId: 'drivers' }));
+
+    expect(result.status).toBe('rejected');
+    expect(result.validation.severity).toBe('hard');
+    expect(result.validation.violations[0]?.rule).toBe('pool-unresolvable');
+    expect(result.validation.violations[0]?.details?.['code']).toBe('POOL_EMPTY');
+    expect(result.validation.violations[0]?.details?.['evaluated']).toEqual([]);
+    expect(engine.state.events).toBe(before); // state unchanged
+  });
+
+  it('surfaces the actual evaluated trail on NO_AVAILABLE_MEMBER rejections', () => {
+    const engine = new CalendarEngine({
+      events: [
+        makeEvent('b1', { title: 'x', start: START, end: END, resourceId: 'd1' }),
+        makeEvent('b2', { title: 'y', start: START, end: END, resourceId: 'd2' }),
+      ],
+      pools:  [pool({ id: 'drivers', memberIds: ['d1', 'd2'] })],
+    });
+
+    const result = engine.applyMutation(createOp({ resourcePoolId: 'drivers' }));
+
+    expect(result.status).toBe('rejected');
+    expect(result.validation.violations[0]?.details?.['code']).toBe('NO_AVAILABLE_MEMBER');
+    // Previously this returned pool.memberIds unconditionally, which
+    // was correct only for this code. Now it must equal the ordered
+    // resolver trail — which, for a two-member exhaustion, is the full
+    // member list.
+    expect(result.validation.violations[0]?.details?.['evaluated']).toEqual(['d1', 'd2']);
+  });
 });

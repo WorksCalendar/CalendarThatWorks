@@ -51,6 +51,14 @@ export interface ResolvePoolError {
   readonly code: ResolvePoolErrorCode
   readonly message: string
   readonly poolId: string
+  /**
+   * Members that were tried, in the order the strategy attempted them,
+   * before the resolver gave up. Empty for `POOL_DISABLED` and
+   * `POOL_EMPTY` (no member is ever attempted). Populated for
+   * `NO_AVAILABLE_MEMBER` so callers can surface "tried A, B; both
+   * conflicted" instead of a bare "no member available".
+   */
+  readonly evaluated: readonly string[]
 }
 
 export interface ResolvePoolSuccess {
@@ -129,10 +137,10 @@ function workloadFor(
 export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
   const { pool } = input
   if (pool.disabled) {
-    return { ok: false, error: { code: 'POOL_DISABLED', message: `Pool "${pool.id}" is disabled.`, poolId: pool.id } }
+    return { ok: false, error: { code: 'POOL_DISABLED', message: `Pool "${pool.id}" is disabled.`, poolId: pool.id, evaluated: [] } }
   }
   if (pool.memberIds.length === 0) {
-    return { ok: false, error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id } }
+    return { ok: false, error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id, evaluated: [] } }
   }
 
   const winStart = toTime(input.proposed.start)
@@ -177,6 +185,13 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
     }
     if (pool.strategy === 'round-robin') {
       const nextCursor = pool.memberIds.indexOf(candidate)
+      // Invariant: every candidate originates from `pool.memberIds`, so
+      // indexOf cannot return -1 on the current code path. Assert anyway
+      // so a future refactor that projects candidates through a
+      // transform fails loudly instead of persisting `rrCursor: -1`.
+      if (nextCursor < 0) {
+        throw new Error(`resolvePool: round-robin candidate "${candidate}" is not in pool "${pool.id}" memberIds`)
+      }
       return { ...result, rrCursor: nextCursor }
     }
     return result
@@ -188,6 +203,7 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
       code: 'NO_AVAILABLE_MEMBER',
       message: `Pool "${pool.id}" has no available member for the requested window.`,
       poolId: pool.id,
+      evaluated,
     },
   }
 }

@@ -10,11 +10,13 @@ import {
 import { saveProfiles } from '../src/core/profileStore';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema';
 import { loadPools, savePools } from '../src/core/pools/poolStore';
+import { buildDefaultFilterSchema } from '../src/filters/filterSchema';
 import {
   regions,
   bases,
   assets as EMS_ASSETS,
   crew,
+  dispatchers,
   medicalCrew,
   mechanics,
   allEvents,
@@ -59,6 +61,17 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 /* ─── Config seed ───────────────────────────────────────────────── */
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
 // see the new defaults on their next load without a manual storage wipe.
+//
+// Seed v5 carries two upgrades:
+//   1. Force-resync `team.bases` to DEMO_BASES. Earlier versions preserved
+//      any non-empty `existing.team.bases`, leaving returning visitors with
+//      stale base ids (e.g. IHC-era numeric ids) that no longer matched
+//      employee `basedAt` / aircraft `meta.base`. The result was a By-Base
+//      view counting 0 people / 0 assets at every base. Bases are demo-
+//      controlled identity, not user data, so overwriting them is safe.
+//   2. Default view returns to Month. The seed previously hard-coded
+//      `defaultView: 'base'`; only the carried-over 'base' choice is reset
+//      so any user-picked view is respected.
 const DEMO_SEED_VERSION = 5;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
@@ -75,8 +88,6 @@ if (!storedCfg) {
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 } else if (storedSeedVer < DEMO_SEED_VERSION) {
   const existing = loadConfig(DEMO_CALENDAR_ID);
-  // v5: default view returns to Month. Only reset the carried-over 'base'
-  // default; respect any user-set choice (any other view value).
   const carriedDefaultView = existing.display?.defaultView;
   const nextDefaultView = carriedDefaultView === 'base' ? 'month' : carriedDefaultView;
   saveConfig(DEMO_CALENDAR_ID, {
@@ -84,7 +95,7 @@ if (!storedCfg) {
     title:     existing.title ?? 'Air EMS Operations',
     setup:     { ...existing.setup, preferredTheme: existing.setup?.preferredTheme ?? 'ops-dark' },
     display:   { ...existing.display, defaultView: nextDefaultView ?? 'month' },
-    team:      { ...existing.team, bases: existing.team?.bases?.length ? existing.team.bases : DEMO_BASES },
+    team:      { ...existing.team, bases: DEMO_BASES },
     approvals: { ...existing.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
@@ -101,8 +112,16 @@ const PILOT_COLOR    = '#3b82f6';
 const MEDICAL_COLOR  = '#10b981';
 const SPECIAL_COLOR  = '#a855f7'; // ECMO specialist
 const MECHANIC_COLOR = '#f97316';
+const DISPATCHER_COLOR = '#0ea5e9';
 
 const INITIAL_EMPLOYEES = [
+  ...dispatchers.map(d => ({
+    id:    d.id,
+    name:  d.name,
+    role:  `Dispatcher (${d.shiftType})`,
+    color: DISPATCHER_COLOR,
+    base:  d.basedAt,
+  })),
   ...crew.map(c => ({
     id:    c.id,
     name:  c.name,
@@ -190,13 +209,17 @@ const INITIAL_EVENTS = allEvents.map(e => ({
 
 /* ─── Resource pools (#212) ─────────────────────────────────────── */
 // Group aircraft by region so bookings can target a pool instead of a tail
-// number; the round-robin cursor persists in localStorage.
+// number; the round-robin cursor persists in localStorage. Resynced on the
+// demo seed bump so returning visitors don't keep stale pool names (e.g.
+// "Mountain Fleet" / "Southwest Fleet") from earlier demo identities.
 const DEMO_POOLS_DEFAULT = [
   { id: 'pool-pnw', name: 'Pacific Northwest Fleet', memberIds: ['ac-n801aw', 'ac-n803lj'], strategy: 'round-robin'     },
   { id: 'pool-rm',  name: 'Rocky Mountain Fleet',   memberIds: ['ac-n804aw', 'ac-n805pc'], strategy: 'first-available' },
 ];
 const _storedPools = loadPools(DEMO_CALENDAR_ID);
-if (_storedPools.length === 0) savePools(DEMO_CALENDAR_ID, DEMO_POOLS_DEFAULT);
+if (_storedPools.length === 0 || storedSeedVer < DEMO_SEED_VERSION) {
+  savePools(DEMO_CALENDAR_ID, DEMO_POOLS_DEFAULT);
+}
 
 /* ─── Categories ────────────────────────────────────────────────── */
 const UNIFIED_CATEGORIES = [
@@ -220,6 +243,24 @@ const UNIFIED_CATEGORIES_CONFIG = {
   pillStyle: 'hue',
   defaultCategoryId: 'other',
 };
+
+/* ─── Filter schema ─────────────────────────────────────────────── */
+// The Air EMS demo uses the predefined saved views (By Base / Dispatch /
+// Maintenance / Flight Crew / Requests / Mission Timeline) as the primary
+// organization model. The stock group builder's default options —
+// Category, Resource, Source — aren't meaningful pivots here: Category is
+// already the filter chip axis, Resource lists raw employee ids, and
+// Source is an adapter/plumbing concept the demo doesn't use. Keep them
+// available as *filters* (so AdvancedFilterBuilder still works) but hide
+// them from the grouping builder.
+const DEMO_FILTER_SCHEMA = buildDefaultFilterSchema({
+  employees: INITIAL_EMPLOYEES,
+  assets:    AIRCRAFT_RESOURCES,
+}).map(f => (
+  f.key === 'categories' || f.key === 'resources' || f.key === 'sources'
+    ? { ...f, groupable: false }
+    : f
+));
 
 /* ─── Approval state machine (demo) ─────────────────────────────── */
 function nextStageFor(currentStage, actionId) {
@@ -450,7 +491,7 @@ function App() {
             showAddButton={true}
             categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
             locationProvider={assetLocationProvider}
-            focusChips
+            filterSchema={DEMO_FILTER_SCHEMA}
           />
         </div>
       </div>
