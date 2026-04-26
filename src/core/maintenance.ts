@@ -172,9 +172,10 @@ export function completeMaintenance(
     ruleId: prior.ruleId ?? rule.id,
     lifecycle: 'complete',
     meterAtService: reading.value,
-    ...(projection.nextDueMiles != null && { nextDueMiles: projection.nextDueMiles }),
-    ...(projection.nextDueHours != null && { nextDueHours: projection.nextDueHours }),
-    ...(projection.nextDueDate           && { nextDueDate: projection.nextDueDate }),
+    ...(projection.nextDueMiles  != null && { nextDueMiles:  projection.nextDueMiles }),
+    ...(projection.nextDueHours  != null && { nextDueHours:  projection.nextDueHours }),
+    ...(projection.nextDueCycles != null && { nextDueCycles: projection.nextDueCycles }),
+    ...(projection.nextDueDate            && { nextDueDate:  projection.nextDueDate }),
   };
 
   const nextEvent: WorksCalendarEvent = {

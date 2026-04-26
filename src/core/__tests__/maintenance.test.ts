@@ -210,6 +210,21 @@ describe('completeMaintenance', () => {
     expect(JSON.stringify(baseEvent)).toBe(before);
   });
 
+  it('writes nextDueCycles for cycle-based rules', () => {
+    const cycleRule: MaintenanceRule = {
+      id: 'engine-overhaul',
+      assetType: 'engine',
+      title: 'Overhaul',
+      interval: { cycles: 2_000 },
+    };
+    const { event } = completeMaintenance(
+      { id: 'evt', title: 'Overhaul', start: '2026-04-10', meta: { maintenance: { ruleId: 'engine-overhaul' } } },
+      cycleRule,
+      { assetId: 'eng-3', type: 'cycles', value: 5_400 },
+    );
+    expect((event.meta as any).maintenance.nextDueCycles).toBe(7_400);
+  });
+
   it('preserves unrelated meta keys on the event', () => {
     const eventWithExtra: WorksCalendarEvent = {
       ...baseEvent,

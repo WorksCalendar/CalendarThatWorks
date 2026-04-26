@@ -250,6 +250,26 @@ describe('mapToEvents — billing fields', () => {
     expect(errors[0]!.message).toMatch(/rate/i);
   });
 
+  it('rejects symbol-only rate ("$") instead of importing it as 0', () => {
+    const { events, errors } = mapToEvents(
+      [{ T: 'Job', S: '2026-04-10', Rate: '$' }],
+      { title: 'T', start: 'S', rate: 'Rate' },
+      'iso',
+    );
+    expect(events).toHaveLength(0);
+    expect(errors[0]!.message).toMatch(/rate/i);
+  });
+
+  it('rejects comma-only quantity (",") instead of importing it as 0', () => {
+    const { events, errors } = mapToEvents(
+      [{ T: 'Job', S: '2026-04-10', Q: ',' }],
+      { title: 'T', start: 'S', quantity: 'Q' },
+      'iso',
+    );
+    expect(events).toHaveLength(0);
+    expect(errors[0]!.message).toMatch(/quantity/i);
+  });
+
   it('does not attach meta when no billing columns map and values exist', () => {
     const { events } = mapToEvents(
       [{ T: 'Plain', S: '2026-04-10' }],

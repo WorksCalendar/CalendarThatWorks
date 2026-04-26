@@ -256,6 +256,11 @@ function _parseNum(raw: string, fieldLabel: string): number | null {
   if (!v) return null;
   // Tolerate currency symbols, thousand separators.
   const cleaned = v.replace(/[$,\s]/g, '');
+  if (!cleaned) {
+    // Original cell had content (e.g. "$" or ",") but stripping left nothing.
+    // Treat as a non-numeric value rather than silently returning 0.
+    throw new Error(`Cannot parse ${fieldLabel}: "${raw}"`);
+  }
   const n = Number(cleaned);
   if (!Number.isFinite(n)) {
     throw new Error(`Cannot parse ${fieldLabel}: "${raw}"`);

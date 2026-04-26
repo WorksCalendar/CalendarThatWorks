@@ -76,6 +76,7 @@ export interface MaintenanceMeta {
   /** Computed next-due meter value after this service completes. */
   nextDueMiles?: number;
   nextDueHours?: number;
+  nextDueCycles?: number;
   nextDueDate?: string;
   /** Free-text technician notes. */
   notes?: string;
