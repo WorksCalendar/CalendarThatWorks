@@ -2442,6 +2442,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEventClick={handleEventClick}
                   missions={dispatchMissions}
                   evaluateForMission={dispatchEvaluator}
+                  // Sync the calendar's currentDate with the dispatcher's chosen
+                  // as-of moment so recurring-event expansion + fetch ranges
+                  // re-anchor around it. Without this, a far-future as-of would
+                  // see no overlapping events (since they were never expanded
+                  // for the original currentDate range) and the row would be
+                  // wrongly classified Available.
+                  onAsOfChange={cal.setCurrentDate}
                 />
               )}
             </>

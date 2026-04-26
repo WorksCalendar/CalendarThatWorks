@@ -85,7 +85,13 @@ export type DispatchViewProps = {
   assets: Asset[];
   bases: Base[];
   locationLabel?: string;
-  onEventClick?: (id: string | number) => void;
+  /**
+   * Click handler for blocker events surfaced via "View booking" / "View
+   * work" actions. Receives the full event object (matching the contract
+   * the rest of the view-prop pipeline expects), not just an id, so the
+   * downstream HoverCard / detail panel can render `event.start` etc.
+   */
+  onEventClick?: (event: LooseEvent) => void;
   /** Default as-of time. Component manages its own state from this seed. */
   initialAsOf?: Date;
   /**
@@ -106,6 +112,16 @@ export type DispatchViewProps = {
     missionId: string,
     asOf: Date,
   ) => DispatchMissionReadiness) | undefined;
+  /**
+   * Notified when the user changes `asOf` via the picker or "Now" button.
+   * Hosts wire this to their calendar's date setter so the underlying
+   * recurring-event expansion follows — without it, an `asOf` outside
+   * the loaded range produces wrong "available" verdicts because the
+   * blocking events for that moment never made it into `events`.
+   *
+   * Not invoked on initial mount — only on user-driven changes.
+   */
+  onAsOfChange?: ((asOf: Date) => void) | undefined;
 };
 
 type Status = 'available' | 'busy' | 'maintenance';
@@ -304,9 +320,18 @@ export default function DispatchView({
   initialAsOf,
   missions,
   evaluateForMission,
+  onAsOfChange,
 }: DispatchViewProps) {
   const [asOf, setAsOf] = useState<Date>(() => initialAsOf ?? new Date());
   const [forMissionId, setForMissionId] = useState<string | null>(null);
+
+  // Single setter so every user-driven asOf change bubbles up. Initial
+  // mount uses `useState`'s lazy initializer above and intentionally
+  // does NOT notify — the host already knows its own currentDate.
+  const updateAsOf = (next: Date) => {
+    setAsOf(next);
+    onAsOfChange?.(next);
+  };
 
   const missionPickerEnabled = !!(missions && missions.length > 0 && evaluateForMission);
   const activeMission = missionPickerEnabled && forMissionId
@@ -351,13 +376,13 @@ export default function DispatchView({
             value={formatDateTimeLocal(asOf)}
             onChange={e => {
               const d = new Date(e.target.value);
-              if (isValid(d)) setAsOf(d);
+              if (isValid(d)) updateAsOf(d);
             }}
           />
           <button
             type="button"
             className={[styles['nowBtn'], isNow && styles['nowBtnActive']].filter(Boolean).join(' ')}
-            onClick={() => setAsOf(new Date())}
+            onClick={() => updateAsOf(new Date())}
             disabled={isNow}
             title={isNow ? 'Already showing live status' : 'Reset to current time'}
           >
@@ -423,7 +448,6 @@ export default function DispatchView({
               {rows.map(row => {
                 const assetLabel = row.asset.label ?? row.asset.name ?? String(row.asset.id);
                 const sublabel = typeof row.asset.meta?.sublabel === 'string' ? row.asset.meta.sublabel : null;
-                const blockingId = row.blockingEvent?.id;
                 return (
                   <tr key={String(row.asset.id)} data-status={row.status}>
                     <td>{row.baseName}</td>
@@ -466,7 +490,6 @@ export default function DispatchView({
                     <td className={styles['actionCol']}>
                       <ActionButton
                         row={row}
-                        blockingId={blockingId != null ? String(blockingId) : null}
                         onView={onEventClick}
                         missionLabel={activeMission?.label}
                       />
@@ -515,23 +538,22 @@ function ReadinessChip({
 
 function ActionButton({
   row,
-  blockingId,
   onView,
   missionLabel,
 }: {
   row: Row;
-  blockingId: string | null;
-  onView?: ((id: string | number) => void) | undefined;
+  onView?: ((event: LooseEvent) => void) | undefined;
   missionLabel?: string | undefined;
 }) {
+  const blockingEvent = row.blockingEvent;
   if (row.status === 'maintenance') {
-    return blockingId
-      ? <button type="button" className={styles['actionBtn']} onClick={() => onView?.(blockingId)}>View work</button>
+    return blockingEvent
+      ? <button type="button" className={styles['actionBtn']} onClick={() => onView?.(blockingEvent)}>View work</button>
       : <span className={styles['actionMuted']}>—</span>;
   }
   if (row.status === 'busy') {
-    return blockingId
-      ? <button type="button" className={styles['actionBtn']} onClick={() => onView?.(blockingId)}>View booking</button>
+    return blockingEvent
+      ? <button type="button" className={styles['actionBtn']} onClick={() => onView?.(blockingEvent)}>View booking</button>
       : <span className={styles['actionMuted']}>—</span>;
   }
   if (!row.crewReady && row.baseId) {
