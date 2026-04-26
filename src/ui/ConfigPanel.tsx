@@ -48,15 +48,15 @@ const MANAGER_TITLES = [
 
 const TABS = [
   { id: 'setup',       label: 'Setup' },
-  { id: 'hoverCard',   label: 'Hover Card' },
+  { id: 'hoverCard',   label: 'Event Details' },
   { id: 'eventFields', label: 'Event Fields' },
-  { id: 'categories',  label: 'Categories' },
+  { id: 'categories',  label: 'Event Colors' },
   { id: 'assets',      label: 'Assets' },
-  { id: 'display',     label: 'Display' },
+  { id: 'display',     label: 'Layout & Labels' },
   { id: 'theme',       label: 'Theme' },
   { id: 'feeds',       label: 'Feeds' },
   { id: 'templates',   label: 'Templates' },
-  { id: 'smartViews',  label: 'Smart Views' },
+  { id: 'smartViews',  label: 'Saved Views' },
   { id: 'team',        label: 'Employees' },
   { id: 'approvals',   label: 'Approvals' },
   { id: 'approvalFlows', label: 'Approval Flows' },
@@ -515,7 +515,7 @@ export function SmartViewsTab({
       {/* ── Existing views list ── */}
       {savedViews.length > 0 && (
         <div className={styles['smartViewList']}>
-          <p className={styles['sectionDesc']} style={{ marginBottom: 6 }}>Manage existing Smart Views:</p>
+          <p className={styles['sectionDesc']} style={{ marginBottom: 6 }}>Manage existing saved views:</p>
           {savedViews.map(view => (
             <div
               key={view.id}
@@ -573,7 +573,7 @@ export function SmartViewsTab({
       <p className={styles['sectionDesc']}>
         {editingView
           ? `Editing conditions for "${editingView.name}"`
-          : 'Create Smart Views once categories and people are configured.'}
+          : 'Create saved views once categories and people are configured.'}
       </p>
       <AdvancedFilterBuilder
         key={editingId ?? '__new__'}
