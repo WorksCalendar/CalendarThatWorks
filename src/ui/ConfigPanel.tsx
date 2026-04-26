@@ -414,7 +414,7 @@ function SetupTab({
   const enabledViews  = Array.isArray(display['enabledViews']) ? (display['enabledViews'] as string[]) : [];
   const baseLabel     = (team['locationLabel'] as string | undefined) ?? 'Base';
   const formatViewLabel = (id: string) => id === 'base' ? baseLabel : id.charAt(0).toUpperCase() + id.slice(1);
-  const visibleViewCount = enabledViews.length > 0 ? enabledViews.length + 2 : 7; // +2 = always-on Month/Week
+  const visibleViewCount = enabledViews.length > 0 ? enabledViews.length + 2 : 8; // +2 = always-on Month/Week; total = 8
   const baseCount     = Array.isArray(team['bases']) ? (team['bases'] as unknown[]).length : 0;
   const employeeCount = Array.isArray(team['employees']) ? (team['employees'] as unknown[]).length : 0;
 
@@ -512,7 +512,7 @@ function SetupTab({
         <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('display')}>
           <span className={styles['setupHubTitle']}>Default view &amp; visible tabs</span>
           <span className={styles['setupHubMeta']}>
-            Default: {formatViewLabel(defaultView)} · {visibleViewCount} of 7 tabs shown
+            Default: {formatViewLabel(defaultView)} · {visibleViewCount} of 8 tabs shown
           </span>
         </button>
         <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('team')}>
@@ -1732,7 +1732,7 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
       <div className={styles['formRow']}>
         <span>Default view</span>
         <select className={styles['select']} value={d.defaultView} onChange={e => set('defaultView', e.target.value)}>
-          {['month','week','day','agenda','schedule','base','assets'].map(v => (
+          {['month','week','day','agenda','schedule','base','assets','dispatch'].map(v => (
             <option key={v} value={v}>
               {v === 'base'
                 ? (config['team']?.locationLabel ?? 'Base')
@@ -1751,6 +1751,7 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
         { id: 'schedule', label: 'Schedule (gantt)' },
         { id: 'base',     label: `${config['team']?.locationLabel ?? 'Base'} (location-first)` },
         { id: 'assets',   label: 'Assets' },
+        { id: 'dispatch', label: 'Dispatch (readiness board)' },
       ].map(v => (
         <label key={v.id} className={styles['toggle']}>
           <span>{v.label}</span>

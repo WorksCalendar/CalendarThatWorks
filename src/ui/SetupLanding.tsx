@@ -31,7 +31,7 @@ export type SetupRecipeId =
   | 'on-call'
   | 'this-week';
 
-export type OptionalViewId = 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
+export type OptionalViewId = 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch';
 
 /** A category of bookable resource. Drives requirement templates. */
 export type AssetTypeDef = { id: string; label: string };
@@ -55,7 +55,7 @@ export type RequirementTemplate = {
 export type SetupLandingResult = {
   calendarName: string;
   theme: string;
-  defaultView: 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
+  defaultView: 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch';
   enabledViews: OptionalViewId[];
   locationLabel: 'Base' | 'Region';
   teamMembers: Array<{ id: string; name: string; color: string }>;
@@ -128,9 +128,10 @@ const VIEW_CHOICES: ViewChoice[] = [
   { id: 'schedule', label: 'Schedule', plain: 'One row per person. Great for shifts and coverage.' },
   { id: 'base',     label: 'Base',     plain: 'One row per location. Shows the assets, people, and events at each base.' },
   { id: 'assets',   label: 'Assets',   plain: 'One row per asset — vehicles, rooms, equipment.' },
+  { id: 'dispatch', label: 'Dispatch', plain: 'A live readiness board — which assets can launch right now.' },
 ];
 
-const OPTIONAL_VIEW_IDS: OptionalViewId[] = ['day', 'agenda', 'schedule', 'base', 'assets'];
+const OPTIONAL_VIEW_IDS: OptionalViewId[] = ['day', 'agenda', 'schedule', 'base', 'assets', 'dispatch'];
 
 const RECIPE_CHOICES: Array<{
   id: SetupRecipeId;
@@ -972,9 +973,9 @@ function exampleNameFor(typeLabel: string): string {
   return `${typeLabel} 1`;
 }
 
-/** Map setup view ids to illustration kinds. Base/assets reuse the schedule illustration. */
+/** Map setup view ids to illustration kinds. Base/assets/dispatch reuse the schedule illustration. */
 function illustrationKindFor(id: SetupLandingResult['defaultView']): 'month' | 'week' | 'day' | 'agenda' | 'schedule' {
-  if (id === 'base' || id === 'assets') return 'schedule';
+  if (id === 'base' || id === 'assets' || id === 'dispatch') return 'schedule';
   return id;
 }
 
