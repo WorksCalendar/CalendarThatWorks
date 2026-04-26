@@ -149,6 +149,8 @@ const EXAMPLES = [
     tag:   'Optional plugin',
     desc:  'Geographic plot of events with meta.coords. Renders an install hint until maplibre-gl + react-map-gl are installed.',
     component: MapExample,
+  },
+  {
     id:    'maintenance-invoicing',
     label: 'Maintenance & Invoicing',
     tag:   'Asset health · CSV export',

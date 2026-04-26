@@ -21,8 +21,6 @@ npm run examples
 - `09-Grouping.jsx` — 1-, 2-, 3-level grouping presets
 - `10-DragAndDrop.jsx` — drag events across groups / rows
 - `11-Map.jsx` — geographic plot via the optional MapView plugin (see [docs/MapView.md](../docs/MapView.md))
-- `09-Grouping.jsx` — single / nested groupBy + saved views
-- `10-DragAndDrop.jsx` — drag events across groups and rows
 - `11-MaintenanceAndInvoicing.jsx` — asset-health badges, in-form maintenance completion, CSV export for invoicing + maintenance log
 
 ## Focused examples
