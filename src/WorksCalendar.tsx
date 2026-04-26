@@ -274,6 +274,12 @@ export type WorksCalendarProps = {
   onConflictCheck?: (event: WorksCalendarEvent, candidate: WorksCalendarEvent) => Promise<unknown>;
   onApprovalAction?: (event: WorksCalendarEvent, action: string) => void | Promise<void>;
   renderAssetLocation?: (locationData: AssetLocationData, asset: { id: string }) => ReactNode;
+  renderAssetBadges?: (asset: { id: string }) => ReactNode;
+  /** Maintenance rules offered in the EventForm. When non-empty, the form
+   *  shows a Maintenance section; lifecycle='complete' triggers a built-in
+   *  call to completeMaintenance() so projected nextDue* fields land on
+   *  event.meta.maintenance automatically. */
+  maintenanceRules?: readonly import('./types/maintenance').MaintenanceRule[];
   renderConflictBody?: (args: UnknownRecord) => ReactNode;
 
   /**
@@ -528,6 +534,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onConflictCheck,
     onApprovalAction,
     renderAssetLocation,
+    renderAssetBadges,
+    maintenanceRules,
     renderConflictBody,
 
     // ── Resource pools (#212) ──
@@ -2437,6 +2445,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onCollapsedGroupsChange={setActiveAssetsCollapsed}
                   locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
+                  renderAssetBadges={renderAssetBadges}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
                   approvalsConfig={ownerCfg.config?.['approvals']}
@@ -2505,6 +2514,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onClose={() => setFormEvent(null)}
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
+            maintenanceRules={maintenanceRules}
           />
         )}
 

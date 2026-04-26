@@ -91,6 +91,7 @@ interface AssetsViewProps {
   categoriesConfig?: { categories?: Array<{ id?: string; color?: string }>; pillStyle?: string } | undefined;
   locationProvider?: LocationProvider | null | undefined;
   renderAssetLocation?: ((locationData: LocationData | null, asset: { id: string }) => ReactNode) | undefined;
+  renderAssetBadges?: ((asset: { id: string }) => ReactNode) | undefined;
   collapsedGroups?: Set<string> | string[] | undefined;
   onCollapsedGroupsChange?: ((next: Set<string>) => void) | undefined;
   assets?: AssetRowDef[] | undefined;
@@ -300,6 +301,7 @@ export default function AssetsView({
   categoriesConfig,
   locationProvider,
   renderAssetLocation,
+  renderAssetBadges,
   collapsedGroups: collapsedGroupsProp,
   onCollapsedGroupsChange,
   assets,
@@ -1126,6 +1128,11 @@ export default function AssetsView({
                     </span>
                     {sublabel && (
                       <span className={styles['assetSublabel']}>{sublabel}</span>
+                    )}
+                    {!isPool && renderAssetBadges && (
+                      <div data-testid="asset-badges" style={{ marginTop: 2 }}>
+                        {renderAssetBadges({ id: resource })}
+                      </div>
                     )}
                   </div>
                   {!isPool && (
