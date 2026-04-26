@@ -319,7 +319,7 @@ export default function ConfigPanel({
           </nav>
 
           <div className={styles['body']} aria-label={activeTabLabel}>
-          {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} onReopenSetup={onReopenSetup} />}
+          {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} onReopenSetup={onReopenSetup} goToTab={setTab} savedViewCount={savedViews?.length ?? 0} />}
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'categories'  && <CategoriesTab   config={config} onUpdate={onUpdate} />}
@@ -390,14 +390,33 @@ const FAMILY_DESCRIPTORS: Record<string, string> = {
   neon:       'Neon / high contrast',
 };
 
+type SetupTabProps = ConfigPanelSectionProps & {
+  onReopenSetup?: (() => void) | undefined;
+  goToTab: (id: string) => void;
+  savedViewCount: number;
+};
+
 function SetupTab({
   config,
   onUpdate,
   onReopenSetup,
-}: ConfigPanelSectionProps & { onReopenSetup?: (() => void) | undefined }) {
+  goToTab,
+  savedViewCount,
+}: SetupTabProps) {
   const selectedTheme = normalizeTheme(config['setup']?.preferredTheme ?? 'canvas-light');
   const selectedMeta  = THEME_META[selectedTheme];
   const calendarName  = config['title'] ?? 'My WorksCalendar';
+
+  // Live counts so the hub doubles as an at-a-glance status panel.
+  const display       = config['display'] ?? {};
+  const team          = config['team'] ?? {};
+  const defaultView   = (display['defaultView'] as string | undefined) ?? 'month';
+  const enabledViews  = Array.isArray(display['enabledViews']) ? (display['enabledViews'] as string[]) : [];
+  const baseLabel     = (team['locationLabel'] as string | undefined) ?? 'Base';
+  const formatViewLabel = (id: string) => id === 'base' ? baseLabel : id.charAt(0).toUpperCase() + id.slice(1);
+  const visibleViewCount = enabledViews.length > 0 ? enabledViews.length + 2 : 7; // +2 = always-on Month/Week
+  const baseCount     = Array.isArray(team['bases']) ? (team['bases'] as unknown[]).length : 0;
+  const employeeCount = Array.isArray(team['employees']) ? (team['employees'] as unknown[]).length : 0;
 
   const setCalendarName = (name: string) => onUpdate(c => ({ ...c, title: name }));
 
@@ -484,6 +503,32 @@ function SetupTab({
             </div>
           );
         })}
+      </div>
+
+      {/* ── Setup essentials hub ── */}
+      <p className={styles['fieldGroupLabel']} style={{ marginTop: 22 }}>Setup essentials</p>
+      <p className={styles['sectionDesc']}>Quick access to the rest of what the guide configures.</p>
+      <div className={styles['setupHubGrid']}>
+        <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('display')}>
+          <span className={styles['setupHubTitle']}>Default view &amp; visible tabs</span>
+          <span className={styles['setupHubMeta']}>
+            Default: {formatViewLabel(defaultView)} · {visibleViewCount} of 7 tabs shown
+          </span>
+        </button>
+        <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('team')}>
+          <span className={styles['setupHubTitle']}>Team &amp; {baseLabel.toLowerCase()}s</span>
+          <span className={styles['setupHubMeta']}>
+            {employeeCount} {employeeCount === 1 ? 'employee' : 'employees'}
+            {' · '}
+            {baseCount} {baseCount === 1 ? baseLabel.toLowerCase() : `${baseLabel.toLowerCase()}s`}
+          </span>
+        </button>
+        <button type="button" className={styles['setupHubCard']} onClick={() => goToTab('smartViews')}>
+          <span className={styles['setupHubTitle']}>Smart views</span>
+          <span className={styles['setupHubMeta']}>
+            {savedViewCount} saved {savedViewCount === 1 ? 'view' : 'views'}
+          </span>
+        </button>
       </div>
 
       {onReopenSetup && (

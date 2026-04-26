@@ -451,6 +451,50 @@
   gap: 10px;
 }
 
+/* Setup essentials hub — three jump-cards from the Setup tab to the
+   tabs that already host these editors (Display / Team / SmartViews).
+   The Setup tab keeps its name + theme controls inline and delegates
+   the rest, so nothing is duplicated and everything is one click away. */
+.setupHubGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.setupHubCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.setupHubCard:hover {
+  border-color: var(--wc-accent);
+  background: var(--wc-surface-2, var(--wc-surface));
+}
+.setupHubCard:active {
+  transform: translateY(1px);
+}
+
+.setupHubTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wc-text);
+}
+
+.setupHubMeta {
+  font-size: 11px;
+  color: var(--wc-text-muted);
+}
+
 /* Restart-setup row — surfaced at the bottom of the Setup tab so owners
    can re-enter the guided flow (tabs, default view, team, smart-view
    recipes) that the inline tab here doesn't otherwise cover. */
