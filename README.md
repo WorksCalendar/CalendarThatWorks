@@ -86,6 +86,56 @@ import 'works-calendar/styles/ocean';
 
 Included packaged themes: `aviation`, `soft`, `minimal`, `corporate`, `forest`, `ocean`.
 
+## Optional view plugins
+
+Some views are shipped behind optional peer dependencies so the core bundle
+stays slim. They are auto-detected at runtime — install the peers and the view
+renders; skip them and a graceful install hint is shown instead.
+
+### Map view
+
+Plot events with coordinates on a MapLibre basemap.
+
+```bash
+npm install maplibre-gl react-map-gl
+```
+
+```jsx
+import { WorksCalendar } from 'works-calendar';
+
+const events = [
+  {
+    id: 'kphx-1',
+    title: 'Phoenix arrival',
+    start: new Date(),
+    meta: { coords: { lat: 33.43, lon: -112.01 } },
+  },
+];
+
+<WorksCalendar events={events} initialView="map" />;
+```
+
+Coordinates are read from `event.meta.coords` (`{ lat, lon }`, matching the
+`LocationData` shape) — `event.meta.lat` + `event.meta.lon`/`meta.lng` is also
+accepted as a loose convenience form. Marker color resolves through the same
+`colorRules` as every other view.
+
+`MapView` is also exported standalone for custom layouts:
+
+```jsx
+import { MapView } from 'works-calendar';
+
+<MapView
+  events={events}
+  onEventClick={ev => console.log(ev)}
+  mapStyle="https://api.maptiler.com/maps/streets/style.json?key=YOUR_KEY"
+/>;
+```
+
+The default `mapStyle` is MapLibre's free demo tile server — fine for local
+development; production hosts should pass their own style URL (MapTiler,
+Stadia, Protomaps, self-hosted, …).
+
 ## Release & project status
 
 - [Release readiness checklist](./docs/release-readiness.md)
