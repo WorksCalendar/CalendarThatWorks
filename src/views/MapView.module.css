@@ -57,3 +57,9 @@
   margin: 0;
   white-space: pre-wrap;
 }
+.reason {
+  color: var(--wc-text-faint);
+  font-size: 11px;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

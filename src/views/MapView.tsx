@@ -85,8 +85,7 @@ type MapModule = {
 type LoadState =
   | { status: 'loading' }
   | { status: 'ready'; mod: MapModule }
-  | { status: 'missing' }
-  | { status: 'error'; message: string };
+  | { status: 'unavailable'; reason: string };
 
 /**
  * Lazy-load the map runtime. Falls back to a clear "missing dep" state instead
@@ -99,14 +98,14 @@ function useMapModule(): LoadState {
     let cancelled = false;
     (async () => {
       try {
-        // Resolved dynamically by string so TypeScript doesn't try to type-check
-        // the optional peer at build time, and @vite-ignore keeps the calendar
-        // bundle from trying to inline it. Host apps that opt in to the map
-        // install both peers themselves.
-        const mapModuleSpec = 'react-map-gl/maplibre';
-        const cssModuleSpec = 'maplibre-gl/dist/maplibre-gl.css';
-        const reactMap = (await import(/* @vite-ignore */ mapModuleSpec)) as any;
-        await import(/* @vite-ignore */ cssModuleSpec);
+        // Static specifiers so bundlers (Vite/Rollup/webpack) can statically
+        // resolve and rewrite these for the browser runtime when the host
+        // has installed the peers. The library build externalizes them via
+        // vite.config rollupOptions so they stay out of the published bundle;
+        // the runtime catch below handles the genuinely-missing case for hosts
+        // that haven't opted in.
+        const reactMap = (await import('react-map-gl/maplibre')) as any;
+        await import('maplibre-gl/dist/maplibre-gl.css');
         if (cancelled) return;
         const mod: MapModule = {
           Map: reactMap.Map ?? reactMap.default,
@@ -115,19 +114,17 @@ function useMapModule(): LoadState {
           NavigationControl: reactMap.NavigationControl,
         };
         if (!mod.Map || !mod.Marker) {
-          setState({ status: 'error', message: 'react-map-gl/maplibre exports missing' });
+          setState({ status: 'unavailable', reason: 'react-map-gl/maplibre exports missing' });
           return;
         }
         setState({ status: 'ready', mod });
       } catch (err) {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        // Module-not-found is the expected "host hasn't installed it" path.
-        if (/Cannot find|Failed to fetch|Failed to resolve|MODULE_NOT_FOUND/i.test(msg)) {
-          setState({ status: 'missing' });
-        } else {
-          setState({ status: 'error', message: msg });
-        }
+        // Whether the peer isn't installed, fails to fetch, or throws at load:
+        // user-facing remedy is the same — install/repair the peers — so we
+        // route everything through one fallback and show the underlying reason.
+        const reason = err instanceof Error ? err.message : String(err);
+        setState({ status: 'unavailable', reason });
       }
     })();
     return () => {
@@ -180,7 +177,7 @@ export default function MapView({
     };
   }, [initialCenter, initialZoom, plotted]);
 
-  if (load.status === 'missing') {
+  if (load.status === 'unavailable') {
     return (
       <div className={styles['fallback']}>
         <p className={styles['hint']}>
@@ -188,14 +185,7 @@ export default function MapView({
           Install them in your app, then this view will render automatically:
         </p>
         <pre className={styles['code']}>npm install maplibre-gl react-map-gl</pre>
-      </div>
-    );
-  }
-
-  if (load.status === 'error') {
-    return (
-      <div className={styles['fallback']}>
-        <p className={styles['hint']}>Map failed to load: {load.message}</p>
+        <p className={styles['reason']}>Reason: {load.reason}</p>
       </div>
     );
   }
