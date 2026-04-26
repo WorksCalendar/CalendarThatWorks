@@ -6,9 +6,9 @@
  *   [chip] [chip] [chip] ...   (only views where !hiddenFromStrip)
  *
  * Chips group under their tab (month/week/schedule/base/assets/…) with a
- * header + divider. Chips pinned to a tab the owner has hidden in Setup are
- * dimmed and non-clickable — they still appear so ownership of the view is
- * preserved, they just can't be applied until the tab is re-enabled.
+ * header + divider. Chips pinned to a tab the owner has hidden in Setup
+ * are dropped from the strip entirely — re-enable the tab in Settings →
+ * Display to bring them back.
  */
 import { useMemo, useState, useRef, useEffect } from 'react';
 import {
@@ -90,7 +90,13 @@ export default function ProfileBar({
     return buckets;
   }, [visibleViews, viewOrder]);
 
-  const nonEmpty = [...grouped.entries()].filter(([, list]) => list.length > 0);
+  // Buckets whose view tab is disabled in Setup are dropped entirely. The
+  // GLOBAL bucket has no view restriction and is always eligible to show.
+  const nonEmpty = [...grouped.entries()].filter(([key, list]) => {
+    if (list.length === 0) return false;
+    if (key === GLOBAL_GROUP_KEY) return true;
+    return isViewEnabled(key);
+  });
 
   // Compact mode scopes the strip to the active view only so the section
   // header ("AGENDA VIEW", "BASE VIEW", …) becomes redundant — the toolbar

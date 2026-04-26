@@ -59,7 +59,7 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 /* ─── Config seed ───────────────────────────────────────────────── */
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
 // see the new defaults on their next load without a manual storage wipe.
-const DEMO_SEED_VERSION = 4;
+const DEMO_SEED_VERSION = 5;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
@@ -69,17 +69,21 @@ if (!storedCfg) {
     ...DEFAULT_CONFIG,
     title: 'Air EMS Operations',
     setup: { completed: true, preferredTheme: 'ops-dark' },
-    display: { ...DEFAULT_CONFIG.display, defaultView: 'base' },
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 } else if (storedSeedVer < DEMO_SEED_VERSION) {
   const existing = loadConfig(DEMO_CALENDAR_ID);
+  // v5: default view returns to Month. Only reset the carried-over 'base'
+  // default; respect any user-set choice (any other view value).
+  const carriedDefaultView = existing.display?.defaultView;
+  const nextDefaultView = carriedDefaultView === 'base' ? 'month' : carriedDefaultView;
   saveConfig(DEMO_CALENDAR_ID, {
     ...existing,
     title:     existing.title ?? 'Air EMS Operations',
     setup:     { ...existing.setup, preferredTheme: existing.setup?.preferredTheme ?? 'ops-dark' },
+    display:   { ...existing.display, defaultView: nextDefaultView ?? 'month' },
     team:      { ...existing.team, bases: existing.team?.bases?.length ? existing.team.bases : DEMO_BASES },
     approvals: { ...existing.approvals, enabled: true },
   });
@@ -430,7 +434,6 @@ function App() {
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
-            initialView="base"
             showSetupLanding
             onConfigSave={handleConfigSave}
             notes={notes}
