@@ -7,6 +7,17 @@ export * from './api/v1/index';
 
 export type { WorksCalendarEvent, NormalizedEvent, EventStatus, EventVisualPriority } from './types/events';
 export { isVisualPriority } from './types/events';
+export type { BillableMeta, InvoiceLineItem, InvoiceStatus } from './types/billing';
+export type {
+  AssetHealth,
+  AssetHealthStatus,
+  MaintenanceMeta,
+  MaintenanceRule,
+  MaintenanceInterval,
+  MaintenanceLifecycle,
+  MeterReading,
+  MeterType,
+} from './types/maintenance';
 export type {
   ConfigPanelProps,
   ConfigPanelTabId,
