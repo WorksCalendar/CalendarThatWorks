@@ -62,13 +62,16 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
 // see the new defaults on their next load without a manual storage wipe.
 //
-// Seed v5 — force-resync `team.bases` to DEMO_BASES on upgrade. Earlier
-// versions preserved any non-empty `existing.team.bases`, which left
-// returning visitors with stale base ids (e.g. IHC-era numeric ids) that
-// no longer matched the employee `basedAt` / aircraft `meta.base`
-// values. The result was a By-Base view counting 0 people / 0 assets at
-// every base. Bases are demo-controlled identity, not user data, so
-// overwriting them is safe.
+// Seed v5 carries two upgrades:
+//   1. Force-resync `team.bases` to DEMO_BASES. Earlier versions preserved
+//      any non-empty `existing.team.bases`, leaving returning visitors with
+//      stale base ids (e.g. IHC-era numeric ids) that no longer matched
+//      employee `basedAt` / aircraft `meta.base`. The result was a By-Base
+//      view counting 0 people / 0 assets at every base. Bases are demo-
+//      controlled identity, not user data, so overwriting them is safe.
+//   2. Default view returns to Month. The seed previously hard-coded
+//      `defaultView: 'base'`; only the carried-over 'base' choice is reset
+//      so any user-picked view is respected.
 const DEMO_SEED_VERSION = 5;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
@@ -79,17 +82,19 @@ if (!storedCfg) {
     ...DEFAULT_CONFIG,
     title: 'Air EMS Operations',
     setup: { completed: true, preferredTheme: 'ops-dark' },
-    display: { ...DEFAULT_CONFIG.display, defaultView: 'base' },
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 } else if (storedSeedVer < DEMO_SEED_VERSION) {
   const existing = loadConfig(DEMO_CALENDAR_ID);
+  const carriedDefaultView = existing.display?.defaultView;
+  const nextDefaultView = carriedDefaultView === 'base' ? 'month' : carriedDefaultView;
   saveConfig(DEMO_CALENDAR_ID, {
     ...existing,
     title:     existing.title ?? 'Air EMS Operations',
     setup:     { ...existing.setup, preferredTheme: existing.setup?.preferredTheme ?? 'ops-dark' },
+    display:   { ...existing.display, defaultView: nextDefaultView ?? 'month' },
     team:      { ...existing.team, bases: DEMO_BASES },
     approvals: { ...existing.approvals, enabled: true },
   });
@@ -470,7 +475,6 @@ function App() {
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
-            initialView="base"
             showSetupLanding
             onConfigSave={handleConfigSave}
             notes={notes}

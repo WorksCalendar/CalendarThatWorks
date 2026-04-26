@@ -272,6 +272,30 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--wc-accent, #3b82f6) 22%, transparent);
 }
 
+/* Always-on cards (Month/Week): rendered as static "locked-in" tiles
+   instead of disabled buttons so they look intentional, not broken.
+   Hover/transform effects are suppressed; the cursor reverts to default. */
+.viewCardLocked {
+  cursor: default;
+}
+.viewCardLocked:hover {
+  transform: none;
+  border-color: var(--wc-accent, #3b82f6);
+}
+
+.alwaysOnBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--wc-accent, #3b82f6) 14%, transparent);
+  color: var(--wc-accent, #3b82f6);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .themeMeta,
 .viewMeta,
 .recipeMeta {
