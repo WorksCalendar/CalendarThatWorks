@@ -51,6 +51,7 @@ import { LeftRail }           from './ui/LeftRail';
 import { SubToolbar }         from './ui/SubToolbar';
 import { DayWindowPills }     from './ui/DayWindowPills';
 import { RightPanel, RightPanelSection, RegionMapWidget, CrewOnShiftList } from './ui/RightPanel';
+import { shiftEmployeeIdsAt } from './hooks/useShiftOverlap';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
@@ -1089,6 +1090,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       : filteredEvents),
     [filteredEvents, activeSort],
   );
+
+  // Set of employee ids whose shift / on-call event covers "right now".
+  // Drives the AppShell RightPanel's CrewOnShiftList narrowing — only people
+  // currently scheduled to work appear there, not the entire roster.
+  // Recomputed when visibleEvents change; intentionally not refreshed on a
+  // wall-clock interval (a shift transition is rare enough that requiring
+  // a re-render to pick it up is acceptable; see useShiftOverlap.ts).
+  const onShiftIds = useMemo(() => shiftEmployeeIdsAt(visibleEvents), [visibleEvents]);
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
   // Stable ref so applyEngineOp closure never goes stale.
@@ -2172,7 +2181,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 <RegionMapWidget events={visibleEvents} />
               </RightPanelSection>
               <RightPanelSection title="Crew on shift">
-                <CrewOnShiftList employees={configuredEmployees} />
+                <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
               </RightPanelSection>
             </RightPanel>
           }

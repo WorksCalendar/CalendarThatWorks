@@ -121,6 +121,46 @@ describe('CrewOnShiftList', () => {
     render(<CrewOnShiftList employees={[{ id: 'emp-42' }]} />);
     expect(screen.getByText('emp-42')).toBeInTheDocument();
   });
+
+  it('narrows to employees whose id is in onShiftIds when provided', () => {
+    render(
+      <CrewOnShiftList
+        employees={[
+          { id: 1, name: 'Sarah Chen' },
+          { id: 2, name: 'Jordan Pace' },
+          { id: 3, name: 'Avery Kim' },
+        ]}
+        onShiftIds={new Set(['1', '3'])}
+      />,
+    );
+    expect(screen.getByText('Sarah Chen')).toBeInTheDocument();
+    expect(screen.queryByText('Jordan Pace')).toBeNull();
+    expect(screen.getByText('Avery Kim')).toBeInTheDocument();
+  });
+
+  it('renders an empty-state when onShiftIds filters everyone out', () => {
+    render(
+      <CrewOnShiftList
+        employees={[{ id: 1, name: 'Sarah Chen' }]}
+        onShiftIds={new Set()}
+      />,
+    );
+    expect(screen.getByRole('note')).toHaveTextContent(/nobody is on shift right now/i);
+  });
+
+  it('renders the full roster when onShiftIds is null (legacy mode)', () => {
+    render(
+      <CrewOnShiftList
+        employees={[
+          { id: 1, name: 'Sarah Chen' },
+          { id: 2, name: 'Jordan Pace' },
+        ]}
+        onShiftIds={null}
+      />,
+    );
+    expect(screen.getByText('Sarah Chen')).toBeInTheDocument();
+    expect(screen.getByText('Jordan Pace')).toBeInTheDocument();
+  });
 });
 
 describe('RightPanel', () => {

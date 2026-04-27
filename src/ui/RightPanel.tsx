@@ -124,6 +124,12 @@ export function RegionMapWidget({ events }: RegionMapWidgetProps) {
 export type CrewMember = { id: string | number; name?: string };
 export type CrewOnShiftListProps = {
   employees: CrewMember[];
+  /**
+   * When provided, narrows the rendered list to only the employees whose id
+   * is in this set (matched by `String(emp.id)`). Pass `null` / omit to
+   * render the full roster — the legacy "show everyone configured" mode.
+   */
+  onShiftIds?: ReadonlySet<string> | null | undefined;
 };
 
 function initials(name: string | undefined): string {
@@ -137,12 +143,16 @@ function initials(name: string | undefined): string {
 const AVATAR_PALETTE = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4'];
 
 /**
- * CrewOnShiftList — configured team members. Currently unfiltered; a follow-up
- * will narrow to "scheduled to work right now" once a reusable shift-overlap
- * helper exists. For now showing the whole roster is honest given the data
- * available.
+ * CrewOnShiftList — configured team members, optionally narrowed to those
+ * whose schedule says they're working right now (see shiftEmployeeIdsAt).
+ * Without `onShiftIds` the list renders the full roster so the panel still
+ * has useful content for calendars that don't track shifts.
  */
-export function CrewOnShiftList({ employees }: CrewOnShiftListProps) {
+export function CrewOnShiftList({ employees, onShiftIds }: CrewOnShiftListProps) {
+  const filtered = onShiftIds
+    ? employees.filter(emp => onShiftIds.has(String(emp.id)))
+    : employees;
+
   if (employees.length === 0) {
     return (
       <div className={cls['crewEmpty']} role="note">
@@ -150,9 +160,16 @@ export function CrewOnShiftList({ employees }: CrewOnShiftListProps) {
       </div>
     );
   }
+  if (filtered.length === 0) {
+    return (
+      <div className={cls['crewEmpty']} role="note">
+        Nobody is on shift right now.
+      </div>
+    );
+  }
   return (
     <ul className={cls['crewList']}>
-      {employees.map((emp, i) => {
+      {filtered.map((emp, i) => {
         const name = emp.name ?? String(emp.id);
         const swatch = AVATAR_PALETTE[i % AVATAR_PALETTE.length];
         return (
