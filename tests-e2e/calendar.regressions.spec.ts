@@ -11,11 +11,14 @@ function dateKey(offsetDays = 0) {
 }
 
 // Same env-noise filter as calendar.demo.spec.ts — sandboxed runners surface
-// cert errors / network failures that aren't part of the calendar's contract.
+// chromium cert errors that aren't part of the calendar's contract. We do
+// NOT filter blanket 4xx/5xx here, since those can fire for real same-origin
+// regressions (a broken local asset, a 500 from the demo's own data path);
+// see the long comment in calendar.demo.spec.ts for the rationale.
 const ENV_NOISE_PATTERNS = [
   /net::ERR_CERT_AUTHORITY_INVALID/i,
   /net::ERR_CERT_DATE_INVALID/i,
-  /Failed to load resource.*the server responded with a status of (4|5)\d{2}/i,
+  /net::ERR_CERT_COMMON_NAME_INVALID/i,
 ];
 
 function ignoreEnvNoise(line) {
@@ -91,7 +94,12 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    await page.getByRole('button', { name: /Edit Pen Fixture/i }).first().click();
+    // Wait for the fixture to hydrate before clicking — the bare click was
+    // racing the fixture's initial render in CI. The recurring-event test
+    // below has the same fix (added inline to keep the diff narrow).
+    const pen = page.getByRole('button', { name: /Edit Pen Fixture/i }).first();
+    await expect(pen).toBeVisible({ timeout: 10000 });
+    await pen.click();
 
     const dialog = page.getByRole('dialog', { name: /Event details: Edit Pen Fixture/i });
     await expect(dialog).toBeVisible();
@@ -107,7 +115,9 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    await page.getByRole('button', { name: /Repeating Pencil Test/i }).first().click();
+    const pencil = page.getByRole('button', { name: /Repeating Pencil Test/i }).first();
+    await expect(pencil).toBeVisible({ timeout: 10000 });
+    await pencil.click();
 
     const dialog = page.getByRole('dialog', { name: /Event details: Repeating Pencil Test/i });
     await expect(dialog).toBeVisible();
