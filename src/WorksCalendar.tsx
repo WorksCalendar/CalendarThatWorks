@@ -46,6 +46,7 @@ import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import { AppShell }           from './ui/AppShell';
+import { AppHeader }          from './ui/AppHeader';
 import { SubToolbar }         from './ui/SubToolbar';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
@@ -2166,76 +2167,90 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {renderToolbar ? (
           <div className={styles['customToolbar']}>{renderToolbar(api)}</div>
         ) : (
-          <div className={styles['toolbar']} role="toolbar" aria-label="Calendar navigation">
-            <div className={styles['navGroup']}>
-              {logoSrc && (
-                <img
-                  src={logoSrc}
-                  alt={logoAlt ?? ''}
-                  className={styles['logo']}
-                  aria-hidden={!logoAlt ? 'true' : undefined}
-                />
-              )}
-              <button
-                className={styles['navBtn']}
-                onClick={() => cal.navigate(-1)}
-                aria-label="Previous"
-                title={`Previous ${cal.view}`}
-              >
-                <ChevronLeft size={18} aria-hidden="true" />
-              </button>
-              <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
-              <button
-                className={styles['navBtn']}
-                onClick={() => cal.navigate(1)}
-                aria-label="Next"
-                title={`Next ${cal.view}`}
-              >
-                <ChevronRight size={18} aria-hidden="true" />
-              </button>
-              <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
-              <span className={styles['calendarTitle']}>{calendarTitle}</span>
-              {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
-            </div>
-
-            <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
-              {VIEWS.map(v => (
+          <AppHeader
+            leftSlot={
+              <div className={styles['navGroup']}>
+                {logoSrc && (
+                  <img
+                    src={logoSrc}
+                    alt={logoAlt ?? ''}
+                    className={styles['logo']}
+                    aria-hidden={!logoAlt ? 'true' : undefined}
+                  />
+                )}
                 <button
-                  key={v.id}
-                  className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
-                  onClick={() => cal.setView(v.id)}
-                  aria-pressed={cal.view === v.id}
-                  title={v.hint}
+                  className={styles['navBtn']}
+                  onClick={() => cal.navigate(-1)}
+                  aria-label="Previous"
+                  title={`Previous ${cal.view}`}
                 >
-                  {v.label}
+                  <ChevronLeft size={18} aria-hidden="true" />
                 </button>
-              ))}
-            </div>
-
-            <div className={styles['actions']}>
-              {devMode && <span className={styles['devBadge']}>Dev</span>}
-              {(ownerCfg.isOwner || devMode) && (
+                <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
                 <button
-                  className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
-                  onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
-                  aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
-                  title={editMode ? 'Exit edit mode' : 'Customize events'}
+                  className={styles['navBtn']}
+                  onClick={() => cal.navigate(1)}
+                  aria-label="Next"
+                  title={`Next ${cal.view}`}
                 >
-                  <Sparkles size={15} aria-hidden="true" />
-                  {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
+                  <ChevronRight size={18} aria-hidden="true" />
                 </button>
-              )}
-              {ownerPassword && (
-                <OwnerLock
-                  isOwner={ownerCfg.isOwner}
-                  authError={ownerCfg.authError}
-                  isAuthLoading={ownerCfg.isAuthLoading}
-                  onAuthenticate={ownerCfg.authenticate}
-                  onOpen={() => ownerCfg.setConfigOpen(true)}
-                />
-              )}
-            </div>
-          </div>
+                <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+                <span className={styles['calendarTitle']}>{calendarTitle}</span>
+                {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
+              </div>
+            }
+            centerSlot={
+              <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
+                {VIEWS.map(v => (
+                  <button
+                    key={v.id}
+                    className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
+                    onClick={() => cal.setView(v.id)}
+                    aria-pressed={cal.view === v.id}
+                    title={v.hint}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            }
+            rightSlot={
+              <div className={styles['actions']}>
+                {devMode && <span className={styles['devBadge']}>Dev</span>}
+                {(ownerCfg.isOwner || devMode) && (
+                  <button
+                    className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
+                    onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
+                    aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
+                    title={editMode ? 'Exit edit mode' : 'Customize events'}
+                  >
+                    <Sparkles size={15} aria-hidden="true" />
+                    {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
+                  </button>
+                )}
+                {ownerPassword && (
+                  <OwnerLock
+                    isOwner={ownerCfg.isOwner}
+                    authError={ownerCfg.authError}
+                    isAuthLoading={ownerCfg.isAuthLoading}
+                    onAuthenticate={ownerCfg.authenticate}
+                    onOpen={() => ownerCfg.setConfigOpen(true)}
+                  />
+                )}
+              </div>
+            }
+            menuItems={[
+              ...(ownerCfg.isOwner ? [
+                { label: 'Settings',          sub: 'Calendar config, integrations', onClick: () => ownerCfg.setConfigOpen(true) },
+                { label: 'Themes',            sub: 'Switch palette / appearance',   onClick: () => ownerCfg.openConfigToTab('theme') },
+                { label: 'Advanced settings', sub: 'Smart views, fields, approvals', onClick: () => ownerCfg.openConfigToTab('smartViews') },
+              ] : []),
+              { label: 'Saved views',         sub: 'Manage your view library',      onClick: () => { setSidebarInitialTab('saved'); setSidebarOpen(true); } },
+              { label: 'Keyboard shortcuts',  sub: 'Quick reference',               onClick: () => setHelpOpen(true) },
+              { label: 'Help & feedback',                                          onClick: () => window.open('https://github.com/WorksCalendar/CalendarThatWorks/issues', '_blank', 'noopener') },
+            ]}
+          />
         )}
 
         {/* ── Profile / Saved-views Bar ── */}
