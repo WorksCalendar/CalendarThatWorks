@@ -132,6 +132,17 @@ export default function EventForm({
     const draftCategory = draft.values.category || null;
     const categoryNeedsApproval = !!draftCategory && approvalCategorySet.has(String(draftCategory));
 
+    // Whether the original event's category was an approval-tracked
+    // one. Combined with `categoryNeedsApproval`, this distinguishes
+    // "user actively moved this event out of approval" from "this event
+    // simply doesn't live in an approval-tracked category right now"
+    // (which is the default for every consumer that doesn't pass
+    // `approvalCategories`).
+    const originalCategory = (event?.category as string | null | undefined) ?? null;
+    const originalCategoryNeedsApproval =
+      !!originalCategory && approvalCategorySet.has(String(originalCategory));
+    const isApprovalDowngrade = originalCategoryNeedsApproval && !categoryNeedsApproval;
+
     // Preserve the original approvalStage across `useEventDraftState`'s
     // mount-time category-clear effect. That effect rebuilds
     // `draft.values.meta` from scratch on every category change (and on
@@ -141,14 +152,14 @@ export default function EventForm({
     // the draft) restores the original lifecycle so the save doesn't
     // regress workflow state.
     //
-    // Gated on `categoryNeedsApproval`: if the user moved the event
-    // from an approval-required category to a non-approval one, the
-    // stage should be cleared along with the workflow context, not
-    // silently preserved on a category that doesn't track lifecycle.
-    // Skipping the restore lets the cleared draft meta drop the stale
-    // stage from the saved payload.
+    // The restore is skipped *only* when the user actively moved out of
+    // an approval-tracked category (`isApprovalDowngrade`); in that
+    // case dropping the stage is the right call. Crucially, we do NOT
+    // gate on `categoryNeedsApproval` alone — consumers that don't pass
+    // `approvalCategories` (default []) would always evaluate that to
+    // false, silently destroying lifecycle history on every edit.
     const originalStage = (event?.meta?.approvalStage as Record<string, unknown> | null | undefined) ?? null;
-    if (originalStage && categoryNeedsApproval && !meta?.['approvalStage']) {
+    if (originalStage && !isApprovalDowngrade && !meta?.['approvalStage']) {
       meta = { ...(meta ?? {}), approvalStage: originalStage };
     }
 
