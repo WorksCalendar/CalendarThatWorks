@@ -35,6 +35,8 @@ import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import type { LegacyEvent } from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
+import { evaluateConflicts } from './core/conflictEngine.ts';
+import type { ConflictEvent, ConflictRule } from './core/conflictEngine.ts';
 import type { OperationContext } from './core/engine/validation/validationTypes';
 import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
@@ -1656,6 +1658,53 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     });
   }, [applyEngineOp]);
 
+  // Pre-save conflict check for EventForm. Builds an `evaluateConflicts`
+  // input from the live event set and the owner-configured rule set.
+  // Returns null when conflicts are disabled or no rules are configured
+  // so the form takes the legacy fast path.
+  //
+  // Windowing: do NOT use `expandedEvents` here — that array is scoped
+  // to the currently-rendered range (current month/week/day), so a user
+  // who edits an event's date into another month would miss every
+  // conflict outside the visible window and silently bypass hard rules.
+  // Instead, re-expand the engine over a window that hugs the proposed
+  // event's [start, end] interval, padded by the largest min-rest rule
+  // so neighboring shifts inside the rest threshold are still seen.
+  const checkEventConflicts = useCallback((proposed: LooseValue) => {
+    const conflictsCfg = ownerCfg.config?.['conflicts'] ?? {};
+    const rules = (conflictsCfg.rules ?? []) as ConflictRule[];
+    const enabled = conflictsCfg.enabled !== false;
+    if (!enabled || rules.length === 0) return null;
+
+    const proposedStart = proposed.start instanceof Date ? proposed.start : new Date(proposed.start);
+    const proposedEnd   = proposed.end   instanceof Date ? proposed.end   : new Date(proposed.end);
+    if (Number.isNaN(proposedStart.getTime()) || Number.isNaN(proposedEnd.getTime())) {
+      return null;
+    }
+
+    // Largest min-rest minutes across the rule set sets the buffer; fall
+    // back to 24h so resource-overlap / category-mutex with adjacent
+    // events still surfaces even without a min-rest rule.
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const restBufferMs = rules.reduce((max, r) => {
+      if (r.type === 'min-rest' && typeof r.minutes === 'number') {
+        return Math.max(max, r.minutes * 60_000);
+      }
+      return max;
+    }, DAY_MS);
+
+    const windowStart = new Date(proposedStart.getTime() - restBufferMs);
+    const windowEnd   = new Date(proposedEnd.getTime()   + restBufferMs);
+    const events = engine.getOccurrencesInRange(windowStart, windowEnd).map(occurrenceToLegacy);
+
+    return evaluateConflicts({
+      proposed: proposed as ConflictEvent,
+      events:   events as unknown as ConflictEvent[],
+      rules,
+      enabled,
+    });
+  }, [ownerCfg.config, engine, engineVer]); // eslint-disable-line react-hooks/exhaustive-deps -- engineVer cues the engine's mutation count
+
   const handleEventSave = useCallback((rawEv: LooseValue) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
     const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
@@ -2679,6 +2728,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
             maintenanceRules={maintenanceRules}
+            onCheckConflicts={checkEventConflicts}
           />
         )}
 

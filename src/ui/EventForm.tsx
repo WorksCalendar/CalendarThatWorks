@@ -17,16 +17,29 @@ import { MaintenanceSection } from './EventFormSections/MaintenanceSection';
 import { completeMaintenance } from '../core/maintenance';
 import type { MaintenanceMeta, MaintenanceRule, MeterType } from '../types/maintenance';
 import type { WorksCalendarEvent } from '../types/events';
+import type { ConflictEvaluationResult } from '../core/conflictEngine';
 import ConfirmDialog from './ConfirmDialog';
+import ConflictModal from './ConflictModal';
 import styles from './EventForm.module.css';
 
 export default function EventForm({
   event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory,
   maintenanceRules,
+  /**
+   * Optional pre-save conflict check. When provided, the form runs it on
+   * the built payload and gates `onSave` behind ConflictModal whenever
+   * the engine returns violations. Hard violations block the save; soft
+   * ones surface a Proceed-anyway override. Wired by WorksCalendar from
+   * `evaluateConflicts` against the live event set + owner-configured
+   * rules; consumers that don't pass it get the previous unchecked path.
+   */
+  onCheckConflicts,
 }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const draft   = useEventDraftState(event, categories, config);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [conflictResult, setConflictResult] = useState<ConflictEvaluationResult | null>(null);
+  const [pendingPayload,  setPendingPayload]  = useState<any>(null);
 
   // Dirty guard: track first user interaction rather than snapshotting
   // draft.values on mount. `useEventDraftState` runs a category-keyed
@@ -78,7 +91,7 @@ export default function EventForm({
       }
     }
 
-    onSave({
+    const payload = {
       ...(event || {}),
       title:    draft.values.title.trim(),
       start,
@@ -90,7 +103,34 @@ export default function EventForm({
       meta,
       rrule:    draft.buildRRule(),
       exdates:  event?.exdates ?? [],
-    });
+    };
+
+    // Conflict gate. `evaluateConflicts` returns {violations, severity,
+    // allowed} — when severity is 'soft' we still allow the user to
+    // proceed via the modal; 'hard' blocks. No-op when the host hasn't
+    // wired the checker (legacy hosts are unaffected).
+    if (onCheckConflicts) {
+      const result: ConflictEvaluationResult | null = onCheckConflicts(payload);
+      if (result && result.severity !== 'none' && result.violations.length > 0) {
+        setConflictResult(result);
+        setPendingPayload(payload);
+        return;
+      }
+    }
+
+    onSave(payload);
+  }
+
+  function handleConflictProceed() {
+    const payload = pendingPayload;
+    setConflictResult(null);
+    setPendingPayload(null);
+    if (payload) onSave(payload);
+  }
+
+  function handleConflictCancel() {
+    setConflictResult(null);
+    setPendingPayload(null);
   }
 
   function inferMeterType(rule: MaintenanceRule | undefined): MeterType | null {
@@ -120,6 +160,13 @@ export default function EventForm({
           confirmLabel="Discard"
           onConfirm={confirmDiscard}
           onCancel={cancelDiscard}
+        />
+      )}
+      {conflictResult && (
+        <ConflictModal
+          result={conflictResult}
+          onProceed={handleConflictProceed}
+          onCancel={handleConflictCancel}
         />
       )}
       <div className={styles['overlay']} onClick={e => e.target === e.currentTarget && requestClose()}>
