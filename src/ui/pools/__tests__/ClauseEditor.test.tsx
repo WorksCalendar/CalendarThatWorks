@@ -174,6 +174,97 @@ describe('ClauseEditor — composite (and / or)', () => {
   })
 })
 
+describe('ClauseEditor — composite reordering (#386 polish)', () => {
+  it('Up / Down buttons swap the targeted child with its neighbor', () => {
+    render(<Harness initial={{
+      op: 'and',
+      clauses: [
+        { op: 'eq', path: 'a', value: 1 },
+        { op: 'eq', path: 'b', value: 2 },
+        { op: 'eq', path: 'c', value: 3 },
+      ],
+    }} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Move sub-rule 2 up' }))
+    expect(stateOf().clauses.map((c: any) => c.path)).toEqual(['b', 'a', 'c'])
+    fireEvent.click(screen.getByRole('button', { name: 'Move sub-rule 2 down' }))
+    expect(stateOf().clauses.map((c: any) => c.path)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('disables Up on the first child and Down on the last (no oscillation)', () => {
+    render(<Harness initial={{
+      op: 'and',
+      clauses: [
+        { op: 'eq', path: 'a', value: 1 },
+        { op: 'eq', path: 'b', value: 2 },
+      ],
+    }} />)
+    expect(screen.getByRole('button', { name: 'Move sub-rule 1 up' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Move sub-rule 2 down' })).toBeDisabled()
+  })
+})
+
+describe('ClauseEditor — path autocomplete (#386 polish)', () => {
+  function HarnessWithSuggestions() {
+    const [c, setC] = useState<ResourceQuery>({ op: 'eq', path: '', value: '' })
+    return (
+      <ClauseEditor
+        clause={c}
+        onChange={setC}
+        pathSuggestions={['meta.capabilities.refrigerated', 'meta.capabilities.heavy_haul', 'meta.location']}
+      />
+    )
+  }
+
+  it('renders a datalist of suggestions and wires the path input to it', () => {
+    const { container } = render(<HarnessWithSuggestions />)
+    const list = container.querySelector('datalist')
+    expect(list).not.toBeNull()
+    expect(list!.querySelectorAll('option')).toHaveLength(3)
+    const pathInput = screen.getByLabelText('Field path')
+    expect(pathInput).toHaveAttribute('list', list!.id)
+  })
+
+  it('omits the datalist when no suggestions are provided', () => {
+    const { container } = render(<Harness initial={{ op: 'eq', path: '', value: '' }} />)
+    expect(container.querySelector('datalist')).toBeNull()
+  })
+
+  it('routes nested path inputs through the root datalist (#386 P2)', () => {
+    // Path autocomplete previously broke for nested rules: each
+    // ClauseEditor generated its own datalistId via useId() but
+    // the <datalist> only rendered at depth 0, so nested path
+    // inputs referenced a non-existent element. Verify every
+    // path input across the tree resolves to the SAME datalist
+    // id — which means the root one — and that exactly one
+    // datalist is in the DOM.
+    function NestedHarness() {
+      const [c, setC] = useState<ResourceQuery>({
+        op: 'and',
+        clauses: [
+          { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+          { op: 'not', clause: { op: 'eq', path: 'tenantId', value: 'banned' } },
+        ],
+      })
+      return (
+        <ClauseEditor
+          clause={c}
+          onChange={setC}
+          pathSuggestions={['meta.capabilities.refrigerated', 'meta.location']}
+        />
+      )
+    }
+    const { container } = render(<NestedHarness />)
+    const datalists = container.querySelectorAll('datalist')
+    expect(datalists.length).toBe(1)
+    const rootId = datalists[0]!.id
+    const pathInputs = screen.getAllByLabelText('Field path')
+    expect(pathInputs.length).toBe(2)        // composite + not-inner
+    for (const input of pathInputs) {
+      expect(input).toHaveAttribute('list', rootId)
+    }
+  })
+})
+
 describe('ClauseEditor — not', () => {
   it('renders the inner clause and propagates edits', () => {
     render(<Harness initial={{

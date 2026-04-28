@@ -182,7 +182,10 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
   // editing the friendly fields doesn't silently drop the host's
   // advanced rules.
 
-  it('preserves a gte clause AND-merged with the user\'s edits', () => {
+  it('preserves a non-recognized clause AND-merged with the user\'s edits', () => {
+    // gte on a *capability* path is now recognized as a numeric
+    // range. Use a comparator on a non-capability path to verify
+    // the preserved-bucket round-trip.
     const onSave = vi.fn()
     const pool: ResourcePool = {
       id: 'p', name: 'Reefers', type: 'query', memberIds: [],
@@ -190,19 +193,17 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
         op: 'and',
         clauses: [
           { op: 'eq',  path: 'meta.capabilities.refrigerated', value: true },
-          { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000 },
+          { op: 'gte', path: 'meta.priority', value: 5 },
         ],
       },
       strategy: 'first-available',
     }
     render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
 
-    // The form acknowledges the preserved gte but lets the user
-    // edit the recognized refrigerated chip.
     // Advanced section opens automatically when there's a preserved clause.
     expect(screen.getByTestId('pool-builder-advanced')).toHaveAttribute('open')
     expect(screen.getByTestId('pool-builder-advanced')).toHaveTextContent('(1)')
-    expect(screen.getByTestId('advanced-rule-summary-0')).toHaveTextContent('capacity lbs ≥ 80,000')
+    expect(screen.getByTestId('advanced-rule-summary-0')).toHaveTextContent('priority ≥ 5')
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     const saved = onSave.mock.calls[0]![0] as ResourcePool
@@ -210,7 +211,7 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
       op: 'and',
       clauses: [
         { op: 'eq',  path: 'meta.capabilities.refrigerated', value: true },
-        { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000 },
+        { op: 'gte', path: 'meta.priority', value: 5 },
       ],
     })
   })
@@ -350,6 +351,102 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
     expect(saved.query).toEqual({
       op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000,
     })
+  })
+})
+
+describe('PoolBuilder — numeric range pickers (#386 polish)', () => {
+  // Fleet with a numeric capability so the auto-derive picks it up.
+  const numericFleet: readonly EngineResource[] = [
+    r('t1', { capabilities: { refrigerated: true,  capacity_lbs: 80000 } }),
+    r('t2', { capabilities: { refrigerated: false, capacity_lbs: 60000 } }),
+  ]
+
+  it('discovers numeric capabilities and emits gte / lte clauses on save', () => {
+    const onSave = vi.fn()
+    render(<PoolBuilder pool={null} resources={numericFleet} onSave={onSave} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('Pool name'), { target: { value: 'Heavy Reefers' } })
+    fireEvent.click(screen.getByLabelText(/Match resources by their attributes/))
+    fireEvent.change(screen.getByLabelText('Capacity Lbs minimum'), { target: { value: '70000' } })
+    fireEvent.change(screen.getByLabelText('Capacity Lbs maximum'), { target: { value: '90000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create pool' }))
+
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    expect(saved.query).toEqual({
+      op: 'and',
+      clauses: [
+        { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 70000 },
+        { op: 'lte', path: 'meta.capabilities.capacity_lbs', value: 90000 },
+      ],
+    })
+  })
+
+  it('emits a single clause when only one bound is set', () => {
+    const onSave = vi.fn()
+    render(<PoolBuilder pool={null} resources={numericFleet} onSave={onSave} onCancel={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText('Pool name'), { target: { value: 'AtLeast' } })
+    fireEvent.click(screen.getByLabelText(/Match resources by their attributes/))
+    fireEvent.change(screen.getByLabelText('Capacity Lbs minimum'), { target: { value: '80000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create pool' }))
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    expect(saved.query).toEqual({
+      op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000,
+    })
+  })
+
+  it('seeds min and max from an existing pool query when editing', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'Existing', type: 'query', memberIds: [],
+      query: {
+        op: 'and',
+        clauses: [
+          { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 70000 },
+          { op: 'lte', path: 'meta.capabilities.capacity_lbs', value: 90000 },
+        ],
+      },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={numericFleet} onSave={vi.fn()} onCancel={vi.fn()} />)
+    expect(screen.getByLabelText('Capacity Lbs minimum')).toHaveValue(70000)
+    expect(screen.getByLabelText('Capacity Lbs maximum')).toHaveValue(90000)
+    // The advanced section stays collapsed because both bounds are
+    // recognized — they don't fall into the preserved bucket.
+    expect(screen.getByTestId('pool-builder-advanced')).not.toHaveAttribute('open')
+  })
+
+  it('clearing both bounds drops the range entirely on save', () => {
+    const onSave = vi.fn()
+    const pool: ResourcePool = {
+      id: 'p', name: 'OnlyRange', type: 'query', memberIds: [],
+      query: { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 70000 },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={numericFleet} onSave={onSave} onCancel={vi.fn()} />)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Refrigerated' }))
+    fireEvent.change(screen.getByLabelText('Capacity Lbs minimum'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    expect(saved.query).toEqual({
+      op: 'eq', path: 'meta.capabilities.refrigerated', value: true,
+    })
+  })
+
+  it('honors a host-supplied numericCapabilityCatalog (no auto-derivation)', () => {
+    render(<PoolBuilder
+      pool={null}
+      resources={numericFleet}
+      numericCapabilityCatalog={[{ id: 'capacity_lbs', label: 'Total weight' }]}
+      onSave={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByLabelText(/Match resources by their attributes/))
+    expect(screen.getByLabelText('Total weight minimum')).toBeInTheDocument()
+  })
+
+  it('skips the section when no numeric capabilities exist', () => {
+    const booleanOnly = [r('t1', { capabilities: { refrigerated: true } })]
+    render(<PoolBuilder pool={null} resources={booleanOnly} onSave={vi.fn()} onCancel={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText(/Match resources by their attributes/))
+    expect(screen.queryByText('Numeric ranges')).toBeNull()
   })
 })
 

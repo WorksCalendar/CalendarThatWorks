@@ -73,6 +73,27 @@ describe('AdvancedRulesEditor — summaries + edit toggle', () => {
     expect(screen.queryByLabelText('Operation')).toBeNull()
   })
 
+  it('Up / Down buttons reorder rows (#386 polish)', () => {
+    render(<Harness initial={[
+      { op: 'eq', path: 'a', value: 1 },
+      { op: 'eq', path: 'b', value: 2 },
+      { op: 'eq', path: 'c', value: 3 },
+    ]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Move rule 2 up' }))
+    expect(stateOf().map((c: any) => c.path)).toEqual(['b', 'a', 'c'])
+    fireEvent.click(screen.getByRole('button', { name: 'Move rule 1 down' }))
+    expect(stateOf().map((c: any) => c.path)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('move buttons disable at list bounds', () => {
+    render(<Harness initial={[
+      { op: 'eq', path: 'a', value: 1 },
+      { op: 'eq', path: 'b', value: 2 },
+    ]} />)
+    expect(screen.getByRole('button', { name: 'Move rule 1 up' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Move rule 2 down' })).toBeDisabled()
+  })
+
   it('inline edits mutate the right clause without touching siblings', () => {
     render(<Harness initial={[
       { op: 'eq', path: 'a', value: 'x' },

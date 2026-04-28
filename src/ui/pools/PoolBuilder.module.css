@@ -177,6 +177,41 @@
   color: var(--wc-text-muted, #6b7280);
 }
 
+.rangeList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rangeRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.rangeLabel {
+  color: var(--wc-text, #111827);
+}
+
+.rangeBound {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--wc-font-mono, ui-monospace, monospace);
+  color: var(--wc-text-muted, #6b7280);
+}
+
+.rangeInput {
+  width: 90px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid var(--wc-border, #e5e7eb);
+  border-radius: 4px;
+  font-family: var(--wc-font-mono, ui-monospace, monospace);
+}
+
 .warning {
   font-size: 12px;
   color: #b45309;

@@ -149,18 +149,35 @@
   cursor: not-allowed;
 }
 
+.rowControls {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.moveBtn,
 .removeBtn {
   font-size: 14px;
   width: 22px;
   height: 22px;
   padding: 0;
-  margin-top: 4px;
   border: 1px solid var(--wc-border, #e5e7eb);
   background: var(--wc-bg, #ffffff);
   color: var(--wc-text-muted, #6b7280);
   border-radius: 4px;
   cursor: pointer;
-  flex-shrink: 0;
+  line-height: 1;
+}
+
+.moveBtn:hover:not(:disabled) {
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+.moveBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .removeBtn:hover {

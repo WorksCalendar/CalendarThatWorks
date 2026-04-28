@@ -196,6 +196,8 @@ export { default as AdvancedRulesEditor } from './ui/pools/AdvancedRulesEditor';
 export type { AdvancedRulesEditorProps } from './ui/pools/AdvancedRulesEditor';
 export { summarizePool, summarizeQuery } from './ui/pools/poolSummary';
 export type { PoolSummary } from './ui/pools/poolSummary';
+export { derivePathSuggestions } from './ui/pools/pathSuggestions';
+export type { CapabilityRange } from './ui/pools/PoolBuilder';
 // ── CalendarConfig — standard config.json shape (#386 wizard) ─────────────
 export { parseConfig } from './core/config/parseConfig';
 export type { ParseConfigResult } from './core/config/parseConfig';
