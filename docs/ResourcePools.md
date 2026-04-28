@@ -462,6 +462,44 @@ import { PoolBuilder } from 'works-calendar';
 The builder produces a concrete `ResourcePool`; persistence is the
 host's problem (typically wired through `onPoolsChange`).
 
+### Advanced rules — full DSL editor
+
+The `PoolBuilder` modal also exposes a collapsible **Advanced rules**
+section for query / hybrid pools. The simple-form fields (capability
+chips + radius) keep covering the common case; the advanced section
+lets power users edit anything else the DSL supports —
+`gt` / `gte` / `lt` / `lte`, `or`, `not`, fixed-point `within`,
+arbitrary `meta` paths, etc.
+
+The section opens automatically when an existing pool's query
+contains clauses the simple form can't model (so users can see what
+they're inheriting), and stays collapsed for "clean" simple-form
+pools so it doesn't add visual noise.
+
+Two opt-in components power the section and ship as standalone
+exports too:
+
+- **`AdvancedRulesEditor`** — flat list manager. Each row shows a
+  plain-English summary of the clause (via `summarizeQuery`) plus
+  Edit / Remove buttons. Add new rules via "+ Add rule".
+- **`ClauseEditor`** — recursive single-clause editor. Op picker
+  covers every DSL leaf and composite (`and` / `or` / `not`); inputs
+  type themselves to whichever op is active (number for gte, lat/lon
+  for fixed-point `within`, etc.).
+
+```tsx
+import { AdvancedRulesEditor } from 'works-calendar';
+
+<AdvancedRulesEditor
+  clauses={query.op === 'and' ? query.clauses : [query]}
+  onChange={(next) => persist(reAndWrap(next))}
+/>
+```
+
+Nesting is capped at depth 5 to keep the DOM bounded; deeper trees
+can still be authored via JSON / config and round-trip safely
+through `PoolBuilder` because they land in the preserved bucket.
+
 ### `summarizePool` / `summarizeQuery`
 
 Pure helpers that turn a pool or query into a `PoolSummary`

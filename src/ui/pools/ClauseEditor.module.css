@@ -1,0 +1,169 @@
+.clause {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--wc-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--wc-bg, #ffffff);
+}
+
+.clause[data-op='and'],
+.clause[data-op='or'] {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.clause[data-depth='1'] { background: color-mix(in srgb, #2563eb 3%, var(--wc-bg, #ffffff)); }
+.clause[data-depth='2'] { background: color-mix(in srgb, #2563eb 5%, var(--wc-bg, #ffffff)); }
+.clause[data-depth='3'] { background: color-mix(in srgb, #2563eb 7%, var(--wc-bg, #ffffff)); }
+.clause[data-depth='4'] { background: color-mix(in srgb, #2563eb 9%, var(--wc-bg, #ffffff)); }
+.clause[data-depth='5'] { background: color-mix(in srgb, #2563eb 11%, var(--wc-bg, #ffffff)); }
+
+.opPicker,
+.valueKind,
+.fromKindPicker,
+.unitPicker {
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid var(--wc-border, #e5e7eb);
+  border-radius: 4px;
+  background: var(--wc-bg, #ffffff);
+}
+
+.opPicker {
+  font-weight: 600;
+}
+
+.composite {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0 0;
+}
+
+.childList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.child {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.child > .clause {
+  flex: 1;
+}
+
+.notBody {
+  flex: 1;
+}
+
+.leafBody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+}
+
+.pathInput {
+  flex: 1;
+  min-width: 160px;
+  padding: 4px 6px;
+  font-family: var(--wc-font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  border: 1px solid var(--wc-border, #e5e7eb);
+  border-radius: 4px;
+  background: var(--wc-bg, #ffffff);
+}
+
+.valueRow {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.valueInput,
+.numInput,
+.valuesInput {
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid var(--wc-border, #e5e7eb);
+  border-radius: 4px;
+  background: var(--wc-bg, #ffffff);
+  font-family: var(--wc-font-mono, ui-monospace, monospace);
+}
+
+.numInput {
+  width: 90px;
+}
+
+.valuesInput {
+  flex: 1;
+  min-width: 160px;
+}
+
+.latLonRow {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.nullPlaceholder {
+  font-size: 12px;
+  color: var(--wc-text-muted, #6b7280);
+  font-style: italic;
+}
+
+.empty {
+  font-size: 12px;
+  color: var(--wc-text-muted, #6b7280);
+  font-style: italic;
+}
+
+.addBtn {
+  align-self: flex-start;
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px dashed var(--wc-border, #d1d5db);
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--wc-text-muted, #6b7280);
+}
+
+.addBtn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.addBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.removeBtn {
+  font-size: 14px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-top: 4px;
+  border: 1px solid var(--wc-border, #e5e7eb);
+  background: var(--wc-bg, #ffffff);
+  color: var(--wc-text-muted, #6b7280);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.removeBtn:hover {
+  color: #dc2626;
+  border-color: #dc2626;
+}

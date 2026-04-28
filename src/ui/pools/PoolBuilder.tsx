@@ -34,6 +34,7 @@ import type {
   ResourceQuery,
 } from '../../core/pools/poolQuerySchema'
 import type { EngineResource } from '../../core/engine/schema/resourceSchema'
+import AdvancedRulesEditor from './AdvancedRulesEditor'
 import styles from './PoolBuilder.module.css'
 
 export interface CapabilityOption {
@@ -287,17 +288,25 @@ export default function PoolBuilder(props: PoolBuilderProps): JSX.Element {
           )}
         </section>
 
-        {hasPreserved && (draft.type === 'query' || draft.type === 'hybrid') && (
-          <section
-            className={styles['preserved']}
-            data-testid="pool-builder-preserved"
-            role="note"
-            aria-label="Additional rules preserved on save"
+        {(draft.type === 'query' || draft.type === 'hybrid') && (
+          <details
+            className={styles['advanced']}
+            data-testid="pool-builder-advanced"
+            open={hasPreserved}
           >
-            <strong>{draft.preserved.length}</strong>{' '}
-            additional {draft.preserved.length === 1 ? 'rule isn’t' : 'rules aren’t'} editable here
-            {' '}— they’ll be preserved on save.
-          </section>
+            <summary className={styles['advancedSummary']}>
+              Advanced rules
+              {hasPreserved && (
+                <span className={styles['advancedCount']}>
+                  ({draft.preserved.length})
+                </span>
+              )}
+            </summary>
+            <AdvancedRulesEditor
+              clauses={draft.preserved}
+              onChange={(next) => setDraft(d => ({ ...d, preserved: next }))}
+            />
+          </details>
         )}
 
         <section className={styles['preview']} aria-label="Live match preview">
