@@ -96,3 +96,60 @@ describe('ConflictModal — actions', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ConflictModal — pool-unresolvable details (#386 item #8)', () => {
+  const poolResult = {
+    violations: [
+      {
+        rule: 'pool-unresolvable',
+        severity: 'hard',
+        message: 'Pool "drivers" has no available member for the requested window.',
+        details: {
+          poolId: 'drivers',
+          code: 'NO_AVAILABLE_MEMBER',
+          evaluated: ['d1', 'd2', 'd3'],
+        },
+      },
+    ],
+    severity: 'hard',
+    allowed: false,
+  };
+
+  it('renders the ordered evaluated trail so users see which members were tried', () => {
+    render(<ConflictModal result={poolResult} onProceed={vi.fn()} onCancel={vi.fn()} />);
+    const evaluated = screen.getByTestId('pool-evaluated');
+    expect(evaluated).toHaveTextContent('Tried members: d1, d2, d3');
+    // Screen-reader friendly aria-label spells the same thing out.
+    expect(evaluated).toHaveAttribute('aria-label', 'Pool members tried: d1, d2, d3');
+  });
+
+  it('shows the structured error code in place of the rule tag', () => {
+    render(<ConflictModal result={poolResult} onProceed={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByText('NO_AVAILABLE_MEMBER')).toBeInTheDocument();
+  });
+
+  it('omits the evaluated row when the trail is empty (e.g. POOL_DISABLED)', () => {
+    const disabledResult = {
+      violations: [
+        {
+          rule: 'pool-unresolvable',
+          severity: 'hard',
+          message: 'Pool "drivers" is disabled.',
+          details: { poolId: 'drivers', code: 'POOL_DISABLED', evaluated: [] },
+        },
+      ],
+      severity: 'hard',
+      allowed: false,
+    };
+    render(<ConflictModal result={disabledResult} onProceed={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.queryByTestId('pool-evaluated')).toBeNull();
+    // Code still surfaces in the rule slot.
+    expect(screen.getByText('POOL_DISABLED')).toBeInTheDocument();
+  });
+
+  it('does not affect non-pool violations (regression guard)', () => {
+    render(<ConflictModal result={hardResult} onProceed={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.queryByTestId('pool-evaluated')).toBeNull();
+    expect(screen.getByText('ovr')).toBeInTheDocument();
+  });
+});

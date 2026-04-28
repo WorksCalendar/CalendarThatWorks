@@ -59,20 +59,43 @@ export default function ConflictModal({
         </div>
 
         <ul className={styles['list']} aria-label="Conflict violations">
-          {result.violations.map((v: any, i: number) => (
-            <li
-              key={`${v.rule}:${v.conflictingEventId ?? i}`}
-              className={styles['item']}
-              data-severity={v.severity}
-              data-rule={v.rule}
-            >
-              <span className={styles['severityTag']}>{v.severity}</span>
-              <span className={styles['message']}>{v.message}</span>
-              <span className={styles['ruleTag']} aria-label={`rule ${v.rule}`}>
-                {v.rule}
-              </span>
-            </li>
-          ))}
+          {result.violations.map((v: any, i: number) => {
+            // Pool-unresolvable rejections carry an `evaluated` trail
+            // (the ordered list of members the resolver actually
+            // tried) and a structured error `code`. Surface both so
+            // the user can see "tried A, B; both conflicted" instead
+            // of a bare "no member available" — issue #386 item #8.
+            const isPoolFailure = v.rule === 'pool-unresolvable';
+            const evaluated: readonly string[] = isPoolFailure && Array.isArray(v.details?.evaluated)
+              ? v.details.evaluated
+              : [];
+            const code = isPoolFailure && typeof v.details?.code === 'string'
+              ? v.details.code
+              : null;
+            return (
+              <li
+                key={`${v.rule}:${v.conflictingEventId ?? i}`}
+                className={styles['item']}
+                data-severity={v.severity}
+                data-rule={v.rule}
+              >
+                <span className={styles['severityTag']}>{v.severity}</span>
+                <span className={styles['message']}>{v.message}</span>
+                <span className={styles['ruleTag']} aria-label={`rule ${v.rule}`}>
+                  {code ?? v.rule}
+                </span>
+                {evaluated.length > 0 && (
+                  <span
+                    className={styles['poolEvaluated']}
+                    aria-label={`Pool members tried: ${evaluated.join(', ')}`}
+                    data-testid="pool-evaluated"
+                  >
+                    Tried members: {evaluated.join(', ')}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
         <div className={styles['footer']}>
