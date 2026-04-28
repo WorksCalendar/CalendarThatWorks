@@ -15,7 +15,7 @@
  * visuals. Those land in follow-up slices once this primitive is
  * stable.
  */
-import type { ChangeEvent } from 'react'
+import { useId, type ChangeEvent } from 'react'
 import type {
   ResourceQuery, ResourceQueryValue, DistanceFrom,
 } from '../../core/pools/poolQuerySchema'
@@ -32,6 +32,14 @@ export interface ClauseEditorProps {
    * the editor has scrollable nesting indicators (follow-up).
    */
   readonly depth?: number
+  /**
+   * Optional path-autocomplete suggestions — typically the output of
+   * `derivePathSuggestions(resources)`. When provided, the path
+   * input renders an HTML5 `<datalist>` so users can pick or
+   * progressively type known paths. The list is informational only;
+   * the editor still accepts any string, so custom paths still work.
+   */
+  readonly pathSuggestions?: readonly string[] | undefined
 }
 
 const ALL_OPS: readonly { value: ResourceQuery['op']; label: string; group: 'logic' | 'compare' | 'set' | 'geo' }[] = [
@@ -50,11 +58,18 @@ const ALL_OPS: readonly { value: ResourceQuery['op']; label: string; group: 'log
 ]
 
 export default function ClauseEditor({
-  clause, onChange, hideOpPicker, depth = 0,
+  clause, onChange, hideOpPicker, depth = 0, pathSuggestions,
 }: ClauseEditorProps): JSX.Element {
   // Hard cap to keep nesting from spiralling. The user can lift it by
   // editing JSON externally; the editor just refuses to add more.
   const atDepthCap = depth >= 5
+  // Stable per-instance id so multiple editors on the page don't
+  // collide their datalist references. Strip colons from useId's
+  // output (`:r1:`) — they're valid in HTML id attributes but
+  // happy-dom (and some legacy DOM consumers) reject them when
+  // querying via `input.list`. The result stays unique because
+  // the remaining characters still come from useId's counter.
+  const datalistId = `clause-paths-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
 
   return (
     <div className={styles['clause']} data-depth={depth} data-op={clause.op}>
@@ -87,31 +102,47 @@ export default function ClauseEditor({
       )}
 
       {(clause.op === 'and' || clause.op === 'or') && (
-        <CompositeBody clause={clause} onChange={onChange} depth={depth} atCap={atDepthCap} />
+        <CompositeBody
+          clause={clause}
+          onChange={onChange}
+          depth={depth}
+          atCap={atDepthCap}
+          pathSuggestions={pathSuggestions}
+          datalistId={datalistId}
+        />
       )}
 
       {clause.op === 'not' && (
-        <NotBody clause={clause} onChange={onChange} depth={depth} />
+        <NotBody clause={clause} onChange={onChange} depth={depth} pathSuggestions={pathSuggestions} />
       )}
 
       {(clause.op === 'eq' || clause.op === 'neq') && (
-        <EqBody clause={clause} onChange={onChange} />
+        <EqBody clause={clause} onChange={onChange} datalistId={datalistId} />
       )}
 
       {(clause.op === 'gt' || clause.op === 'gte' || clause.op === 'lt' || clause.op === 'lte') && (
-        <NumericBody clause={clause} onChange={onChange} />
+        <NumericBody clause={clause} onChange={onChange} datalistId={datalistId} />
       )}
 
       {clause.op === 'in' && (
-        <InBody clause={clause} onChange={onChange} />
+        <InBody clause={clause} onChange={onChange} datalistId={datalistId} />
       )}
 
       {clause.op === 'exists' && (
-        <ExistsBody clause={clause} onChange={onChange} />
+        <ExistsBody clause={clause} onChange={onChange} datalistId={datalistId} />
       )}
 
       {clause.op === 'within' && (
-        <WithinBody clause={clause} onChange={onChange} />
+        <WithinBody clause={clause} onChange={onChange} datalistId={datalistId} />
+      )}
+
+      {/* The datalist lives on the outer container so every leaf
+          body in this editor instance shares a single suggestion
+          list. Rendered only once per editor instance. */}
+      {pathSuggestions && pathSuggestions.length > 0 && depth === 0 && (
+        <datalist id={datalistId}>
+          {pathSuggestions.map(p => <option key={p} value={p} />)}
+        </datalist>
       )}
     </div>
   )
@@ -120,13 +151,26 @@ export default function ClauseEditor({
 // ─── Bodies ────────────────────────────────────────────────────────────────
 
 function CompositeBody({
-  clause, onChange, depth, atCap,
+  clause, onChange, depth, atCap, pathSuggestions, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'and' | 'or' }>
   onChange: (next: ResourceQuery) => void
   depth: number
   atCap: boolean
+  pathSuggestions?: readonly string[] | undefined
+  datalistId: string
 }): JSX.Element {
+  // Move helpers — out-of-bounds moves are no-ops so the buttons can
+  // stay rendered (and disabled at the ends) for stable focus order.
+  const moveBy = (i: number, delta: -1 | 1) => {
+    const target = i + delta
+    if (target < 0 || target >= clause.clauses.length) return
+    const next = [...clause.clauses]
+    const tmp = next[i]!
+    next[i] = next[target]!
+    next[target] = tmp
+    onChange({ ...clause, clauses: next })
+  }
   return (
     <div className={styles['composite']}>
       {clause.clauses.length === 0 && (
@@ -140,20 +184,37 @@ function CompositeBody({
             <ClauseEditor
               clause={c}
               depth={depth + 1}
+              pathSuggestions={pathSuggestions}
               onChange={(next) => onChange({
                 ...clause,
                 clauses: clause.clauses.map((existing, j) => j === i ? next : existing),
               })}
             />
-            <button
-              type="button"
-              className={styles['removeBtn']}
-              aria-label={`Remove sub-rule ${i + 1}`}
-              onClick={() => onChange({
-                ...clause,
-                clauses: clause.clauses.filter((_, j) => j !== i),
-              })}
-            >×</button>
+            <span className={styles['rowControls']}>
+              <button
+                type="button"
+                className={styles['moveBtn']}
+                aria-label={`Move sub-rule ${i + 1} up`}
+                disabled={i === 0}
+                onClick={() => moveBy(i, -1)}
+              >↑</button>
+              <button
+                type="button"
+                className={styles['moveBtn']}
+                aria-label={`Move sub-rule ${i + 1} down`}
+                disabled={i === clause.clauses.length - 1}
+                onClick={() => moveBy(i, 1)}
+              >↓</button>
+              <button
+                type="button"
+                className={styles['removeBtn']}
+                aria-label={`Remove sub-rule ${i + 1}`}
+                onClick={() => onChange({
+                  ...clause,
+                  clauses: clause.clauses.filter((_, j) => j !== i),
+                })}
+              >×</button>
+            </span>
           </li>
         ))}
       </ul>
@@ -167,22 +228,28 @@ function CompositeBody({
           clauses: [...clause.clauses, defaultClause('eq')],
         })}
       >+ Add sub-rule</button>
+      {/* Suppress unused-variable warning while we keep datalistId
+          on the prop type so future composite-level paths can also
+          use it. */}
+      {datalistId.length === 0 && null}
     </div>
   )
 }
 
 function NotBody({
-  clause, onChange, depth,
+  clause, onChange, depth, pathSuggestions,
 }: {
   clause: Extract<ResourceQuery, { op: 'not' }>
   onChange: (next: ResourceQuery) => void
   depth: number
+  pathSuggestions?: readonly string[] | undefined
 }): JSX.Element {
   return (
     <div className={styles['notBody']}>
       <ClauseEditor
         clause={clause.clause}
         depth={depth + 1}
+        pathSuggestions={pathSuggestions}
         onChange={(inner) => onChange({ ...clause, clause: inner })}
       />
     </div>
@@ -190,14 +257,15 @@ function NotBody({
 }
 
 function EqBody({
-  clause, onChange,
+  clause, onChange, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'eq' | 'neq' }>
   onChange: (next: ResourceQuery) => void
+  datalistId?: string | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
       <ValueInput
         value={clause.value}
         onChange={(value) => onChange({ ...clause, value })}
@@ -207,14 +275,15 @@ function EqBody({
 }
 
 function NumericBody({
-  clause, onChange,
+  clause, onChange, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'gt' | 'gte' | 'lt' | 'lte' }>
   onChange: (next: ResourceQuery) => void
+  datalistId?: string | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
       <input
         type="number"
         className={styles['numInput']}
@@ -228,14 +297,15 @@ function NumericBody({
 }
 
 function InBody({
-  clause, onChange,
+  clause, onChange, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'in' }>
   onChange: (next: ResourceQuery) => void
+  datalistId?: string | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
       <input
         type="text"
         className={styles['valuesInput']}
@@ -253,29 +323,31 @@ function InBody({
 }
 
 function ExistsBody({
-  clause, onChange,
+  clause, onChange, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'exists' }>
   onChange: (next: ResourceQuery) => void
+  datalistId?: string | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
     </div>
   )
 }
 
 function WithinBody({
-  clause, onChange,
+  clause, onChange, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'within' }>
   onChange: (next: ResourceQuery) => void
+  datalistId?: string | undefined
 }): JSX.Element {
   const fromKind = clause.from.kind
   const usingMiles = clause.km == null
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
       <select
         className={styles['fromKindPicker']}
         value={fromKind}
@@ -348,7 +420,13 @@ function WithinBody({
 
 // ─── Shared inputs ─────────────────────────────────────────────────────────
 
-function PathInput({ value, onChange }: { value: string; onChange: (v: string) => void }): JSX.Element {
+function PathInput({
+  value, onChange, datalistId,
+}: {
+  value: string
+  onChange: (v: string) => void
+  datalistId?: string | undefined
+}): JSX.Element {
   return (
     <input
       type="text"
@@ -356,6 +434,7 @@ function PathInput({ value, onChange }: { value: string; onChange: (v: string) =
       value={value}
       placeholder="meta.capabilities.refrigerated"
       aria-label="Field path"
+      list={datalistId}
       onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
     />
   )

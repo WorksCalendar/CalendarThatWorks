@@ -462,6 +462,27 @@ import { PoolBuilder } from 'works-calendar';
 The builder produces a concrete `ResourcePool`; persistence is the
 host's problem (typically wired through `onPoolsChange`).
 
+### Numeric ranges (capacity, weight, etc.)
+
+The `PoolBuilder` simple form auto-discovers numeric capabilities
+on the live registry and renders a **Numeric ranges** section with
+min / max inputs per capability:
+
+```
+Capacity Lbs   ≥ [ 70000 ]   ≤ [ 90000 ]
+```
+
+A bound input emits a clause on save (`gte` for min, `lte` for max);
+filling both produces the obvious range. Clearing both inputs drops
+the row entirely. Hosts can curate the list with the
+`numericCapabilityCatalog` prop (mirrors `capabilityCatalog` but
+for numeric ones); pass `[]` to suppress the section even when the
+fleet has numeric values.
+
+Range clauses are recognized round-trip — opening an existing pool
+that uses `gte` / `lte` on a `meta.capabilities.X` path seeds the
+bound inputs, no advanced editor required.
+
 ### Advanced rules — full DSL editor
 
 The `PoolBuilder` modal also exposes a collapsible **Advanced rules**
@@ -499,6 +520,39 @@ import { AdvancedRulesEditor } from 'works-calendar';
 Nesting is capped at depth 5 to keep the DOM bounded; deeper trees
 can still be authored via JSON / config and round-trip safely
 through `PoolBuilder` because they land in the preserved bucket.
+
+#### Path autocomplete
+
+Pass the live `resources` registry through to the editors and the
+path inputs render an HTML5 `<datalist>` with every dotted path
+the registry exposes (top-level fields plus `meta.<dot.path>`):
+
+```tsx
+import { derivePathSuggestions } from 'works-calendar';
+
+<AdvancedRulesEditor
+  clauses={preserved}
+  pathSuggestions={derivePathSuggestions(resources)}
+  onChange={...}
+/>
+```
+
+`PoolBuilder` does this for you — its embedded
+`AdvancedRulesEditor` automatically receives suggestions derived
+from the same `resources` it uses for the live preview.
+
+The list is informational only; the inputs still accept any
+string, so custom paths the registry doesn't yet expose still
+work.
+
+#### Reordering composite children
+
+Both `ClauseEditor` (for `and` / `or` children) and
+`AdvancedRulesEditor` (for top-level rules) render
+keyboard-accessible **Up / Down** buttons next to each row.
+Buttons disable at the list bounds. No HTML5 drag-drop
+dependency — the buttons stay reachable for screen readers and
+touch-only sessions.
 
 ### `summarizePool` / `summarizeQuery`
 

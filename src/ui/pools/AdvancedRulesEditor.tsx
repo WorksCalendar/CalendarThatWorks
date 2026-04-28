@@ -19,12 +19,18 @@ import styles from './AdvancedRulesEditor.module.css'
 export interface AdvancedRulesEditorProps {
   readonly clauses: readonly ResourceQuery[]
   readonly onChange: (next: readonly ResourceQuery[]) => void
+  /**
+   * Optional path-autocomplete suggestions, threaded down to each
+   * `ClauseEditor`. Hosts compose this from
+   * `derivePathSuggestions(resources)`.
+   */
+  readonly pathSuggestions?: readonly string[] | undefined
 }
 
 const DEFAULT_NEW_CLAUSE: ResourceQuery = { op: 'eq', path: '', value: '' }
 
 export default function AdvancedRulesEditor({
-  clauses, onChange,
+  clauses, onChange, pathSuggestions,
 }: AdvancedRulesEditorProps): JSX.Element {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
@@ -37,6 +43,18 @@ export default function AdvancedRulesEditor({
   const addNew = () => {
     onChange([...clauses, DEFAULT_NEW_CLAUSE])
     setEditingIndex(clauses.length) // open the new row in edit mode
+  }
+  const moveBy = (index: number, delta: -1 | 1) => {
+    const target = index + delta
+    if (target < 0 || target >= clauses.length) return
+    const next = [...clauses]
+    const tmp = next[index]!
+    next[index] = next[target]!
+    next[target] = tmp
+    onChange(next)
+    // Keep the editor focus on the moved clause if it was open.
+    if (editingIndex === index) setEditingIndex(target)
+    else if (editingIndex === target) setEditingIndex(index)
   }
 
   return (
@@ -62,6 +80,20 @@ export default function AdvancedRulesEditor({
                   <button
                     type="button"
                     className={styles['rowBtn']}
+                    onClick={() => moveBy(i, -1)}
+                    disabled={i === 0}
+                    aria-label={`Move rule ${i + 1} up`}
+                  >↑</button>
+                  <button
+                    type="button"
+                    className={styles['rowBtn']}
+                    onClick={() => moveBy(i, 1)}
+                    disabled={i === clauses.length - 1}
+                    aria-label={`Move rule ${i + 1} down`}
+                  >↓</button>
+                  <button
+                    type="button"
+                    className={styles['rowBtn']}
                     onClick={() => setEditingIndex(isEditing ? null : i)}
                     aria-expanded={isEditing}
                     aria-controls={`advanced-rule-body-${i}`}
@@ -80,7 +112,11 @@ export default function AdvancedRulesEditor({
               </div>
               {isEditing && (
                 <div id={`advanced-rule-body-${i}`} className={styles['rowBody']}>
-                  <ClauseEditor clause={c} onChange={(next) => updateAt(i, next)} />
+                  <ClauseEditor
+                    clause={c}
+                    pathSuggestions={pathSuggestions}
+                    onChange={(next) => updateAt(i, next)}
+                  />
                 </div>
               )}
             </li>
