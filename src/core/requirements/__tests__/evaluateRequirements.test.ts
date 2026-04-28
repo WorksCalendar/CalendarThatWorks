@@ -203,6 +203,57 @@ describe('evaluateRequirements — pool slots', () => {
     expect(out.missing[0]).toMatchObject({ kind: 'pool', pool: 'ghost', poolUnknown: true, assigned: 0 })
   })
 
+  it('ignores assignments to resources not in the registry (#386 P1)', () => {
+    // Manual pool's memberIds include a stale id whose resource was
+    // deleted. An assignment still references the deleted id — without
+    // the registry check, that phantom assignment would falsely
+    // satisfy the slot.
+    const stalePool: ResourcePool = {
+      id: 'fleet', name: 'Fleet',
+      memberIds: ['t1', 'gone'],   // 'gone' isn't in resources
+      strategy: 'first-available',
+    }
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ pool: 'fleet', count: 1 }] }],
+      resources,                                          // does NOT include 'gone'
+      pools: mapBy([stalePool]),
+      assignments: mapBy([a('a1', 'e1', 'gone')]),        // assignment to deleted resource
+    })
+    expect(out.satisfied).toBe(false)
+    expect(out.missing[0]?.assigned).toBe(0)
+  })
+
+  it('treats a malformed query as zero members instead of throwing (#386 P2)', () => {
+    // A pool's `query` field is loosely validated by parseConfig as
+    // "any object" — a malformed `{}` can survive parsing and would
+    // crash evaluateQuery (path.startsWith on undefined). The
+    // evaluator's documented "never throws" contract requires a
+    // graceful zero-members fallback.
+    const broken: ResourcePool = {
+      id: 'broken', name: 'Broken',
+      type: 'query', memberIds: [],
+      query: {} as never,                     // malformed by design
+      strategy: 'first-available',
+    }
+    expect(() => evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ pool: 'broken', count: 1 }] }],
+      resources,
+      pools: mapBy([broken]),
+      assignments: mapBy([a('a1', 'e1', 't1')]),
+    })).not.toThrow()
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ pool: 'broken', count: 1 }] }],
+      resources,
+      pools: mapBy([broken]),
+      assignments: mapBy([a('a1', 'e1', 't1')]),
+    })
+    expect(out.satisfied).toBe(false)
+    expect(out.missing[0]?.assigned).toBe(0)
+  })
+
   it('treats a query/hybrid pool with no query as zero members (defensive)', () => {
     const broken: ResourcePool = {
       id: 'broken', name: 'Broken',

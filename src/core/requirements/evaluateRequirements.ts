@@ -182,6 +182,14 @@ function countRoleAssignments(roleId: string, ctx: SlotContext): number {
 function countPoolAssignments(members: ReadonlySet<string>, ctx: SlotContext): number {
   let count = 0
   for (const a of ctx.eventAssignments) {
+    // Phantom guard: a manual pool's `memberIds` can carry stale ids
+    // that point at deleted resources. Without checking the registry,
+    // an assignment to a non-existent resource would still match
+    // `members.has(...)` (the id is in the pool list) and falsely
+    // satisfy a slot. The role path is already safe — it reads the
+    // resource's `meta.roles`, which is `undefined` when the resource
+    // is gone — but pool counts need an explicit registry check.
+    if (!ctx.resources.has(a.resourceId)) continue
     if (members.has(a.resourceId)) count++
   }
   return count
@@ -213,7 +221,18 @@ function computePoolMembers(pool: ResourcePool, ctx: SlotContext): ReadonlySet<s
   const queryContext = ctx.proposedLocation
     ? { proposedLocation: ctx.proposedLocation }
     : {}
-  const result = evaluateQuery(pool.query, ctx.resources, queryContext)
+  // Catch any throw from evaluateQuery — a malformed query (e.g. an
+  // empty object that passed parseConfig's loose object check)
+  // breaks the documented "never throws" contract otherwise. The
+  // safe default is "zero effective members"; the slot will surface
+  // as a shortfall, which mirrors how the rest of the evaluator
+  // handles broken pools.
+  let result
+  try {
+    result = evaluateQuery(pool.query, ctx.resources, queryContext)
+  } catch {
+    return new Set()
+  }
   if (type === 'query') return new Set(result.matched)
   // hybrid — intersection of memberIds and query result
   const allowed = new Set(result.matched)
