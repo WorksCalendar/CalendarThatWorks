@@ -41,6 +41,14 @@ export interface ClauseEditorProps {
    */
   readonly pathSuggestions?: readonly string[] | undefined
   /**
+   * Optional set of paths that don't resolve on any live resource —
+   * typically `validateClausePaths(query, resources).byPath`. When a
+   * leaf's `path` is in this set, the editor renders a small ⚠
+   * indicator next to the input. Informational only: the editor
+   * still accepts the path so forward-looking schemas keep working.
+   */
+  readonly unresolvedPaths?: ReadonlySet<string> | undefined
+  /**
    * Internal — the root editor passes its datalist id to every
    * nested clause so every path input references the same
    * `<datalist>` (which only the root renders). Hosts shouldn't
@@ -65,7 +73,7 @@ const ALL_OPS: readonly { value: ResourceQuery['op']; label: string; group: 'log
 ]
 
 export default function ClauseEditor({
-  clause, onChange, hideOpPicker, depth = 0, pathSuggestions,
+  clause, onChange, hideOpPicker, depth = 0, pathSuggestions, unresolvedPaths,
   datalistId: parentDatalistId,
 }: ClauseEditorProps): JSX.Element {
   // Hard cap to keep nesting from spiralling. The user can lift it by
@@ -120,32 +128,33 @@ export default function ClauseEditor({
           depth={depth}
           atCap={atDepthCap}
           pathSuggestions={pathSuggestions}
+          unresolvedPaths={unresolvedPaths}
           datalistId={datalistId}
         />
       )}
 
       {clause.op === 'not' && (
-        <NotBody clause={clause} onChange={onChange} depth={depth} pathSuggestions={pathSuggestions} datalistId={datalistId} />
+        <NotBody clause={clause} onChange={onChange} depth={depth} pathSuggestions={pathSuggestions} unresolvedPaths={unresolvedPaths} datalistId={datalistId} />
       )}
 
       {(clause.op === 'eq' || clause.op === 'neq') && (
-        <EqBody clause={clause} onChange={onChange} datalistId={datalistId} />
+        <EqBody clause={clause} onChange={onChange} datalistId={datalistId} unresolvedPaths={unresolvedPaths} />
       )}
 
       {(clause.op === 'gt' || clause.op === 'gte' || clause.op === 'lt' || clause.op === 'lte') && (
-        <NumericBody clause={clause} onChange={onChange} datalistId={datalistId} />
+        <NumericBody clause={clause} onChange={onChange} datalistId={datalistId} unresolvedPaths={unresolvedPaths} />
       )}
 
       {clause.op === 'in' && (
-        <InBody clause={clause} onChange={onChange} datalistId={datalistId} />
+        <InBody clause={clause} onChange={onChange} datalistId={datalistId} unresolvedPaths={unresolvedPaths} />
       )}
 
       {clause.op === 'exists' && (
-        <ExistsBody clause={clause} onChange={onChange} datalistId={datalistId} />
+        <ExistsBody clause={clause} onChange={onChange} datalistId={datalistId} unresolvedPaths={unresolvedPaths} />
       )}
 
       {clause.op === 'within' && (
-        <WithinBody clause={clause} onChange={onChange} datalistId={datalistId} />
+        <WithinBody clause={clause} onChange={onChange} datalistId={datalistId} unresolvedPaths={unresolvedPaths} />
       )}
 
       {/* The datalist lives on the outer container so every leaf
@@ -163,13 +172,14 @@ export default function ClauseEditor({
 // ─── Bodies ────────────────────────────────────────────────────────────────
 
 function CompositeBody({
-  clause, onChange, depth, atCap, pathSuggestions, datalistId,
+  clause, onChange, depth, atCap, pathSuggestions, unresolvedPaths, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'and' | 'or' }>
   onChange: (next: ResourceQuery) => void
   depth: number
   atCap: boolean
   pathSuggestions?: readonly string[] | undefined
+  unresolvedPaths?: ReadonlySet<string> | undefined
   datalistId: string
 }): JSX.Element {
   // Move helpers — out-of-bounds moves are no-ops so the buttons can
@@ -197,6 +207,7 @@ function CompositeBody({
               clause={c}
               depth={depth + 1}
               pathSuggestions={pathSuggestions}
+              unresolvedPaths={unresolvedPaths}
               datalistId={datalistId}
               onChange={(next) => onChange({
                 ...clause,
@@ -250,12 +261,13 @@ function CompositeBody({
 }
 
 function NotBody({
-  clause, onChange, depth, pathSuggestions, datalistId,
+  clause, onChange, depth, pathSuggestions, unresolvedPaths, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'not' }>
   onChange: (next: ResourceQuery) => void
   depth: number
   pathSuggestions?: readonly string[] | undefined
+  unresolvedPaths?: ReadonlySet<string> | undefined
   datalistId?: string | undefined
 }): JSX.Element {
   return (
@@ -264,6 +276,7 @@ function NotBody({
         clause={clause.clause}
         depth={depth + 1}
         pathSuggestions={pathSuggestions}
+        unresolvedPaths={unresolvedPaths}
         datalistId={datalistId}
         onChange={(inner) => onChange({ ...clause, clause: inner })}
       />
@@ -272,15 +285,16 @@ function NotBody({
 }
 
 function EqBody({
-  clause, onChange, datalistId,
+  clause, onChange, datalistId, unresolvedPaths,
 }: {
   clause: Extract<ResourceQuery, { op: 'eq' | 'neq' }>
   onChange: (next: ResourceQuery) => void
   datalistId?: string | undefined
+  unresolvedPaths?: ReadonlySet<string> | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} unresolved={!!(unresolvedPaths && clause.path && unresolvedPaths.has(clause.path))} />
       <ValueInput
         value={clause.value}
         onChange={(value) => onChange({ ...clause, value })}
@@ -290,15 +304,16 @@ function EqBody({
 }
 
 function NumericBody({
-  clause, onChange, datalistId,
+  clause, onChange, datalistId, unresolvedPaths,
 }: {
   clause: Extract<ResourceQuery, { op: 'gt' | 'gte' | 'lt' | 'lte' }>
   onChange: (next: ResourceQuery) => void
   datalistId?: string | undefined
+  unresolvedPaths?: ReadonlySet<string> | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} unresolved={!!(unresolvedPaths && clause.path && unresolvedPaths.has(clause.path))} />
       <input
         type="number"
         className={styles['numInput']}
@@ -312,15 +327,16 @@ function NumericBody({
 }
 
 function InBody({
-  clause, onChange, datalistId,
+  clause, onChange, datalistId, unresolvedPaths,
 }: {
   clause: Extract<ResourceQuery, { op: 'in' }>
   onChange: (next: ResourceQuery) => void
   datalistId?: string | undefined
+  unresolvedPaths?: ReadonlySet<string> | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} unresolved={!!(unresolvedPaths && clause.path && unresolvedPaths.has(clause.path))} />
       <input
         type="text"
         className={styles['valuesInput']}
@@ -338,31 +354,33 @@ function InBody({
 }
 
 function ExistsBody({
-  clause, onChange, datalistId,
+  clause, onChange, datalistId, unresolvedPaths,
 }: {
   clause: Extract<ResourceQuery, { op: 'exists' }>
   onChange: (next: ResourceQuery) => void
   datalistId?: string | undefined
+  unresolvedPaths?: ReadonlySet<string> | undefined
 }): JSX.Element {
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} unresolved={!!(unresolvedPaths && clause.path && unresolvedPaths.has(clause.path))} />
     </div>
   )
 }
 
 function WithinBody({
-  clause, onChange, datalistId,
+  clause, onChange, datalistId, unresolvedPaths,
 }: {
   clause: Extract<ResourceQuery, { op: 'within' }>
   onChange: (next: ResourceQuery) => void
   datalistId?: string | undefined
+  unresolvedPaths?: ReadonlySet<string> | undefined
 }): JSX.Element {
   const fromKind = clause.from.kind
   const usingMiles = clause.km == null
   return (
     <div className={styles['leafBody']}>
-      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} />
+      <PathInput value={clause.path} onChange={(path) => onChange({ ...clause, path })} datalistId={datalistId} unresolved={!!(unresolvedPaths && clause.path && unresolvedPaths.has(clause.path))} />
       <select
         className={styles['fromKindPicker']}
         value={fromKind}
@@ -436,22 +454,41 @@ function WithinBody({
 // ─── Shared inputs ─────────────────────────────────────────────────────────
 
 function PathInput({
-  value, onChange, datalistId,
+  value, onChange, datalistId, unresolved,
 }: {
   value: string
   onChange: (v: string) => void
   datalistId?: string | undefined
+  /**
+   * `true` when the parent has determined this path doesn't resolve
+   * on any live resource. Renders a small ⚠ next to the input —
+   * informational; doesn't block input.
+   */
+  unresolved?: boolean
 }): JSX.Element {
   return (
-    <input
-      type="text"
-      className={styles['pathInput']}
-      value={value}
-      placeholder="meta.capabilities.refrigerated"
-      aria-label="Field path"
-      list={datalistId}
-      onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
-    />
+    <span className={styles['pathInputWrap']}>
+      <input
+        type="text"
+        className={styles['pathInput']}
+        value={value}
+        placeholder="meta.capabilities.refrigerated"
+        aria-label="Field path"
+        list={datalistId}
+        aria-invalid={unresolved ? 'true' : undefined}
+        data-unresolved={unresolved ? 'true' : undefined}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+      />
+      {unresolved && (
+        <span
+          className={styles['pathWarning']}
+          role="img"
+          aria-label="Path not found on any resource"
+          title="This path doesn't resolve on any live resource. Could be a typo, or a forward-looking schema."
+          data-testid="clause-path-warning"
+        >⚠</span>
+      )}
+    </span>
   )
 }
 

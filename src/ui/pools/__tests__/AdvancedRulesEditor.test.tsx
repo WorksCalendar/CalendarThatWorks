@@ -108,3 +108,65 @@ describe('AdvancedRulesEditor — summaries + edit toggle', () => {
     ])
   })
 })
+
+describe('AdvancedRulesEditor — path validation chip (#452)', () => {
+  const r = (id: string, meta: Record<string, unknown> = {}) =>
+    ({ id, name: id.toUpperCase(), meta }) as unknown as { id: string; name: string; meta: Record<string, unknown> }
+  const fleet = [r('t1', { capabilities: { refrigerated: true } })]
+
+  function ChipHarness({ initial, withResources }: {
+    initial: readonly ResourceQuery[]
+    withResources: boolean
+  }) {
+    const [c, setC] = useState<readonly ResourceQuery[]>(initial)
+    return withResources
+      ? <AdvancedRulesEditor clauses={c} onChange={setC} resources={fleet as never} />
+      : <AdvancedRulesEditor clauses={c} onChange={setC} />
+  }
+
+  it('shows a warning chip when a row has unresolved paths', () => {
+    render(<ChipHarness
+      initial={[
+        { op: 'eq', path: 'meta.capabilities.refridgerated', value: true } as ResourceQuery,
+      ]}
+      withResources
+    />)
+    const chip = screen.getByTestId('advanced-rule-warning-0')
+    expect(chip).toHaveTextContent('1 unresolved')
+    expect(chip.getAttribute('title')).toContain('meta.capabilities.refridgerated')
+  })
+
+  it('omits the chip when every path resolves', () => {
+    render(<ChipHarness
+      initial={[
+        { op: 'eq', path: 'meta.capabilities.refrigerated', value: true } as ResourceQuery,
+      ]}
+      withResources
+    />)
+    expect(screen.queryByTestId('advanced-rule-warning-0')).toBeNull()
+  })
+
+  it('does nothing without resources (validation is opt-in)', () => {
+    render(<ChipHarness
+      initial={[
+        { op: 'eq', path: 'meta.bogus', value: true } as ResourceQuery,
+      ]}
+      withResources={false}
+    />)
+    expect(screen.queryByTestId('advanced-rule-warning-0')).toBeNull()
+  })
+
+  it('opens the row editor and shows the inline ⚠ next to the bad path', () => {
+    render(<ChipHarness
+      initial={[
+        { op: 'eq', path: 'meta.bogus', value: true } as ResourceQuery,
+      ]}
+      withResources
+    />)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const warning = screen.getByTestId('clause-path-warning')
+    expect(warning).toBeInTheDocument()
+    const pathInput = screen.getByLabelText('Field path')
+    expect(pathInput).toHaveAttribute('aria-invalid', 'true')
+  })
+})
