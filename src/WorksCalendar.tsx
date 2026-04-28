@@ -35,6 +35,8 @@ import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import type { LegacyEvent } from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
+import { evaluateConflicts } from './core/conflictEngine.ts';
+import type { ConflictEvent, ConflictRule } from './core/conflictEngine.ts';
 import type { OperationContext } from './core/engine/validation/validationTypes';
 import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
@@ -1656,6 +1658,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     });
   }, [applyEngineOp]);
 
+  // Pre-save conflict check for EventForm. Builds an `evaluateConflicts`
+  // input from the live event set and the owner-configured rule set.
+  // Returns null when conflicts are disabled or no rules are configured
+  // so the form takes the legacy fast path.
+  const checkEventConflicts = useCallback((proposed: LooseValue) => {
+    const conflictsCfg = ownerCfg.config?.['conflicts'] ?? {};
+    const rules = (conflictsCfg.rules ?? []) as ConflictRule[];
+    const enabled = conflictsCfg.enabled !== false;
+    if (!enabled || rules.length === 0) return null;
+    return evaluateConflicts({
+      proposed: proposed as ConflictEvent,
+      events:   expandedEvents as ConflictEvent[],
+      rules,
+      enabled,
+    });
+  }, [ownerCfg.config, expandedEvents]);
+
   const handleEventSave = useCallback((rawEv: LooseValue) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
     const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
@@ -2679,6 +2698,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
             maintenanceRules={maintenanceRules}
+            onCheckConflicts={checkEventConflicts}
           />
         )}
 
