@@ -193,6 +193,42 @@ describe('validateEvent — sourcePolicy (#259 prod overrides)', () => {
     expect(r.ok).toBe(false);
     expect(r.issues.some(i => i.code === 'INVALID_TITLE')).toBe(true);
   });
+
+  it('honors sourcePolicy on the INVALID_EVENT non-object fast path (Codex P2)', () => {
+    // Pre-fix, the non-object fast path hardcoded INVALID_EVENT as
+    // an error and returned before resolveAction could downgrade it.
+    const onError = vi.fn() as unknown as OnError;
+
+    const warned = validateEvent(null, {
+      mode: 'prod',
+      sourcePolicy: { INVALID_EVENT: 'warn' },
+      onError,
+    });
+    expect(warned.ok).toBe(true);
+    expect(warned.issues[0]?.code).toBe('INVALID_EVENT');
+    expect(warned.issues[0]?.severity).toBe('warn');
+    // Warn-severity must not ping onError.
+    expect(onError).not.toHaveBeenCalled();
+
+    const ignored = validateEvent('not an object', {
+      mode: 'prod',
+      sourcePolicy: { INVALID_EVENT: 'ignore' },
+      onError,
+    });
+    expect(ignored.ok).toBe(true);
+    expect(ignored.issues).toEqual([]);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('strict mode still hard-errors INVALID_EVENT regardless of sourcePolicy', () => {
+    const r = validateEvent(null, {
+      mode: 'strict',
+      sourcePolicy: { INVALID_EVENT: 'ignore' },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.issues[0]?.code).toBe('INVALID_EVENT');
+    expect(r.issues[0]?.severity).toBe('error');
+  });
 });
 
 describe('validateEvent — onError wiring (#259)', () => {

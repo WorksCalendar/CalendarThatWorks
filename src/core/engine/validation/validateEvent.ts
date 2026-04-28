@@ -89,31 +89,37 @@ export function validateEvent(
   opts: ValidateEventOptions = {},
 ): EventValidationResult {
   const mode = opts.mode ?? 'strict';
-
-  if (!input || typeof input !== 'object') {
-    const issue: EventValidationIssue = {
-      code: 'INVALID_EVENT', field: 'event', severity: 'error',
-      message: 'Event must be an object.',
-    };
-    emit(issue, undefined, opts);
-    return { ok: false, issues: [issue] };
-  }
-
-  const ev = input as Partial<EngineEvent>;
   const collected: EventValidationIssue[] = [];
   const collect = (
     code: EventValidationCode,
     field: EventValidationIssue['field'],
     message: string,
     details?: Readonly<Record<string, unknown>>,
-  ) => {
+  ): boolean => {
     const action = resolveAction(code, mode, opts.sourcePolicy);
-    if (action === 'ignore') return;
+    if (action === 'ignore') return false;
     const issue: EventValidationIssue = details === undefined
       ? { code, field, message, severity: actionToSeverity(action) }
       : { code, field, message, severity: actionToSeverity(action), details };
     collected.push(issue);
+    return true;
   };
+
+  // Non-object payload — route through the same policy machinery so
+  // `sourcePolicy: { INVALID_EVENT: 'warn' | 'ignore' }` is honored
+  // (Codex P2 on #259). Bail before touching `ev.<field>` accessors.
+  if (!input || typeof input !== 'object') {
+    collect('INVALID_EVENT', 'event', 'Event must be an object.');
+    for (const issue of collected) {
+      if (issue.severity === 'error') emit(issue, undefined, opts);
+    }
+    return {
+      ok: !collected.some(i => i.severity === 'error'),
+      issues: collected,
+    };
+  }
+
+  const ev = input as Partial<EngineEvent>;
 
   // ── id ────────────────────────────────────────────────────────────────────
   if (typeof ev.id !== 'string' || ev.id.trim().length === 0) {
