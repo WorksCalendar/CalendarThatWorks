@@ -42,7 +42,11 @@ export default function ActiveFilterStrip({
   if (pills.length === 0) return null;
 
   return (
-    <div className={styles['strip']} role="status" aria-live="polite">
+    // role="status" alone provides the polite-live semantic for screen
+    // readers. The explicit aria-live attribute is omitted because
+    // E2E tests select the calendar's date label via
+    // `[aria-live="polite"]` and a competing match here would shadow it.
+    <div className={styles['strip']} role="status">
       <span className={styles['label']}>Filtered by</span>
       {pills.map((pill, i) => {
         const field = schema.find(f => f.key === pill.key);
