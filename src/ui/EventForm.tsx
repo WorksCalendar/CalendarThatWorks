@@ -127,11 +127,24 @@ export default function EventForm({
       }
     }
 
-    // Auto-tag approvalStage when the chosen category routes through the
-    // approval state machine. Only seed a *new* stage — never overwrite
-    // an existing approvalStage that's already moved past 'requested'
-    // (approved / finalized / denied) since editing the event shouldn't
-    // rewind the lifecycle.
+    // Preserve the original approvalStage across `useEventDraftState`'s
+    // mount-time category-clear effect. That effect rebuilds
+    // `draft.values.meta` from scratch on every category change (and on
+    // mount), keeping only template metadata — so by the time we land
+    // here, an approved/finalized/denied event has lost its stage from
+    // the draft. Reading off `event.meta.approvalStage` (the prop, not
+    // the draft) restores the original lifecycle so the save doesn't
+    // regress workflow state.
+    const originalStage = (event?.meta?.approvalStage as Record<string, unknown> | null | undefined) ?? null;
+    if (originalStage && !meta?.['approvalStage']) {
+      meta = { ...(meta ?? {}), approvalStage: originalStage };
+    }
+
+    // Auto-tag a fresh approvalStage when the chosen category routes
+    // through the approval state machine AND the event has no stage
+    // yet (post-restoration). Never overwrites a stage that already
+    // moved past requested — editing an approved event must not rewind
+    // the lifecycle to requested.
     const draftCategory = draft.values.category || null;
     const categoryNeedsApproval = !!draftCategory && approvalCategorySet.has(String(draftCategory));
     const existingStage = (meta?.['approvalStage'] as { stage?: string } | undefined)?.stage;
