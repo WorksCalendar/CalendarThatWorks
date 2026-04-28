@@ -177,6 +177,58 @@ describe('AssetsView — resource pools (issue #212)', () => {
     expect(pill.getAttribute('aria-label')).toContain('resolved from pool West Fleet');
   });
 
+  it('marks pool rowheaders with aria-roledescription and a hidden description (#386 item #10)', () => {
+    // A screen reader presented "Pool: West Fleet" as a single
+    // resource without the aggregate cue. The hidden description and
+    // aria-roledescription together announce the pool semantic and
+    // member count so non-sighted users know the click books any one.
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+    });
+    const header = screen.getByRole('rowheader', { name: 'Pool: West Fleet' });
+    expect(header).toHaveAttribute('aria-roledescription', 'resource pool');
+    const describedBy = header.getAttribute('aria-describedby');
+    expect(describedBy).toBe('pool-desc-fleet-west');
+    const desc = document.getElementById(describedBy!);
+    expect(desc).not.toBeNull();
+    expect(desc!.textContent).toContain('aggregating 2 members');
+    expect(desc!.textContent).toContain('selecting a date books one of them');
+  });
+
+  it('does not stamp aria-roledescription on regular asset rowheaders', () => {
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB'], strategy: 'round-robin' }],
+    });
+    const assetHeader = screen.getByRole('rowheader', { name: 'N505CD' });
+    expect(assetHeader).not.toHaveAttribute('aria-roledescription');
+    expect(assetHeader).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('renders a pool location banner only when renderPoolLocation is provided (#386 item #9)', () => {
+    const renderPoolLocation = vi.fn(({ memberIds }) => `${memberIds.length} aircraft`);
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+      renderPoolLocation,
+    });
+    expect(screen.getByLabelText('Pool location')).toBeInTheDocument();
+    expect(screen.getByText('2 aircraft')).toBeInTheDocument();
+    expect(renderPoolLocation).toHaveBeenCalledWith({
+      id: 'fleet-west',
+      memberIds: ['N121AB', 'N505CD'],
+    });
+  });
+
+  it('omits the pool location banner when renderPoolLocation is not provided (default behavior)', () => {
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB'], strategy: 'round-robin' }],
+    });
+    expect(screen.queryByLabelText('Pool location')).toBeNull();
+  });
+
   it('does not render disabled pools as rows', () => {
     // Disabled pools stay in history but can't accept new bookings — the
     // resolver rejects them as POOL_DISABLED — so they must not render as

@@ -93,6 +93,14 @@ interface AssetsViewProps {
   categoriesConfig?: { categories?: Array<{ id?: string; color?: string }>; pillStyle?: string } | undefined;
   locationProvider?: LocationProvider | null | undefined;
   renderAssetLocation?: ((locationData: LocationData | null, asset: { id: string }) => ReactNode) | undefined;
+  /**
+   * Optional renderer for the location banner of a pool row. Pools
+   * don't appear in the per-resource locations map (they aggregate
+   * members), so the banner stays empty by default. Provide a renderer
+   * if your domain has a natural aggregation (centroid, dominant
+   * region, "N/A · mixed", etc.) — issue #386 item #9.
+   */
+  renderPoolLocation?: ((pool: { id: string; memberIds: readonly string[] }) => ReactNode) | undefined;
   renderAssetBadges?: ((asset: { id: string }) => ReactNode) | undefined;
   collapsedGroups?: Set<string> | string[] | undefined;
   onCollapsedGroupsChange?: ((next: Set<string>) => void) | undefined;
@@ -310,6 +318,7 @@ export default function AssetsView({
   categoriesConfig,
   locationProvider,
   renderAssetLocation,
+  renderPoolLocation,
   renderAssetBadges,
   collapsedGroups: collapsedGroupsProp,
   onCollapsedGroupsChange,
@@ -1146,6 +1155,14 @@ export default function AssetsView({
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
                   role="rowheader"
                   aria-label={isPool ? `Pool: ${displayLabel}` : displayLabel}
+                  // Pool rows aggregate multiple resources — without an
+                  // aria-roledescription a screen reader presents them
+                  // as a single resource named "Pool: <name>". The
+                  // hidden description spells out the aggregate semantic
+                  // and member count so non-sighted users know clicking
+                  // books any one member (issue #386 item #10).
+                  aria-roledescription={isPool ? 'resource pool' : undefined}
+                  aria-describedby={isPool ? `pool-desc-${rowData.poolId}` : undefined}
                   data-resource={resource}
                   title={memberTooltip}
                 >
@@ -1156,6 +1173,14 @@ export default function AssetsView({
                     </span>
                     {sublabel && (
                       <span className={styles['assetSublabel']}>{sublabel}</span>
+                    )}
+                    {isPool && (
+                      <span
+                        id={`pool-desc-${rowData.poolId}`}
+                        className={styles['srOnly']}
+                      >
+                        {`Resource pool aggregating ${rowData.memberIds.length} ${rowData.memberIds.length === 1 ? 'member' : 'members'}; selecting a date books one of them.`}
+                      </span>
                     )}
                     {!isPool && renderAssetBadges && (
                       <div data-testid="asset-badges" style={{ marginTop: 2 }}>
@@ -1177,6 +1202,15 @@ export default function AssetsView({
                           ? <span className={styles['locationText']}>{locationData.text}</span>
                           : <span className={styles['locationPlaceholder']}>Location —</span>
                       }
+                    </div>
+                  )}
+                  {isPool && renderPoolLocation && (
+                    <div
+                      className={styles['locationBanner']}
+                      aria-label="Pool location"
+                      data-status="pool"
+                    >
+                      {renderPoolLocation({ id: rowData.poolId, memberIds: rowData.memberIds })}
                     </div>
                   )}
                 </div>

@@ -292,6 +292,14 @@ export type WorksCalendarProps = {
   onConflictCheck?: (event: WorksCalendarEvent, candidate: WorksCalendarEvent) => Promise<unknown>;
   onApprovalAction?: (event: WorksCalendarEvent, action: string) => void | Promise<void>;
   renderAssetLocation?: (locationData: AssetLocationData, asset: { id: string }) => ReactNode;
+  /**
+   * Optional renderer for the location banner of a pool row. Pools
+   * aggregate multiple resources, so the per-resource locations map
+   * has no entry — the banner stays empty by default. Provide a
+   * renderer if your domain has a natural aggregation (centroid,
+   * dominant region, "N/A · mixed", etc.). Issue #386 item #9.
+   */
+  renderPoolLocation?: (pool: { id: string; memberIds: readonly string[] }) => ReactNode;
   renderAssetBadges?: (asset: { id: string }) => ReactNode;
   /** Maintenance rules offered in the EventForm. When non-empty, the form
    *  shows a Maintenance section; lifecycle='complete' triggers a built-in
@@ -566,6 +574,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onConflictCheck,
     onApprovalAction,
     renderAssetLocation,
+    renderPoolLocation,
     renderAssetBadges,
     maintenanceRules,
     renderConflictBody,
@@ -2619,6 +2628,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onCollapsedGroupsChange={setActiveAssetsCollapsed}
                   locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
+                  renderPoolLocation={renderPoolLocation}
                   renderAssetBadges={renderAssetBadges}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}

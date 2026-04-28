@@ -108,6 +108,14 @@
   color: var(--wc-text-muted, #6b7280);
 }
 
+.poolEvaluated {
+  flex-basis: 100%;
+  font-family: var(--wc-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--wc-text-muted, #6b7280);
+  padding-left: 28px;
+}
+
 .footer {
   display: flex;
   justify-content: flex-end;
