@@ -199,7 +199,10 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
 
     // The form acknowledges the preserved gte but lets the user
     // edit the recognized refrigerated chip.
-    expect(screen.getByTestId('pool-builder-preserved')).toHaveTextContent(/1 additional rule/)
+    // Advanced section opens automatically when there's a preserved clause.
+    expect(screen.getByTestId('pool-builder-advanced')).toHaveAttribute('open')
+    expect(screen.getByTestId('pool-builder-advanced')).toHaveTextContent('(1)')
+    expect(screen.getByTestId('advanced-rule-summary-0')).toHaveTextContent('capacity lbs ≥ 80,000')
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     const saved = onSave.mock.calls[0]![0] as ResourcePool
@@ -228,8 +231,12 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
     render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
 
     // The whole `or` is preserved; capability chips start empty.
-    expect(screen.getByTestId('pool-builder-preserved')).toHaveTextContent(/1 additional rule/)
+    // Advanced section opens automatically when there's a preserved clause.
+    expect(screen.getByTestId('pool-builder-advanced')).toHaveAttribute('open')
+    expect(screen.getByTestId('pool-builder-advanced')).toHaveTextContent('(1)')
     expect(screen.getByRole('checkbox', { name: 'Refrigerated' })).toHaveAttribute('aria-checked', 'false')
+    // The preserved `or` is shown as a single advanced row, summarized as "any of …".
+    expect(screen.getByTestId('advanced-rule-summary-0')).toHaveTextContent('any of:')
 
     // User adds a refrigerated chip.
     fireEvent.click(screen.getByRole('checkbox', { name: 'Refrigerated' }))
@@ -269,7 +276,7 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
       strategy: 'first-available',
     }
     render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
-    expect(screen.getByTestId('pool-builder-preserved')).toHaveTextContent(/2 additional rules/)
+    expect(screen.getByTestId('pool-builder-advanced')).toHaveTextContent('(2)')
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     const saved = onSave.mock.calls[0]![0] as ResourcePool
@@ -284,7 +291,7 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
     })
   })
 
-  it('omits the preserved-clause notice when nothing was preserved', () => {
+  it('keeps the advanced section collapsed when nothing was preserved', () => {
     render(<PoolBuilder
       pool={{
         id: 'p', name: 'Simple', type: 'query', memberIds: [],
@@ -293,7 +300,37 @@ describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', (
       }}
       resources={fleet} onSave={vi.fn()} onCancel={vi.fn()}
     />)
-    expect(screen.queryByTestId('pool-builder-preserved')).toBeNull()
+    const advanced = screen.getByTestId('pool-builder-advanced')
+    expect(advanced).not.toHaveAttribute('open')
+    expect(advanced).not.toHaveTextContent('(1)')
+  })
+
+  it('lets users add a brand-new advanced rule via the embedded editor', () => {
+    const onSave = vi.fn()
+    const pool: ResourcePool = {
+      id: 'p', name: 'NewRule', type: 'query', memberIds: [],
+      // Start with a recognized rule so save is enabled by the simple form.
+      query: { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
+
+    // Open advanced section, add a new rule, configure it as gte.
+    fireEvent.click(screen.getByText(/^Advanced rules/))
+    fireEvent.click(screen.getByRole('button', { name: '+ Add rule' }))
+    fireEvent.change(screen.getByLabelText('Operation'),  { target: { value: 'gte' } })
+    fireEvent.change(screen.getByLabelText('Field path'), { target: { value: 'meta.capabilities.capacity_lbs' } })
+    fireEvent.change(screen.getByLabelText('Value'),      { target: { value: '80000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    expect(saved.query).toEqual({
+      op: 'and',
+      clauses: [
+        { op: 'eq',  path: 'meta.capabilities.refrigerated', value: true },
+        { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000 },
+      ],
+    })
   })
 
   it('lets the user save with only preserved rules (no UI clauses configured)', () => {

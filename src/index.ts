@@ -190,6 +190,10 @@ export { default as PoolCard }    from './ui/pools/PoolCard';
 export type { PoolCardProps }      from './ui/pools/PoolCard';
 export { default as PoolBuilder } from './ui/pools/PoolBuilder';
 export type { PoolBuilderProps, CapabilityOption } from './ui/pools/PoolBuilder';
+export { default as ClauseEditor } from './ui/pools/ClauseEditor';
+export type { ClauseEditorProps } from './ui/pools/ClauseEditor';
+export { default as AdvancedRulesEditor } from './ui/pools/AdvancedRulesEditor';
+export type { AdvancedRulesEditorProps } from './ui/pools/AdvancedRulesEditor';
 export { summarizePool, summarizeQuery } from './ui/pools/poolSummary';
 export type { PoolSummary } from './ui/pools/poolSummary';
 
