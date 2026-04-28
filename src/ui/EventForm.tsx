@@ -127,6 +127,11 @@ export default function EventForm({
       }
     }
 
+    // Decide first whether the *current* draft category still routes
+    // through approval — restore + auto-tag both depend on it.
+    const draftCategory = draft.values.category || null;
+    const categoryNeedsApproval = !!draftCategory && approvalCategorySet.has(String(draftCategory));
+
     // Preserve the original approvalStage across `useEventDraftState`'s
     // mount-time category-clear effect. That effect rebuilds
     // `draft.values.meta` from scratch on every category change (and on
@@ -135,8 +140,15 @@ export default function EventForm({
     // the draft. Reading off `event.meta.approvalStage` (the prop, not
     // the draft) restores the original lifecycle so the save doesn't
     // regress workflow state.
+    //
+    // Gated on `categoryNeedsApproval`: if the user moved the event
+    // from an approval-required category to a non-approval one, the
+    // stage should be cleared along with the workflow context, not
+    // silently preserved on a category that doesn't track lifecycle.
+    // Skipping the restore lets the cleared draft meta drop the stale
+    // stage from the saved payload.
     const originalStage = (event?.meta?.approvalStage as Record<string, unknown> | null | undefined) ?? null;
-    if (originalStage && !meta?.['approvalStage']) {
+    if (originalStage && categoryNeedsApproval && !meta?.['approvalStage']) {
       meta = { ...(meta ?? {}), approvalStage: originalStage };
     }
 
@@ -145,8 +157,6 @@ export default function EventForm({
     // yet (post-restoration). Never overwrites a stage that already
     // moved past requested — editing an approved event must not rewind
     // the lifecycle to requested.
-    const draftCategory = draft.values.category || null;
-    const categoryNeedsApproval = !!draftCategory && approvalCategorySet.has(String(draftCategory));
     const existingStage = (meta?.['approvalStage'] as { stage?: string } | undefined)?.stage;
     if (categoryNeedsApproval && !existingStage) {
       meta = {
