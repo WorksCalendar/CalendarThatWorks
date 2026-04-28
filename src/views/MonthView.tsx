@@ -10,6 +10,7 @@ import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay, layoutSpans } from '../core/layout';
 import type { NormalizedEvent } from '../types/events';
 import ApprovalDot from '../ui/ApprovalDot';
+import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './MonthView.module.css';
 
 const SPAN_H   = 22;
@@ -366,9 +367,10 @@ export default function MonthView({
         onPointerDown={e => startPillDrag(ev, e)}
         onMouseEnter={handlePillMouseEnter}
         onMouseLeave={handlePillMouseLeave}
-        aria-label={ariaLabel}
+        aria-label={ev.lifecycle ? `${ariaLabel}, lifecycle ${ev.lifecycle}` : ariaLabel}
       >
         <ApprovalDot event={ev} />
+        <EventStatusBadge lifecycle={ev.lifecycle} variant="compact" />
         {ev.title}
       </button>
     );
@@ -554,9 +556,14 @@ export default function MonthView({
                               if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === wi ? null : prev));
                               if (pillHoverTitle) setTitleHover(null);
                             }}
-                            aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
+                            aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.lifecycle ? `, lifecycle ${ev.lifecycle}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
                           >
-                            {!continuesBefore && ev.title}
+                            {!continuesBefore && (
+                              <>
+                                <EventStatusBadge lifecycle={ev.lifecycle} variant="compact" />
+                                {ev.title}
+                              </>
+                            )}
                           </button>
                         );
                       })}

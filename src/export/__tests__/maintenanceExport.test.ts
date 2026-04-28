@@ -20,6 +20,7 @@ function makeEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {
     color: '#3b82f6',
     resource: 'truck-12',
     status: 'confirmed',
+    lifecycle: null,
     meta: {},
     rrule: null,
     exdates: [],

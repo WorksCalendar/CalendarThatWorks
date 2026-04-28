@@ -3,6 +3,7 @@
  */
 import { parseISO, isValid, addHours } from 'date-fns';
 import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
+import { isLifecycleState } from '../types/events';
 
 let _idCounter = 0;
 function uid() { return `wc-${++_idCounter}`; }
@@ -44,6 +45,16 @@ export function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent {
   const start = toDate(raw.start) || new Date();
   const end   = toDate(raw.end)   || addHours(start, 1);
 
+  // Lifecycle is opt-in: prefer the top-level field, accept a meta override
+  // so hosts can ride it through their existing payloads without changing
+  // their adapter. Falls back to null when neither is provided.
+  const metaLifecycle = (raw.meta as { lifecycle?: unknown } | undefined)?.lifecycle;
+  const lifecycle = isLifecycleState(raw.lifecycle)
+    ? raw.lifecycle
+    : isLifecycleState(metaLifecycle)
+      ? metaLifecycle
+      : null;
+
   return {
     id:             raw.id             ?? uid(),
     title:          raw.title          ?? '(untitled)',
@@ -55,6 +66,7 @@ export function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent {
     resource:       raw.resource       ?? null,
     visualPriority: raw.visualPriority ?? null,
     status:         raw.status         ?? 'confirmed',
+    lifecycle,
     rrule:          raw.rrule          ?? null,
     exdates:        raw.exdates        ?? [],
     meta:           raw.meta           ?? {},

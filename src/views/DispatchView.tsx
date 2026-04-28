@@ -23,6 +23,8 @@
 import { useMemo, useState } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { Wrench, Users, Plane, AlertTriangle, Clock, MapPin } from 'lucide-react';
+import EventStatusBadge from '../ui/EventStatusBadge';
+import { isLifecycleState, type EventLifecycleState } from '../types/events';
 import styles from './DispatchView.module.css';
 
 type LooseEvent = {
@@ -32,8 +34,21 @@ type LooseEvent = {
   resource?: string | number | null;
   category?: string;
   title?: string;
+  lifecycle?: EventLifecycleState | string | null;
   meta?: Record<string, unknown> | null | undefined;
 };
+
+/**
+ * Pull a lifecycle value off either the top-level field or `meta.lifecycle`,
+ * matching `normalizeEvent`'s opt-in fallback so dispatch surfaces the same
+ * state hosts see in the calendar even when their loose event payloads
+ * haven't been re-normalized.
+ */
+function readLifecycle(ev: LooseEvent): EventLifecycleState | null {
+  if (isLifecycleState(ev.lifecycle)) return ev.lifecycle;
+  const metaLifecycle = (ev.meta as { lifecycle?: unknown } | null | undefined)?.lifecycle;
+  return isLifecycleState(metaLifecycle) ? metaLifecycle : null;
+}
 
 type Employee = {
   id: string | number;
@@ -361,6 +376,21 @@ export default function DispatchView({
     return { available, busy, maintenance };
   }, [rows]);
 
+  // Pipeline summary: tally where every loaded event sits in the lifecycle.
+  // Drives the "Pipeline" strip so dispatch sees how full upstream queues
+  // are, not just what is blocking right now.
+  const pipeline = useMemo(() => {
+    const counts: Record<EventLifecycleState, number> = {
+      draft: 0, pending: 0, approved: 0, scheduled: 0, completed: 0,
+    };
+    for (const ev of events) {
+      const lc = readLifecycle(ev);
+      if (lc) counts[lc] += 1;
+    }
+    const total = counts.draft + counts.pending + counts.approved + counts.scheduled + counts.completed;
+    return { counts, total };
+  }, [events]);
+
   const isNow = useMemo(() => Math.abs(Date.now() - asOf.getTime()) < 60_000, [asOf]);
 
   return (
@@ -431,6 +461,22 @@ export default function DispatchView({
         </div>
       </div>
 
+      {pipeline.total > 0 && (
+        <div
+          className={styles['pipelineStrip']}
+          role="group"
+          aria-label="Event lifecycle pipeline"
+        >
+          <span className={styles['pipelineLabel']}>Pipeline</span>
+          {(['draft', 'pending', 'approved', 'scheduled', 'completed'] as EventLifecycleState[]).map(state => (
+            <span key={state} className={styles['pipelineCell']}>
+              <EventStatusBadge lifecycle={state} />
+              <span className={styles['pipelineCount']}>{pipeline.counts[state]}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className={styles['scroll']}>
         {rows.length === 0 ? (
           <div className={styles['emptyState']}>
@@ -491,6 +537,11 @@ export default function DispatchView({
                             </li>
                           ))}
                         </ul>
+                      )}
+                      {row.blockingEvent && readLifecycle(row.blockingEvent) && (
+                        <div className={styles['blockingLifecycle']}>
+                          <EventStatusBadge lifecycle={readLifecycle(row.blockingEvent)} />
+                        </div>
                       )}
                     </td>
                     <td className={styles['actionCol']}>

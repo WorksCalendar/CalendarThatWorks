@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { EventStatus } from './events';
+import type { EventStatus, EventLifecycleState } from './events';
 import type { EventVisualPriority } from './view';
 
 export type AnyRecord = Record<string, any>;
@@ -119,6 +119,7 @@ export interface CalendarViewEvent {
   category?: string | null | undefined;
   resource?: string | null | undefined;
   status?: EventStatus | undefined;
+  lifecycle?: EventLifecycleState | null | undefined;
   visualPriority?: EventVisualPriority | null | undefined;
   meta?: Record<string, unknown> | undefined;
   _col?: number | undefined;

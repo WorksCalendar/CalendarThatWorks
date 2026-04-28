@@ -377,3 +377,38 @@
   font-size: 12px;
   color: var(--wc-text-faint, var(--wc-text-muted));
 }
+
+/* ── Lifecycle pipeline strip ──────────────────────────────── */
+.pipelineStrip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+
+.pipelineLabel {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--wc-text-muted);
+}
+
+.pipelineCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pipelineCount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--wc-text);
+}
+
+.blockingLifecycle {
+  margin-top: 4px;
+}

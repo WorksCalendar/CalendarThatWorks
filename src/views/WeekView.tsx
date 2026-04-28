@@ -13,6 +13,7 @@ import { layoutOverlaps, layoutSpans } from '../core/layout';
 import { useDrag } from '../hooks/useDrag';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import ApprovalDot from '../ui/ApprovalDot';
+import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './WeekView.module.css';
 import type { CalendarViewEvent } from '../types/ui';
 
@@ -365,6 +366,7 @@ export default function WeekView({
           <>
             <span className={styles['evTitle']} style={{ fontWeight: display.bold ? '700' : undefined }}>
               <ApprovalDot event={ev as any} />
+              <EventStatusBadge lifecycle={(ev as { lifecycle?: unknown }).lifecycle as never} variant="compact" />
               {ev.title}
             </span>
             {isUltraCompact ? null : (

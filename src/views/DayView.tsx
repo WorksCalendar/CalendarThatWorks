@@ -11,6 +11,7 @@ import { useDrag } from '../hooks/useDrag';
 import type { NormalizedEvent } from '../types/events';
 import type { CalendarViewEvent } from '../types/ui';
 import ApprovalDot from '../ui/ApprovalDot';
+import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './DayView.module.css';
 
 const GUTTER_W = 56;
@@ -204,7 +205,11 @@ export default function DayView({
         <div className={styles['resizeHandleTop']}
           onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
-        <span className={styles['evTitle']}><ApprovalDot event={ev} />{ev.title}</span>
+        <span className={styles['evTitle']}>
+          <ApprovalDot event={ev} />
+          <EventStatusBadge lifecycle={ev.lifecycle} variant="compact" />
+          {ev.title}
+        </span>
         <span className={styles['evTime']}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
         {ev.resource && numCols === 1 && <span className={styles['evMeta']}>{ev.resource}</span>}
         <div className={styles['resizeHandle']}
@@ -265,7 +270,11 @@ export default function DayView({
               return (
                 <button key={ev.id} className={styles['allDayPill']} style={{ '--ev-color': color }}
                   aria-label={ariaLabel}
-                  onClick={() => onEventClick?.(ev)}><ApprovalDot event={ev} />{ev.title}</button>
+                  onClick={() => onEventClick?.(ev)}>
+                  <ApprovalDot event={ev} />
+                  <EventStatusBadge lifecycle={ev.lifecycle} variant="compact" />
+                  {ev.title}
+                </button>
               );
             })}
           </div>
