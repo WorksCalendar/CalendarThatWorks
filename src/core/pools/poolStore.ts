@@ -108,7 +108,7 @@ export function clearPools(calendarId: string): void {
 
 // ─── Internals ───────────────────────────────────────────────────────────────
 
-const STRATEGIES: readonly PoolStrategy[] = ['first-available', 'least-loaded', 'round-robin'];
+const STRATEGIES: readonly PoolStrategy[] = ['first-available', 'least-loaded', 'round-robin', 'closest'];
 const POOL_TYPES: readonly PoolType[] = ['manual', 'query', 'hybrid'];
 
 function coerce(item: unknown): ResourcePool | null {

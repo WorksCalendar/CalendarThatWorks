@@ -24,6 +24,7 @@ import { evaluateConflicts } from '../conflictEngine'
 import type { EngineResource } from '../engine/schema/resourceSchema'
 import type { ResourcePool } from './resourcePoolSchema'
 import { evaluateQuery, type QueryExclusion } from './evaluateQuery'
+import { haversineKm, isLatLon, type LatLon } from './geo'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,21 @@ export interface ResolvePoolInput {
    * be silently disabled by a missing argument.
    */
   readonly strictMembers?: boolean
+  /**
+   * Reference point for the `closest` strategy and for any `within`
+   * clause that uses `from: { kind: 'proposed' }`. Typically the
+   * proposed event's pickup / origin location. Without this, the
+   * `closest` strategy throws (no meaningful order) and proposed-mode
+   * `within` clauses fail-closed.
+   */
+  readonly proposedLocation?: LatLon
+  /**
+   * Path on each resource that `closest` should read for coordinates.
+   * Defaults to `meta.location` — the convention shipped with the
+   * `asset-tracker` bridge. Override if your registry stores
+   * coordinates elsewhere (e.g. `meta.depot`).
+   */
+  readonly locationPath?: string
 }
 
 export type ResolvePoolErrorCode =
@@ -117,6 +133,31 @@ export type ResolvePoolResult =
     }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
+
+const TOP_LEVEL_KEYS: ReadonlySet<string> = new Set([
+  'id', 'name', 'tenantId', 'capacity', 'color', 'timezone',
+])
+
+/**
+ * Same path-resolution rules as `evaluateQuery.readPath` — kept in
+ * sync deliberately so a `closest` strategy that uses the same path
+ * the host's `within` clause uses reads the same coordinate.
+ */
+function readPath(r: EngineResource | undefined, path: string): unknown {
+  if (!r) return undefined
+  if (TOP_LEVEL_KEYS.has(path)) {
+    return (r as unknown as Record<string, unknown>)[path]
+  }
+  const segments = path.startsWith('meta.')
+    ? path.slice(5).split('.')
+    : path.split('.')
+  let cursor: unknown = r.meta
+  for (const seg of segments) {
+    if (cursor == null || typeof cursor !== 'object') return undefined
+    cursor = (cursor as Record<string, unknown>)[seg]
+  }
+  return cursor
+}
 
 function hasHardConflict(
   proposed: ConflictEvent,
@@ -198,14 +239,20 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
     throw new Error(`resolvePool: pool "${pool.id}" has type "${poolType}" but no \`resources\` registry to evaluate against`)
   }
 
+  // Pass proposedLocation into the evaluator so `within` clauses
+  // with `from: { kind: 'proposed' }` resolve against the live
+  // submit context instead of needing a literal point in the query.
+  const queryContext = input.proposedLocation
+    ? { proposedLocation: input.proposedLocation }
+    : {}
   let queryExcluded: readonly QueryExclusion[] | undefined
   let baseMembers: readonly string[]
   if (poolType === 'query') {
-    const result = evaluateQuery(pool.query!, input.resources!)
+    const result = evaluateQuery(pool.query!, input.resources!, queryContext)
     queryExcluded = result.excluded
     baseMembers = result.matched
   } else if (poolType === 'hybrid') {
-    const result = evaluateQuery(pool.query!, input.resources!)
+    const result = evaluateQuery(pool.query!, input.resources!, queryContext)
     const allowed = new Set(result.matched)
     queryExcluded = result.excluded
     baseMembers = pool.memberIds.filter(id => allowed.has(id))
@@ -291,6 +338,26 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
       ]
       const allowed = new Set(validMembers)
       candidates = ordered.filter(id => allowed.has(id))
+      break
+    }
+    case 'closest': {
+      // Sort by great-circle distance to the proposed location.
+      // Resources missing a usable coordinate sort to the back so
+      // they're tried last — never silently disqualified, since a
+      // well-located member with a stale lat/lon is still better
+      // than no booking at all if it's the only available option.
+      if (!input.proposedLocation) {
+        throw new Error(`resolvePool: pool "${pool.id}" uses strategy "closest" but no \`proposedLocation\` was supplied`)
+      }
+      const path = input.locationPath ?? 'meta.location'
+      const from = input.proposedLocation
+      const ranked = validMembers.map((id, i) => {
+        const here = input.resources ? readPath(input.resources.get(id), path) : null
+        const km = isLatLon(here) ? haversineKm(here, from) : Number.POSITIVE_INFINITY
+        return { id, index: i, km }
+      })
+      ranked.sort((a, b) => a.km - b.km || a.index - b.index)
+      candidates = ranked.map(r => r.id)
       break
     }
   }
