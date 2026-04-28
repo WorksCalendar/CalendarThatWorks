@@ -23,6 +23,7 @@ import type { SortConfig } from './types/grouping.ts';
 import { sortEvents } from './core/sortEngine.ts';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents';
 import { usePermissions }     from './hooks/usePermissions';
+import { useSavedFlash }      from './hooks/useSavedFlash';
 import { useEventOptions }    from './hooks/useEventOptions';
 import { useTouchSwipe }     from './hooks/useTouchSwipe';
 import { CalendarContext }    from './core/CalendarContext';
@@ -64,6 +65,8 @@ import OwnerLock              from './ui/OwnerLock';
 import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import ConfigPanel            from './ui/ConfigPanel';
+import SavedFlash             from './ui/SavedFlash';
+import ActiveFilterStrip      from './ui/ActiveFilterStrip';
 import EventForm              from './ui/EventForm';
 import AssetRequestForm       from './ui/AssetRequestForm';
 import ImportZone             from './ui/ImportZone';
@@ -911,7 +914,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const sourceStore = useSourceStore(calendarId);
 
   // ── Aggregator: merges prop feeds + stored ICS + stored CSV ─────────────
-  const { events: sourceEvents, feedErrors } = useSourceAggregator({
+  const { events: sourceEvents, feedErrors, isFetchingFeeds } = useSourceAggregator({
     icalFeedsProp: icalFeeds,
     sourceStore,
   });
@@ -1175,6 +1178,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [formEvent,        setFormEvent]        = useState<LooseValue | null>(null);
   const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
+  // Transient confirmation that the host's import landed; the dialog
+  // itself closes immediately so without this users can't tell whether
+  // anything happened beyond "the modal disappeared".
+  const [importMsg,        setImportMsg]        = useState('');
+  const importFlash                              = useSavedFlash(2500);
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
   const [availabilityState, setAvailabilityState] = useState<LooseValue | null>(null);
@@ -1824,7 +1832,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       importedAt: new Date().toISOString(),
     });
     setImportOpen(false);
-  }, [onImport, sourceStore]);
+    const count = Array.isArray(imported) ? imported.length : 0;
+    setImportMsg(`Imported ${count} event${count === 1 ? '' : 's'}`);
+    importFlash.trigger();
+  }, [onImport, sourceStore, importFlash]);
 
   const handleScheduleInstantiate = useCallback((request: ScheduleDialogRequest) => {
     const startedAt = Date.now();
@@ -2187,6 +2198,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       <CalendarContext.Provider value={ctxValue}>
         <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
 
+        <div className={styles['transientToast']} aria-hidden={!importFlash.flash}>
+          <SavedFlash visible={importFlash.flash} label={importMsg} />
+        </div>
+
         <AppShell
           leftRail={
             <LeftRail
@@ -2476,6 +2491,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 </button>
               </>}
             />
+            <ActiveFilterStrip
+              filters={cal.filters as Record<string, unknown>}
+              schema={schema}
+              onChange={(key, value) => cal.setFilter(key, value)}
+              onClear={(key) => cal.clearFilter(key)}
+              onClearAll={cal.clearFilters}
+            />
         {/* ── View area ── */}
         <div
           ref={swipeAreaRef}
@@ -2760,6 +2782,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
             sources={sourceStore.sources}
             feedErrors={feedErrors}
+            isFetchingFeeds={isFetchingFeeds}
             onAddSource={sourceStore.addSource}
             onRemoveSource={sourceStore.removeSource}
             onToggleSource={sourceStore.toggleSource}
