@@ -108,6 +108,89 @@ describe('evaluateRequirements — role slots', () => {
   })
 })
 
+describe('evaluateRequirements — per-assignment roleId (#449)', () => {
+  // Resources tagged with static meta.roles to verify the override
+  // takes precedence; same fixture as the role-slots block.
+  const resources = mapBy([
+    r('alice',   { roles: ['driver'] }),
+    r('bob',     { roles: ['driver', 'dispatcher'] }),
+    r('untagged', {}),
+  ])
+
+  it('an assignment with roleId counts toward that role even when the resource lacks the tag', () => {
+    // 'untagged' has no meta.roles, but the assignment pins it as a
+    // dispatcher for this specific event — should satisfy a 1-dispatcher
+    // requirement.
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ role: 'dispatcher', count: 1 }] }],
+      resources,
+      assignments: mapBy([
+        { id: 'a1', eventId: 'e1', resourceId: 'untagged', units: 100, roleId: 'dispatcher' },
+      ]),
+    })
+    expect(out.satisfied).toBe(true)
+  })
+
+  it('roleId overrides static meta.roles for the slot match', () => {
+    // Bob is statically tagged as both driver + dispatcher. The
+    // assignment pins him as dispatcher this time — he should NOT
+    // count toward a driver requirement, even though meta.roles
+    // includes 'driver'.
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ role: 'driver', count: 1 }] }],
+      resources,
+      assignments: mapBy([
+        { id: 'a1', eventId: 'e1', resourceId: 'bob', units: 100, roleId: 'dispatcher' },
+      ]),
+    })
+    expect(out.satisfied).toBe(false)
+    expect(out.missing[0]?.assigned).toBe(0)
+  })
+
+  it('falls back to static meta.roles when roleId is omitted (v1 contract)', () => {
+    // Alice has no roleId on her assignment, so the resource's
+    // meta.roles drives the count. Should still work like before.
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ role: 'driver', count: 1 }] }],
+      resources,
+      assignments: mapBy([a('a1', 'e1', 'alice')]),
+    })
+    expect(out.satisfied).toBe(true)
+  })
+
+  it('stale assignment with roleId does not satisfy a slot when the resource is missing', () => {
+    // The resource was deleted but the assignment record was retained.
+    // Even though roleId matches, the phantom resource must not count.
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ role: 'dispatcher', count: 1 }] }],
+      resources,  // 'ghost' is not in this map
+      assignments: mapBy([
+        { id: 'a1', eventId: 'e1', resourceId: 'ghost', units: 100, roleId: 'dispatcher' },
+      ]),
+    })
+    expect(out.satisfied).toBe(false)
+    expect(out.missing[0]?.assigned).toBe(0)
+  })
+
+  it('mixed assignments — some with roleId, some without — count correctly', () => {
+    // Need 2 drivers. Alice (static) + bob acting-as driver = 2.
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ role: 'driver', count: 2 }] }],
+      resources,
+      assignments: mapBy([
+        a('a1', 'e1', 'alice'),                                                                // static driver
+        { id: 'a2', eventId: 'e1', resourceId: 'untagged', units: 100, roleId: 'driver' },   // acting-as
+      ]),
+    })
+    expect(out.satisfied).toBe(true)
+  })
+})
+
 describe('evaluateRequirements — pool slots', () => {
   const truck = (id: string, refrigerated = false) =>
     r(id, { type: 'vehicle', capabilities: { refrigerated } })

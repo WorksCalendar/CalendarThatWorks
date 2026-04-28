@@ -29,6 +29,21 @@ export interface Assignment {
    * inherits the tenant of the joined event/resource.
    */
   readonly tenantId?: string;
+  /**
+   * "Acting as" role override for this specific event (#449).
+   *
+   * When set, the requirements engine uses this id as the role the
+   * assignment fulfills, ignoring the resource's static
+   * `meta.roles` for the slot match. Lets a person who's both a
+   * driver and a dispatcher be booked as one role on Monday and
+   * the other on Tuesday without re-tagging the underlying
+   * resource.
+   *
+   * When unset, role membership falls back to the resource's
+   * static `meta.roles: string[]` — the v1 contract — so existing
+   * assignments behave exactly as before.
+   */
+  readonly roleId?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

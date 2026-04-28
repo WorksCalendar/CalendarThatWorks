@@ -57,8 +57,23 @@ that's in the catalog") can read `noTemplate` and react.
 
 ## Role tagging
 
-Role membership lives on the resource side, not on `Assignment`.
-A resource declares which roles it can fulfill via `meta.roles`:
+Role membership has two layers, in priority order:
+
+**1. Per-assignment `roleId` ("acting as"). Wins when set.**
+
+```ts
+const a: Assignment = {
+  id: 'a1', eventId: 'e1', resourceId: 'alice', units: 100,
+  roleId: 'dispatcher',   // Alice is acting as dispatcher *on this event*
+};
+```
+
+Lets a person who's statically both driver and dispatcher be
+booked as one role on Monday and the other on Tuesday without
+re-tagging the underlying resource. When `assignment.roleId` is
+set, the engine ignores `meta.roles` for the slot match.
+
+**2. Static `meta.roles` on the resource (fallback).**
 
 ```ts
 const alice: EngineResource = {
@@ -68,12 +83,10 @@ const alice: EngineResource = {
 };
 ```
 
-The engine counts every assignment whose resource is tagged with
-the slot's role. This is the v1 contract: it captures static role
-membership and works for the wizard's needs. A future slice may
-add an optional per-assignment `roleId` for "Alice is acting as
-dispatcher *on this event*" semantics; that's additive when it
-lands.
+When `assignment.roleId` is unset, the engine counts every
+assignment whose resource is tagged with the slot's role. This is
+the v1 contract — additive: existing assignments keep working
+exactly as before.
 
 ## Pool slots
 
