@@ -119,3 +119,86 @@ describe('evaluateQuery — boolean composites', () => {
     expect(evaluateQuery(reefer80k, map).matched).toEqual(['truck-101'])
   })
 })
+
+describe('evaluateQuery — within (distance, #386 v2)', () => {
+  // Fleet anchored in three western US cities — distances chosen so a
+  // radius of 700 mi from SLC includes Denver but excludes the Bay
+  // Area; 800 mi includes both. Conservative tolerances keep the
+  // tests deterministic across earth-radius constants.
+  const SLC = { lat: 40.7608, lon: -111.8910 }
+  const fleetGeo: readonly EngineResource[] = [
+    r('slc-1', { type: 'vehicle', location: SLC }),
+    r('den-1', { type: 'vehicle', location: { lat: 39.7392, lon: -104.9903 } }),
+    r('sfo-1', { type: 'vehicle', location: { lat: 37.6189, lon: -122.3750 } }),
+    r('no-loc', { type: 'vehicle' }),
+  ]
+
+  it('filters resources by literal-point distance (miles)', () => {
+    // SLC↔DEN ≈ 372 mi, SLC↔SFO ≈ 600 mi → 500 mi keeps Denver, drops SFO.
+    const q: ResourceQuery = {
+      op: 'within',
+      path: 'meta.location',
+      from: { kind: 'point', lat: SLC.lat, lon: SLC.lon },
+      miles: 500,
+    }
+    const e = evaluateQuery(q, fleetGeo)
+    expect([...e.matched].sort()).toEqual(['den-1', 'slc-1'])
+    expect(e.excluded.find(x => x.id === 'sfo-1')?.reason).toBe('within(meta.location, 500mi)')
+    expect(e.excluded.find(x => x.id === 'no-loc')?.reason).toBe('within(meta.location, 500mi)')
+  })
+
+  it('uses the proposed-event location when from.kind is "proposed"', () => {
+    // SLC↔DEN ≈ 599 km, SLC↔SFO ≈ 965 km → 800 km keeps Denver, drops SFO.
+    const q: ResourceQuery = {
+      op: 'within',
+      path: 'meta.location',
+      from: { kind: 'proposed' },
+      km: 800,
+    }
+    const e = evaluateQuery(q, fleetGeo, { proposedLocation: SLC })
+    expect([...e.matched].sort()).toEqual(['den-1', 'slc-1'])
+  })
+
+  it('fails-closed when from is "proposed" but no proposedLocation in context', () => {
+    const q: ResourceQuery = {
+      op: 'within',
+      path: 'meta.location',
+      from: { kind: 'proposed' },
+      miles: 100,
+    }
+    const e = evaluateQuery(q, fleetGeo)
+    // Every resource is excluded because the reference point is missing.
+    expect(e.matched).toEqual([])
+    expect(e.excluded.length).toBe(fleetGeo.length)
+  })
+
+  it('fails-closed on malformed query (both miles and km, or neither)', () => {
+    const both: ResourceQuery = {
+      op: 'within', path: 'meta.location',
+      from: { kind: 'point', lat: SLC.lat, lon: SLC.lon },
+      miles: 700, km: 1000,
+    }
+    const neither: ResourceQuery = {
+      op: 'within', path: 'meta.location',
+      from: { kind: 'point', lat: SLC.lat, lon: SLC.lon },
+    }
+    expect(evaluateQuery(both,    fleetGeo).matched).toEqual([])
+    expect(evaluateQuery(neither, fleetGeo).matched).toEqual([])
+  })
+
+  it('composes with and: refrigerated trucks within 100 miles of SLC', () => {
+    const fleetMixed: readonly EngineResource[] = [
+      r('reefer-slc', { type: 'vehicle', capabilities: { refrigerated: true },  location: SLC }),
+      r('dry-slc',    { type: 'vehicle', capabilities: { refrigerated: false }, location: SLC }),
+      r('reefer-den', { type: 'vehicle', capabilities: { refrigerated: true },  location: { lat: 39.7392, lon: -104.9903 } }),
+    ]
+    const q: ResourceQuery = {
+      op: 'and',
+      clauses: [
+        { op: 'eq',     path: 'capabilities.refrigerated', value: true },
+        { op: 'within', path: 'meta.location', from: { kind: 'point', ...SLC }, miles: 100 },
+      ],
+    }
+    expect(evaluateQuery(q, fleetMixed).matched).toEqual(['reefer-slc'])
+  })
+})

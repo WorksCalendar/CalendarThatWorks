@@ -174,8 +174,17 @@ export type { PoolIntegrityIssue, PoolIntegrityReport } from './core/pools/valid
 export type { ResourcePool, PoolStrategy, PoolType } from './core/pools/resourcePoolSchema';
 // ── Resource pools v2 — query DSL (#386) ───────────────────────────────────
 export { evaluateQuery } from './core/pools/evaluateQuery';
-export type { QueryEvaluation, QueryExclusion } from './core/pools/evaluateQuery';
-export type { ResourceQuery, ResourceQueryValue } from './core/pools/poolQuerySchema';
+export type { QueryContext, QueryEvaluation, QueryExclusion } from './core/pools/evaluateQuery';
+export type { ResourceQuery, ResourceQueryValue, DistanceFrom, WithinDistance } from './core/pools/poolQuerySchema';
+// ── Resource pools v2 — geo + location adapters (#386) ─────────────────────
+export { haversineKm, haversineMiles, isLatLon } from './core/pools/geo';
+export type { LatLon } from './core/pools/geo';
+export {
+  attachLocations,
+  createStaticLocationAdapter,
+  createMetaPathLocationAdapter,
+} from './core/pools/locationAdapters';
+export type { ResourceLocation, ResourceLocationAdapter } from './core/pools/locationAdapters';
 
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────
 export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';

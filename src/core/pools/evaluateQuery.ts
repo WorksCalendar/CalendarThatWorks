@@ -21,10 +21,22 @@
  */
 import type { EngineResource } from '../engine/schema/resourceSchema'
 import type { ResourceQuery, ResourceQueryValue } from './poolQuerySchema'
+import type { LatLon } from './geo'
+import { haversineKm, haversineMiles, isLatLon } from './geo'
 
 const TOP_LEVEL_KEYS: ReadonlySet<string> = new Set([
   'id', 'name', 'tenantId', 'capacity', 'color', 'timezone',
 ])
+
+/**
+ * Optional evaluation context. Currently used only by `within` clauses
+ * with `from: { kind: 'proposed' }` — the resolver passes through the
+ * proposed event's location so a single saved query can match against
+ * "wherever this event is happening" rather than baking in a literal.
+ */
+export interface QueryContext {
+  readonly proposedLocation?: LatLon
+}
 
 export interface QueryExclusion {
   readonly id: string
@@ -48,6 +60,7 @@ export function evaluateQuery(
   resources:
     | readonly EngineResource[]
     | ReadonlyMap<string, EngineResource>,
+  context: QueryContext = {},
 ): QueryEvaluation {
   const list: readonly EngineResource[] = resources instanceof Map
     ? Array.from(resources.values())
@@ -57,7 +70,7 @@ export function evaluateQuery(
   const excluded: QueryExclusion[] = []
 
   for (const r of list) {
-    const reason = firstFailingPath(query, r)
+    const reason = firstFailingPath(query, r, context)
     if (reason === null) matched.push(r.id)
     else excluded.push({ id: r.id, reason })
   }
@@ -73,11 +86,11 @@ export function evaluateQuery(
  * leaf clause that failed (used as the `reason` field in the excluded
  * trail).
  */
-function firstFailingPath(query: ResourceQuery, r: EngineResource): string | null {
+function firstFailingPath(query: ResourceQuery, r: EngineResource, ctx: QueryContext): string | null {
   switch (query.op) {
     case 'and': {
       for (const c of query.clauses) {
-        const f = firstFailingPath(c, r)
+        const f = firstFailingPath(c, r, ctx)
         if (f !== null) return f
       }
       return null
@@ -86,23 +99,24 @@ function firstFailingPath(query: ResourceQuery, r: EngineResource): string | nul
       if (query.clauses.length === 0) return 'or()'
       let lastReason: string | null = null
       for (const c of query.clauses) {
-        const f = firstFailingPath(c, r)
+        const f = firstFailingPath(c, r, ctx)
         if (f === null) return null
         lastReason = f
       }
       return lastReason
     }
     case 'not': {
-      const f = firstFailingPath(query.clause, r)
+      const f = firstFailingPath(query.clause, r, ctx)
       return f === null ? `not(${describe(query.clause)})` : null
     }
     default: {
-      return matchLeaf(query, r) ? null : describe(query)
+      return matchLeaf(query, r, ctx) ? null : describe(query)
     }
   }
 }
 
-function matchLeaf(q: Exclude<ResourceQuery, { op: 'and' | 'or' | 'not' }>, r: EngineResource): boolean {
+function matchLeaf(q: Exclude<ResourceQuery, { op: 'and' | 'or' | 'not' }>, r: EngineResource, ctx: QueryContext): boolean {
+  if (q.op === 'within') return matchWithin(q, r, ctx)
   const v = readPath(r, q.path)
   switch (q.op) {
     case 'exists': return v !== undefined
@@ -114,6 +128,28 @@ function matchLeaf(q: Exclude<ResourceQuery, { op: 'and' | 'or' | 'not' }>, r: E
     case 'lt':     return typeof v === 'number' && Number.isFinite(v) && v <  q.value
     case 'lte':    return typeof v === 'number' && Number.isFinite(v) && v <= q.value
   }
+}
+
+function matchWithin(
+  q: Extract<ResourceQuery, { op: 'within' }>,
+  r: EngineResource,
+  ctx: QueryContext,
+): boolean {
+  // Resolve the reference point first so a misconfigured query
+  // ("from: proposed" without a context) fails-closed instead of
+  // throwing in the middle of a per-resource loop.
+  const from: LatLon | null = q.from.kind === 'point'
+    ? q.from
+    : ctx.proposedLocation ?? null
+  if (!from) return false
+  const here = readPath(r, q.path)
+  if (!isLatLon(here)) return false
+  // Exactly one of miles / km drives the comparison. If both / neither
+  // are set the query is malformed; fail-closed.
+  if ((q.miles == null) === (q.km == null)) return false
+  if (q.miles != null) return haversineMiles(here, from) <= q.miles
+  if (q.km    != null) return haversineKm(here, from)    <= q.km
+  return false
 }
 
 function sameValue(actual: unknown, expected: ResourceQueryValue): boolean {
@@ -145,6 +181,10 @@ function describe(q: ResourceQuery): string {
     case 'not':    return `not(${describe(q.clause)})`
     case 'exists': return `exists(${q.path})`
     case 'in':     return `in(${q.path})`
+    case 'within': {
+      const unit = q.miles != null ? `${q.miles}mi` : q.km != null ? `${q.km}km` : '?'
+      return `within(${q.path}, ${unit})`
+    }
     default:       return `${q.op}(${q.path})`
   }
 }

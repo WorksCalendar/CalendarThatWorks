@@ -13,12 +13,34 @@
  *     `capacity`, `color`, `timezone`,
  *   - `meta.<dot.path>` for arbitrary host-defined attributes.
  *
- * This first slice deliberately omits distance / geo filters and the
- * `closest` strategy — those need a coordinate model and warrant their
- * own follow-up. Filterable types here: string, number, boolean, null.
+ * Filterable types: string, number, boolean, null. The `within`
+ * op layers on great-circle distance against `{ lat, lon }` data —
+ * see `geo.ts` for the math and `evaluateQuery.ts` for the optional
+ * `context.proposedLocation` hook used by `from: { kind: 'proposed' }`.
  */
 
 export type ResourceQueryValue = string | number | boolean | null
+
+/**
+ * Reference for the "from" point of a `within` distance clause.
+ *  - `point`     literal coordinates baked into the query
+ *  - `proposed`  resolves to the proposed event's location at
+ *                evaluation time (passed via `context.proposedLocation`).
+ *                Useful for "within 50 miles of the load's origin"
+ *                without re-building the query per submit.
+ */
+export type DistanceFrom =
+  | { readonly kind: 'point';    readonly lat: number; readonly lon: number }
+  | { readonly kind: 'proposed' }
+
+/**
+ * Distance / units configuration for `within`.
+ * Exactly one of `miles` / `km` must be set.
+ */
+export interface WithinDistance {
+  readonly miles?: number
+  readonly km?: number
+}
 
 export type ResourceQuery =
   /** Strict equality after path resolution. Missing path → false. */
@@ -37,6 +59,14 @@ export type ResourceQuery =
   | { readonly op: 'lte';    readonly path: string; readonly value: number }
   /** Path resolves to anything other than `undefined`. */
   | { readonly op: 'exists'; readonly path: string }
+  /**
+   * Great-circle distance filter. `path` resolves to `{ lat, lon }`
+   * on the resource (typically `meta.location` by convention but any
+   * meta path works). `from` supplies the reference point — either a
+   * literal or `{ kind: 'proposed' }` to defer to context. Resources
+   * with a missing or malformed coordinate fail the clause.
+   */
+  | { readonly op: 'within'; readonly path: string; readonly from: DistanceFrom; readonly miles?: number; readonly km?: number }
   /** Logical AND. Empty clauses → true (vacuously). */
   | { readonly op: 'and';    readonly clauses: readonly ResourceQuery[] }
   /** Logical OR. Empty clauses → false. */

@@ -26,6 +26,14 @@ export type PoolStrategy =
   | 'first-available'
   | 'least-loaded'
   | 'round-robin'
+  /**
+   * Picks the candidate with the smallest great-circle distance to
+   * `ResolvePoolInput.proposedLocation`. Throws when the input lacks a
+   * `proposedLocation` — the strategy has no meaning without one.
+   * Resources without a usable `meta.location` (or whatever path the
+   * pool's query targeted) sort to the back so they're tried last.
+   */
+  | 'closest'
 
 export type PoolType = 'manual' | 'query' | 'hybrid'
 

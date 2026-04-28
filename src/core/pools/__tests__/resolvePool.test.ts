@@ -497,3 +497,135 @@ describe('resolvePool — v2 query pools (#386)', () => {
     }
   })
 })
+
+describe('resolvePool — closest strategy (#386 v2 distance)', () => {
+  type R = import('../../engine/schema/resourceSchema').EngineResource
+  const SLC = { lat: 40.7608, lon: -111.8910 }
+  const slc1 = { id: 'slc-1', name: 'SLC1', meta: { location: SLC                        } } as unknown as R
+  const den1 = { id: 'den-1', name: 'DEN1', meta: { location: { lat: 39.7392, lon: -104.9903 } } } as unknown as R
+  const sfo1 = { id: 'sfo-1', name: 'SFO1', meta: { location: { lat: 37.6189, lon: -122.3750 } } } as unknown as R
+  const noLoc = { id: 'no-loc', name: 'NoLoc', meta: {} } as unknown as R
+  const registry = new Map([slc1, den1, sfo1, noLoc].map(r => [r.id, r]))
+
+  it('orders candidates by great-circle distance to proposedLocation', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'AnyTruck',
+      memberIds: ['sfo-1', 'den-1', 'slc-1'],   // worst-case input order
+      strategy: 'closest',
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [], resources: registry,
+      proposedLocation: SLC,
+    })
+    // Closest to SLC wins despite being last in memberIds.
+    expect(result.ok && result.resourceId).toBe('slc-1')
+  })
+
+  it('falls through to the next-closest when the nearest is busy', () => {
+    // Force the nearest (SLC) into conflict so the for-loop reaches
+    // farther members in their distance-ordered sequence — that's how
+    // we verify the *full* ordering, not just the winner.
+    const pool: ResourcePool = {
+      id: 'p', name: 'AnyTruck',
+      memberIds: ['sfo-1', 'den-1', 'slc-1'], strategy: 'closest',
+    }
+    const events = [
+      { id: 'busy', start: proposed.start, end: proposed.end, resource: 'slc-1' },
+    ]
+    const result = resolvePool({
+      pool, proposed, events, rules: [overlapRule],
+      resources: registry, proposedLocation: SLC,
+    })
+    expect(result.ok && result.resourceId).toBe('den-1')
+    if (result.ok) {
+      // Attempt trail confirms the order: SLC was tried first, then DEN.
+      expect(result.evaluated).toEqual(['slc-1', 'den-1'])
+    }
+  })
+
+  it('skips closer members in hard conflict and falls through to the next', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'AnyTruck',
+      memberIds: ['slc-1', 'den-1'], strategy: 'closest',
+    }
+    // SLC truck is busy → resolver moves to Denver.
+    const events = [
+      { id: 'busy', start: proposed.start, end: proposed.end, resource: 'slc-1' },
+    ]
+    const result = resolvePool({
+      pool, proposed, events, rules: [overlapRule],
+      resources: registry, proposedLocation: SLC,
+    })
+    expect(result.ok && result.resourceId).toBe('den-1')
+  })
+
+  it('sorts coordinate-less members to the back rather than disqualifying them', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'WithGap',
+      memberIds: ['no-loc', 'den-1'], strategy: 'closest',
+    }
+    // Force den-1 into conflict so we reach no-loc — then the
+    // coord-less member is still booked rather than being silently
+    // disqualified by the strategy.
+    const events = [
+      { id: 'busy', start: proposed.start, end: proposed.end, resource: 'den-1' },
+    ]
+    const result = resolvePool({
+      pool, proposed, events, rules: [overlapRule],
+      resources: registry, proposedLocation: SLC,
+    })
+    expect(result.ok && result.resourceId).toBe('no-loc')
+    if (result.ok) {
+      // Attempt order proves no-loc is *behind* den-1, not removed
+      // from the candidate set.
+      expect(result.evaluated).toEqual(['den-1', 'no-loc'])
+    }
+  })
+
+  it('throws when proposedLocation is missing — closest has no meaning without one', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'NoFrom',
+      memberIds: ['slc-1', 'den-1'], strategy: 'closest',
+    }
+    expect(() => resolvePool({
+      pool, proposed, events: [], rules: [], resources: registry,
+    })).toThrow(/proposedLocation/)
+  })
+
+  it('honors locationPath override for non-default coordinate fields', () => {
+    type R2 = import('../../engine/schema/resourceSchema').EngineResource
+    const depotA = { id: 'a', name: 'A', meta: { depot: SLC } } as unknown as R2
+    const depotB = { id: 'b', name: 'B', meta: { depot: { lat: 39.7392, lon: -104.9903 } } } as unknown as R2
+    const reg = new Map([depotA, depotB].map(r => [r.id, r]))
+    const pool: ResourcePool = {
+      id: 'p', name: 'Depots', memberIds: ['b', 'a'], strategy: 'closest',
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [], resources: reg,
+      proposedLocation: SLC, locationPath: 'meta.depot',
+    })
+    expect(result.ok && result.resourceId).toBe('a')
+  })
+
+  it('composes with within: dynamic narrowing then closest within the narrowed set', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'NearbyVehicles', type: 'query', memberIds: [],
+      query: {
+        op: 'within',
+        path: 'meta.location',
+        from: { kind: 'proposed' },
+        miles: 700,           // SLC + Denver in; SFO out
+      },
+      strategy: 'closest',
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [], resources: registry,
+      proposedLocation: SLC,
+    })
+    expect(result.ok && result.resourceId).toBe('slc-1')
+    if (result.ok) {
+      // SFO is filtered out by `within` before `closest` runs.
+      expect(result.evaluated).not.toContain('sfo-1')
+    }
+  })
+})

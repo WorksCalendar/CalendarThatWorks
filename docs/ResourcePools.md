@@ -120,6 +120,7 @@ still find a free member if one exists.
 |-------------------|----------------------------------------------------------|
 | `first-available` | First member, in declared order, with no hard conflict   |
 | `least-loaded`    | Member with the lowest `workloadForResource()` in window (extend with `lookaheadMs` to tally past the proposed end) |
+| `closest`         | Member with the smallest great-circle distance to `proposedLocation` (requires v2 distance filters; see below) |
 | `round-robin`     | Next member after the stored cursor, skipping conflicts  |
 
 `round-robin` persists its cursor (`rrCursor`) on the pool itself. The
@@ -250,6 +251,7 @@ them. See `src/core/pools/poolQuerySchema.ts` for the full type.
 | `in`     | `{ op: 'in', path, values: [...] }`                    |
 | `gt`/`gte`/`lt`/`lte` | `{ op, path, value }` — numeric only      |
 | `exists` | `{ op: 'exists', path }`                               |
+| `within` | `{ op: 'within', path, from, miles? \| km? }` — great-circle distance (see below) |
 | `and`/`or` | `{ op, clauses: [...] }` — empty `and` is true, empty `or` is false |
 | `not`    | `{ op: 'not', clause }`                                |
 
@@ -291,6 +293,105 @@ import { evaluateQuery } from 'works-calendar';
 const { matched, excluded } = evaluateQuery(query, resources);
 console.log(`Matches ${matched.length} resources, excludes ${excluded.length}`);
 ```
+
+### Distance: `within` clauses + the `closest` strategy
+
+Distance filters operate on `{ lat, lon }` data the host supplies on
+each resource (convention: `meta.location`). The math is great-circle
+haversine — see `src/core/pools/geo.ts`.
+
+A `within` clause narrows the candidate set; the `closest` strategy
+ranks the survivors by proximity:
+
+```ts
+const pool: ResourcePool = {
+  id: 'nearby-reefers',
+  name: 'Nearby Reefers',
+  type: 'query',
+  memberIds: [],
+  query: {
+    op: 'and',
+    clauses: [
+      { op: 'eq',     path: 'capabilities.refrigerated', value: true },
+      { op: 'within', path: 'meta.location',
+                      from: { kind: 'proposed' },           // event location
+                      miles: 50 },
+    ],
+  },
+  strategy: 'closest',
+};
+
+resolvePool({
+  pool, proposed, events, rules, resources,
+  proposedLocation: { lat: 40.76, lon: -111.89 },   // pickup point
+});
+```
+
+`from` accepts a literal `{ kind: 'point', lat, lon }` baked into the
+query, or `{ kind: 'proposed' }` to defer to
+`ResolvePoolInput.proposedLocation` at resolve time. The latter lets a
+single saved query work for any pickup without rebuilding it per
+submit.
+
+The `closest` strategy throws when `proposedLocation` is missing —
+the strategy has no meaning without a reference point. Resources
+without a usable `meta.location` (or whatever path
+`ResolvePoolInput.locationPath` overrides to) sort to the back so
+they're tried last rather than silently disqualified.
+
+### Importing coordinates: location adapters
+
+Hosts compose `ResourceLocationAdapter`s and call `attachLocations`
+at registry-build time:
+
+```ts
+import {
+  attachLocations,
+  createStaticLocationAdapter,
+  createMetaPathLocationAdapter,
+} from 'works-calendar';
+
+const located = attachLocations(resources, [
+  // Manual / config-driven coordinates win first.
+  createStaticLocationAdapter({
+    'truck-101': { lat: 40.7608, lon: -111.8910 },
+    'truck-202': { lat: 39.7392, lon: -104.9903 },
+  }),
+  // Fall back to a different meta path if your registry uses it.
+  createMetaPathLocationAdapter('meta.depot'),
+]);
+```
+
+Resources that already carry `meta.location` are left untouched —
+manual config always wins over an automated source. Adapters earlier
+in the array win.
+
+#### Plugin: `asset-tracker` (Map_Idea) bridge
+
+The [`asset-tracker`](https://github.com/natehorst240-sketch/Map_Idea)
+library normalizes positions from many feeds (ADS-B, NMEA, Traccar,
+APRS, Samsara, AIS, inReach, MQTT, GeoJSON, …) into a flat schema
+keyed by `id` — a perfect match for `EngineResource.id`. The bridge
+lives at `works-calendar/integrations/asset-tracker` so hosts who
+don't use the tracker pay nothing in their bundle.
+
+```ts
+import { buildRegistry, samsaraAdapter } from 'asset-tracker';
+import {
+  fromAssetTrackerRegistry,
+} from 'works-calendar/integrations/asset-tracker';
+
+const registry = buildRegistry([samsaraAdapter()]);
+await registry.refresh();   // host owns the polling cadence
+
+const located = attachLocations(resources, [
+  fromAssetTrackerRegistry(registry),
+]);
+```
+
+The bridge accepts any object that implements `getById(id)` (preferred
+— O(1)) or `positions()` (fallback — O(n)), so it also works with
+hand-rolled registries that match the normalized-position shape.
 
 ### Round-robin and dynamic candidate sets
 
