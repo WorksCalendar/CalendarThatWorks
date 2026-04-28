@@ -193,10 +193,13 @@ export default function FilterGroupSidebar({
       >
         {/* Header */}
         <div className={styles['header']}>
-          <h2 className={styles['headerTitle']}>
-            <SlidersHorizontal size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            View Controls
-          </h2>
+          <div className={styles['headerText']}>
+            <h2 className={styles['headerTitle']}>
+              <SlidersHorizontal size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+              View Controls
+            </h2>
+            <p className={styles['headerHint']}>Changes apply as you go</p>
+          </div>
           <button
             className={styles['closeBtn']}
             onClick={onClose}
