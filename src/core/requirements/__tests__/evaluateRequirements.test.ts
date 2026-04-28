@@ -161,6 +161,21 @@ describe('evaluateRequirements — per-assignment roleId (#449)', () => {
     expect(out.satisfied).toBe(true)
   })
 
+  it('stale assignment with roleId does not satisfy a slot when the resource is missing', () => {
+    // The resource was deleted but the assignment record was retained.
+    // Even though roleId matches, the phantom resource must not count.
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ role: 'dispatcher', count: 1 }] }],
+      resources,  // 'ghost' is not in this map
+      assignments: mapBy([
+        { id: 'a1', eventId: 'e1', resourceId: 'ghost', units: 100, roleId: 'dispatcher' },
+      ]),
+    })
+    expect(out.satisfied).toBe(false)
+    expect(out.missing[0]?.assigned).toBe(0)
+  })
+
   it('mixed assignments — some with roleId, some without — count correctly', () => {
     // Need 2 drivers. Alice (static) + bob acting-as driver = 2.
     const out = evaluateRequirements({

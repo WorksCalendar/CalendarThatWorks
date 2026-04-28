@@ -176,6 +176,10 @@ function countRoleAssignments(roleId: string, ctx: SlotContext): number {
     // pinned the role on this specific assignment, ignore the
     // resource's static meta.roles for slot matching.
     if (a.roleId !== undefined) {
+      // Phantom guard: a stale assignment (resource deleted, assignment
+      // retained) must not satisfy a slot just because roleId matches.
+      // Mirrors the same check in countPoolAssignments.
+      if (!ctx.resources.has(a.resourceId)) continue
       if (a.roleId === roleId) count++
       continue
     }
