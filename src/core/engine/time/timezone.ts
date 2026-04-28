@@ -84,8 +84,21 @@ export function utcOffsetMinutes(d: Date, tz: string): number {
  *
  * Example: 9:00 AM in America/Denver → UTC Date
  *
- * This is an approximation that iterates once to handle DST correctly.
- * For precise scheduling use a full timezone library (e.g. date-fns-tz).
+ * DST-aware (#258): collects up to four candidate UTC instants
+ * (the offset-1 anchor, the offset-2 anchor for non-trivial fixups,
+ * and ±1h fold siblings) and returns the one whose `partsInTimezone`
+ * round-trips back to the requested wall-clock target.
+ *
+ *   - Outside DST transitions: candidate1 round-trips and is returned.
+ *   - Spring-forward gap (a wall-clock time that doesn't exist):
+ *     none of the candidates round-trip. Default to the offset-2
+ *     anchor when available, otherwise candidate1 — both represent
+ *     the "snap forward" mapping in the common case.
+ *   - Fall-back fold (an ambiguous wall-clock time that repeats):
+ *     two candidates round-trip. By default the earlier (DST-active)
+ *     instance wins. Callers can pin a side via `preferOffsetMinutes`
+ *     — typically the offset of a known anchor (e.g. start time) —
+ *     to keep duration math monotonic across the fold.
  */
 export function wallClockToUtc(
   year: number,
@@ -95,13 +108,52 @@ export function wallClockToUtc(
   minute: number,
   second: number,
   tz: string,
+  preferOffsetMinutes?: number,
 ): Date {
-  // First pass: assume current UTC offset
   const approxUtc = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-  const offset    = utcOffsetMinutes(approxUtc, tz);
-  // Second pass: correct for offset
-  const corrected = new Date(approxUtc.getTime() - offset * 60_000);
-  return corrected;
+  const target = { year, month, day, hour, minute, second };
+
+  const offset1 = utcOffsetMinutes(approxUtc, tz);
+  const candidate1 = new Date(approxUtc.getTime() - offset1 * 60_000);
+
+  // Build candidate set: the naive anchor, the re-anchored variant
+  // when offsets disagree (handles spring-forward where offset1 reads
+  // the pre-DST side but the target lives on the post-DST side), and
+  // ±1h fold siblings (handles fall-back ambiguity, where the same
+  // wall-clock minute exists in both the DST-active and standard
+  // periods).
+  const candidates: Date[] = [candidate1];
+  const offset2 = utcOffsetMinutes(candidate1, tz);
+  if (offset2 !== offset1) {
+    candidates.push(new Date(approxUtc.getTime() - offset2 * 60_000));
+  }
+  candidates.push(new Date(candidate1.getTime() + 3_600_000));
+  candidates.push(new Date(candidate1.getTime() - 3_600_000));
+
+  const matches = candidates.filter(d => matchesWallClock(d, tz, target));
+  if (matches.length === 0) {
+    // Spring-forward gap — `candidate1` is the snap-forward result
+    // (the wall-clock time interpreted with the offset that was in
+    // force just before the transition, which lands one missing
+    // hour past the requested time on the post-DST side).
+    return candidate1;
+  }
+
+  if (preferOffsetMinutes !== undefined) {
+    const hinted = matches.find(d => utcOffsetMinutes(d, tz) === preferOffsetMinutes);
+    if (hinted) return hinted;
+  }
+  return matches[0]!;
+}
+
+function matchesWallClock(
+  d: Date,
+  tz: string,
+  target: { year: number; month: number; day: number; hour: number; minute: number; second: number },
+): boolean {
+  const p = partsInTimezone(d, tz);
+  return p.year === target.year && p.month === target.month && p.day === target.day
+      && p.hour === target.hour && p.minute === target.minute && p.second === target.second;
 }
 
 /**
