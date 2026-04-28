@@ -172,6 +172,13 @@ function checkSlot(slot: ConfigRequirementSlot, ctx: SlotContext): RequirementSh
 function countRoleAssignments(roleId: string, ctx: SlotContext): number {
   let count = 0
   for (const a of ctx.eventAssignments) {
+    // Per-assignment "acting as" override wins (#449). When the host
+    // pinned the role on this specific assignment, ignore the
+    // resource's static meta.roles for slot matching.
+    if (a.roleId !== undefined) {
+      if (a.roleId === roleId) count++
+      continue
+    }
     const r = ctx.resources.get(a.resourceId)
     const roles = (r?.meta?.['roles'] ?? null) as readonly string[] | null
     if (Array.isArray(roles) && roles.includes(roleId)) count++
