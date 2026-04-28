@@ -194,12 +194,17 @@ function mergeById<T extends { id: string }>(
   base: readonly T[] | undefined,
   preset: readonly T[] | undefined,
 ): readonly T[] | undefined {
+  // Always emit a fresh array — the preset map is shipped as
+  // module-level static data, so handing back its reference would
+  // let callers mutate a shared default in place. (The merge path
+  // below already produces a new array; the early-return shortcuts
+  // were the leaks Codex flagged on #446.)
   if (!base && !preset) return undefined
-  if (!preset) return base
-  if (!base)   return preset
+  if (!preset) return [...base!]
+  if (!base)   return [...preset]
   const seen = new Set(base.map(x => x.id))
   const additions = preset.filter(x => !seen.has(x.id))
-  return additions.length > 0 ? [...base, ...additions] : base
+  return additions.length > 0 ? [...base, ...additions] : [...base]
 }
 
 function cleanUndefined(o: { [k: string]: unknown }): CalendarConfig {

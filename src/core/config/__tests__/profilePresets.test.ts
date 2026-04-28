@@ -123,6 +123,19 @@ describe('applyProfilePreset — merging into an existing config', () => {
 })
 
 describe('applyProfilePreset — defensive', () => {
+  it('does not share array references with the static PROFILE_PRESETS map (#386 P1)', () => {
+    // Hand-out preset-backed catalogs would let downstream mutations
+    // corrupt the module-level default. Apply twice; mutate the first
+    // result; the second should be unaffected.
+    const first = applyProfilePreset('trucking');
+    (first.roles as Array<{ id: string; label: string }>).push({ id: 'rogue', label: 'Rogue' })
+
+    const second = applyProfilePreset('trucking')
+    expect(second.roles!.map(r => r.id)).not.toContain('rogue')
+    // And the static preset itself is untouched.
+    expect(PROFILE_PRESETS.trucking.config.roles!.map(r => r.id)).toEqual(['driver', 'dispatcher'])
+  })
+
   it('returns a copy of the base when the profile id is unknown', () => {
     // Cast through unknown — types prevent this at compile-time but
     // hosts can still pass a string from a URL / JSON file at runtime.
