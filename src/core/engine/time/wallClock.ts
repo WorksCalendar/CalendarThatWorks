@@ -59,17 +59,60 @@ export function applyWallClockAnchor(
  *   - the original event duration in ms
  *   - the event's timezone (for DST-aware duration)
  *
- * In most cases this is just `start + durationMs`.
- * The timezone parameter is reserved for future DST-aware duration math.
+ * When `tz` is null/undefined, this is `start + durationMs` — the
+ * UTC delta is preserved. That matches the "floating event" model
+ * and is the right call when no timezone is known.
+ *
+ * When `tz` is a valid IANA zone, this preserves the **wall-clock**
+ * duration instead. That matters across DST transitions: a 2h
+ * meeting that starts at 1:00 AM the night clocks spring forward
+ * should end at 3:00 AM (wall-clock), not 4:00 AM. UTC-only math
+ * skips an hour by silently keeping a 2h UTC delta even though the
+ * clock itself jumped.
+ *
+ * Algorithm:
+ *   1. Project `start` to wall-clock parts in `tz`.
+ *   2. Add `durationMs` worth of wall-clock time, carrying minutes
+ *      → hours → days the same way regardless of DST (i.e. clock
+ *      arithmetic, not UTC arithmetic).
+ *   3. Convert the new wall-clock parts back to UTC at `tz`. If
+ *      the end lands inside a spring-forward gap (a non-existent
+ *      time), `wallClockToUtc` snaps it to the post-DST equivalent.
  */
 export function computeOccurrenceEnd(
   start: Date,
   durationMs: number,
-  _tz?: string | null,
+  tz?: string | null,
 ): Date {
-  // Currently: simple addition.
-  // TODO: For DST-aware semantics (preserve wall-clock end time), use _tz.
-  return new Date(start.getTime() + durationMs);
+  if (!tz) return new Date(start.getTime() + durationMs);
+
+  const startParts = partsInTimezone(start, tz);
+
+  // Treat the wall-clock parts as if they were UTC and add `durationMs`
+  // there. This is "clock arithmetic" — the carry rules (60s = 1m,
+  // 60m = 1h, etc.) match what a wall clock does, and the result is
+  // independent of the source/target offsets.
+  const wallStartAsUtc = Date.UTC(
+    startParts.year,
+    startParts.month - 1,
+    startParts.day,
+    startParts.hour,
+    startParts.minute,
+    startParts.second,
+  );
+  const wallEndAsUtc = new Date(wallStartAsUtc + durationMs);
+
+  // Read the post-add wall-clock parts back out of the throwaway UTC
+  // moment and re-anchor in the real timezone.
+  return wallClockToUtc(
+    wallEndAsUtc.getUTCFullYear(),
+    wallEndAsUtc.getUTCMonth() + 1,
+    wallEndAsUtc.getUTCDate(),
+    wallEndAsUtc.getUTCHours(),
+    wallEndAsUtc.getUTCMinutes(),
+    wallEndAsUtc.getUTCSeconds(),
+    tz,
+  );
 }
 
 // ─── Display helpers ──────────────────────────────────────────────────────────

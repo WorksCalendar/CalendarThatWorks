@@ -84,8 +84,23 @@ export function utcOffsetMinutes(d: Date, tz: string): number {
  *
  * Example: 9:00 AM in America/Denver → UTC Date
  *
- * This is an approximation that iterates once to handle DST correctly.
- * For precise scheduling use a full timezone library (e.g. date-fns-tz).
+ * DST-aware (#258): a single offset pass picks the wrong side of the
+ * transition when the wall-clock target sits across it, so we try
+ * both candidate offsets and pick whichever round-trips cleanly via
+ * `partsInTimezone`.
+ *
+ *   - Outside DST transitions: candidate1 round-trips and is returned.
+ *   - On the DST-active side of a fall-back: candidate1 lands an hour
+ *     off; candidate2 (using the offset at candidate1's instant)
+ *     round-trips correctly and is returned.
+ *   - Spring-forward gap (a wall-clock time that doesn't exist):
+ *     neither candidate round-trips. Default to candidate1 — the
+ *     "snap forward" mapping (skip the missing hour) — because a
+ *     duration that lands in the gap is almost always meant to extend
+ *     past it rather than collapse before it.
+ *   - Fall-back fold (an ambiguous wall-clock time that repeats):
+ *     candidate1's first round-trip wins, which is the earlier (DST-
+ *     active) of the two — matches common library convention.
  */
 export function wallClockToUtc(
   year: number,
@@ -96,12 +111,31 @@ export function wallClockToUtc(
   second: number,
   tz: string,
 ): Date {
-  // First pass: assume current UTC offset
   const approxUtc = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-  const offset    = utcOffsetMinutes(approxUtc, tz);
-  // Second pass: correct for offset
-  const corrected = new Date(approxUtc.getTime() - offset * 60_000);
-  return corrected;
+  const target = { year, month, day, hour, minute, second };
+
+  const offset1 = utcOffsetMinutes(approxUtc, tz);
+  const candidate1 = new Date(approxUtc.getTime() - offset1 * 60_000);
+  if (matchesWallClock(candidate1, tz, target)) return candidate1;
+
+  const offset2 = utcOffsetMinutes(candidate1, tz);
+  if (offset2 === offset1) return candidate1;
+  const candidate2 = new Date(approxUtc.getTime() - offset2 * 60_000);
+  if (matchesWallClock(candidate2, tz, target)) return candidate2;
+
+  // Wall-clock time doesn't exist in this tz on this date (spring-
+  // forward gap). Default to candidate1 — see fn comment.
+  return candidate1;
+}
+
+function matchesWallClock(
+  d: Date,
+  tz: string,
+  target: { year: number; month: number; day: number; hour: number; minute: number; second: number },
+): boolean {
+  const p = partsInTimezone(d, tz);
+  return p.year === target.year && p.month === target.month && p.day === target.day
+      && p.hour === target.hour && p.minute === target.minute && p.second === target.second;
 }
 
 /**
