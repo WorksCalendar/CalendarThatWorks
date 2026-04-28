@@ -10,10 +10,12 @@
  * changes via `onChange`. The parent (`PoolBuilder`) owns the array
  * and AND-merges it with the simple-form clauses on save.
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ResourceQuery } from '../../core/pools/poolQuerySchema'
+import type { EngineResource } from '../../core/engine/schema/resourceSchema'
 import ClauseEditor from './ClauseEditor'
 import { summarizeQuery } from './poolSummary'
+import { validateClausePaths } from './validateClausePaths'
 import styles from './AdvancedRulesEditor.module.css'
 
 export interface AdvancedRulesEditorProps {
@@ -25,14 +27,31 @@ export interface AdvancedRulesEditorProps {
    * `derivePathSuggestions(resources)`.
    */
   readonly pathSuggestions?: readonly string[] | undefined
+  /**
+   * Optional live registry. When provided, each row computes
+   * `validateClausePaths` and surfaces a warning chip on the
+   * summary when one or more paths in the clause don't resolve on
+   * any resource. The chip is informational; it never blocks
+   * editing — paths that don't resolve today are sometimes
+   * intentional (forward-looking schemas / optional capabilities).
+   */
+  readonly resources?: ReadonlyMap<string, EngineResource> | readonly EngineResource[] | undefined
 }
 
 const DEFAULT_NEW_CLAUSE: ResourceQuery = { op: 'eq', path: '', value: '' }
 
 export default function AdvancedRulesEditor({
-  clauses, onChange, pathSuggestions,
+  clauses, onChange, pathSuggestions, resources,
 }: AdvancedRulesEditorProps): JSX.Element {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
+
+  // Per-row path validation against the live registry. Re-runs only
+  // when the clause list or registry changes; cheap enough to do
+  // inline since each clause is small and the registry is bounded.
+  const unresolvedByRow = useMemo(() => {
+    if (!resources) return [] as ReadonlyArray<ReadonlySet<string>>
+    return clauses.map(c => validateClausePaths(c, resources).byPath)
+  }, [clauses, resources])
 
   const updateAt = (index: number, next: ResourceQuery) =>
     onChange(clauses.map((c, i) => i === index ? next : c))
@@ -70,12 +89,24 @@ export default function AdvancedRulesEditor({
         {clauses.map((c, i) => {
           const phrase = summarizeQuery(c).join(' & ') || `${c.op}(...)`
           const isEditing = editingIndex === i
+          const unresolved = unresolvedByRow[i] ?? null
+          const unresolvedCount = unresolved ? unresolved.size : 0
           return (
-            <li key={i} className={styles['row']}>
+            <li key={i} className={styles['row']} data-has-unresolved={unresolvedCount > 0 ? 'true' : undefined}>
               <div className={styles['rowHead']}>
                 <span className={styles['summary']} data-testid={`advanced-rule-summary-${i}`}>
                   {phrase}
                 </span>
+                {unresolvedCount > 0 && (
+                  <span
+                    className={styles['warningChip']}
+                    role="status"
+                    title={`${unresolvedCount} path(s) don't resolve on any live resource: ${[...unresolved!].join(', ')}`}
+                    data-testid={`advanced-rule-warning-${i}`}
+                  >
+                    ⚠ {unresolvedCount} unresolved
+                  </span>
+                )}
                 <span className={styles['rowActions']}>
                   <button
                     type="button"
@@ -115,6 +146,7 @@ export default function AdvancedRulesEditor({
                   <ClauseEditor
                     clause={c}
                     pathSuggestions={pathSuggestions}
+                    unresolvedPaths={unresolved ?? undefined}
                     onChange={(next) => updateAt(i, next)}
                   />
                 </div>

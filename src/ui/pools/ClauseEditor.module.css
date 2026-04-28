@@ -74,6 +74,31 @@
   flex: 1;
 }
 
+.pathInputWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.pathInputWrap .pathInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.pathInput[data-unresolved='true'] {
+  border-color: #f59e0b;
+}
+
+.pathWarning {
+  flex: 0 0 auto;
+  font-size: 14px;
+  color: #b45309;
+  line-height: 1;
+  cursor: help;
+}
+
 .pathInput {
   flex: 1;
   min-width: 160px;
