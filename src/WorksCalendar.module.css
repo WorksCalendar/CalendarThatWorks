@@ -402,6 +402,16 @@
   color: #fff !important;
 }
 
+/* Calendar | Operations divider (#424 wk6) — splits the view picker
+   into the two semantic groups so users see scheduling tabs apart
+   from the operational boards. Slightly stronger than the per-button
+   border so the boundary reads as a group seam, not a button edge. */
+.viewGroupDivider {
+  align-self: stretch;
+  width: 2px;
+  background: color-mix(in srgb, var(--wc-border) 70%, var(--wc-text-muted) 30%);
+}
+
 /* Actions */
 .actions {
   display: flex;

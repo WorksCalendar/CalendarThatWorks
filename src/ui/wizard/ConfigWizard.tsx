@@ -202,6 +202,7 @@ interface StepProps {
 function ProfileStep({ config, setConfig }: StepProps): JSX.Element {
   return (
     <div className={styles['stepInner']}>
+      <h2 className={styles['stepHeadline']}>What are you scheduling?</h2>
       <p className={styles['hint']}>
         Pick a starter preset. We'll seed your labels, resource types, and
         roles based on the industry. You can edit anything afterward.

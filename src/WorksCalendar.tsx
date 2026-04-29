@@ -360,18 +360,19 @@ function opAnnouncement(op: LooseValue) {
   }
 }
 
-type ViewDef = { id: ViewId; label: string; alwaysOn: boolean; hint?: string };
+type ViewGroup = 'calendar' | 'operations';
+type ViewDef = { id: ViewId; label: string; alwaysOn: boolean; hint?: string; group: ViewGroup };
 const ALL_VIEWS: readonly ViewDef[] = [
-  { id: 'month',    label: 'Month',    alwaysOn: true,  hint: 'Scheduled events — appointments, missions, PTO' },
-  { id: 'week',     label: 'Week',     alwaysOn: true,  hint: 'Scheduled events by day — not staffing or on-call' },
-  { id: 'day',      label: 'Day',      alwaysOn: false },
-  { id: 'agenda',   label: 'Agenda',   alwaysOn: false },
-  { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status' },
-  { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side' },
-  { id: 'assets',   label: 'Assets',   alwaysOn: false },
-  { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?' },
-  { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests' },
-  { id: 'map',      label: 'Map',      alwaysOn: false, hint: 'Geographic plot of events that carry coordinates (meta.coords)' },
+  { id: 'month',    label: 'Month',    alwaysOn: true,  hint: 'Scheduled events — appointments, missions, PTO',                   group: 'calendar' },
+  { id: 'week',     label: 'Week',     alwaysOn: true,  hint: 'Scheduled events by day — not staffing or on-call',                group: 'calendar' },
+  { id: 'day',      label: 'Day',      alwaysOn: false,                                                                            group: 'calendar' },
+  { id: 'agenda',   label: 'Agenda',   alwaysOn: false,                                                                            group: 'calendar' },
+  { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status',       group: 'calendar' },
+  { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side', group: 'calendar' },
+  { id: 'assets',   label: 'Assets',   alwaysOn: false,                                                                            group: 'operations' },
+  { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?',      group: 'operations' },
+  { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests',    group: 'operations' },
+  { id: 'map',      label: 'Map',      alwaysOn: false, hint: 'Geographic plot of events that carry coordinates (meta.coords)',  group: 'operations' },
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -2438,8 +2439,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               </div>
             }
             centerSlot={
-              <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
-                {VIEWS.map(v => (
+              // Views are grouped Calendar | Operations (#424 wk6) so a
+              // new user sees scheduling tabs separately from the
+              // operational boards (Assets / Dispatch / Requests / Map).
+              // Both groups share the same buttonGroup styling; the
+              // separator is purely visual.
+              (() => {
+                const calendarViews   = VIEWS.filter(v => v.group === 'calendar');
+                const operationsViews = VIEWS.filter(v => v.group === 'operations');
+                const renderBtn = (v: ViewDef) => (
                   <button
                     key={v.id}
                     className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
@@ -2449,8 +2457,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   >
                     {v.label}
                   </button>
-                ))}
-              </div>
+                );
+                return (
+                  <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
+                    {calendarViews.map(renderBtn)}
+                    {operationsViews.length > 0 && (
+                      <span
+                        className={styles['viewGroupDivider']}
+                        aria-hidden="true"
+                        role="presentation"
+                      />
+                    )}
+                    {operationsViews.map(renderBtn)}
+                  </div>
+                );
+              })()
             }
             rightSlot={
               <div className={styles['actions']}>
@@ -2589,8 +2610,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   groupCount={sidebarGroupLevels.length}
                 />
                 {hasAddButton && cal.view !== 'schedule' && (
-                  <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
-                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
+                  <button
+                    className={styles['addBtn']}
+                    onClick={() => setFormEvent({})}
+                    aria-label={`Add new ${profileLabels.event.toLowerCase()}`}
+                    title={profileLabels.event === 'Event' ? undefined : `Create a new ${profileLabels.event.toLowerCase()}`}
+                  >
+                    <Plus size={14} aria-hidden="true" />
+                    <span className={styles['addBtnLabel']}> New {profileLabels.event}</span>
                   </button>
                 )}
                 {hasAddButton && hasScheduleTemplates && (

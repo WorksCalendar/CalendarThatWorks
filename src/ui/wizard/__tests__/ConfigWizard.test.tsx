@@ -513,3 +513,12 @@ describe('ConfigWizard — initialConfig editing', () => {
     expect(onComplete).toHaveBeenCalledWith(initial)
   })
 })
+
+describe('ConfigWizard — profile step framing (#424 wk6)', () => {
+  it('frames the first step with "What are you scheduling?"', () => {
+    render(<ConfigWizard onComplete={vi.fn()} onCancel={vi.fn()} />)
+    expect(
+      screen.getByRole('heading', { name: /What are you scheduling\?/i }),
+    ).toBeInTheDocument()
+  })
+})
