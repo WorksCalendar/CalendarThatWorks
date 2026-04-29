@@ -145,6 +145,12 @@
 }
 .event.cancelled { opacity: 0.45; }
 .event.cancelled .evTitle { text-decoration: line-through; }
+.event[data-wc-conflicting="true"],
+.allDayPill[data-wc-conflicting="true"] {
+  outline: 2px solid var(--wc-danger, #ef4444);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
 
 /* Business-hours off-peak shading */
 .offHour { background: color-mix(in srgb, var(--wc-text) 4%, transparent) !important; height: 64px; z-index: 1; }

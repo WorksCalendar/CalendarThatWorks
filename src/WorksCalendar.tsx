@@ -1211,6 +1211,29 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState<LooseValue | null>(null);
   const [formEvent,        setFormEvent]        = useState<LooseValue | null>(null);
+  // Conflict highlights (#424 week 2). Populated by EventForm's live
+  // conflict check via `onLiveConflictsChange`; passed through
+  // CalendarContext so each view can paint a red outline on the
+  // events the proposed draft overlaps. Empty set = no highlights.
+  const [conflictingEventIds, setConflictingEventIds] = useState<ReadonlySet<string>>(() => new Set());
+  // Stable callback so EventForm's `useEffect([onLiveConflictsChange])`
+  // doesn't refire every parent render (which would feed an infinite
+  // setState loop through the EVENT_FORM ⇄ WORKS_CALENDAR boundary).
+  // The functional setter also short-circuits identical id sets so the
+  // calendar stays still when only unrelated state changes.
+  const handleLiveConflicts = useCallback((ids: readonly string[] | null) => {
+    setConflictingEventIds(prev => {
+      if (!ids || ids.length === 0) {
+        return prev.size === 0 ? prev : new Set();
+      }
+      if (prev.size === ids.length) {
+        let same = true;
+        for (const id of ids) if (!prev.has(id)) { same = false; break; }
+        if (same) return prev;
+      }
+      return new Set(ids);
+    });
+  }, []);
   const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
   // Transient confirmation that the host's import landed; the dialog
@@ -2146,7 +2169,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
     permissions: perms,
     editMode,
-  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode]);
+    conflictingEventIds,
+  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode, conflictingEventIds]);
 
   // ── Toolbar date label ───────────────────────────────────────────────────
   function getDateLabel() {
@@ -2758,11 +2782,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             categories={[...eventFormCats, ...eventOptions.categories]}
             onSave={handleEventSave}
             onDelete={(onEventDelete && perms.canDeleteEvent) ? handleEventDelete : null}
-            onClose={() => setFormEvent(null)}
+            onClose={() => { setFormEvent(null); handleLiveConflicts(null); }}
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
             maintenanceRules={maintenanceRules}
             onCheckConflicts={checkEventConflicts}
+            onLiveConflictsChange={handleLiveConflicts}
             approvalCategories={Array.isArray(assetRequestCategories) ? assetRequestCategories : []}
             pools={rawPools ?? []}
           />

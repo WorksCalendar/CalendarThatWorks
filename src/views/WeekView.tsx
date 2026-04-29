@@ -328,7 +328,8 @@ export default function WeekView({
     const pctWidth = (1 / numCols) * 100;
     const statusClass = ev.status === 'cancelled' ? styles['cancelled']
       : ev.status === 'tentative' ? styles['tentative'] : '';
-    const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
+    const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+    const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}${isConflicting ? ', conflicts with current draft' : ''}`;
     const display = ((ev.meta ?? {}) as { _display?: { large?: boolean; bold?: boolean } })._display ?? {};
     const isUltraCompact = height < 42;
     const isCompact = height < 72;
@@ -348,6 +349,7 @@ export default function WeekView({
           ctx?.['editMode'] && styles['editModeEvent'],
         ].filter(Boolean).join(' ')}
         data-wc-priority={ev.visualPriority ?? undefined}
+        data-wc-conflicting={isConflicting ? 'true' : undefined}
         style={{
           top, height, '--ev-color': color,
           left: `${pctLeft}%`, width: `${pctWidth}%`,

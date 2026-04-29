@@ -305,6 +305,7 @@ export default function MonthView({
     const color       = resolveColor(ev, ctx?.['colorRules']);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
+    const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
     const statusClass = ev.status === 'cancelled' ? styles['cancelled']
       : ev.status === 'tentative' ? styles['tentative'] : '';
     const display = (ev.meta?.['_display'] as { bold?: boolean; large?: boolean } | undefined) ?? {};
@@ -330,6 +331,7 @@ export default function MonthView({
             role="button"
             tabIndex={0}
             data-wc-priority={ev.visualPriority ?? undefined}
+            data-wc-conflicting={isConflicting ? 'true' : undefined}
             onClick={e => { e.stopPropagation(); onClick(); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
             onPointerDown={e => startPillDrag(ev, e)}
@@ -356,6 +358,7 @@ export default function MonthView({
           ctx?.['editMode'] && styles['editModePill'],
         ].filter(Boolean).join(' ')}
         data-wc-priority={ev.visualPriority ?? undefined}
+        data-wc-conflicting={isConflicting ? 'true' : undefined}
         style={{
           '--ev-color': color,
           fontWeight: display.bold  ? '700' : undefined,
@@ -526,6 +529,7 @@ export default function MonthView({
                         const statusClass = ev.status === 'cancelled' ? styles['cancelled']
                           : ev.status === 'tentative' ? styles['tentative'] : '';
                         const isDimmed = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
+                        const spanConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
                         return (
                           <button
                             key={`${ev.id}-w${wi}`}
@@ -536,6 +540,7 @@ export default function MonthView({
                               statusClass,
                               isDimmed && styles['dragging'],
                             ].filter(Boolean).join(' ')}
+                            data-wc-conflicting={spanConflicting ? 'true' : undefined}
                             style={{
                               '--ev-color': color,
                               left:   `${pctLeft}%`,
