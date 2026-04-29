@@ -124,6 +124,15 @@
 }
 .spanBar.cancelled { opacity: 0.45; text-decoration: line-through; }
 .spanBar.dragging { opacity: 0.3; pointer-events: none; }
+/* Conflict highlight (#424 wk2) — outline applied when an open EventForm
+   draft overlaps this event. The data attribute is set by views; the
+   colour reads off the danger token so themes pick it up automatically. */
+.spanBar[data-wc-conflicting="true"],
+.eventPill[data-wc-conflicting="true"] {
+  outline: 2px solid var(--wc-danger, #ef4444);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
 
 /* ── 7 day cells ── */
 .weekCells {

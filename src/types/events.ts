@@ -12,6 +12,33 @@ export type { EventVisualPriority };
 export { isVisualPriority };
 export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
+/**
+ * Lifecycle state — orthogonal to iCal `status`. Drives the
+ * draft → pending → approved → scheduled → completed loop that the
+ * roadmap (issue #424, week 1) makes visible everywhere an event is
+ * rendered. `null` means the host hasn't opted into lifecycle tracking
+ * for this event; views fall back to legacy rendering.
+ */
+export type EventLifecycleState =
+  | 'draft'
+  | 'pending'
+  | 'approved'
+  | 'scheduled'
+  | 'completed';
+
+export const EVENT_LIFECYCLE_STATES: readonly EventLifecycleState[] = [
+  'draft',
+  'pending',
+  'approved',
+  'scheduled',
+  'completed',
+];
+
+export function isLifecycleState(v: unknown): v is EventLifecycleState {
+  return typeof v === 'string'
+    && (EVENT_LIFECYCLE_STATES as readonly string[]).includes(v);
+}
+
 export interface WorksCalendarEvent {
   id?: string | undefined;
   title: string;
@@ -22,6 +49,7 @@ export interface WorksCalendarEvent {
   color?: string | undefined;
   resource?: string | undefined;
   status?: EventStatus | undefined;
+  lifecycle?: EventLifecycleState | undefined;
   /** Importance signal: 'muted' = normal recurring ops; 'high' = planning exceptions. */
   visualPriority?: EventVisualPriority | undefined;
   meta?: Record<string, unknown> | undefined;
@@ -39,6 +67,8 @@ export interface NormalizedEvent {
   color: string;
   resource: string | null;
   status: EventStatus;
+  /** Lifecycle state when the host supplies one; null when untracked. */
+  lifecycle: EventLifecycleState | null;
   /** Present when the raw event supplies visualPriority; null otherwise. */
   visualPriority?: EventVisualPriority | null | undefined;
   meta: Record<string, unknown>;

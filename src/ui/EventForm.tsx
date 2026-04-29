@@ -3,9 +3,9 @@
  * Layout and orchestration only; business logic lives in useEventDraftState
  * and the extracted section components.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ShieldCheck, Users, X } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, Users, X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { useEventDraftState, fromDatetimeLocal } from '../hooks/useEventDraftState';
@@ -52,6 +52,16 @@ export default function EventForm({
    * edit the pool selection. Closes #386 item #11.
    */
   pools = [],
+  /**
+   * Notified whenever the live conflict check produces a non-empty
+   * violation list. The host uses this to highlight the conflicting
+   * events inside the calendar grid — see WorksCalendar's
+   * `conflictingEventIds` context value. Receives an empty array when
+   * the draft is currently clean; receives `null` when the form
+   * unmounts so the host can clear stale highlights. Sprint #424
+   * week 2.
+   */
+  onLiveConflictsChange,
 }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const draft   = useEventDraftState(event, categories, config);
@@ -90,6 +100,64 @@ export default function EventForm({
   const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
     useDirtyGuard({ dirty, onClose });
   const trapRef = useFocusTrap<HTMLDivElement>(requestClose);
+
+  // ── Live conflict check ────────────────────────────────────────────────
+  // Runs the host's `onCheckConflicts` against a lightweight payload built
+  // from the live draft so the user sees the verdict before they hit
+  // Save. The submit-time check still runs (and still gates onSave behind
+  // ConflictModal for soft violations + override) — this layer is purely
+  // additive: an inline banner + a hard-disabled Save button so users
+  // don't have to round-trip the modal to learn their times overlap.
+  //
+  // The build is intentionally small: title / start / end / category /
+  // resource / id is everything every conflict rule consumes. We skip
+  // when start/end won't parse so half-typed datetimes don't paint a
+  // misleading "no conflict" verdict.
+  const liveConflicts: ConflictEvaluationResult | null = useMemo(() => {
+    if (!onCheckConflicts) return null;
+    const start = fromDatetimeLocal(draft.values.start);
+    const end   = fromDatetimeLocal(draft.values.end);
+    if (!start || !end) return null;
+    const normalizedResource = draft.values.resource == null ? '' : String(draft.values.resource);
+    const probe = {
+      ...(event || {}),
+      id:       event?.id ?? '__draft__',
+      title:    draft.values.title.trim() || '(untitled)',
+      start,
+      end,
+      allDay:   draft.values.allDay,
+      category: draft.values.category || null,
+      resource: normalizedResource.trim() || null,
+      meta:     draft.values.meta,
+    };
+    try {
+      return onCheckConflicts(probe) as ConflictEvaluationResult | null;
+    } catch (_err) {
+      return null;
+    }
+  }, [onCheckConflicts, draft.values.start, draft.values.end, draft.values.allDay,
+      draft.values.title, draft.values.category, draft.values.resource, draft.values.meta,
+      event]);
+
+  // Tell the host which events are in conflict so it can paint outlines
+  // in the calendar grid. Empty array clears highlights; unmount sends
+  // null so the host can drop the set entirely.
+  useEffect(() => {
+    if (!onLiveConflictsChange) return;
+    const ids: string[] = [];
+    for (const v of liveConflicts?.violations ?? []) {
+      const cid = (v as { conflictingEventId?: string }).conflictingEventId;
+      if (cid) ids.push(cid);
+    }
+    onLiveConflictsChange(ids);
+  }, [liveConflicts, onLiveConflictsChange]);
+
+  useEffect(() => () => {
+    onLiveConflictsChange?.(null);
+  }, [onLiveConflictsChange]);
+
+  const liveHasHard = liveConflicts?.severity === 'hard';
+  const liveHasAny  = !!liveConflicts && liveConflicts.violations.length > 0;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -348,13 +416,46 @@ export default function EventForm({
                 <span>This category routes through approval — your save lands as <strong>requested</strong> until approved.</span>
               </div>
             )}
+            {liveHasAny && (
+              <div
+                className={styles['conflictBanner']}
+                data-severity={liveConflicts!.severity}
+                role={liveHasHard ? 'alert' : 'status'}
+                aria-live="polite"
+              >
+                <AlertTriangle size={14} aria-hidden="true" />
+                <div className={styles['conflictBannerBody']}>
+                  <strong>
+                    {liveHasHard
+                      ? 'Cannot save — conflict detected'
+                      : 'Conflict warning — review before saving'}
+                  </strong>
+                  <ul className={styles['conflictList']}>
+                    {liveConflicts!.violations.map((v: any, i: number) => (
+                      <li key={`${v.rule}:${v.conflictingEventId ?? i}`}>
+                        <span className={styles['conflictSeverity']} data-severity={v.severity}>
+                          {v.severity}
+                        </span>
+                        <span>{v.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             <div className={styles['actions']}>
               {!isNew && onDelete && (
                 <button type="button" className={styles['btnDelete']} onClick={() => setConfirmDeleteOpen(true)}>Delete</button>
               )}
               <div className={styles['actionRight']}>
                 <button type="button" className={styles['btnCancel']} onClick={onClose}>Cancel</button>
-                <button type="submit" className={styles['btnSave']}>{isNew ? 'Add Event' : 'Save Changes'}</button>
+                <button
+                  type="submit"
+                  className={styles['btnSave']}
+                  disabled={liveHasHard}
+                  aria-disabled={liveHasHard}
+                  title={liveHasHard ? 'Resolve conflicts to continue' : undefined}
+                >{isNew ? 'Add Event' : 'Save Changes'}</button>
               </div>
             </div>
           </form>

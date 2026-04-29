@@ -11,6 +11,7 @@ import { useDrag } from '../hooks/useDrag';
 import type { NormalizedEvent } from '../types/events';
 import type { CalendarViewEvent } from '../types/ui';
 import ApprovalDot from '../ui/ApprovalDot';
+import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './DayView.module.css';
 
 const GUTTER_W = 56;
@@ -162,7 +163,8 @@ export default function DayView({
     const pctWidth = (1 / numCols) * 100;
     const statusClass = ev.status === 'cancelled' ? styles['cancelled']
       : ev.status === 'tentative' ? styles['tentative'] : '';
-    const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
+    const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+    const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}${isConflicting ? ', conflicts with current draft' : ''}`;
 
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev as NormalizedEvent, { view: 'day', isCompact: false, onClick, color });
@@ -172,6 +174,7 @@ export default function DayView({
             className={[styles['event'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
             style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
             data-wc-priority={ev.visualPriority ?? undefined}
+            data-wc-conflicting={isConflicting ? 'true' : undefined}
             role="button" tabIndex={0}
             aria-label={ariaLabel}
             onClick={onClick}
@@ -195,6 +198,7 @@ export default function DayView({
         className={[styles['event'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
         style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
         data-wc-priority={ev.visualPriority ?? undefined}
+        data-wc-conflicting={isConflicting ? 'true' : undefined}
         role="button" tabIndex={0}
         aria-label={ariaLabel}
         onClick={onClick}
@@ -204,7 +208,11 @@ export default function DayView({
         <div className={styles['resizeHandleTop']}
           onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
-        <span className={styles['evTitle']}><ApprovalDot event={ev} />{ev.title}</span>
+        <span className={styles['evTitle']}>
+          <ApprovalDot event={ev} />
+          <EventStatusBadge lifecycle={ev.lifecycle} variant="compact" />
+          {ev.title}
+        </span>
         <span className={styles['evTime']}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
         {ev.resource && numCols === 1 && <span className={styles['evMeta']}>{ev.resource}</span>}
         <div className={styles['resizeHandle']}
@@ -261,11 +269,17 @@ export default function DayView({
           <div className={styles['allDayEvents']} role="gridcell" aria-label="All-day events">
             {allDayEvs.map(ev => {
               const color = resolveColor(ev as NormalizedEvent, ctx?.['colorRules']);
-              const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
+              const allDayConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+              const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}${allDayConflicting ? ', conflicts with current draft' : ''}`;
               return (
                 <button key={ev.id} className={styles['allDayPill']} style={{ '--ev-color': color }}
                   aria-label={ariaLabel}
-                  onClick={() => onEventClick?.(ev)}><ApprovalDot event={ev} />{ev.title}</button>
+                  data-wc-conflicting={allDayConflicting ? 'true' : undefined}
+                  onClick={() => onEventClick?.(ev)}>
+                  <ApprovalDot event={ev} />
+                  <EventStatusBadge lifecycle={ev.lifecycle} variant="compact" />
+                  {ev.title}
+                </button>
               );
             })}
           </div>

@@ -10,6 +10,7 @@ import {
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import ApprovalDot from '../ui/ApprovalDot';
+import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './ScheduleView.module.css';
 
 const WEEKS = 6;
@@ -118,6 +119,7 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                           title={ev.title}
                         >
                           <ApprovalDot event={ev as any} />
+                          <EventStatusBadge lifecycle={(ev as { lifecycle?: unknown }).lifecycle as never} variant="compact" />
                           {ev.title}
                         </button>
                       );

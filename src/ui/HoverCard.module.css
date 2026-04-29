@@ -86,6 +86,12 @@
 .statusBadge[data-status="tentative"] { background: #fef3c7; color: #92400e; }
 .statusBadge[data-status="cancelled"] { background: #fee2e2; color: #991b1b; }
 
+.lifecycleRow {
+  display: flex;
+  align-items: center;
+  margin: 6px 0 2px;
+}
+
 .field {
   display: flex;
   align-items: center;

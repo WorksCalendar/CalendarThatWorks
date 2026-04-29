@@ -20,9 +20,11 @@
  * `meta.status === 'maintenance'`. The table surfaces what's missing in
  * a final column so the dispatcher's next move is visible at a glance.
  */
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
-import { Wrench, Users, Plane, AlertTriangle, Clock, MapPin } from 'lucide-react';
+import { Wrench, Users, Plane, AlertTriangle, Clock, MapPin, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import EventStatusBadge from '../ui/EventStatusBadge';
+import { isLifecycleState, type EventLifecycleState } from '../types/events';
 import styles from './DispatchView.module.css';
 
 type LooseEvent = {
@@ -32,8 +34,21 @@ type LooseEvent = {
   resource?: string | number | null;
   category?: string;
   title?: string;
+  lifecycle?: EventLifecycleState | string | null;
   meta?: Record<string, unknown> | null | undefined;
 };
+
+/**
+ * Pull a lifecycle value off either the top-level field or `meta.lifecycle`,
+ * matching `normalizeEvent`'s opt-in fallback so dispatch surfaces the same
+ * state hosts see in the calendar even when their loose event payloads
+ * haven't been re-normalized.
+ */
+function readLifecycle(ev: LooseEvent): EventLifecycleState | null {
+  if (isLifecycleState(ev.lifecycle)) return ev.lifecycle;
+  const metaLifecycle = (ev.meta as { lifecycle?: unknown } | null | undefined)?.lifecycle;
+  return isLifecycleState(metaLifecycle) ? metaLifecycle : null;
+}
 
 type Employee = {
   id: string | number;
@@ -68,6 +83,33 @@ export type DispatchMissionCandidate = {
 };
 
 /**
+ * Structured per-requirement verdict (#424 wk4). Lets hosts surface
+ * exactly which role/pool a row is short of — instead of a free-text
+ * `missing` line — so the readiness UI can render "Needs paramedic"
+ * style labels and an inline breakdown panel. Optional: the existing
+ * `missing: string[]` channel still works for hosts that haven't
+ * adopted the structured shape yet.
+ */
+export type DispatchRequirementBreakdown = {
+  /** Stable key used for React lists; defaults to `role`/`pool` value. */
+  id?: string;
+  /** Discriminator — drives icon + label phrasing. */
+  kind: 'role' | 'pool' | 'conflict' | 'note';
+  /** Human-readable name for the requirement (e.g. "Paramedic"). */
+  label: string;
+  /** True when the requirement is satisfied. Drives icon + colour. */
+  satisfied: boolean;
+  /** Headcount target — surfaced as "(2/3)" suffix when both present. */
+  required?: number;
+  /** Headcount actually assigned. */
+  assigned?: number;
+  /** `'soft'` shortfalls render as warnings only; default `'hard'`. */
+  severity?: 'hard' | 'soft';
+  /** Optional sub-text shown in the breakdown panel only. */
+  detail?: string;
+};
+
+/**
  * Per-asset readiness for a specific mission. Hosts return whatever their
  * own validation primitives report (cert matches, aircraft capability
  * checks, hours remaining, etc.) translated into the same shape the
@@ -77,6 +119,8 @@ export type DispatchMissionReadiness = {
   crewReady: boolean;
   equipmentReady: boolean;
   missing: string[];
+  /** Structured per-requirement verdict (sprint #424 wk4). */
+  breakdown?: readonly DispatchRequirementBreakdown[];
 };
 
 export type DispatchViewProps = {
@@ -138,6 +182,13 @@ export type DispatchRow = {
   crewReady: boolean;
   equipmentReady: boolean;
   missing: string[];
+  /**
+   * Structured per-requirement breakdown surfaced in the row's
+   * disclosure panel and used to derive the "Needs X" headline label
+   * (sprint #424 wk4). Empty when the host hasn't supplied one or the
+   * row is fully ready.
+   */
+  breakdown: readonly DispatchRequirementBreakdown[];
 };
 
 // Internal alias kept short to avoid churn in the existing call sites.
@@ -200,6 +251,7 @@ export function computeDispatchRows(
       crewReady: false,
       equipmentReady: false,
       missing: [],
+      breakdown: [],
     });
   }
   return rows;
@@ -264,6 +316,65 @@ export function decorateDispatchRows(
     const equipmentReady = status !== 'maintenance';
 
     const missing: string[] = [];
+    const breakdown: DispatchRequirementBreakdown[] = [];
+
+    // Status row — always present; severity hard when busy/maintenance,
+    // satisfied when the asset is otherwise free at the chosen as-of.
+    breakdown.push({
+      id: 'status',
+      kind: 'note',
+      label:
+        status === 'maintenance' ? 'In maintenance'
+        : status === 'busy' ? `Busy with ${otherEvent?.title ?? otherEvent?.category ?? 'booking'}`
+        : 'Free at the selected time',
+      satisfied: status === 'available',
+      severity: status === 'available' ? 'soft' : 'hard',
+      ...(blockingEvent ? { detail: `Blocked by event: ${blockingEvent.title ?? blockingEvent.id ?? 'event'}` } : {}),
+    });
+
+    // Crew row — only meaningful when the asset has a base and isn't
+    // already in maintenance (maintenance rows show a `na` chip
+    // anyway). Skipping when status is maintenance keeps the panel
+    // honest: a wrenched aircraft isn't "missing crew", it's down.
+    if (status !== 'maintenance' && row.baseId) {
+      breakdown.push({
+        id: 'crew',
+        kind: 'role',
+        label: 'Crew at base',
+        satisfied: crewReady,
+        severity: crewReady ? 'soft' : 'hard',
+        detail: crewReady
+          ? `At least one employee at ${row.baseName} is free`
+          : `No employee at ${row.baseName} is free at the selected time`,
+      });
+    }
+
+    // Equipment row — flips to a structured note for maintenance
+    // assets so the disclosure explains the equipment gap before
+    // the host's per-mission breakdown layers on.
+    breakdown.push({
+      id: 'equipment',
+      kind: 'role',
+      label: 'Equipment',
+      satisfied: equipmentReady,
+      severity: equipmentReady ? 'soft' : 'hard',
+      detail: equipmentReady ? 'Asset is operational' : 'Asset is in maintenance',
+    });
+
+    // Base assignment — surface as its own row when missing so the
+    // dispatcher sees the structural fix needed (assign a base)
+    // separately from the per-as-of state.
+    if (!row.baseId) {
+      breakdown.push({
+        id: 'base',
+        kind: 'note',
+        label: `${row.baseName}`,
+        satisfied: false,
+        severity: 'hard',
+        detail: 'Assign this asset to a base in Settings → Assets.',
+      });
+    }
+
     if (status === 'maintenance') missing.push('In maintenance');
     if (status === 'busy') {
       const t = otherEvent?.title ?? otherEvent?.category ?? 'booking';
@@ -274,7 +385,7 @@ export function decorateDispatchRows(
     }
     if (!row.baseId) missing.push(`No ${row.baseName.toLowerCase()} assigned`);
 
-    return { ...row, status, blockingEvent, crewReady, equipmentReady, missing };
+    return { ...row, status, blockingEvent, crewReady, equipmentReady, missing, breakdown };
   });
 }
 
@@ -298,11 +409,17 @@ export function applyMissionOverride(
   return rows.map(row => {
     const verdict = evaluate(String(row.asset.id), missionId, asOf);
     const blockingNotes = row.status === 'available' ? [] : row.missing;
+    // Keep the structural rows from the base breakdown (status / base
+    // assignment) so a mission-eligible aircraft that's also currently
+    // in maintenance still surfaces both gaps. The host's mission
+    // breakdown layers on top — typically per-role/pool slot verdicts.
+    const baseStructural = row.breakdown.filter(b => b.id === 'status' || b.id === 'base');
     return {
       ...row,
       crewReady: verdict.crewReady,
       equipmentReady: verdict.equipmentReady,
       missing: [...blockingNotes, ...verdict.missing],
+      breakdown: [...baseStructural, ...(verdict.breakdown ?? [])],
     };
   });
 }
@@ -311,6 +428,48 @@ function formatDateTimeLocal(d: Date): string {
   // <input type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in local time.
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Compose the row's headline label from its breakdown — "Ready" when
+ * every hard requirement is satisfied; "Needs paramedic" / "Needs 2
+ * crew" when not. Falls back to the legacy `missing[0]` line when no
+ * breakdown is present so hosts that haven't adopted the structured
+ * channel still see a readable summary. (Sprint #424 wk4.)
+ */
+export function summarizeReadiness(row: DispatchRow): {
+  label: string;
+  ready: boolean;
+  reason?: string | undefined;
+} {
+  const hardShortfalls = row.breakdown.filter(b => !b.satisfied && (b.severity ?? 'hard') === 'hard');
+
+  if (hardShortfalls.length === 0) {
+    if (row.missing.length === 0) return { label: 'Ready', ready: true };
+    // No structured shortfall but a legacy missing line exists — surface
+    // it so legacy hosts still see "why" instead of a misleading "Ready".
+    return { label: `Needs ${row.missing[0]!.toLowerCase()}`, ready: false, reason: row.missing[0]! };
+  }
+
+  if (hardShortfalls.length === 1) {
+    const s = hardShortfalls[0]!;
+    if (s.kind === 'role' && typeof s.required === 'number' && typeof s.assigned === 'number') {
+      const short = s.required - s.assigned;
+      const noun = s.label.toLowerCase();
+      const phrase = short === 1 ? `Needs ${noun}` : `Needs ${short} more ${noun}`;
+      return { label: phrase, ready: false, reason: s.detail ?? s.label };
+    }
+    if (s.kind === 'pool' && typeof s.required === 'number' && typeof s.assigned === 'number') {
+      return { label: `Needs ${s.required - s.assigned} from ${s.label}`, ready: false, reason: s.detail ?? s.label };
+    }
+    return { label: `Needs ${s.label.toLowerCase()}`, ready: false, reason: s.detail ?? s.label };
+  }
+
+  return {
+    label: `Needs ${hardShortfalls.length} requirements`,
+    ready: false,
+    reason: hardShortfalls.map(s => s.label).join(', '),
+  };
 }
 
 export default function DispatchView({
@@ -330,6 +489,18 @@ export default function DispatchView({
   const labelPluralLower = `${labelLower}s`;
   const [asOf, setAsOf] = useState<Date>(() => initialAsOf ?? new Date());
   const [forMissionId, setForMissionId] = useState<string | null>(null);
+  // Per-row disclosure state for the requirement breakdown (#424 wk4).
+  // Multi-row open at once so a dispatcher can compare two assets'
+  // shortfalls side by side without losing the first one's context.
+  const [expandedRows, setExpandedRows] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleRowExpanded = (assetId: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(assetId)) next.delete(assetId);
+      else next.add(assetId);
+      return next;
+    });
+  };
 
   // Single setter so every user-driven asOf change bubbles up. Initial
   // mount uses `useState`'s lazy initializer above and intentionally
@@ -360,6 +531,21 @@ export default function DispatchView({
     }
     return { available, busy, maintenance };
   }, [rows]);
+
+  // Pipeline summary: tally where every loaded event sits in the lifecycle.
+  // Drives the "Pipeline" strip so dispatch sees how full upstream queues
+  // are, not just what is blocking right now.
+  const pipeline = useMemo(() => {
+    const counts: Record<EventLifecycleState, number> = {
+      draft: 0, pending: 0, approved: 0, scheduled: 0, completed: 0,
+    };
+    for (const ev of events) {
+      const lc = readLifecycle(ev);
+      if (lc) counts[lc] += 1;
+    }
+    const total = counts.draft + counts.pending + counts.approved + counts.scheduled + counts.completed;
+    return { counts, total };
+  }, [events]);
 
   const isNow = useMemo(() => Math.abs(Date.now() - asOf.getTime()) < 60_000, [asOf]);
 
@@ -431,6 +617,22 @@ export default function DispatchView({
         </div>
       </div>
 
+      {pipeline.total > 0 && (
+        <div
+          className={styles['pipelineStrip']}
+          role="group"
+          aria-label="Event lifecycle pipeline"
+        >
+          <span className={styles['pipelineLabel']}>Pipeline</span>
+          {(['draft', 'pending', 'approved', 'scheduled', 'completed'] as EventLifecycleState[]).map(state => (
+            <span key={state} className={styles['pipelineCell']}>
+              <EventStatusBadge lifecycle={state} />
+              <span className={styles['pipelineCount']}>{pipeline.counts[state]}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className={styles['scroll']}>
         {rows.length === 0 ? (
           <div className={styles['emptyState']}>
@@ -454,53 +656,122 @@ export default function DispatchView({
               {rows.map(row => {
                 const assetLabel = row.asset.label ?? row.asset.name ?? String(row.asset.id);
                 const sublabel = typeof row.asset.meta?.sublabel === 'string' ? row.asset.meta.sublabel : null;
+                const assetIdStr = String(row.asset.id);
+                const isExpanded = expandedRows.has(assetIdStr);
+                const summary = summarizeReadiness(row);
+                const hasBreakdown = row.breakdown.length > 0;
                 return (
-                  <tr key={String(row.asset.id)} data-status={row.status}>
-                    <td>{row.baseName}</td>
-                    <td>
-                      <div className={styles['assetCell']}>
-                        <span className={styles['assetName']}>{assetLabel}</span>
-                        {sublabel && <span className={styles['assetSub']}>{sublabel}</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={[styles['statusPill'], styles[`status_${row.status}`]].join(' ')}>
-                        <span className={styles['statusDot']} aria-hidden="true" />
-                        {row.status === 'available' ? 'Available'
-                          : row.status === 'busy' ? 'Busy'
-                          : 'Maintenance'}
-                      </span>
-                    </td>
-                    <td>
-                      <ReadinessChip ok={row.crewReady} okIcon={<Users size={12} aria-hidden="true" />} okLabel="Ready" naLabel="—" na={row.status === 'maintenance'} />
-                    </td>
-                    <td>
-                      <ReadinessChip ok={row.equipmentReady} okIcon={<Plane size={12} aria-hidden="true" />} okLabel="Ready" />
-                    </td>
-                    <td className={styles['missingCell']}>
-                      {row.missing.length === 0 ? (
-                        <span className={styles['missingNone']}>—</span>
-                      ) : (
-                        <ul className={styles['missingList']}>
-                          {row.missing.map((m, i) => (
-                            <li key={i}>
-                              {m.startsWith('In maintenance')
-                                ? <Wrench size={11} aria-hidden="true" />
-                                : <AlertTriangle size={11} aria-hidden="true" />}
-                              <span>{m}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td className={styles['actionCol']}>
-                      <ActionButton
-                        row={row}
-                        onView={onEventClick}
-                        missionLabel={activeMission?.label}
-                      />
-                    </td>
-                  </tr>
+                  <Fragment key={assetIdStr}>
+                    <tr data-status={row.status}>
+                      <td>{row.baseName}</td>
+                      <td>
+                        <div className={styles['assetCell']}>
+                          <span className={styles['assetName']}>{assetLabel}</span>
+                          {sublabel && <span className={styles['assetSub']}>{sublabel}</span>}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={[styles['statusPill'], styles[`status_${row.status}`]].join(' ')}>
+                          <span className={styles['statusDot']} aria-hidden="true" />
+                          {row.status === 'available' ? 'Available'
+                            : row.status === 'busy' ? 'Busy'
+                            : 'Maintenance'}
+                        </span>
+                      </td>
+                      <td>
+                        <ReadinessChip ok={row.crewReady} okIcon={<Users size={12} aria-hidden="true" />} okLabel="Ready" naLabel="—" na={row.status === 'maintenance'} />
+                      </td>
+                      <td>
+                        <ReadinessChip ok={row.equipmentReady} okIcon={<Plane size={12} aria-hidden="true" />} okLabel="Ready" />
+                      </td>
+                      <td className={styles['missingCell']}>
+                        <div className={styles['summaryRow']}>
+                          <span
+                            className={[
+                              styles['summaryLabel'],
+                              summary.ready ? styles['summaryReady'] : styles['summaryBlocked'],
+                            ].join(' ')}
+                            title={summary.reason}
+                          >
+                            {summary.ready
+                              ? <Check size={12} aria-hidden="true" />
+                              : <AlertTriangle size={12} aria-hidden="true" />}
+                            <span>{summary.label}</span>
+                          </span>
+                          {hasBreakdown && (
+                            <button
+                              type="button"
+                              className={styles['detailsToggle']}
+                              aria-expanded={isExpanded}
+                              aria-controls={`dispatch-details-${assetIdStr}`}
+                              onClick={() => toggleRowExpanded(assetIdStr)}
+                            >
+                              {isExpanded
+                                ? <ChevronDown size={11} aria-hidden="true" />
+                                : <ChevronRight size={11} aria-hidden="true" />}
+                              <span>{isExpanded ? 'Hide' : 'Why?'}</span>
+                            </button>
+                          )}
+                        </div>
+                        {row.blockingEvent && readLifecycle(row.blockingEvent) && (
+                          <div className={styles['blockingLifecycle']}>
+                            <EventStatusBadge lifecycle={readLifecycle(row.blockingEvent)} />
+                          </div>
+                        )}
+                      </td>
+                      <td className={styles['actionCol']}>
+                        <ActionButton
+                          row={row}
+                          onView={onEventClick}
+                          missionLabel={activeMission?.label}
+                        />
+                      </td>
+                    </tr>
+                    {isExpanded && hasBreakdown && (
+                      <tr
+                        className={styles['detailsRow']}
+                        id={`dispatch-details-${assetIdStr}`}
+                      >
+                        <td colSpan={7}>
+                          <ul className={styles['breakdownList']} aria-label="Readiness breakdown">
+                            {row.breakdown.map((b, i) => {
+                              const sev = b.severity ?? 'hard';
+                              const headcount = (typeof b.required === 'number' && typeof b.assigned === 'number')
+                                ? `${b.assigned}/${b.required}`
+                                : null;
+                              return (
+                                <li
+                                  key={b.id ?? `${b.kind}-${i}`}
+                                  className={[
+                                    styles['breakdownItem'],
+                                    b.satisfied ? styles['breakdownOk'] : styles['breakdownBad'],
+                                    !b.satisfied && sev === 'soft' && styles['breakdownSoft'],
+                                  ].filter(Boolean).join(' ')}
+                                  data-kind={b.kind}
+                                  data-severity={sev}
+                                >
+                                  <span className={styles['breakdownIcon']} aria-hidden="true">
+                                    {b.satisfied
+                                      ? <Check size={12} />
+                                      : <AlertTriangle size={12} />}
+                                  </span>
+                                  <span className={styles['breakdownLabel']}>
+                                    {b.label}
+                                    {headcount && (
+                                      <span className={styles['breakdownCount']}>{headcount}</span>
+                                    )}
+                                  </span>
+                                  {b.detail && (
+                                    <span className={styles['breakdownDetail']}>{b.detail}</span>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>

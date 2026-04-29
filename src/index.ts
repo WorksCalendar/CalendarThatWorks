@@ -5,8 +5,16 @@
 // ── Versioned public schema (engine types + serialization helpers) ───────────
 export * from './api/v1/index';
 
-export type { WorksCalendarEvent, NormalizedEvent, EventStatus, EventVisualPriority } from './types/events';
-export { isVisualPriority } from './types/events';
+export type {
+  WorksCalendarEvent,
+  NormalizedEvent,
+  EventStatus,
+  EventLifecycleState,
+  EventVisualPriority,
+} from './types/events';
+export { isVisualPriority, isLifecycleState, EVENT_LIFECYCLE_STATES } from './types/events';
+export { default as EventStatusBadge } from './ui/EventStatusBadge';
+export type { EventStatusBadgeProps } from './ui/EventStatusBadge';
 export type { BillableMeta, InvoiceLineItem, InvoiceStatus } from './types/billing';
 export type {
   AssetHealth,
@@ -219,6 +227,8 @@ export {
 } from './core/config/profilePresets';
 export type { ProfileId, ProfilePreset } from './core/config/profilePresets';
 export { getProfileSampleData, applyProfileSampleData } from './core/config/profilePresets';
+export { resolveLabels } from './core/config/resolveLabels';
+export type { ResolvedLabels } from './core/config/resolveLabels';
 export { default as ConfigWizard } from './ui/wizard/ConfigWizard';
 export type { ConfigWizardProps, ConfigWizardStepId } from './ui/wizard/ConfigWizard';
 // ── Requirements engine — runtime consumer for the templates (#386) ──────

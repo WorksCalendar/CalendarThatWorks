@@ -47,6 +47,7 @@ import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, 
 import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
+import { resolveLabels } from './core/config/resolveLabels';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import { AppShell }           from './ui/AppShell';
 import { AppHeader }          from './ui/AppHeader';
@@ -102,6 +103,7 @@ import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
 import DispatchView           from './views/DispatchView';
 import type { DispatchMissionCandidate, DispatchMissionReadiness } from './views/DispatchView';
+import RequestQueueView       from './views/RequestQueueView';
 import MapView                from './views/MapView';
 
 type DispatchEvaluator = (
@@ -368,6 +370,7 @@ const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false },
   { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?' },
+  { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests' },
   { id: 'map',      label: 'Map',      alwaysOn: false, hint: 'Geographic plot of events that carry coordinates (meta.coords)' },
 ];
 
@@ -1060,11 +1063,40 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [engine, engineVer, range],
   );
 
+  // Unwindowed event source for the Requests view (#424 wk3 — codex
+  // followup). The queue must surface every pending approval regardless
+  // of the calendar's currentDate, so we walk the engine's master
+  // records directly instead of `getOccurrencesInRange(range)`. Approval
+  // stage lives on the master record (one stage per series, not per
+  // occurrence), so master-level iteration is exactly the right grain
+  // here. Filter early to keep the array small even for hosts with
+  // thousands of historical events.
+  const approvalRequestEvents: LooseValue[] = useMemo(() => {
+    const out: LooseValue[] = [];
+    for (const ev of engine.state.events.values()) {
+      const stage = (ev.meta as { approvalStage?: { stage?: string } } | undefined)?.approvalStage?.stage;
+      if (typeof stage === 'string') out.push(toLegacyEvent(ev));
+    }
+    return out;
+  }, [engine, engineVer]); // eslint-disable-line react-hooks/exhaustive-deps -- engineVer cues the engine's mutation count
+
   // ── Base/Region view config ───────────────────────────────────────────────
   const configuredBases   = ownerCfg.config?.['team']?.bases ?? [];
   const configuredRegions = ownerCfg.config?.['team']?.regions ?? [];
-  const locationLabel     = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
-  const assetsLabel       = ownerCfg.config?.['team']?.assetsLabel   ?? 'Asset';
+  // Profile-aware labels (#424 wk5). Hosts can keep using the legacy
+  // `team.locationLabel` / `team.assetsLabel` overrides, but when neither
+  // exists we fall back to the profile preset's defaults via
+  // `resolveLabels` — so an air-medical config picks "Aircraft" / "Base"
+  // automatically without per-key wiring.
+  const profileLabels = useMemo(
+    () => resolveLabels({
+      profile: ownerCfg.config?.['profile'] as string | undefined,
+      labels:  ownerCfg.config?.['labels']  as Record<string, string> | undefined,
+    }),
+    [ownerCfg.config?.['profile'], ownerCfg.config?.['labels']],
+  );
+  const locationLabel     = ownerCfg.config?.['team']?.locationLabel ?? profileLabels.location;
+  const assetsLabel       = ownerCfg.config?.['team']?.assetsLabel   ?? profileLabels.resource;
 
   // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
   const VIEWS = useMemo(() => {
@@ -1211,6 +1243,29 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState<LooseValue | null>(null);
   const [formEvent,        setFormEvent]        = useState<LooseValue | null>(null);
+  // Conflict highlights (#424 week 2). Populated by EventForm's live
+  // conflict check via `onLiveConflictsChange`; passed through
+  // CalendarContext so each view can paint a red outline on the
+  // events the proposed draft overlaps. Empty set = no highlights.
+  const [conflictingEventIds, setConflictingEventIds] = useState<ReadonlySet<string>>(() => new Set());
+  // Stable callback so EventForm's `useEffect([onLiveConflictsChange])`
+  // doesn't refire every parent render (which would feed an infinite
+  // setState loop through the EVENT_FORM ⇄ WORKS_CALENDAR boundary).
+  // The functional setter also short-circuits identical id sets so the
+  // calendar stays still when only unrelated state changes.
+  const handleLiveConflicts = useCallback((ids: readonly string[] | null) => {
+    setConflictingEventIds(prev => {
+      if (!ids || ids.length === 0) {
+        return prev.size === 0 ? prev : new Set();
+      }
+      if (prev.size === ids.length) {
+        let same = true;
+        for (const id of ids) if (!prev.has(id)) { same = false; break; }
+        if (same) return prev;
+      }
+      return new Set(ids);
+    });
+  }, []);
   const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
   // Transient confirmation that the host's import landed; the dialog
@@ -2146,7 +2201,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
     permissions: perms,
     editMode,
-  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode]);
+    conflictingEventIds,
+  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode, conflictingEventIds]);
 
   // ── Toolbar date label ───────────────────────────────────────────────────
   function getDateLabel() {
@@ -2682,6 +2738,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onAsOfChange={cal.setCurrentDate}
                 />
               )}
+              {cal.view === 'requests' && (
+                <RequestQueueView
+                  // Approval queue must be window-independent — see
+                  // `approvalRequestEvents` above for why we use the
+                  // engine's master records instead of expandedEvents.
+                  events={approvalRequestEvents as never}
+                  approvalsConfig={ownerCfg.config?.['approvals'] as Record<string, unknown> | undefined}
+                  onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
+                  onEventClick={handleEventClick}
+                />
+              )}
               {cal.view === 'map' && (
                 <MapView
                   events={visibleEvents as any}
@@ -2758,11 +2825,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             categories={[...eventFormCats, ...eventOptions.categories]}
             onSave={handleEventSave}
             onDelete={(onEventDelete && perms.canDeleteEvent) ? handleEventDelete : null}
-            onClose={() => setFormEvent(null)}
+            onClose={() => { setFormEvent(null); handleLiveConflicts(null); }}
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
             maintenanceRules={maintenanceRules}
             onCheckConflicts={checkEventConflicts}
+            onLiveConflictsChange={handleLiveConflicts}
             approvalCategories={Array.isArray(assetRequestCategories) ? assetRequestCategories : []}
             pools={rawPools ?? []}
           />

@@ -1,0 +1,73 @@
+/* EventStatusBadge — semantic lifecycle pill (draft → completed).
+   Colours intentionally read off the base UI tokens so themes inherit them
+   automatically; per-state hue is layered via the `--badge-tint` channel. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--badge-fg, #fff);
+  background: var(--badge-bg, var(--wc-text-faint, #6b7280));
+  border: 1px solid var(--badge-border, transparent);
+  white-space: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+/* Compact variant: drops to a small bare dot for use inside tight cells. */
+.compact {
+  padding: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--badge-bg, var(--wc-text-faint, #6b7280));
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+}
+
+.compact .dot,
+.compact .label {
+  display: none;
+}
+
+.size_md {
+  font-size: 11px;
+  padding: 2px 9px;
+}
+
+/* ── Per-lifecycle palettes ─────────────────────────────────────────────── */
+.state_draft {
+  --badge-bg:     var(--wc-surface-alt, #e5e7eb);
+  --badge-fg:     var(--wc-text, #374151);
+  --badge-border: var(--wc-border, #d1d5db);
+}
+.state_pending {
+  --badge-bg: var(--wc-warning, #f59e0b);
+  --badge-fg: #1f2937;
+}
+.state_approved {
+  --badge-bg: var(--wc-info, #3b82f6);
+  --badge-fg: #fff;
+}
+.state_scheduled {
+  --badge-bg: var(--wc-success, #10b981);
+  --badge-fg: #fff;
+}
+.state_completed {
+  --badge-bg: var(--wc-text-faint, #6b7280);
+  --badge-fg: #fff;
+  opacity: 0.85;
+}

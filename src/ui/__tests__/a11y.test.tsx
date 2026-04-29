@@ -61,6 +61,7 @@ function makeEvent(id: string, overrides: A11yEventOverrides = {}): NormalizedEv
     color,
     resource,
     status,
+    lifecycle: null,
     meta,
     rrule,
     exdates,
