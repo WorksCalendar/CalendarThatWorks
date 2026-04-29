@@ -251,23 +251,253 @@ const UNIFIED_CATEGORIES_CONFIG = {
   defaultCategoryId: 'other',
 };
 
+/* ─── Cascade scope helpers ─────────────────────────────────────── */
+// Lookup maps so the cascade filter predicates can resolve an event's
+// region / base / role tier in O(1) — events store the assigned resource id
+// (employee or aircraft), not the rolled-up axes the cascade selects on.
+const ALL_EMPLOYEES = [...dispatchers, ...crew, ...medicalCrew, ...mechanics];
+const EMPLOYEE_BY_ID = new Map(ALL_EMPLOYEES.map(e => [e.id, e]));
+const AIRCRAFT_BY_ID = new Map(EMS_ASSETS.map(a => [a.id, a]));
+const BASE_REGION_BY_ID = new Map(bases.map(b => [b.id, b.regionId]));
+
+function resolveEventBase(ev) {
+  const emp = EMPLOYEE_BY_ID.get(ev.resource);
+  if (emp) return emp.basedAt;
+  const ac = AIRCRAFT_BY_ID.get(ev.resource);
+  if (ac) return ac.basedAt;
+  return ev.basedAt ?? null;
+}
+function resolveEventRegion(ev) {
+  const baseId = resolveEventBase(ev);
+  return baseId ? BASE_REGION_BY_ID.get(baseId) ?? null : null;
+}
+function resolveEventType(ev) {
+  if (AIRCRAFT_BY_ID.has(ev.resource)) return 'asset';
+  const emp = EMPLOYEE_BY_ID.get(ev.resource);
+  if (!emp) return null;
+  return emp.role === 'dispatcher' ? 'base' : 'crew';
+}
+function resolveEventSubType(ev) {
+  const emp = EMPLOYEE_BY_ID.get(ev.resource);
+  if (emp) {
+    switch (emp.role) {
+      case 'pilot':      return 'pilot';
+      case 'rn':
+      case 'rt':
+      case 'medic':      return 'medical';
+      case 'mechanic':   return 'maintenance';
+      case 'dispatcher': return 'dispatch';
+      default:           return null;
+    }
+  }
+  const ac = AIRCRAFT_BY_ID.get(ev.resource);
+  if (ac) return ac.type === 'helicopter' ? 'helicopter' : 'fixed-wing';
+  return null;
+}
+function resolveEventShiftPattern(ev) {
+  const emp = EMPLOYEE_BY_ID.get(ev.resource);
+  return emp ? emp.shiftType : null;
+}
+function resolveEventCertifications(ev) {
+  const emp = EMPLOYEE_BY_ID.get(ev.resource);
+  return emp ? emp.certifications : [];
+}
+
+// `multi-select` predicates accept either a Set (engine-side) or a string[]
+// (rare host-side path); collapse into a single membership check.
+function valueHas(value, key) {
+  if (key == null) return false;
+  return value instanceof Set ? value.has(key) : Array.isArray(value) && value.includes(key);
+}
+
 /* ─── Filter schema ─────────────────────────────────────────────── */
-// The Air EMS demo uses the predefined saved views (By Base / Dispatch /
-// Maintenance / Flight Crew / Requests / Mission Timeline) as the primary
-// organization model. The stock group builder's default options —
-// Category, Resource, Source — aren't meaningful pivots here: Category is
-// already the filter chip axis, Resource lists raw employee ids, and
-// Source is an adapter/plumbing concept the demo doesn't use. Keep them
-// available as *filters* (so AdvancedFilterBuilder still works) but hide
-// them from the grouping builder.
-const DEMO_FILTER_SCHEMA = buildDefaultFilterSchema({
-  employees: INITIAL_EMPLOYEES,
-  assets:    AIRCRAFT_RESOURCES,
-}).map(f => (
-  f.key === 'categories' || f.key === 'resources' || f.key === 'sources'
-    ? { ...f, groupable: false }
-    : f
-));
+// `buildDefaultFilterSchema` gives us categories / resources / sources /
+// dateRange / search. We add region / base / type / subType / shiftPattern /
+// certifications so the cascade UI's tier ids round-trip through the engine.
+// Category / Resource / Source aren't useful as *grouping* axes for this
+// dataset (the cascade owns scoping, the toolbar owns display mode), so we
+// flag them ungroupable.
+const CASCADE_FIELDS = [
+  {
+    key:       'region',
+    label:     'Region',
+    type:      'multi-select',
+    operators: ['in', 'not-in'],
+    groupable: false,
+    predicate: (item, value) => valueHas(value, resolveEventRegion(item)),
+    getOptions: () => regions.map(r => ({ value: r.id, label: r.name })),
+  },
+  {
+    key:       'base',
+    label:     'Base',
+    type:      'multi-select',
+    operators: ['in', 'not-in'],
+    groupable: false,
+    predicate: (item, value) => valueHas(value, resolveEventBase(item)),
+    getOptions: () => bases.map(b => ({ value: b.id, label: b.name })),
+  },
+  {
+    key:       'type',
+    label:     'Type',
+    type:      'multi-select',
+    operators: ['in', 'not-in'],
+    groupable: false,
+    predicate: (item, value) => valueHas(value, resolveEventType(item)),
+    getOptions: () => [
+      { value: 'crew',  label: 'Crew'  },
+      { value: 'base',  label: 'Base'  },
+      { value: 'asset', label: 'Asset' },
+    ],
+  },
+  {
+    key:       'subType',
+    label:     'Sub-type',
+    type:      'multi-select',
+    operators: ['in', 'not-in'],
+    groupable: false,
+    predicate: (item, value) => valueHas(value, resolveEventSubType(item)),
+    getOptions: () => [
+      { value: 'pilot',       label: 'Pilot'       },
+      { value: 'medical',     label: 'Medical'     },
+      { value: 'maintenance', label: 'Maintenance' },
+      { value: 'dispatch',    label: 'Dispatch'    },
+      { value: 'helicopter',  label: 'Helicopter'  },
+      { value: 'fixed-wing',  label: 'Fixed-wing'  },
+    ],
+  },
+  {
+    key:       'shiftPattern',
+    label:     'Shift pattern',
+    type:      'multi-select',
+    operators: ['in', 'not-in'],
+    groupable: false,
+    predicate: (item, value) => valueHas(value, resolveEventShiftPattern(item)),
+    getOptions: () => [
+      { value: 'day',     label: 'Day'     },
+      { value: 'night',   label: 'Night'   },
+      { value: 'on-call', label: 'On call' },
+    ],
+  },
+  {
+    key:       'certifications',
+    label:     'Certifications',
+    type:      'multi-select',
+    operators: ['in', 'not-in'],
+    groupable: false,
+    predicate: (item, value) => {
+      const certs = resolveEventCertifications(item);
+      if (!certs || certs.length === 0) return false;
+      if (value instanceof Set) return certs.some(c => value.has(c));
+      return Array.isArray(value) && certs.some(c => value.includes(c));
+    },
+    getOptions: () => {
+      const seen = new Set();
+      ALL_EMPLOYEES.forEach(e => e.certifications.forEach(c => seen.add(c)));
+      return [...seen].sort().map(c => ({ value: c, label: c }));
+    },
+  },
+];
+
+const DEMO_FILTER_SCHEMA = [
+  ...buildDefaultFilterSchema({
+    employees: INITIAL_EMPLOYEES,
+    assets:    AIRCRAFT_RESOURCES,
+  }).map(f => (
+    f.key === 'categories' || f.key === 'resources' || f.key === 'sources'
+      ? { ...f, groupable: false }
+      : f
+  )),
+  ...CASCADE_FIELDS,
+];
+
+/* ─── Cascade config ────────────────────────────────────────────── */
+// Tier ids match the filter-schema field keys above so the cascade UI's
+// selections round-trip through the engine without translation.
+const SUBTYPE_BY_TYPE = {
+  crew:  ['pilot', 'medical', 'maintenance'],
+  base:  ['dispatch'],
+  asset: ['helicopter', 'fixed-wing'],
+};
+
+const SUBTYPE_LABELS = {
+  pilot:       'Pilot',
+  medical:     'Medical',
+  maintenance: 'Maintenance',
+  dispatch:    'Dispatch',
+  helicopter:  'Helicopter',
+  'fixed-wing':'Fixed-wing',
+};
+
+const DEMO_CASCADE_CONFIG = {
+  tiers: [
+    {
+      id:          'region',
+      label:       'Region',
+      filterField: 'region',
+      hint:        'multi-select',
+      getOptions: () => regions.map(r => ({ value: r.id, label: r.name })),
+    },
+    {
+      id:          'base',
+      label:       'Base',
+      filterField: 'base',
+      hint:        'pruned by Region',
+      getOptions: (sel) => {
+        const regionFilter = sel.region ?? [];
+        return bases
+          .filter(b => regionFilter.length === 0 || regionFilter.includes(b.regionId))
+          .map(b => ({ value: b.id, label: b.name }));
+      },
+    },
+    {
+      id:          'type',
+      label:       'Type',
+      filterField: 'type',
+      getOptions: () => [
+        { value: 'crew',  label: 'Crew'  },
+        { value: 'base',  label: 'Base'  },
+        { value: 'asset', label: 'Asset' },
+      ],
+    },
+    {
+      id:          'subType',
+      label:       'Sub-type',
+      filterField: 'subType',
+      hint:        'pruned by Type',
+      getOptions: (sel) => {
+        const typeFilter = sel.type ?? [];
+        const allowed = typeFilter.length === 0
+          ? Object.values(SUBTYPE_BY_TYPE).flat()
+          : typeFilter.flatMap(t => SUBTYPE_BY_TYPE[t] ?? []);
+        return allowed.map(v => ({ value: v, label: SUBTYPE_LABELS[v] ?? v }));
+      },
+    },
+  ],
+  moreOptions: [
+    {
+      id:          'shiftPattern',
+      label:       'Shift pattern',
+      filterField: 'shiftPattern',
+      getOptions: () => [
+        { value: 'day',     label: 'Day'     },
+        { value: 'night',   label: 'Night'   },
+        { value: 'on-call', label: 'On call' },
+      ],
+    },
+    {
+      id:          'certifications',
+      label:       'Certifications',
+      filterField: 'certifications',
+      hint:        'matches if any selected cert is held',
+      getOptions: () => {
+        const seen = new Set();
+        ALL_EMPLOYEES.forEach(e => e.certifications.forEach(c => seen.add(c)));
+        return [...seen].sort().map(c => ({ value: c, label: c }));
+      },
+    },
+  ],
+  moreOptionsLabel: 'More options',
+};
 
 /* ─── Approval state machine (demo) ─────────────────────────────── */
 function nextStageFor(currentStage, actionId) {
@@ -536,6 +766,7 @@ function App() {
       categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
       locationProvider={assetLocationProvider}
       filterSchema={DEMO_FILTER_SCHEMA}
+      cascadeConfig={DEMO_CASCADE_CONFIG}
       dispatchMissions={dispatchMissions}
       dispatchEvaluator={dispatchEvaluator}
     />
