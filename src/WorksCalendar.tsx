@@ -869,7 +869,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const keys: string[] = [];
     const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
       for (const t of tiers) {
-        const k = (t as { filterField?: string }).filterField;
+        const k = t.filterField;
         if (typeof k === 'string' && k.length > 0) keys.push(k);
       }
     };
@@ -883,7 +883,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (!cascadeConfig) return map;
     const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
       for (const t of tiers) {
-        const k = (t as { filterField?: string }).filterField;
+        const k = t.filterField;
         if (typeof k === 'string' && k.length > 0) map.set(k, t.id);
       }
     };
@@ -902,7 +902,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       const patch: Record<string, unknown> = {};
       const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
         for (const t of tiers) {
-          const k = (t as { filterField?: string }).filterField;
+          const k = t.filterField;
           if (typeof k !== 'string' || k.length === 0) continue;
           const sel = next[t.id];
           if (sel && sel.length > 0) {
@@ -931,8 +931,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       const tierId = cascadeTierByFieldKey.get(fieldKey);
       if (!tierId) continue;
       const value = (cal.filters as Record<string, unknown>)[fieldKey];
-      if (value instanceof Set && value.size > 0) {
-        next[tierId] = Array.from(value).filter((v): v is string => typeof v === 'string');
+      // Accept both Set<string> (live form) and string[] (serialized/programmatic
+      // form) so the cascade UI reflects scope no matter how filters were applied.
+      let values: readonly string[] | null = null;
+      if (value instanceof Set) {
+        if (value.size > 0) {
+          values = Array.from(value).filter((v): v is string => typeof v === 'string');
+        }
+      } else if (Array.isArray(value)) {
+        if (value.length > 0) {
+          values = value.filter((v): v is string => typeof v === 'string');
+        }
+      }
+      if (values && values.length > 0) {
+        next[tierId] = values;
       }
     }
     setCascadeSelections(prev => {

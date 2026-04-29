@@ -42,6 +42,13 @@ export interface CascadeTier {
    */
   readonly getOptions: (selections: CascadeSelections) => readonly CascadeOption[];
   /**
+   * Optional filter key in `cal.filters` that this tier mirrors into. The
+   * host (e.g. WorksCalendar) reads this to round-trip selections through
+   * the existing filter pipeline. Tiers without a `filterField` are still
+   * tracked in the cascade selections but are not pushed into filters.
+   */
+  readonly filterField?: string;
+  /**
    * If set, the tier label gets a small meta string under it (e.g.
    * "select one or more").
    */
