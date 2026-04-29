@@ -12,8 +12,15 @@ function useIsMobile(): boolean {
     const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     setIsMobile(mq.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    // Safari < 14 / older iOS WebViews only expose addListener/removeListener
+    // on MediaQueryList; calling addEventListener throws there. Feature-detect
+    // and fall back so the demo still mounts on legacy clients.
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+    mq.addListener(handler);
+    return () => mq.removeListener(handler);
   }, []);
   return isMobile;
 }
