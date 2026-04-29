@@ -1063,6 +1063,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [engine, engineVer, range],
   );
 
+  // Unwindowed event source for the Requests view (#424 wk3 — codex
+  // followup). The queue must surface every pending approval regardless
+  // of the calendar's currentDate, so we walk the engine's master
+  // records directly instead of `getOccurrencesInRange(range)`. Approval
+  // stage lives on the master record (one stage per series, not per
+  // occurrence), so master-level iteration is exactly the right grain
+  // here. Filter early to keep the array small even for hosts with
+  // thousands of historical events.
+  const approvalRequestEvents: LooseValue[] = useMemo(() => {
+    const out: LooseValue[] = [];
+    for (const ev of engine.state.events.values()) {
+      const stage = (ev.meta as { approvalStage?: { stage?: string } } | undefined)?.approvalStage?.stage;
+      if (typeof stage === 'string') out.push(toLegacyEvent(ev));
+    }
+    return out;
+  }, [engine, engineVer]); // eslint-disable-line react-hooks/exhaustive-deps -- engineVer cues the engine's mutation count
+
   // ── Base/Region view config ───────────────────────────────────────────────
   const configuredBases   = ownerCfg.config?.['team']?.bases ?? [];
   const configuredRegions = ownerCfg.config?.['team']?.regions ?? [];
@@ -2723,7 +2740,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               )}
               {cal.view === 'requests' && (
                 <RequestQueueView
-                  events={expandedEvents as never}
+                  // Approval queue must be window-independent — see
+                  // `approvalRequestEvents` above for why we use the
+                  // engine's master records instead of expandedEvents.
+                  events={approvalRequestEvents as never}
                   approvalsConfig={ownerCfg.config?.['approvals'] as Record<string, unknown> | undefined}
                   onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
                   onEventClick={handleEventClick}
