@@ -1,19 +1,53 @@
 # WorksCalendar
 
-WorksCalendar is an embeddable React calendar focused on **real scheduling workflows** (team coverage, PTO handling, saved filtered views) instead of a single static calendar screen.
+**Embeddable scheduling engine for teams, assets, and operations.** Drop it into a React app and get a working calendar, dispatch board, request queue, and approval pipeline — all driven by one config object.
 
 **Website:** [workscalendar.com](https://workscalendar.com) · **Repository:** [github.com/workscalendar/calendarthatworks](https://github.com/workscalendar/calendarthatworks)
 
-## Highlights
+WorksCalendar provides the building blocks for advanced scheduling. Applications are expected to configure and extend these systems to fit their workflow.
+
+## Core features (fully working)
 
 - Multiple calendar modes: month, week, day, agenda, schedule, timeline
-- Schema-driven filtering and saved views
-- Team scheduling workflow (PTO/unavailable → uncovered shift → coverage)
-- External intake form component (`CalendarExternalForm`)
-- Themeable UI with optional packaged themes
+- Event lifecycle states (draft → pending → approved → scheduled → completed) surfaced everywhere
+- Conflict engine with hard-block / soft-warning modes, live inline feedback in the editor, and conflict highlights on the calendar
+- Request queue with approve / deny / finalize / revoke actions wired to a tamper-evident audit chain
+- Dispatch readiness board with per-row "Why?" breakdown — driver / pilot / pool shortfalls explained in plain English
+- Schema-driven filtering, saved views, themeable UI with packaged themes
 - Data adapter pattern for backend-agnostic integrations
-- Declarative approval workflows with a sandboxed expression language — multi-tier approvals, SLA timers + escalation, parallel branches with quorum joins (`requireAll` / `requireAny` / `requireN`), and pluggable notification channels (Slack, email, webhook, or your own adapter)
 - **Written in strict TypeScript**; ships with generated `.d.ts` so consumer types stay in lockstep with the implementation
+
+## Extensible systems (configurable)
+
+- Approval workflow DSL — multi-tier approvals, SLA timers + escalation, parallel branches with quorum joins (`requireAll` / `requireAny` / `requireN`), and pluggable notification channels (Slack, email, webhook, or your own adapter)
+- Resource pools with a query DSL (capability + distance filters), pool resolution strategies, and per-pool readiness evaluation
+- Requirement templates — declare per-event-type role / pool needs and let `evaluateRequirements` gate the booking
+- Custom resource types, roles, labels, and capability schemas
+
+## Profiles
+
+WorksCalendar ships starter profiles so the same engine fits multiple industries via configuration:
+
+| Profile             | Resource label | Event label | Default roles                                                |
+| ------------------- | -------------- | ----------- | ------------------------------------------------------------ |
+| `air_medical`       | Aircraft       | Mission     | Pilot in Command, Flight Paramedic, Flight Nurse, Dispatcher |
+| `aviation`          | Aircraft       | Flight      | Pilot in Command, Second in Command, Dispatcher              |
+| `trucking`          | Truck          | Load        | Driver, Dispatcher                                           |
+| `equipment_rental`  | Equipment      | Rental      | Yard Attendant, Delivery Driver, Dispatcher                  |
+| `scheduling`        | Room           | Booking     | Organizer, Attendee                                          |
+| `custom`            | Resource       | Event       | (none)                                                       |
+
+Apply a profile via the setup wizard's "What are you scheduling?" step or programmatically:
+
+```ts
+import { applyProfilePreset } from 'works-calendar';
+
+const config = applyProfilePreset('air_medical');
+// config.labels.resource === 'Aircraft'
+// config.roles → [pilot-in-command, flight-paramedic, flight-nurse, …]
+```
+
+Switching profiles changes terminology and defaults without changing logic — the conflict engine, requirement evaluator, and approval reducer all read off the same config.
 
 ## New here? Start with the [Setup guide](./docs/Setup.md)
 

@@ -125,6 +125,17 @@
   color: var(--wc-text-muted, #6b7280);
 }
 
+/* Profile-step headline (#424 wk6) — frames the wizard's first
+   question so the user sees "what are you scheduling?" before the
+   preset grid, instead of jumping straight into a list of cards. */
+.stepHeadline {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--wc-text, #111827);
+  letter-spacing: -0.01em;
+}
+
 .empty {
   margin: 0;
   font-size: 13px;
