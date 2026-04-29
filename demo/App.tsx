@@ -207,17 +207,39 @@ function categoryColor(cat) {
 
 const APPROVAL_CATS = new Set(['maintenance', 'aircraft-request', 'asset-request']);
 
-const INITIAL_EVENTS = allEvents.map(e => ({
-  id: e.id, title: e.title, start: e.start, end: e.end,
-  category: e.category,
-  resource: e.assignedTo ?? null,
-  color: categoryColor(e.category),
-  visualPriority: e.visualPriority,
-  ...(e.category === 'on-call' || e.category === 'pto' ? { allDay: true } : {}),
-  ...(APPROVAL_CATS.has(e.category) ? {
-    meta: { approvalStage: { stage: e.visualPriority === 'high' ? 'requested' : 'approved', updatedAt: e.start } },
-  } : {}),
-}));
+// Categories that represent "schedule grain" content — shifts, PTO, on-call.
+// The library's viewScope filters these out of Month/Week/Day/Agenda when an
+// event sets `meta.kind` to a recognized schedule kind, so the high-level
+// views aren't drowned in shift slivers (Schedule and Base tabs cover that
+// detail). Map the demo's category-level naming onto the library's kinds.
+const SHIFT_CATS = new Set([
+  'dispatch-shift', 'pilot-shift', 'medical-shift', 'mechanic-shift',
+]);
+function scheduleKindFor(category) {
+  if (SHIFT_CATS.has(category)) return 'shift';
+  if (category === 'on-call')    return 'on-call';
+  if (category === 'pto')        return 'shift'; // pto already filters by category, but kind makes it explicit
+  return null;
+}
+
+const INITIAL_EVENTS = allEvents.map(e => {
+  const kind = scheduleKindFor(e.category);
+  const approvalMeta = APPROVAL_CATS.has(e.category)
+    ? { approvalStage: { stage: e.visualPriority === 'high' ? 'requested' : 'approved', updatedAt: e.start } }
+    : null;
+  const meta = (kind || approvalMeta)
+    ? { ...(kind ? { kind } : {}), ...(approvalMeta ?? {}) }
+    : null;
+  return {
+    id: e.id, title: e.title, start: e.start, end: e.end,
+    category: e.category,
+    resource: e.assignedTo ?? null,
+    color: categoryColor(e.category),
+    visualPriority: e.visualPriority,
+    ...(e.category === 'on-call' || e.category === 'pto' ? { allDay: true } : {}),
+    ...(meta ? { meta } : {}),
+  };
+});
 
 /* ─── Resource pools (#212) ─────────────────────────────────────── */
 // Group aircraft by region so bookings can target a pool instead of a tail
