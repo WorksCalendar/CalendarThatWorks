@@ -212,13 +212,17 @@ const APPROVAL_CATS = new Set(['maintenance', 'aircraft-request', 'asset-request
 // event sets `meta.kind` to a recognized schedule kind, so the high-level
 // views aren't drowned in shift slivers (Schedule and Base tabs cover that
 // detail). Map the demo's category-level naming onto the library's kinds.
+//
+// PTO is intentionally NOT tagged with a kind — `SCHEDULE_WORKFLOW_CATEGORIES`
+// already filters it by category, and tagging it `kind: 'shift'` would make
+// `isShiftOrOnCallEvent` (Crew-on-shift panel, Timeline shift-status) treat
+// people on leave as actively working.
 const SHIFT_CATS = new Set([
   'dispatch-shift', 'pilot-shift', 'medical-shift', 'mechanic-shift',
 ]);
 function scheduleKindFor(category) {
   if (SHIFT_CATS.has(category)) return 'shift';
   if (category === 'on-call')    return 'on-call';
-  if (category === 'pto')        return 'shift'; // pto already filters by category, but kind makes it explicit
   return null;
 }
 
