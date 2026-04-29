@@ -26,6 +26,11 @@ import MissionHoverCard, { allRequirementsMet } from './MissionHoverCard';
 import missionStyles from './MissionHoverCard.module.css';
 import { makeDispatchEvaluator } from './dispatchEvaluator';
 import Landing from './Landing';
+import {
+  DEFAULT_PROFILE_ID,
+  findProfile,
+  APPROVAL_ACTION_CAP,
+} from './profiles';
 
 /* ─── Demo identity ─────────────────────────────────────────────── */
 // Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
@@ -591,6 +596,8 @@ function App() {
     aircraft: null, // starts unassigned so the pulsing badge is visible on load
   });
   const [missionOpen,       setMissionOpen]       = useState(false);
+  const [activeProfileId,   setActiveProfileId]   = useState(DEFAULT_PROFILE_ID);
+  const activeProfile = useMemo(() => findProfile(activeProfileId), [activeProfileId]);
   const [pools, setPools] = useState(() => {
     const persisted = loadPools(DEMO_CALENDAR_ID);
     return persisted.length > 0 ? persisted : DEMO_POOLS_DEFAULT;
@@ -706,14 +713,24 @@ function App() {
   }, []);
 
   const handleApprovalAction = useCallback((event, actionId, payload) => {
+    // Profile-driven gating: each role has a capability matrix in
+    // demo/profiles.ts. A dispatcher can request but not approve; an
+    // ops manager can finalize and revoke; etc. Block actions the
+    // active role can't perform — that's how the profile switcher
+    // demos the approval hierarchy.
+    const capKey = APPROVAL_ACTION_CAP[actionId];
+    if (capKey && !activeProfile.approval[capKey]) {
+      log(`Blocked: ${activeProfile.role} cannot ${actionId} this request`);
+      return;
+    }
     const nextStage = nextStageFor(event?.meta?.approvalStage?.stage ?? 'requested', actionId);
     if (!nextStage) {
       log(`Approval: ${actionId} not allowed from ${event?.meta?.approvalStage?.stage ?? 'requested'}`);
       return;
     }
     setEvents(prev => prev.map(e => e.id === event.id ? applyApprovalTransition(e, actionId, payload) : e));
-    log(`Approval: ${event.title} → ${nextStage}`);
-  }, []);
+    log(`Approval: ${event.title} → ${nextStage} (as ${activeProfile.role})`);
+  }, [activeProfile]);
 
   const handleEventClick = useCallback((ev) => {
     log(`Clicked: ${ev.title}`);
@@ -767,6 +784,7 @@ function App() {
       locationProvider={assetLocationProvider}
       filterSchema={DEMO_FILTER_SCHEMA}
       cascadeConfig={DEMO_CASCADE_CONFIG}
+      role={activeProfile.permissionRole}
       dispatchMissions={dispatchMissions}
       dispatchEvaluator={dispatchEvaluator}
     />
@@ -777,7 +795,12 @@ function App() {
       {EMBED_MODE ? (
         <div style={{ height: '100vh', width: '100vw' }}>{calendar}</div>
       ) : (
-        <Landing>{calendar}</Landing>
+        <Landing
+          activeProfile={activeProfile}
+          onProfileChange={setActiveProfileId}
+        >
+          {calendar}
+        </Landing>
       )}
 
       {missionOpen && (
