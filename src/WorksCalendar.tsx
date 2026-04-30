@@ -568,7 +568,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     blockedWindows,
 
     // ── Appearance ──
-    theme       = 'light',
+    // No default here: a hard-coded fallback ('light') would always be
+    // truthy and short-circuit the rawTheme `||` chain, hiding the
+    // owner-config-driven theme even when the host doesn't pass a prop.
+    // The actual default is applied in the rawTheme expression below.
+    theme,
     colorRules,
     businessHours,
 
