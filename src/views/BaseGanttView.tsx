@@ -9,7 +9,7 @@
  * Timeline spans 14 days starting from `currentDate` by default, with a
  * toolbar toggle to expand to 90 days when the owner needs the longer view.
  * Events are lane-packed per row using the same first-fit algorithm as
- * TimelineView / AssetsView so overlapping items stack cleanly.
+ * ScheduleView / AssetsView so overlapping items stack cleanly.
  *
  * The left ("name") column is sticky so owners can scroll the timeline
  * horizontally without losing row identity. Accountable managers appear

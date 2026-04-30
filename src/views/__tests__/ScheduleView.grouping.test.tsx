@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
-import TimelineView from '../TimelineView';
+import ScheduleView from '../ScheduleView';
 import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1); // April 2026
@@ -15,7 +15,7 @@ const employees = [
 function renderTimeline(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
-      <TimelineView
+      <ScheduleView
         currentDate={currentDate}
         events={[]}
         employees={employees}
@@ -26,7 +26,7 @@ function renderTimeline(props: Record<string, unknown> = {}) {
   );
 }
 
-describe('TimelineView grouping', () => {
+describe('ScheduleView grouping', () => {
   it('renders group headers with expand/collapse buttons when groupBy is set', () => {
     renderTimeline({ groupBy: 'role' });
     expect(
@@ -80,7 +80,7 @@ describe('TimelineView grouping', () => {
     ];
     render(
       <CalendarContext.Provider value={null}>
-        <TimelineView
+        <ScheduleView
           currentDate={currentDate}
           events={[]}
           employees={multiEmployees}
@@ -105,7 +105,7 @@ describe('TimelineView grouping', () => {
     ];
     render(
       <CalendarContext.Provider value={null}>
-        <TimelineView
+        <ScheduleView
           currentDate={currentDate}
           events={[]}
           employees={multiEmployees}
@@ -148,7 +148,7 @@ describe('TimelineView grouping', () => {
       const onEventGroupChange = vi.fn();
       render(
         <CalendarContext.Provider value={null}>
-          <TimelineView
+          <ScheduleView
             currentDate={currentDate}
             events={evts}
             employees={employees}
@@ -179,7 +179,7 @@ describe('TimelineView grouping', () => {
       const onEventGroupChange = vi.fn();
       render(
         <CalendarContext.Provider value={null}>
-          <TimelineView
+          <ScheduleView
             currentDate={currentDate}
             events={evts}
             employees={employees}
@@ -200,7 +200,7 @@ describe('TimelineView grouping', () => {
     it('events are not draggable when onEventGroupChange is absent', () => {
       render(
         <CalendarContext.Provider value={null}>
-          <TimelineView
+          <ScheduleView
             currentDate={currentDate}
             events={evts}
             employees={employees}

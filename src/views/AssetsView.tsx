@@ -1,13 +1,13 @@
 /**
  * AssetsView.jsx — Horizontal resource (asset) timeline / Gantt view.
  *
- * Phase 1 Sprint 2 skeleton. Cloned from TimelineView but stripped of
+ * Phase 1 Sprint 2 skeleton. Cloned from ScheduleView but stripped of
  * employee-specific shift coverage / on-call / action-card machinery.
  *
  * Key responsibilities:
  *   - Rows derived from event.resource (one row per distinct asset).
  *   - Horizontal pill bars sized by duration and laid out with
- *     first-fit lane packing (shared algorithm with TimelineView).
+ *     first-fit lane packing (shared algorithm with ScheduleView).
  *   - Assets timeline always renders in day-scale gantt mode.
  *   - Sticky left asset column: registration + sublabel + banner slot.
  *     Location banner is a placeholder in Sprint 2; Sprint 3 wires the

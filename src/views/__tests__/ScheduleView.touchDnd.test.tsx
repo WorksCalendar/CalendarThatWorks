@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import React from 'react';
-import TimelineView from '../TimelineView';
+import ScheduleView from '../ScheduleView';
 import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1);
@@ -21,7 +21,7 @@ const evts = [
 function renderTimeline(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
-      <TimelineView
+      <ScheduleView
         currentDate={currentDate}
         events={evts}
         employees={employees}
@@ -43,7 +43,7 @@ function fireTouch(type: string, el: EventTarget, touches: Array<{ x: number; y:
   el.dispatchEvent(evt);
 }
 
-describe('TimelineView touch DnD', () => {
+describe('ScheduleView touch DnD', () => {
   let origElementFromPoint: typeof document.elementFromPoint;
   let pointTarget: Element | null = null;
 

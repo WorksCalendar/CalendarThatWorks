@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 /**
- * TimelineView — base-filter recovery (issue #192).
+ * ScheduleView — base-filter recovery (issue #192).
  *
  * Verifies that when a location filter yields zero rows, the filter bar
  * remains mounted and the user can clear the filter to recover from the
@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import TimelineView from '../TimelineView';
+import ScheduleView from '../ScheduleView';
 import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1); // April 2026
@@ -28,7 +28,7 @@ const bases = [
 function renderTimeline(props: any = {}) {
   return render(
     <CalendarContext.Provider value={null as any}>
-      <TimelineView
+      <ScheduleView
         currentDate={currentDate}
         events={[]}
         employees={employees}
@@ -40,7 +40,7 @@ function renderTimeline(props: any = {}) {
   );
 }
 
-describe('TimelineView — base filter recovery (#192)', () => {
+describe('ScheduleView — base filter recovery (#192)', () => {
   it('keeps the filter toolbar mounted when a filter yields zero rows', () => {
     renderTimeline();
 
@@ -93,7 +93,7 @@ describe('TimelineView — base filter recovery (#192)', () => {
 
   it('still renders the plain empty state when there is no data at all', () => {
     renderTimeline({ employees: [], bases: [] });
-    // With no employees, TimelineView falls back to the resource-derived
+    // With no employees, ScheduleView falls back to the resource-derived
     // empty message; either variant is an acceptable terminal empty state.
     expect(screen.getByText(/No (employees|events) to display/i)).toBeInTheDocument();
   });

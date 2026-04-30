@@ -98,7 +98,7 @@ import MonthView              from './views/MonthView';
 import WeekView               from './views/WeekView';
 import DayView                from './views/DayView';
 import AgendaView             from './views/AgendaView';
-import TimelineView           from './views/TimelineView';
+import ScheduleView           from './views/ScheduleView';
 import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
 import DispatchView           from './views/DispatchView';
@@ -2858,7 +2858,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
               {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} onEventGroupChange={handleEventGroupChange} groupBy={activeGroupBy} sort={activeSort} showAllGroups={activeShowAllGroups} employees={configuredEmployees} />}
               {cal.view === 'schedule' && (
-                <TimelineView
+                <ScheduleView
                   currentDate={cal.currentDate}
                   events={visibleEvents}
                   onEventClick={handleEventClick}

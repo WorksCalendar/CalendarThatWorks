@@ -7,7 +7,7 @@
  *   • MonthView: ARIA grid structure, roving tabIndex, keyboard nav, Enter → onDateSelect
  *   • WeekView slot cells: role="gridcell", tabIndex, aria-label
  *   • DayView slot cells: role="gridcell", tabIndex, aria-label
- *   • TimelineView: role="grid", role="rowheader", aria-label on event bars
+ *   • ScheduleView: role="grid", role="rowheader", aria-label on event bars
  */
 
 // @vitest-environment happy-dom
@@ -21,14 +21,14 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import MonthView from '../../views/MonthView';
 import WeekView from '../../views/WeekView';
 import DayView from '../../views/DayView';
-import TimelineView from '../../views/TimelineView';
+import ScheduleView from '../../views/ScheduleView';
 import { CalendarContext } from '../../core/CalendarContext';
 import type { NormalizedEvent } from '../../types/events';
 
 type MonthViewTestProps = Partial<React.ComponentProps<typeof MonthView>>;
 type WeekViewTestProps = Partial<React.ComponentProps<typeof WeekView>>;
 type DayViewTestProps = Partial<React.ComponentProps<typeof DayView>>;
-type TimelineViewTestProps = Partial<React.ComponentProps<typeof TimelineView>>;
+type ScheduleViewTestProps = Partial<React.ComponentProps<typeof ScheduleView>>;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -640,9 +640,9 @@ describe('DayView ARIA semantics', () => {
   });
 });
 
-// ─── TimelineView a11y ────────────────────────────────────────────────────────
+// ─── ScheduleView a11y ────────────────────────────────────────────────────────
 
-describe('TimelineView ARIA semantics', () => {
+describe('ScheduleView ARIA semantics', () => {
   const currentDate = d(2026, 4, 1);
 
   const employees = [
@@ -650,10 +650,10 @@ describe('TimelineView ARIA semantics', () => {
     { id: 'bob', name: 'Bob Jones', role: 'Designer' },
   ];
 
-  function renderTimeline(props: TimelineViewTestProps = {}) {
+  function renderTimeline(props: ScheduleViewTestProps = {}) {
     return render(
       <CalCtxWrap>
-        <TimelineView
+        <ScheduleView
           currentDate={currentDate}
           events={props.events ?? []}
           employees={employees}
@@ -726,7 +726,7 @@ describe('TimelineView ARIA semantics', () => {
     const renderEvent = () => <span>Custom</span>;
     render(
       <CalendarContext.Provider value={{ renderEvent }}>
-        <TimelineView
+        <ScheduleView
           currentDate={currentDate}
           events={[ev]}
           employees={employees}

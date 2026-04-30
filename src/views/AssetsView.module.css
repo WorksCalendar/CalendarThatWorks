@@ -1,7 +1,7 @@
 /* AssetsView.module.css
  *
  * Styling for the Assets (Gantt) view. Intentionally close to
- * TimelineView.module.css so the two feel related, but with asset-specific
+ * ScheduleView.module.css so the two feel related, but with asset-specific
  * affordances: wider sticky column with registration + sublabel + location
  * banner, zoom control in the corner cell, and approval-stage pill variants
  * (5 states per Phase 0 contract).
@@ -589,7 +589,7 @@
   text-decoration-thickness: 1.5px;
 }
 
-/* ── Legacy event.status modifiers (unchanged from TimelineView) ── */
+/* ── Legacy event.status modifiers (unchanged from ScheduleView) ── */
 .event.tentative {
   opacity: 0.65;
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px);

@@ -3,7 +3,7 @@ import styles from './EmployeeActionCard.module.css';
 
 /**
  * EmployeeActionCard — fixed-position popover shown when an employee name is
- * clicked in the TimelineView.
+ * clicked in the ScheduleView.
  *
  * Props:
  *   emp        { id, name, role? }   — the employee whose row was clicked

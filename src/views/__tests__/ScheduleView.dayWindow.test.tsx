@@ -1,13 +1,13 @@
 // @vitest-environment happy-dom
 /**
- * TimelineView dayWindow — pin the range-derivation contract that wires
+ * ScheduleView dayWindow — pin the range-derivation contract that wires
  * the AppShell sub-toolbar's 7/14/30/90 pills into the Schedule view grid.
  */
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import TimelineView from '../TimelineView';
+import ScheduleView from '../ScheduleView';
 import { CalendarContext } from '../../core/CalendarContext';
 
 const employees = [
@@ -17,7 +17,7 @@ const employees = [
 function renderTimeline(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
-      <TimelineView
+      <ScheduleView
         currentDate={new Date(2026, 3, 10) /* April 10 2026, mid-month */}
         events={[]}
         employees={employees}
@@ -40,7 +40,7 @@ function dayCellCount(container: HTMLElement): number {
   return Math.max(0, headers.length - 1);
 }
 
-describe('TimelineView dayWindow', () => {
+describe('ScheduleView dayWindow', () => {
   it('falls back to the full calendar month when dayWindow is absent', () => {
     const { container } = renderTimeline();
     expect(rangeLabel(container)).toBe('Timeline for April 2026');
