@@ -10,7 +10,7 @@ import {
   format, startOfMonth, endOfMonth, startOfDay,
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
-import { Bookmark, ChevronLeft, ChevronRight, Download, Filter, Map as MapIcon, Plus, Settings, Sparkles, Upload } from 'lucide-react';
+import { Bookmark, ChevronLeft, ChevronRight, Download, Filter, Plus, Settings, Sparkles, Upload } from 'lucide-react';
 
 import { useCalendar }        from './hooks/useCalendar';
 import { useOwnerConfig }     from './hooks/useOwnerConfig';
@@ -104,7 +104,7 @@ import BaseGanttView          from './views/BaseGanttView';
 import DispatchView           from './views/DispatchView';
 import type { DispatchMissionCandidate, DispatchMissionReadiness } from './views/DispatchView';
 import RequestQueueView       from './views/RequestQueueView';
-import MapView                from './views/MapView';
+import { MapPeekWidget }      from './ui/MapPeekWidget';
 
 type DispatchEvaluator = (
   assetId: string,
@@ -232,9 +232,9 @@ export type WorksCalendarProps = {
   theme?: string;
   colorRules?: UnknownRecord[];
   /**
-   * Forwarded to the optional Map view (`initialView="map"`) as its
-   * MapLibre style URL. Ignored when the map view isn't active or when the
-   * `react-map-gl` / `maplibre-gl` peers aren't installed.
+   * MapLibre style URL forwarded to the chrome-level MapPeekWidget when
+   * the user opens it (panel or fullscreen). Ignored when the
+   * `react-map-gl` / `maplibre-gl` peers aren't installed in the host.
    */
   mapStyle?: string;
   businessHours?: UnknownRecord;
@@ -398,7 +398,11 @@ const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'assets',   label: 'Assets',   alwaysOn: false,                                                                            group: 'operations' },
   { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?',      group: 'operations' },
   { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests',    group: 'operations' },
-  { id: 'map',      label: 'Map',      alwaysOn: false, hint: 'Geographic plot of events that carry coordinates (meta.coords)',  group: 'operations' },
+  // Map is intentionally NOT a view tab — it's an in-shell floating
+  // widget mounted at the chrome level (see MapPeekWidget below). Putting
+  // it on a tab forces a full workspace switch just to peek at where
+  // assets are, which is the wrong tradeoff for a situational-awareness
+  // surface.
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -2520,20 +2524,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   icon: <Filter size={18} aria-hidden="true" />,
                   onClick: () => { setSidebarInitialTab('focus'); setSidebarOpen(true); },
                 },
-                // Only surface Map when it's actually one of the enabled views.
-                // WorksCalendar's view-validation effect snaps cal.view back
-                // to a fallback when the target isn't in VIEWS, so an
-                // unconditional Map shortcut would render a button that
-                // appears to do nothing — the navigation gets reverted on
-                // the next render. Skip the button if map isn't enabled.
-                ...(VIEWS.some(v => v.id === 'map') ? [{
-                  id: 'map',
-                  label: 'Map view',
-                  hint: 'Geographic plot of events with coordinates',
-                  icon: <MapIcon size={18} aria-hidden="true" />,
-                  active: cal.view === 'map',
-                  onClick: () => cal.setView('map'),
-                }] : []),
+                // Map is rendered as a floating MapPeekWidget at chrome
+                // level (peek → panel → fullscreen) rather than as a
+                // workspace-replacing view tab.
                 ...(ownerCfg.isOwner ? [{
                   id: 'settings',
                   label: 'Settings',
@@ -2930,13 +2923,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEventClick={handleEventClick}
                 />
               )}
-              {cal.view === 'map' && (
-                <MapView
-                  events={visibleEvents as any}
-                  onEventClick={handleEventClick}
-                  {...(mapStyle ? { mapStyle } : {})}
-                />
-              )}
+              {/* Floating chrome-level map. Lives at the workspace
+                  level (not inside any view) so toggling it never
+                  unmounts the active view. Rendered last so its
+                  absolutely-positioned host stacks above the grid. */}
+              <MapPeekWidget
+                events={visibleEvents as never}
+                onEventClick={handleEventClick as never}
+                {...(mapStyle ? { mapStyle } : {})}
+              />
             </>
           )}
         </div>
