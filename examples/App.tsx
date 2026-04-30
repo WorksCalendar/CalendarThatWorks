@@ -22,6 +22,7 @@ import { GroupingExample }         from './09-Grouping';
 import { DragAndDropExample }      from './10-DragAndDrop';
 import { MapExample }              from './11-Map';
 import { MaintenanceAndInvoicingExample } from './11-MaintenanceAndInvoicing';
+import { AssetMapWidgetExample }     from './12-AssetMapWidget';
 import { BasicUsageExample }       from './basic-usage';
 import { SetupWizardExample }      from './setup-wizard';
 import { AdvancedFiltersExample }  from './advanced-filters';
@@ -157,6 +158,13 @@ const EXAMPLES = [
     desc:  'Asset-row badges show due/overdue maintenance; completing service in the form auto-stamps next-due. One-click CSV export for invoices and maintenance log.',
     component: MaintenanceAndInvoicingExample,
   },
+  {
+    id:    'asset-map-widget',
+    label: 'Asset Map Widget',
+    tag:   'Optional integration · peek/panel/fullscreen',
+    desc:  'Map-agnostic situational-awareness overlay. Pass live AssetTrackerPositions; supply a WorksCalendarMapAdapter for a real basemap or use the built-in SVG fallback.',
+    component: AssetMapWidgetExample,
+  },
 ];
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -247,6 +255,7 @@ function SourceHint({ id }) {
     'drag-and-drop':        '10-DragAndDrop.jsx',
     'map':                  '11-Map.jsx',
     'maintenance-invoicing': '11-MaintenanceAndInvoicing.jsx',
+    'asset-map-widget':     '12-AssetMapWidget.jsx',
     'basic-usage-modern':   'basic-usage.jsx',
     'setup-wizard':         'setup-wizard.jsx',
     'advanced-filters-new': 'advanced-filters.jsx',

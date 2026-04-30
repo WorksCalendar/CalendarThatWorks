@@ -22,6 +22,7 @@ npm run examples
 - `10-DragAndDrop.jsx` — drag events across groups / rows
 - `11-Map.jsx` — geographic plot via the optional MapView plugin (see [docs/MapView.md](../docs/MapView.md))
 - `11-MaintenanceAndInvoicing.jsx` — asset-health badges, in-form maintenance completion, CSV export for invoicing + maintenance log
+- `12-AssetMapWidget.jsx` — peek/panel/fullscreen live-asset overlay via the optional `integrations/asset-map-widget` subpath (see [docs/AssetMapWidget.md](../docs/AssetMapWidget.md))
 
 ## Focused examples
 
