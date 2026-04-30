@@ -68,6 +68,15 @@ export default function EventForm({
    * planning, etc.) can suppress the irrelevant picker.
    */
   hideTemplates = false,
+  /**
+   * Optional category-aware resource suggester. Returns the
+   * resource options that make sense for the currently picked
+   * category (e.g. for "maintenance", suggest mechanics + aircraft;
+   * for "pilot-shift", suggest pilots only). Wires a <datalist>
+   * onto the resource input so users get scoped autocomplete
+   * instead of the browser's freeform history.
+   */
+  resourceSuggestions,
 }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const draft   = useEventDraftState(event, categories, config);
@@ -388,8 +397,21 @@ export default function EventForm({
                 onAddCategory={onAddCategory} onChange={(cat: string) => d.set('category', cat)} />
               <div className={styles['field']}>
                 <label className={styles['label']} htmlFor="ef-resource">Resource</label>
-                <input id="ef-resource" className={styles['input']} value={d.values.resource}
-                  onChange={e => d.set('resource', e.target.value)} placeholder="Tail #, room, person…" />
+                <input
+                  id="ef-resource"
+                  className={styles['input']}
+                  value={d.values.resource}
+                  onChange={e => d.set('resource', e.target.value)}
+                  placeholder="Tail #, room, person…"
+                  list={resourceSuggestions ? 'ef-resource-suggestions' : undefined}
+                />
+                {resourceSuggestions && (
+                  <datalist id="ef-resource-suggestions">
+                    {resourceSuggestions(d.values.category).map((opt: { value: string; label: string }) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </datalist>
+                )}
               </div>
             </div>
             <div className={styles['field']}>

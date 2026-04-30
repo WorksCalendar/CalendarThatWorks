@@ -286,6 +286,16 @@ export type WorksCalendarProps = {
    */
   hideEventTemplates?: boolean;
   /**
+   * Category-aware resource suggester for the Add/Edit Event form.
+   * When provided, the form's resource input gets a `<datalist>`
+   * scoped to the suggester's output for the currently picked
+   * category. Lets hosts wire their domain knowledge (e.g.
+   * "maintenance category → mechanics + aircraft only") into the
+   * picker without surfacing every employee/asset for every
+   * category.
+   */
+  eventResourceSuggestions?: (category: string) => Array<{ value: string; label: string }>;
+  /**
    * Opt-in interactive setup landing page. When true, first-time owners
    * (those with `config.setup.completed === false`) see a full-page
    * guided walkthrough before the calendar renders — with a prominent
@@ -580,6 +590,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // ── UI toggles ──
     showAddButton           = false,
     hideEventTemplates       = false,
+    eventResourceSuggestions,
     showSetupLanding        = false,
 
     // ── Initial view (overrides saved config on first render) ──
@@ -2988,6 +2999,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             approvalCategories={Array.isArray(assetRequestCategories) ? assetRequestCategories : []}
             pools={rawPools ?? []}
             hideTemplates={hideEventTemplates}
+            resourceSuggestions={eventResourceSuggestions}
           />
         )}
 

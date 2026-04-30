@@ -218,6 +218,55 @@ const STAGE_PILL_STYLES = {
   denied:    { label: 'Denied',    bg: '#fee2e2', fg: '#991b1b' },
 };
 
+// Resource pool tagging — which roles + asset types can be the "resource"
+// for each category. Drives the Add Event form's resource suggester so a
+// maintenance event suggests mechanics & aircraft, a pilot-shift event
+// suggests only pilots, etc. Categories not listed accept any resource.
+const RESOURCE_POOL_BY_CATEGORY = {
+  // Shifts pin to a single role
+  'pilot-shift':    { roles: ['pilot'],                         assets: false  },
+  'medical-shift':  { roles: ['rn', 'rt', 'medic'],             assets: false  },
+  'mechanic-shift': { roles: ['mechanic'],                      assets: false  },
+  'dispatch-shift': { roles: ['dispatcher'],                    assets: false  },
+  'on-call':        { roles: ['mechanic', 'pilot', 'rn'],       assets: false  },
+  'pto':            { roles: ['pilot', 'rn', 'rt', 'medic',
+                              'mechanic', 'dispatcher'],         assets: false  },
+  // Asset-centric categories
+  'maintenance':       { roles: ['mechanic'],                    assets: true   },
+  'aircraft-request':  { roles: [],                              assets: true   },
+  'asset-request':     { roles: [],                              assets: true   },
+  // Mission can be flown by any pilot/medical or aircraft
+  'mission-assignment': { roles: ['pilot', 'rn', 'rt', 'medic'], assets: true   },
+  'training':           { roles: ['pilot', 'rn', 'rt', 'medic',
+                                  'mechanic'],                    assets: true   },
+  'base-event':         { roles: [],                              assets: false  },
+};
+
+function suggestResourcesForCategory(category) {
+  const pool = RESOURCE_POOL_BY_CATEGORY[category];
+  // Unknown / empty category: suggest everyone + every asset.
+  if (!pool) {
+    return [
+      ...ALL_EMPLOYEES.map(e => ({ value: e.id, label: `${e.name} (${e.role})` })),
+      ...EMS_ASSETS.map(a => ({ value: a.id, label: `${a.name} — ${a.tail}` })),
+    ];
+  }
+  const out = [];
+  if (pool.roles.length > 0) {
+    out.push(
+      ...ALL_EMPLOYEES
+        .filter(e => pool.roles.includes(e.role))
+        .map(e => ({ value: e.id, label: `${e.name} (${e.role})` })),
+    );
+  }
+  if (pool.assets) {
+    out.push(
+      ...EMS_ASSETS.map(a => ({ value: a.id, label: `${a.name} — ${a.tail}` })),
+    );
+  }
+  return out;
+}
+
 // Categories that represent "schedule grain" content — shifts, PTO, on-call.
 // The library's viewScope filters these out of Month/Week/Day/Agenda when an
 // event sets `meta.kind` to a recognized schedule kind, so the high-level
@@ -855,6 +904,7 @@ function App() {
       theme={theme}
       showAddButton={true}
       hideEventTemplates={true}
+      eventResourceSuggestions={suggestResourcesForCategory}
       categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
       locationProvider={assetLocationProvider}
       filterSchema={DEMO_FILTER_SCHEMA}
