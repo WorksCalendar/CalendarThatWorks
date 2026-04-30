@@ -12,7 +12,13 @@ import {
 interface ApprovalEvent {
   id: string;
   title: string;
-  start: string;
+  // The host (demo/App.tsx) hands us events straight from its events
+  // state, which mixes string starts (from INITIAL_EVENTS) with Date
+  // starts (from `getSavedEventPayload → toLegacyEvent` after any
+  // drag-move or form save). Accept either and coerce when comparing —
+  // calling `.localeCompare` on a Date used to crash the chrome the
+  // moment a host saved a coord-tagged event.
+  start: string | Date;
   category: string;
   meta?: { approvalStage?: { stage?: string; updatedAt?: string } };
 }
@@ -201,11 +207,30 @@ interface ApprovalQueueItem {
   id: string;
   title: string;
   stage: string;
-  start: string;
+  // Epoch ms so the queue's sort comparator stays correct regardless of
+  // whether the upstream event arrives as a naive local-time string
+  // (`YYYY-MM-DDTHH:mm`, what INITIAL_EVENTS produces) or as a Date
+  // serialised to UTC ISO (`...Z`, what the calendar emits via
+  // toLegacyEvent after a drag-move). Lexically comparing those mixed
+  // shapes inverts chronology in non-UTC time zones — e.g. a moved
+  // event at local 2026-04-24T23:45 becomes 2026-04-25T06:45:00.000Z
+  // and would sort *ahead* of an untouched 2026-04-25T00:30 even though
+  // it's earlier in real time. Comparing milliseconds removes the
+  // format axis entirely.
+  startMs: number;
   category: string;
 }
 
-function splitApprovalQueues(
+function startToMs(value: string | Date): number {
+  if (value instanceof Date) {
+    const t = value.getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+  const t = Date.parse(value);
+  return Number.isFinite(t) ? t : 0;
+}
+
+export function splitApprovalQueues(
   events: ApprovalEvent[],
   profile: DemoProfile,
 ): { myRequests: ApprovalQueueItem[]; awaiting: ApprovalQueueItem[] } {
@@ -218,7 +243,7 @@ function splitApprovalQueues(
       id: ev.id,
       title: ev.title,
       stage,
-      start: ev.start,
+      startMs: startToMs(ev.start),
       category: ev.category,
     };
     const isOwnRequest = simulatedRequesterIdFor(ev.category) === profile.id;
@@ -240,8 +265,8 @@ function splitApprovalQueues(
     }
   }
   // Most recent first.
-  awaiting.sort((a, b) => b.start.localeCompare(a.start));
-  myRequests.sort((a, b) => b.start.localeCompare(a.start));
+  awaiting.sort((a, b) => b.startMs - a.startMs);
+  myRequests.sort((a, b) => b.startMs - a.startMs);
   return { myRequests, awaiting };
 }
 
