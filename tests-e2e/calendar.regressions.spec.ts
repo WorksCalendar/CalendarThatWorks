@@ -78,12 +78,21 @@ test.describe('WorksCalendar targeted regressions', () => {
     const dialog = page.getByRole('dialog', { name: /Event details: Cross-Day Hover Range/i });
     await expect(dialog).toBeVisible();
 
-    const expected = fixtureBaseDate();
-    expected.setDate(expected.getDate() + 3);
-    const month = expected.toLocaleString('en-US', { month: 'short' });
-    const day = expected.getDate();
+    // Fixture spans today+1 22:00 → today+2 06:00, so the hover card's
+    // end-day label is today+2. Verify both endpoints render so the test
+    // proves the full cross-day range, not just one side of it.
+    const start = fixtureBaseDate();
+    start.setDate(start.getDate() + 1);
+    const startMonth = start.toLocaleString('en-US', { month: 'short' });
+    const startDay = start.getDate();
 
-    await expect(dialog).toContainText(new RegExp(`${month}\\s+${day}`));
+    const end = fixtureBaseDate();
+    end.setDate(end.getDate() + 2);
+    const endMonth = end.toLocaleString('en-US', { month: 'short' });
+    const endDay = end.getDate();
+
+    await expect(dialog).toContainText(new RegExp(`${startMonth}\\s+${startDay}`));
+    await expect(dialog).toContainText(new RegExp(`${endMonth}\\s+${endDay}`));
   });
 
   test('mobile month pills keep visible title text', async ({ page }) => {

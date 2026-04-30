@@ -74,13 +74,14 @@ function App() {
     {
       id: 'editable-1',
       title: 'Edit Pen Fixture',
-      // Anchor the editable / span fixtures at small offsets so they always
-      // land inside the visible 5-week month grid. Larger offsets used to
-      // push them off-screen near month boundaries (the e2e Edit Pen test
-      // would silently fail when `today + 4` crossed into an unrendered
-      // week — the reason this fixture broke each cycle near month-end).
-      start: at(today, 0, 16, 0).toISOString(),
-      end: at(today, 0, 17, 0).toISOString(),
+      // Park this fixture on a day that holds no other events. `today` is
+      // pinned to the 10th of the current month, so today+4 always lands
+      // inside the visible grid. Stacking it on `today` (which already
+      // carries Drag Crash + Repeating Pencil) pushed the cell past its
+      // row's flex height, dropping the third pill into the next row's
+      // cellHead so Playwright's click was intercepted.
+      start: at(today, 4, 16, 0).toISOString(),
+      end: at(today, 4, 17, 0).toISOString(),
       category: 'Deploy',
       resource: 'emp-alpha',
       color: '#8b5cf6',
