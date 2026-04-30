@@ -21,7 +21,7 @@ export interface ReducerDeps {
 
 export const INITIAL_STATE: WalkthroughState = {
   mode: 'guided',
-  currentStep: 'move-job',
+  currentStep: 'move-mission',
   history: [],
   bootstrapping: true,
 };

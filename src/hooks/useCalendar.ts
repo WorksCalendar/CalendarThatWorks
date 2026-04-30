@@ -24,7 +24,7 @@ type CalendarState = {
    * Bound to the 7/14/30/90 pills in the sub-toolbar.
    *
    * `null` is the implicit "auto" / "view default" — timeline views fall
-   * back to their intrinsic range (e.g. TimelineView shows the calendar
+   * back to their intrinsic range (e.g. ScheduleView shows the calendar
    * month around currentDate). When set to a positive number, observing
    * views render exactly that many days starting from currentDate.
    *

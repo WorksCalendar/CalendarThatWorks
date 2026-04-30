@@ -11,7 +11,7 @@ export type DayWindowPillsProps = {
   value: number | null;
   /**
    * Called when the user picks a different window. `null` means "auto" —
-   * the consumer should restore the view's intrinsic span (TimelineView /
+   * the consumer should restore the view's intrinsic span (ScheduleView /
    * BaseGanttView / AssetsView fall back to their calendar-month default).
    */
   onChange: (next: number | null) => void;

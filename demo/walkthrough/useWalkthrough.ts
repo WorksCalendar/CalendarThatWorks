@@ -100,13 +100,13 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
     persistMode(state.mode);
   }, [state.mode]);
 
-  // Snapshot of the previous state of Alpha so we can tell a "move" (time
-  // change, same resource) from a "reassign" (resource change). Refs because
-  // adapters fire outside React's render cycle. Seeded from ctx so the very
-  // first drag is observable — otherwise Step 1 never advances.
-  const lastAlphaSnapshot = useRef<{ resource: string | null; startIso: string }>({
-    resource: ctx.alphaInitialResource,
-    startIso: ctx.alphaInitialStartIso,
+  // Snapshot of the mission's previous state so we can tell "moved" (time
+  // changed, resource unchanged) from "assigned" (resource changed). Refs
+  // because adapters fire outside React's render cycle. The mission seed
+  // starts unassigned, so resource begins as null.
+  const lastMissionSnapshot = useRef<{ resource: string | null; startIso: string }>({
+    resource: null,
+    startIso: ctx.missionInitialStartIso,
   });
 
   const observe = useCallback((event: WalkthroughEvent) => {
@@ -120,61 +120,53 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
   const wrapped = useMemo<HostDelegate>(() => ({
     onEventMove: (ev, newStart, newEnd) => {
       delegate.onEventMove?.(ev, newStart, newEnd);
-      if (ev.id !== ctx.alphaEventId) return;
-      const prevStartIso = lastAlphaSnapshot.current.startIso;
+      if (ev.id !== ctx.missionEventId) return;
+      const prevStartIso = lastMissionSnapshot.current.startIso;
       observe({
-        kind: 'event-moved',
+        kind: 'mission-moved',
         eventId: ev.id,
-        previousResource: lastAlphaSnapshot.current.resource,
         previousStartIso: prevStartIso,
       });
-      lastAlphaSnapshot.current = {
-        resource: lastAlphaSnapshot.current.resource,
+      lastMissionSnapshot.current = {
+        resource: lastMissionSnapshot.current.resource,
         startIso: toIso(newStart),
       };
     },
 
     onEventSave: (ev) => {
       delegate.onEventSave?.(ev);
-      if (ev.id !== ctx.alphaEventId) return;
-      const snapshot     = lastAlphaSnapshot.current;
+      if (ev.id !== ctx.missionEventId) return;
+      const snapshot     = lastMissionSnapshot.current;
       const nextResource = ev.resource ?? null;
       const nextStartIso = toIso(ev.start ?? snapshot.startIso);
 
-      // The demo wires drag-drop through onEventSave for both time and
-      // resource changes (no separate onEventMove / onEventGroupChange).
-      // Distinguish them here so steps 1 and 2/3 see different events.
+      // The demo wires drag-drop and form-saves through onEventSave for
+      // both time and resource changes. Distinguish:
+      //   • resource changed (null → pilot, or pilot A → pilot B) → assigned
+      //   • only time changed                                      → moved
       if (snapshot.resource !== nextResource) {
         observe({
-          kind: 'event-reassigned',
+          kind: 'mission-assigned',
           eventId: ev.id ?? '',
+          previousResource: snapshot.resource,
           toResource: nextResource,
         });
       } else if (snapshot.startIso !== nextStartIso) {
         observe({
-          kind: 'event-moved',
+          kind: 'mission-moved',
           eventId: ev.id ?? '',
-          previousResource: snapshot.resource,
           previousStartIso: snapshot.startIso,
         });
       }
 
-      lastAlphaSnapshot.current = { resource: nextResource, startIso: nextStartIso };
+      lastMissionSnapshot.current = { resource: nextResource, startIso: nextStartIso };
     },
 
     onConflictCheck: async (ev, candidate) => {
-      const result = await delegate.onConflictCheck?.(ev, candidate);
-      if (ev.id === ctx.alphaEventId && result) {
-        // The host returned a conflict object — the calendar uses it to
-        // flag overlap. We don't care about the shape, only that one was
-        // detected against the Bravo decoy.
-        observe({
-          kind: 'conflict-detected',
-          eventId: ev.id,
-          conflictingEventId: ctx.bravoEventId,
-        });
-      }
-      return result;
+      // The walkthrough doesn't use this for advancement (the assign step
+      // is satisfied by mission-assigned events). Kept for future use and
+      // so wrapping it stays a no-op pass-through if a host wires it.
+      return delegate.onConflictCheck?.(ev, candidate);
     },
 
     onViewChange: (view) => {
@@ -188,7 +180,7 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
       // shouldn't fire a redundant observation.
       if (open) observe({ kind: 'map-widget-opened' });
     },
-  }), [delegate, ctx.alphaEventId, ctx.bravoEventId, observe]);
+  }), [delegate, ctx.missionEventId, observe]);
 
   const step = useMemo<Step>(() => {
     const found = STEPS.find(s => s.id === state.currentStep);

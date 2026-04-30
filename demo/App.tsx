@@ -35,11 +35,9 @@ import {
 import WalkthroughHost from './walkthrough/WalkthroughHost';
 import { useWalkthrough } from './walkthrough/useWalkthrough';
 import {
-  ALPHA_INITIAL_RESOURCE,
   ALPHA_INITIAL_START_ISO,
-  BRAVO_RESOURCE,
-  WALKTHROUGH_ALPHA_ID,
-  WALKTHROUGH_BRAVO_ID,
+  CONFLICT_PILOT_ID,
+  WALKTHROUGH_MISSION_ID,
   buildWalkthroughEvents,
 } from './walkthrough/fixtures';
 
@@ -939,25 +937,29 @@ function App() {
   // user gestures (drag-to-move, drag-to-reassign, view switch) without
   // changing the demo's behavior. Suppressed in EMBED_MODE so the raw
   // calendar embed used by e2e tests stays free of demo chrome.
+  // Stable pilot-id set for the walkthrough's Step 3 matcher. Built from
+  // emsData.crew (which is `pilots`) so adding/removing pilots in the demo
+  // dataset auto-updates the walkthrough without a separate edit.
+  const walkthroughPilotIds = useMemo(
+    () => new Set<string>(crew.map(p => p.id)),
+    [],
+  );
+
   const walkthrough = useWalkthrough({
     ctx: {
-      alphaEventId:         WALKTHROUGH_ALPHA_ID,
-      bravoEventId:         WALKTHROUGH_BRAVO_ID,
-      bravoResource:        BRAVO_RESOURCE,
-      alphaInitialResource: ALPHA_INITIAL_RESOURCE,
-      alphaInitialStartIso: ALPHA_INITIAL_START_ISO,
+      missionEventId:         WALKTHROUGH_MISSION_ID,
+      conflictPilotId:        CONFLICT_PILOT_ID,
+      missionInitialStartIso: ALPHA_INITIAL_START_ISO,
+      pilotIds:               walkthroughPilotIds,
     },
     delegate: { onEventSave: handleEventSave },
   });
 
-  // Snap the calendar to the walkthrough seed date on first guided mount so
-  // Mission Alpha is at the natural focus point — important across views:
-  //   • Schedule view's 6-week window starts at startOfWeek(currentDate);
-  //     today (Apr 30) puts the window at Apr 26 → Jun 6, hiding the
-  //     Apr 23 seeds entirely.
-  //   • Week / Day views show only the current period.
-  //   • Month view is forgiving (April 23 is in April), but the pulse is
-  //     more obvious when alpha is the focused cell.
+  // Snap the calendar to the walkthrough seed slot on first guided mount.
+  // Forces (a) Week view, since the operator workflow the walkthrough
+  // teaches lives there ("a request lands on the week, scheduler moves it,
+  // then fills it"), and (b) navigates currentDate to the seed date so the
+  // unassigned mission is on screen regardless of "today".
   // Implemented as a callback ref rather than useEffect because the parent
   // mount effect can occasionally fire before forwardRef + useImperativeHandle
   // has populated the imperative handle. Callback refs run synchronously the
@@ -978,6 +980,7 @@ function App() {
     if (EMBED_MODE) return;
     if (walkthroughModeRef.current === 'free-play') return;
     if (walkthroughHistoryRef.current > 0) return;
+    api.setView?.('week');
     api.navigateTo(new Date(ALPHA_INITIAL_START_ISO));
     didSnapRef.current = true;
   }, []);

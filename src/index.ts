@@ -58,7 +58,7 @@ export type {
 } from './types/ui';
 
 export { WorksCalendar }                  from './WorksCalendar.tsx';
-export { default as TimelineView }        from './views/TimelineView';
+export { default as ScheduleView }        from './views/ScheduleView';
 export { default as MapView }             from './views/MapView';
 export type { MapViewProps }              from './views/MapView';
 export { normalizeEvent, normalizeEvents } from './core/eventModel';

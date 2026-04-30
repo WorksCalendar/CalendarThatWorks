@@ -1,6 +1,6 @@
 /* BaseGanttView.module.css
  *
- * Styling for the Gantt-style Base view. Modeled on TimelineView /
+ * Styling for the Gantt-style Base view. Modeled on ScheduleView /
  * AssetsView but with per-base grouping, asset + person sub-rows, and
  * accountable-manager chips in the base header.
  */

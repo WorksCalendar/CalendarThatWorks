@@ -2,7 +2,7 @@
  * Example 10 — Drag & Drop Between Groups
  *
  * Demonstrates the `onEventGroupChange` callback in both AgendaView (leaf
- * groups as drop targets) and TimelineView (resource rows as drop targets).
+ * groups as drop targets) and ScheduleView (resource rows as drop targets).
  *
  * Key prop demonstrated:
  *   onEventGroupChange(event, patch) — fired when an event is dropped onto

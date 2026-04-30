@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 describe('WorksCalendar employees ↔ TeamTab bidirectional sync (issue #101)', () => {
-  it('adding an employee from TimelineView updates owner config and calls consumer callback', async () => {
+  it('adding an employee from ScheduleView updates owner config and calls consumer callback', async () => {
     const onEmployeeAdd = vi.fn();
     const onConfigSave  = vi.fn();
 
