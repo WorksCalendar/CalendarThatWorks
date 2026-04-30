@@ -173,6 +173,7 @@ export default function DayView({
           <div key={ev.id} data-event="1"
             className={[styles['event'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
             style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
+            data-wc-event-id={ev.id}
             data-wc-priority={ev.visualPriority ?? undefined}
             data-wc-conflicting={isConflicting ? 'true' : undefined}
             role="button" tabIndex={0}
@@ -197,6 +198,7 @@ export default function DayView({
       <div key={ev.id} data-event="1"
         className={[styles['event'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
         style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
+        data-wc-event-id={ev.id}
         data-wc-priority={ev.visualPriority ?? undefined}
         data-wc-conflicting={isConflicting ? 'true' : undefined}
         role="button" tabIndex={0}

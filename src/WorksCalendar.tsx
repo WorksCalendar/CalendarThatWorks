@@ -217,6 +217,7 @@ export type WorksCalendarProps = {
   onEventDelete?: (eventId: string) => void;
   onEventGroupChange?: (event: WorksCalendarEvent, patch: EventGroupPatch) => void;
   onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
+  onViewChange?: (view: CalendarView) => void;
   supabaseUrl?: string;
   supabaseKey?: string;
   supabaseTable?: string;
@@ -550,6 +551,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventDelete,
     onEventGroupChange,
     onDateSelect,
+    onViewChange,
 
     // ── Supabase realtime ──
     supabaseUrl,
@@ -692,6 +694,24 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [filterSchema, configuredEmployees, effectiveAssets],
   );
   const cal = useCalendar([], initialView ?? 'month', schema);
+
+  // Notify host on view changes (toolbar click, keyboard shortcut, programmatic
+  // setView). Skips the initial mount so consumers don't get a synthetic event
+  // for the default view. Used by the demo walkthrough to advance steps when
+  // the user switches to schedule/map.
+  // useCalendar's view type widens to `string`; we narrow at the public API
+  // boundary by casting before invoking the host callback.
+  const lastViewRef = useRef<string | null>(null);
+  useEffect(() => {
+    const next = cal.view;
+    if (lastViewRef.current === null) {
+      lastViewRef.current = next;
+      return;
+    }
+    if (lastViewRef.current === next) return;
+    lastViewRef.current = next;
+    onViewChange?.(next as CalendarView);
+  }, [cal.view, onViewChange]);
 
   // Wrap parent employee handlers so edits from ANY surface (timeline add-form
   // or TeamTab settings) flow both to the consumer's state AND to the owner
@@ -2601,6 +2621,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                     onClick={() => cal.setView(v.id)}
                     aria-pressed={cal.view === v.id}
                     title={v.hint}
+                    data-wc-view-button={v.id}
                   >
                     {v.label}
                   </button>

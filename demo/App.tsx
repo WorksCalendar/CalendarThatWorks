@@ -32,6 +32,16 @@ import {
   findProfile,
   APPROVAL_ACTION_CAP,
 } from './profiles';
+import WalkthroughHost from './walkthrough/WalkthroughHost';
+import { useWalkthrough } from './walkthrough/useWalkthrough';
+import {
+  ALPHA_INITIAL_RESOURCE,
+  ALPHA_INITIAL_START_ISO,
+  BRAVO_RESOURCE,
+  WALKTHROUGH_ALPHA_ID,
+  WALKTHROUGH_BRAVO_ID,
+  buildWalkthroughEvents,
+} from './walkthrough/fixtures';
 
 /* ─── Demo identity ─────────────────────────────────────────────── */
 // Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
@@ -335,6 +345,13 @@ const INITIAL_EVENTS = allEvents.map(e => {
     ...(meta ? { meta } : {}),
   };
 });
+
+// Walkthrough fixtures: two seeded mission-assignment events at the same
+// time on different aircraft. Step 2 of the guided tour exploits the
+// overlap to demonstrate conflict detection. Aircraft were chosen because
+// emsData has no other events on those slots, so the conflict is solely
+// caused by Alpha+Bravo.
+INITIAL_EVENTS.push(...buildWalkthroughEvents());
 
 /* ─── Resource pools (#212) ─────────────────────────────────────── */
 // Group aircraft by region so bookings can target a pool instead of a tail
@@ -917,6 +934,22 @@ function App() {
     />
   ), [activeProfile.approval, handleApprovalAction, handleEventDelete]);
 
+  // ── Guided walkthrough wiring ───────────────────────────────────
+  // The walkthrough wraps the existing host callbacks so it can detect
+  // user gestures (drag-to-move, drag-to-reassign, view switch) without
+  // changing the demo's behavior. Suppressed in EMBED_MODE so the raw
+  // calendar embed used by e2e tests stays free of demo chrome.
+  const walkthrough = useWalkthrough({
+    ctx: {
+      alphaEventId:         WALKTHROUGH_ALPHA_ID,
+      bravoEventId:         WALKTHROUGH_BRAVO_ID,
+      bravoResource:        BRAVO_RESOURCE,
+      alphaInitialResource: ALPHA_INITIAL_RESOURCE,
+      alphaInitialStartIso: ALPHA_INITIAL_START_ISO,
+    },
+    delegate: { onEventSave: handleEventSave },
+  });
+
   const calendar = (
     <WorksCalendar
       events={events}
@@ -935,7 +968,8 @@ function App() {
       notes={notes}
       onNoteSave={handleNoteSave}
       onNoteDelete={handleNoteDelete}
-      onEventSave={handleEventSave}
+      onEventSave={EMBED_MODE ? handleEventSave : walkthrough.wrapped.onEventSave}
+      onViewChange={EMBED_MODE ? undefined : walkthrough.wrapped.onViewChange}
       onEventDelete={handleEventDelete}
       onScheduleSave={handleEventSave}
       onAvailabilitySave={handleEventSave}
@@ -986,6 +1020,17 @@ function App() {
         <UpdateToast
           onUpdate={() => { updateSW(true); setNeedsRefresh(false); }}
           onDismiss={() => setNeedsRefresh(false)}
+        />
+      )}
+
+      {!EMBED_MODE && (
+        <WalkthroughHost
+          step={walkthrough.step}
+          state={walkthrough.state}
+          steps={walkthrough.steps}
+          onAdvance={walkthrough.advance}
+          onRestart={walkthrough.restart}
+          onExit={walkthrough.exit}
         />
       )}
     </>
