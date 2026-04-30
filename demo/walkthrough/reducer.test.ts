@@ -16,6 +16,7 @@ const CTX: StepContext = {
   bravoEventId: 'wt-bravo',
   bravoResource: 'ac-n804aw',
   alphaInitialResource: 'ac-n801aw',
+  alphaInitialStartIso: '2026-04-23T14:00:00',
 };
 
 const DEPS: ReducerDeps = { steps: STEPS, ctx: CTX };

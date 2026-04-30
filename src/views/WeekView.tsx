@@ -348,6 +348,7 @@ export default function WeekView({
           isDimmed && styles['dragging'],
           ctx?.['editMode'] && styles['editModeEvent'],
         ].filter(Boolean).join(' ')}
+        data-wc-event-id={ev.id}
         data-wc-priority={ev.visualPriority ?? undefined}
         data-wc-conflicting={isConflicting ? 'true' : undefined}
         style={{

@@ -61,6 +61,7 @@ export interface StepContext {
   bravoEventId: string;       // the decoy that creates the Step 2 conflict
   bravoResource: string;      // aircraft id Bravo is parked on
   alphaInitialResource: string;
+  alphaInitialStartIso: string; // start time from the seed; used to detect Step 1 moves
 }
 
 export interface WalkthroughState {

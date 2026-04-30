@@ -2628,6 +2628,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                     onClick={() => cal.setView(v.id)}
                     aria-pressed={cal.view === v.id}
                     title={v.hint}
+                    data-wc-view-button={v.id}
                   >
                     {v.label}
                   </button>

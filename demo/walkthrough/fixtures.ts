@@ -19,7 +19,8 @@ export const ALPHA_INITIAL_RESOURCE = 'ac-n801aw';
 /** Aircraft id Bravo parks on — Step 2 conflict target. */
 export const BRAVO_RESOURCE = 'ac-n804aw';
 
-const SLOT_START = '2026-04-23T14:00:00';
+export const ALPHA_INITIAL_START_ISO = '2026-04-23T14:00:00';
+const SLOT_START = ALPHA_INITIAL_START_ISO;
 const SLOT_END   = '2026-04-23T15:00:00';
 
 const MISSION_COLOR = '#a855f7';

@@ -14,27 +14,29 @@
  *   6. done            — terminal CTA ("Now you get it")
  */
 
+import { WALKTHROUGH_ALPHA_ID } from './fixtures';
 import type { Step } from './types';
 
 export const STEPS: readonly Step[] = [
   {
     id: 'move-job',
     banner: {
-      title: 'Step 1 of 4 — Move a job',
+      title: 'Move a job',
       body:  'Drag the highlighted mission to a new time on the calendar.',
     },
-    spotlight: { /* eventId filled in by the host using ctx.alphaEventId */ },
+    spotlight: { eventId: WALKTHROUGH_ALPHA_ID },
     matches: (event, ctx) =>
       event.kind === 'event-moved' && event.eventId === ctx.alphaEventId,
-    hint: 'Click and hold the purple "Mission Alpha" pill, then drag it to a different hour.',
+    hint: 'Click and hold the highlighted "Mission Alpha" pill, then drag it to a different hour.',
   },
 
   {
     id: 'cause-conflict',
     banner: {
-      title: 'Step 2 of 4 — Trigger a conflict',
+      title: 'Trigger a conflict',
       body:  'Now drag Mission Alpha onto Mission Bravo’s aircraft at the same time.',
     },
+    spotlight: { eventId: WALKTHROUGH_ALPHA_ID },
     matches: (event, ctx) => {
       // A reassign onto Bravo's aircraft should immediately overlap Bravo.
       // We accept either signal — whichever the host emits first.
@@ -54,9 +56,10 @@ export const STEPS: readonly Step[] = [
   {
     id: 'fix-conflict',
     banner: {
-      title: 'Step 3 of 4 — Resolve the conflict',
+      title: 'Resolve the conflict',
       body:  'Reassign Mission Alpha to any other available aircraft.',
     },
+    spotlight: { eventId: WALKTHROUGH_ALPHA_ID },
     matches: (event, ctx) =>
       event.kind === 'event-reassigned'
       && event.eventId === ctx.alphaEventId
@@ -68,10 +71,10 @@ export const STEPS: readonly Step[] = [
   {
     id: 'switch-view',
     banner: {
-      title: 'Step 4 of 4 — Switch to the schedule view',
+      title: 'Switch to the schedule view',
       body:  'See the same data as a resource timeline. Use the view toggle in the toolbar.',
     },
-    spotlight: { selector: '[data-view-button="schedule"]' },
+    spotlight: { selector: '[data-wc-view-button="schedule"]' },
     matches: (event) =>
       event.kind === 'view-changed' && event.view === 'schedule',
     hint: 'Look for the view toggle in the calendar toolbar and pick "Schedule".',

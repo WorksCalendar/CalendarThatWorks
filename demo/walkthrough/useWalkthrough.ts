@@ -67,10 +67,11 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
 
   // Snapshot of the previous state of Alpha so we can tell a "move" (time
   // change, same resource) from a "reassign" (resource change). Refs because
-  // adapters fire outside React's render cycle.
+  // adapters fire outside React's render cycle. Seeded from ctx so the very
+  // first drag is observable — otherwise Step 1 never advances.
   const lastAlphaSnapshot = useRef<{ resource: string | null; startIso: string }>({
     resource: ctx.alphaInitialResource,
-    startIso: '',
+    startIso: ctx.alphaInitialStartIso,
   });
 
   const observe = useCallback((event: WalkthroughEvent) => {
@@ -101,19 +102,29 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
     onEventSave: (ev) => {
       delegate.onEventSave?.(ev);
       if (ev.id !== ctx.alphaEventId) return;
-      const prevResource = lastAlphaSnapshot.current.resource;
+      const snapshot     = lastAlphaSnapshot.current;
       const nextResource = ev.resource ?? null;
-      if (prevResource !== nextResource) {
+      const nextStartIso = toIso(ev.start ?? snapshot.startIso);
+
+      // The demo wires drag-drop through onEventSave for both time and
+      // resource changes (no separate onEventMove / onEventGroupChange).
+      // Distinguish them here so steps 1 and 2/3 see different events.
+      if (snapshot.resource !== nextResource) {
         observe({
           kind: 'event-reassigned',
-          eventId: ev.id,
+          eventId: ev.id ?? '',
           toResource: nextResource,
         });
-        lastAlphaSnapshot.current = {
-          resource: nextResource,
-          startIso: toIso(ev.start ?? lastAlphaSnapshot.current.startIso),
-        };
+      } else if (snapshot.startIso !== nextStartIso) {
+        observe({
+          kind: 'event-moved',
+          eventId: ev.id ?? '',
+          previousResource: snapshot.resource,
+          previousStartIso: snapshot.startIso,
+        });
       }
+
+      lastAlphaSnapshot.current = { resource: nextResource, startIso: nextStartIso };
     },
 
     onConflictCheck: async (ev, candidate) => {
