@@ -709,20 +709,6 @@ function SetupTab({
             <div
               key={family.id}
               className={[styles['themeFamilyCard'], isSelected && styles['themeFamilyCardSelected']].filter(Boolean).join(' ')}
-              role="button"
-              tabIndex={0}
-              aria-label={`Select ${family.label} theme`}
-              onClick={() => {
-                // Clicking the card selects the light variant. If the card is
-                // already selected, toggle to dark (and vice-versa).
-                if (isSelected) {
-                  setPreferredTheme(selectedTheme === `${family.id}-light` ? `${family.id}-dark` : `${family.id}-light`);
-                } else {
-                  setPreferredTheme(`${family.id}-light`);
-                }
-              }}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPreferredTheme(isSelected && selectedTheme === `${family.id}-light` ? `${family.id}-dark` : `${family.id}-light`); } }}
-              style={{ cursor: 'pointer' }}
             >
               {/* Mini structural preview */}
               <div
@@ -761,7 +747,7 @@ function SetupTab({
               <div className={styles['themeModeToggle']}>
                 <button
                   className={[styles['themeModeBtn'], selectedTheme === `${family.id}-light` && styles['themeModeBtnActive']].filter(Boolean).join(' ')}
-                  onClick={(e) => { e.stopPropagation(); setPreferredTheme(`${family.id}-light`); }}
+                  onClick={() => setPreferredTheme(`${family.id}-light`)}
                   aria-pressed={selectedTheme === `${family.id}-light`}
                   title={lightMeta.label}
                 >
@@ -769,7 +755,7 @@ function SetupTab({
                 </button>
                 <button
                   className={[styles['themeModeBtn'], selectedTheme === `${family.id}-dark` && styles['themeModeBtnActive']].filter(Boolean).join(' ')}
-                  onClick={(e) => { e.stopPropagation(); setPreferredTheme(`${family.id}-dark`); }}
+                  onClick={() => setPreferredTheme(`${family.id}-dark`)}
                   aria-pressed={selectedTheme === `${family.id}-dark`}
                   title={darkMeta.label}
                 >

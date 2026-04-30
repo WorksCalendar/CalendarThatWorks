@@ -72,11 +72,13 @@ test.describe('WorksCalendar targeted regressions', () => {
     const dialog = page.getByRole('dialog', { name: /Event details: Cross-Day Hover Range/i });
     await expect(dialog).toBeVisible();
 
-    const tomorrow = new Date();
-    tomorrow.setHours(0, 0, 0, 0);
-    tomorrow.setDate(tomorrow.getDate() + 3);
-    const month = tomorrow.toLocaleString('en-US', { month: 'short' });
-    const day = tomorrow.getDate();
+    // Fixture spans today + 1 → today + 2 (see regression-bugs.tsx). The
+    // dialog should show the END date — today + 2 — somewhere in its text.
+    const eventEnd = new Date();
+    eventEnd.setHours(0, 0, 0, 0);
+    eventEnd.setDate(eventEnd.getDate() + 2);
+    const month = eventEnd.toLocaleString('en-US', { month: 'short' });
+    const day = eventEnd.getDate();
 
     await expect(dialog).toContainText(new RegExp(`${month} ${day}`));
   });
