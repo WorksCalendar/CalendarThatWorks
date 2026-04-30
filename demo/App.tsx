@@ -341,16 +341,18 @@ const INITIAL_EVENTS = allEvents.map(e => {
 // number; the round-robin cursor persists in localStorage. Resynced on the
 // demo seed bump so returning visitors don't keep stale pool names (e.g.
 // "Mountain Fleet" / "Southwest Fleet") from earlier demo identities.
-// One pool per base containing every person, asset, and the base itself.
-// Lets the MapView (and any base-scoped dispatch) resolve the full roster
-// at a base from a single membership lookup. The two original regional
-// fleet pools are retained for round-robin aircraft selection.
+// One pool per base containing every person and asset stationed there.
+// Lets base-scoped dispatch resolve the full roster from a single
+// membership lookup. The base id itself is intentionally NOT a member —
+// pools feed `resolvePool` for booking, and a non-resource id selected
+// by `first-available` would produce events assigned to the base
+// instead of an employee/asset. The two original regional fleet pools
+// are retained for round-robin aircraft selection.
 const ALL_PERSONNEL = [...dispatchers, ...crew, ...medicalCrew, ...mechanics];
 const DEMO_BASE_POOLS = bases.map(b => ({
   id: `pool-base-${b.id}`,
   name: `${b.name} — On Base`,
   memberIds: [
-    b.id,
     ...ALL_PERSONNEL.filter(p => p.basedAt === b.id).map(p => p.id),
     ...EMS_ASSETS.filter(a => a.basedAt === b.id).map(a => a.id),
   ],
