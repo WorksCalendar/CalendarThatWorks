@@ -2926,9 +2926,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {/* Floating chrome-level map. Lives at the workspace
                   level (not inside any view) so toggling it never
                   unmounts the active view. Rendered last so its
-                  absolutely-positioned host stacks above the grid. */}
+                  absolutely-positioned host stacks above the grid.
+                  Fed `expandedEvents` (the unscoped, recurring-expanded
+                  set), NOT `visibleEvents`, so opening the map from
+                  Month/Week doesn't drop coord-bearing schedule events
+                  the active tab's view-scope filtered out — that
+                  regressed the prior `'map'` view's all-events scope
+                  and could mislead operators about what's nearby. */}
               <MapPeekWidget
-                events={visibleEvents as never}
+                events={expandedEvents as never}
                 onEventClick={handleEventClick as never}
                 {...(mapStyle ? { mapStyle } : {})}
               />
