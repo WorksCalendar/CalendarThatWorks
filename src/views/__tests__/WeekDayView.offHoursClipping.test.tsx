@@ -79,7 +79,11 @@ describe('WeekView off-hours event clipping', () => {
     expect(btn).toBeInTheDocument();
     expect(screen.queryByText('Title: Type rating')).not.toBeInTheDocument();
     expect(screen.getByText('Type rating')).toBeInTheDocument();
-    expect(screen.getByText(/10:00 AM - 11:00 AM/)).toBeInTheDocument();
+    // Pill height + grid position encode start/end visually, so we no longer
+    // duplicate the time range as text — it just stole space from the title.
+    // The aria-label retains the hours for screen readers (asserted via the
+    // role="button" name match above).
+    expect(screen.queryByText(/10:00 AM - 11:00 AM/)).not.toBeInTheDocument();
   });
 
   it('clips event that starts before dayStart but ends inside the window', () => {

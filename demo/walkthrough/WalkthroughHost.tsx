@@ -70,12 +70,14 @@ function buildSpotlightCss(spotlight: StepSpotlight | undefined): string | null 
     : spotlight.selector ?? null;
   if (!selector) return null;
 
-  // outline + box-shadow pulse. Position relative + z-index keeps the glow
-  // above neighboring pills without changing layout.
+  // outline + box-shadow pulse. We deliberately do NOT touch `position` or
+  // `z-index` here — Week / Day pills rely on `position: absolute` for their
+  // inline top/left/width/height percentages, and overriding that to relative
+  // breaks the layout (the pill renders at static flow position, leaving the
+  // click area empty so click-to-edit becomes click-to-create-new-event).
+  // outline is "outside" the box layout so it doesn't need positioning help.
   return `
     ${selector} {
-      position: relative;
-      z-index: 5;
       outline: 3px solid #f59e0b;
       outline-offset: 2px;
       border-radius: 6px;

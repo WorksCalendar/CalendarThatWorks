@@ -333,7 +333,6 @@ export default function WeekView({
     const display = ((ev.meta ?? {}) as { _display?: { large?: boolean; bold?: boolean } })._display ?? {};
     const isUltraCompact = height < 42;
     const isCompact = height < 72;
-    const timeRangeLabel = `${format(ev.start, 'h:mm a')} - ${format(ev.end, 'h:mm a')}`;
 
     const inner = ctx?.renderEvent
       ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
@@ -372,15 +371,14 @@ export default function WeekView({
               <EventStatusBadge lifecycle={(ev as { lifecycle?: unknown }).lifecycle as never} variant="compact" />
               {ev.title}
             </span>
-            {isUltraCompact ? null : (
-              <span className={styles['evTimeRange']}>{timeRangeLabel}</span>
-            )}
+            {/* Pill height + grid position already encode start/end visually,
+             *  so the duplicated time labels (timeRange, Start, End) only
+             *  starved the title of legible space. Keep the resource line
+             *  (non-time, useful when row identity is grid-conveyed but
+             *  pills overlap or wrap). aria-label still includes everything
+             *  for screen readers. */}
             {isCompact ? null : (
-              <>
-                <span className={styles['evTime']}>Start: {format(ev.start, 'h:mm a')}</span>
-                <span className={styles['evTime']}>End: {format(ev.end, 'h:mm a')}</span>
-                <span className={styles['evMeta']}>Resource: {pillResource(ev)}</span>
-              </>
+              <span className={styles['evMeta']}>Resource: {pillResource(ev)}</span>
             )}
           </>
         )}
