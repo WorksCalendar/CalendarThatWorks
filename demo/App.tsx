@@ -68,6 +68,15 @@ if (!storedProfiles || storedProfiles === '[]' || storedProfileSeedVer < PROFILE
 // Settings → Team tab can show / assign regions when editing bases.
 const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name, regionId: b.regionId }));
 
+/* ─── Geographic coordinates per base (for MapView) ─────────────── */
+const BASE_COORDS: Record<string, { lat: number; lon: number }> = {
+  'b-seattle':  { lat: 47.4502, lon: -122.3088 }, // SEA
+  'b-portland': { lat: 45.5887, lon: -122.5975 }, // PDX
+  'b-denver':   { lat: 39.8561, lon: -104.6737 }, // DEN
+  'b-slc':      { lat: 40.7899, lon: -111.9791 }, // SLC
+  'b-bozeman':  { lat: 45.7775, lon: -111.1602 }, // BZN
+};
+
 /* ─── Config seed ───────────────────────────────────────────────── */
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
 // see the new defaults on their next load without a manual storage wipe.
@@ -82,7 +91,7 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name, regionId: b.regionI
 //   2. Default view returns to Month. The seed previously hard-coded
 //      `defaultView: 'base'`; only the carried-over 'base' choice is reset
 //      so any user-picked view is respected.
-const DEMO_SEED_VERSION = 7;
+const DEMO_SEED_VERSION = 8;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
@@ -304,8 +313,17 @@ const INITIAL_EVENTS = allEvents.map(e => {
   const approvalMeta = APPROVAL_CATS.has(e.category)
     ? { approvalStage: { stage: e.visualPriority === 'high' ? 'requested' : 'approved', updatedAt: e.start } }
     : null;
-  const meta = (sourceMeta || kind || approvalMeta)
-    ? { ...(sourceMeta ?? {}), ...(kind ? { kind } : {}), ...(approvalMeta ?? {}) }
+  // Plot every event on the MapView by stamping coordinates from its base.
+  // Events without basedAt fall back to the resource owner's base when known.
+  const empBase = e.assignedTo
+    ? [...dispatchers, ...crew, ...medicalCrew, ...mechanics].find(emp => emp.id === e.assignedTo)?.basedAt
+    : undefined;
+  const assetBase = e.assignedTo ? EMS_ASSETS.find(a => a.id === e.assignedTo)?.basedAt : undefined;
+  const baseId = e.basedAt ?? empBase ?? assetBase;
+  const baseCoords = baseId ? BASE_COORDS[baseId] : undefined;
+  const coordsMeta = baseCoords ? { coords: baseCoords, baseId } : null;
+  const meta = (sourceMeta || kind || approvalMeta || coordsMeta)
+    ? { ...(sourceMeta ?? {}), ...(kind ? { kind } : {}), ...(approvalMeta ?? {}), ...(coordsMeta ?? {}) }
     : null;
   return {
     id: e.id, title: e.title, start: e.start, end: e.end,
@@ -323,9 +341,25 @@ const INITIAL_EVENTS = allEvents.map(e => {
 // number; the round-robin cursor persists in localStorage. Resynced on the
 // demo seed bump so returning visitors don't keep stale pool names (e.g.
 // "Mountain Fleet" / "Southwest Fleet") from earlier demo identities.
+// One pool per base containing every person, asset, and the base itself.
+// Lets the MapView (and any base-scoped dispatch) resolve the full roster
+// at a base from a single membership lookup. The two original regional
+// fleet pools are retained for round-robin aircraft selection.
+const ALL_PERSONNEL = [...dispatchers, ...crew, ...medicalCrew, ...mechanics];
+const DEMO_BASE_POOLS = bases.map(b => ({
+  id: `pool-base-${b.id}`,
+  name: `${b.name} — On Base`,
+  memberIds: [
+    b.id,
+    ...ALL_PERSONNEL.filter(p => p.basedAt === b.id).map(p => p.id),
+    ...EMS_ASSETS.filter(a => a.basedAt === b.id).map(a => a.id),
+  ],
+  strategy: 'first-available' as const,
+}));
 const DEMO_POOLS_DEFAULT = [
   { id: 'pool-pnw', name: 'Pacific Northwest Fleet', memberIds: ['ac-n801aw', 'ac-n803lj'], strategy: 'round-robin'     },
   { id: 'pool-rm',  name: 'Rocky Mountain Fleet',   memberIds: ['ac-n804aw', 'ac-n805pc'], strategy: 'first-available' },
+  ...DEMO_BASE_POOLS,
 ];
 const _storedPools = loadPools(DEMO_CALENDAR_ID);
 if (_storedPools.length === 0 || storedSeedVer < DEMO_SEED_VERSION) {
