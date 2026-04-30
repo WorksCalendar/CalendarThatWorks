@@ -761,7 +761,7 @@ function SetupTab({
               <div className={styles['themeModeToggle']}>
                 <button
                   className={[styles['themeModeBtn'], selectedTheme === `${family.id}-light` && styles['themeModeBtnActive']].filter(Boolean).join(' ')}
-                  onClick={() => setPreferredTheme(`${family.id}-light`)}
+                  onClick={(e) => { e.stopPropagation(); setPreferredTheme(`${family.id}-light`); }}
                   aria-pressed={selectedTheme === `${family.id}-light`}
                   title={lightMeta.label}
                 >
@@ -769,7 +769,7 @@ function SetupTab({
                 </button>
                 <button
                   className={[styles['themeModeBtn'], selectedTheme === `${family.id}-dark` && styles['themeModeBtnActive']].filter(Boolean).join(' ')}
-                  onClick={() => setPreferredTheme(`${family.id}-dark`)}
+                  onClick={(e) => { e.stopPropagation(); setPreferredTheme(`${family.id}-dark`); }}
                   aria-pressed={selectedTheme === `${family.id}-dark`}
                   title={darkMeta.label}
                 >
