@@ -59,8 +59,14 @@ function App() {
     {
       id: 'hover-range-1',
       title: 'Cross-Day Hover Range',
-      start: at(today, 2, 22, 0).toISOString(),
-      end: at(today, 3, 6, 0).toISOString(),
+      // Use today + 1 → today + 2 so the event always fits inside the
+      // current month's visible grid even when today is in the last week
+      // of the month. Earlier offsets of (+2, +3) used to push the
+      // end-day past the grid edge whenever today landed near month-end
+      // (e.g. Apr 30, 2026 → endCell for May 3 is in the next month
+      // grid), making the e2e cross-day test flaky.
+      start: at(today, 1, 22, 0).toISOString(),
+      end: at(today, 2, 6, 0).toISOString(),
       category: 'Incident',
       resource: 'emp-beta',
       color: '#f59e0b',

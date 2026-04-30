@@ -69,8 +69,11 @@ export interface CascadePanelProps {
   readonly config: CascadeConfig;
   readonly selections: CascadeSelections;
   readonly onSelectionsChange: (next: CascadeSelections) => void;
-  /** Called when the user clicks Save. The host decides naming/persistence. */
-  readonly onSave?: (snapshot: CascadeSelections) => void;
+  /**
+   * Called after the user clicks Save and confirms a name. The host
+   * decides persistence (typically wraps the saved-view system).
+   */
+  readonly onSave?: (name: string, snapshot: CascadeSelections) => void;
   /** Called when the user clicks Reset. Defaults to clearing all selections. */
   readonly onReset?: () => void;
 }
@@ -92,6 +95,12 @@ export default function CascadePanel({
   onReset,
 }: CascadePanelProps) {
   const [moreOpen, setMoreOpen] = useState(false);
+  // Name-prompt state: when the user clicks Save we switch the action
+  // row into a small name-entry form, instead of saving with a hardcoded
+  // "Custom view" label. Separate states so the input survives focus
+  // changes inside the row.
+  const [namingOpen, setNamingOpen] = useState(false);
+  const [pendingName, setPendingName] = useState('');
 
   const allTiers = useMemo(
     () => [...config.tiers, ...(config.moreOptions ?? [])],
@@ -100,6 +109,8 @@ export default function CascadePanel({
 
   const summary = useMemo(() => buildSummary(allTiers, selections), [allTiers, selections]);
   const hasSelection = !isEmpty(selections);
+
+  const defaultName = useMemo(() => buildDefaultViewName(allTiers, selections), [allTiers, selections]);
 
   const setTier = (tierId: string, next: readonly string[]) => {
     const updated: Record<string, readonly string[]> = { ...selections };
@@ -144,9 +155,23 @@ export default function CascadePanel({
     }
   };
 
+  const openNamePrompt = () => {
+    if (!onSave) return;
+    setPendingName(defaultName);
+    setNamingOpen(true);
+  };
+
+  const cancelNamePrompt = () => {
+    setNamingOpen(false);
+    setPendingName('');
+  };
+
   const handleSave = () => {
     if (!onSave) return;
-    onSave(selections);
+    const name = pendingName.trim() || defaultName;
+    onSave(name, selections);
+    setNamingOpen(false);
+    setPendingName('');
   };
 
   return (
@@ -199,32 +224,89 @@ export default function CascadePanel({
       )}
 
       <div className={styles['actions']}>
-        <span className={styles['summary']} aria-live="polite">
-          {summary}
-        </span>
-        <span className={styles['actionGroup']}>
-          <button
-            type="button"
-            className={styles['btnGhost']}
-            onClick={handleReset}
-            disabled={!hasSelection}
-          >
-            Reset
-          </button>
-          {onSave && (
-            <button
-              type="button"
-              className={styles['btnPrimary']}
-              onClick={handleSave}
-              disabled={!hasSelection}
-            >
-              Save
-            </button>
-          )}
-        </span>
+        {namingOpen ? (
+          <div className={styles['nameRow']}>
+            <label className={styles['nameLabel']} htmlFor="cascade-save-name">
+              Save view as
+            </label>
+            <input
+              id="cascade-save-name"
+              type="text"
+              className={styles['nameInput']}
+              value={pendingName}
+              autoFocus
+              placeholder={defaultName}
+              onChange={(e) => setPendingName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSave();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelNamePrompt();
+                }
+              }}
+            />
+            <span className={styles['actionGroup']}>
+              <button
+                type="button"
+                className={styles['btnGhost']}
+                onClick={cancelNamePrompt}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles['btnPrimary']}
+                onClick={handleSave}
+              >
+                Save
+              </button>
+            </span>
+          </div>
+        ) : (
+          <>
+            <span className={styles['summary']} aria-live="polite">
+              {summary}
+            </span>
+            <span className={styles['actionGroup']}>
+              <button
+                type="button"
+                className={styles['btnGhost']}
+                onClick={handleReset}
+                disabled={!hasSelection}
+              >
+                Reset
+              </button>
+              {onSave && (
+                <button
+                  type="button"
+                  className={styles['btnPrimary']}
+                  onClick={openNamePrompt}
+                  disabled={!hasSelection}
+                >
+                  Save
+                </button>
+              )}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+function buildDefaultViewName(tiers: readonly CascadeTier[], selections: CascadeSelections): string {
+  const parts: string[] = [];
+  for (const tier of tiers) {
+    const sel = selections[tier.id];
+    if (!sel || sel.length === 0) continue;
+    const opts = tier.getOptions(selections);
+    const labelMap = new Map(opts.map(o => [o.value, o.label]));
+    const labels = sel.map(v => labelMap.get(v) ?? v);
+    parts.push(labels.length === 1 ? labels[0]! : `${labels[0]} +${labels.length - 1}`);
+  }
+  return parts.length === 0 ? 'Custom view' : parts.join(' · ');
 }
 
 interface TierRowProps {

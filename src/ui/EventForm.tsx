@@ -62,6 +62,21 @@ export default function EventForm({
    * week 2.
    */
   onLiveConflictsChange,
+  /**
+   * When true, hide the template dropdown entirely. Hosts whose domain
+   * doesn't map to the built-in templates (Daily standup, Sprint
+   * planning, etc.) can suppress the irrelevant picker.
+   */
+  hideTemplates = false,
+  /**
+   * Optional category-aware resource suggester. Returns the
+   * resource options that make sense for the currently picked
+   * category (e.g. for "maintenance", suggest mechanics + aircraft;
+   * for "pilot-shift", suggest pilots only). Wires a <datalist>
+   * onto the resource input so users get scoped autocomplete
+   * instead of the browser's freeform history.
+   */
+  resourceSuggestions,
 }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const draft   = useEventDraftState(event, categories, config);
@@ -337,12 +352,14 @@ export default function EventForm({
                 </span>
               </div>
             )}
-            <div className={styles['field']}>
-              <label className={styles['label']} htmlFor="ef-template">Template</label>
-              <select id="ef-template" className={styles['select']} value={d.templateId} onChange={e => d.applyTemplate(e.target.value)}>
-                {BUILT_IN_EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-              </select>
-            </div>
+            {!hideTemplates && (
+              <div className={styles['field']}>
+                <label className={styles['label']} htmlFor="ef-template">Template</label>
+                <select id="ef-template" className={styles['select']} value={d.templateId} onChange={e => d.applyTemplate(e.target.value)}>
+                  {BUILT_IN_EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+            )}
             <div className={styles['field']}>
               <label className={styles['label']} htmlFor="ef-title">Title <span className={styles['req']}>*</span></label>
               <input id="ef-title"
@@ -380,8 +397,21 @@ export default function EventForm({
                 onAddCategory={onAddCategory} onChange={(cat: string) => d.set('category', cat)} />
               <div className={styles['field']}>
                 <label className={styles['label']} htmlFor="ef-resource">Resource</label>
-                <input id="ef-resource" className={styles['input']} value={d.values.resource}
-                  onChange={e => d.set('resource', e.target.value)} placeholder="Tail #, room, person…" />
+                <input
+                  id="ef-resource"
+                  className={styles['input']}
+                  value={d.values.resource}
+                  onChange={e => d.set('resource', e.target.value)}
+                  placeholder="Tail #, room, person…"
+                  list={resourceSuggestions ? 'ef-resource-suggestions' : undefined}
+                />
+                {resourceSuggestions && (
+                  <datalist id="ef-resource-suggestions">
+                    {resourceSuggestions(d.values.category).map((opt: { value: string; label: string }) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </datalist>
+                )}
               </div>
             </div>
             <div className={styles['field']}>

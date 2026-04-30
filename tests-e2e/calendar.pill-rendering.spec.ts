@@ -26,8 +26,11 @@ test.describe('WorksCalendar month pill rendering regressions', () => {
     const pill = page.getByRole('button', { name: /Cross-Day Hover Range, Incident/i }).first();
     await expect(pill).toBeVisible();
 
-    const startCell = page.locator(`[data-date="${dateKey(2)}"]`).first();
-    const endCell = page.locator(`[data-date="${dateKey(3)}"]`).first();
+    // Fixture spans today + 1 → today + 2 (see regression-bugs.tsx). Smaller
+    // offsets keep both endpoints inside the month grid even when today is
+    // in the last week of the month.
+    const startCell = page.locator(`[data-date="${dateKey(1)}"]`).first();
+    const endCell = page.locator(`[data-date="${dateKey(2)}"]`).first();
     await expect(startCell).toBeVisible();
     await expect(endCell).toBeVisible();
 

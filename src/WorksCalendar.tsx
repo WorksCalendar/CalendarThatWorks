@@ -279,6 +279,23 @@ export type WorksCalendarProps = {
   cascadeConfig?: import('./ui/CascadePanel').CascadeConfig;
   showAddButton?: boolean;
   /**
+   * Hide the event-template dropdown in the Add/Edit Event form. Hosts
+   * whose domain doesn't map to the built-in templates ("Daily standup",
+   * "Sprint planning", etc.) can suppress the picker entirely instead
+   * of showing irrelevant options.
+   */
+  hideEventTemplates?: boolean;
+  /**
+   * Category-aware resource suggester for the Add/Edit Event form.
+   * When provided, the form's resource input gets a `<datalist>`
+   * scoped to the suggester's output for the currently picked
+   * category. Lets hosts wire their domain knowledge (e.g.
+   * "maintenance category → mechanics + aircraft only") into the
+   * picker without surfacing every employee/asset for every
+   * category.
+   */
+  eventResourceSuggestions?: (category: string) => Array<{ value: string; label: string }>;
+  /**
    * Opt-in interactive setup landing page. When true, first-time owners
    * (those with `config.setup.completed === false`) see a full-page
    * guided walkthrough before the calendar renders — with a prominent
@@ -551,7 +568,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     blockedWindows,
 
     // ── Appearance ──
-    theme       = 'light',
+    // No default here: a hard-coded fallback ('light') would always be
+    // truthy and short-circuit the rawTheme `||` chain, hiding the
+    // owner-config-driven theme even when the host doesn't pass a prop.
+    // The actual default is applied in the rawTheme expression below.
+    theme,
     colorRules,
     businessHours,
 
@@ -572,6 +593,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── UI toggles ──
     showAddButton           = false,
+    hideEventTemplates       = false,
+    eventResourceSuggestions,
     showSetupLanding        = false,
 
     // ── Initial view (overrides saved config on first render) ──
@@ -2320,6 +2343,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     });
   }, [inlineEditTarget, applyEngineOp, getSavedEventPayload, onEventSave]);
 
+  /** Delete an event directly from InlineEventEditor. Mirrors the
+   *  recurring-aware id resolution used by handleInlineSave: a recurring
+   *  occurrence's `id` is the per-occurrence key, while `_eventId` is the
+   *  series master id the engine knows. Using the wrong one makes the
+   *  delete a no-op and emits the wrong id upstream. */
+  const handleInlineDelete = useCallback(() => {
+    const ev = inlineEditTarget?.event;
+    if (!ev) return;
+    const eventId = ev._eventId ?? String(ev.id);
+    applyEngineOp({ type: 'delete', id: eventId, source: 'api' }, () => {
+      onEventDelete?.(eventId);
+      setInlineEditTarget(null);
+    });
+  }, [inlineEditTarget, applyEngineOp, onEventDelete]);
+
   // ── Context value ────────────────────────────────────────────────────────
   const ctxValue = useMemo(() => ({
     renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
@@ -2979,6 +3017,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onLiveConflictsChange={handleLiveConflicts}
             approvalCategories={Array.isArray(assetRequestCategories) ? assetRequestCategories : []}
             pools={rawPools ?? []}
+            hideTemplates={hideEventTemplates}
+            resourceSuggestions={eventResourceSuggestions}
           />
         )}
 
@@ -3109,6 +3149,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             x={inlineEditTarget.x}
             y={inlineEditTarget.y}
             onSave={handleInlineSave}
+            onDelete={onEventDelete ? handleInlineDelete : undefined}
             onClose={() => setInlineEditTarget(null)}
           />
         )}

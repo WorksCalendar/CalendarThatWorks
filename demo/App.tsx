@@ -26,6 +26,7 @@ import MissionHoverCard, { allRequirementsMet } from './MissionHoverCard';
 import missionStyles from './MissionHoverCard.module.css';
 import { makeDispatchEvaluator } from './dispatchEvaluator';
 import Landing from './Landing';
+import DemoHoverCard from './DemoHoverCard';
 import {
   DEFAULT_PROFILE_ID,
   findProfile,
@@ -63,7 +64,9 @@ if (!storedProfiles || storedProfiles === '[]' || storedProfileSeedVer < PROFILE
 }
 
 /* ─── Bases ─────────────────────────────────────────────────────── */
-const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
+// Include regionId so BaseGanttView can group bases by region, and the
+// Settings → Team tab can show / assign regions when editing bases.
+const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name, regionId: b.regionId }));
 
 /* ─── Config seed ───────────────────────────────────────────────── */
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
@@ -79,17 +82,20 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 //   2. Default view returns to Month. The seed previously hard-coded
 //      `defaultView: 'base'`; only the carried-over 'base' choice is reset
 //      so any user-picked view is respected.
-const DEMO_SEED_VERSION = 6;
+const DEMO_SEED_VERSION = 7;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
+
+// Seed the demo regions list (shared between the fresh-install and migration paths).
+const DEMO_REGIONS = regions.map(r => ({ id: r.id, name: r.name }));
 
 if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
     ...DEFAULT_CONFIG,
     title: 'Air EMS Operations',
     setup: { completed: true, preferredTheme: 'industrial-light' },
-    team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
+    team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
@@ -107,14 +113,16 @@ if (!storedCfg) {
     title:     existing.title ?? 'Air EMS Operations',
     setup:     { ...existing.setup, preferredTheme: nextTheme },
     display:   { ...existing.display, defaultView: nextDefaultView ?? 'month' },
-    team:      { ...existing.team, bases: DEMO_BASES },
+    team:      { ...existing.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...existing.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 }
 
-const _seedConfig  = loadConfig(DEMO_CALENDAR_ID);
-const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'industrial-light';
+// Theme is managed entirely inside the library's ownerConfig (setup.preferredTheme)
+// so we don't duplicate it here. The seed/migration above already writes the
+// correct initial value. Passing a `theme` prop from outside would shadow the
+// config-driven value and make in-settings theme switching appear broken.
 
 /* ─── Employees ────────────────────────────────────────────────── */
 // Pilots + medical crew + mechanics rendered as the people roster. Each
@@ -206,6 +214,65 @@ function categoryColor(cat) {
 }
 
 const APPROVAL_CATS = new Set(['maintenance', 'aircraft-request', 'asset-request']);
+
+// Visual styles for the approval-stage chip rendered inside event pills via
+// `renderEvent`. Same color logic as the Awaiting-your-approval card in the
+// chrome so the pill chip and queue list read consistently.
+const STAGE_PILL_STYLES = {
+  requested: { label: 'Requested', bg: '#fef3c7', fg: '#92400e' },
+  approved:  { label: 'Approved',  bg: '#dbeafe', fg: '#1e40af' },
+  finalized: { label: 'Finalized', bg: '#dcfce7', fg: '#15803d' },
+  denied:    { label: 'Denied',    bg: '#fee2e2', fg: '#991b1b' },
+};
+
+// Resource pool tagging — which roles + asset types can be the "resource"
+// for each category. Drives the Add Event form's resource suggester so a
+// maintenance event suggests mechanics & aircraft, a pilot-shift event
+// suggests only pilots, etc. Categories not listed accept any resource.
+const RESOURCE_POOL_BY_CATEGORY = {
+  // Shifts pin to a single role
+  'pilot-shift':    { roles: ['pilot'],                         assets: false  },
+  'medical-shift':  { roles: ['rn', 'rt', 'medic'],             assets: false  },
+  'mechanic-shift': { roles: ['mechanic'],                      assets: false  },
+  'dispatch-shift': { roles: ['dispatcher'],                    assets: false  },
+  'on-call':        { roles: ['mechanic', 'pilot', 'rn'],       assets: false  },
+  'pto':            { roles: ['pilot', 'rn', 'rt', 'medic',
+                              'mechanic', 'dispatcher'],         assets: false  },
+  // Asset-centric categories
+  'maintenance':       { roles: ['mechanic'],                    assets: true   },
+  'aircraft-request':  { roles: [],                              assets: true   },
+  'asset-request':     { roles: [],                              assets: true   },
+  // Mission can be flown by any pilot/medical or aircraft
+  'mission-assignment': { roles: ['pilot', 'rn', 'rt', 'medic'], assets: true   },
+  'training':           { roles: ['pilot', 'rn', 'rt', 'medic',
+                                  'mechanic'],                    assets: true   },
+  'base-event':         { roles: [],                              assets: false  },
+};
+
+function suggestResourcesForCategory(category) {
+  const pool = RESOURCE_POOL_BY_CATEGORY[category];
+  // Unknown / empty category: suggest everyone + every asset.
+  if (!pool) {
+    return [
+      ...ALL_EMPLOYEES.map(e => ({ value: e.id, label: `${e.name} (${e.role})` })),
+      ...EMS_ASSETS.map(a => ({ value: a.id, label: `${a.name} — ${a.tail}` })),
+    ];
+  }
+  const out = [];
+  if (pool.roles.length > 0) {
+    out.push(
+      ...ALL_EMPLOYEES
+        .filter(e => pool.roles.includes(e.role))
+        .map(e => ({ value: e.id, label: `${e.name} (${e.role})` })),
+    );
+  }
+  if (pool.assets) {
+    out.push(
+      ...EMS_ASSETS.map(a => ({ value: a.id, label: `${a.name} — ${a.tail}` })),
+    );
+  }
+  return out;
+}
 
 // Categories that represent "schedule grain" content — shifts, PTO, on-call.
 // The library's viewScope filters these out of Month/Week/Day/Agenda when an
@@ -619,7 +686,6 @@ const EMBED_MODE =
 function App() {
   const [events,            setEvents]            = useState(INITIAL_EVENTS);
   const [notes,             setNotes]             = useState({});
-  const [theme,             setTheme]             = useState(INITIAL_THEME);
   const [employees,         setEmployees]         = useState(INITIAL_EMPLOYEES);
   const [eventLog,          setEventLog]          = useState([]);
   const [needsRefresh,      setNeedsRefresh]      = useState(false);
@@ -699,10 +765,8 @@ function App() {
 
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
-  const handleConfigSave = useCallback((cfg) => {
+  const handleConfigSave = useCallback(() => {
     log('Config saved');
-    const newTheme = cfg.setup?.preferredTheme;
-    if (newTheme) setTheme(newTheme);
   }, []);
 
   const handleEventSave = useCallback((ev) => {
@@ -771,19 +835,50 @@ function App() {
     }
   }, []);
 
-  // Appends pulsing "REQS UNMET" badge to mission pills when not fully staffed
+  // Append visual cues to event pills:
+  //   - "REQS UNMET" pulsing badge when a mission isn't fully staffed
+  //   - Approval-stage chip (REQUESTED / APPROVED / FINALIZED / DENIED) so
+  //     users can see the workflow state at a glance without opening the
+  //     hover card. Without this, an aircraft-request pill looks identical
+  //     whether it's awaiting first approval or already finalized.
   const renderEvent = useCallback((ev) => {
-    if (ev.category !== 'mission-assignment' && ev.category !== 'aircraft-request') return null;
-    if (allRequirementsMet(missionAssignments, mission, EMS_ASSETS)) return null;
+    const stage = ev?.meta?.approvalStage?.stage ?? null;
+    const isMissionLike = ev.category === 'mission-assignment' || ev.category === 'aircraft-request';
+    const showUnmet = isMissionLike && !allRequirementsMet(missionAssignments, mission, EMS_ASSETS);
+
+    if (!stage && !showUnmet) return null;
+
+    const stageStyles = stage ? STAGE_PILL_STYLES[stage] : null;
+
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', width: '100%' }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
           {ev.title}
         </span>
-        <span className={missionStyles.unmetBadge}>REQS UNMET</span>
+        {stageStyles && (
+          <span style={{
+            fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em',
+            textTransform: 'uppercase', padding: '1px 5px', borderRadius: 3,
+            background: stageStyles.bg, color: stageStyles.fg,
+            flexShrink: 0, lineHeight: 1.4,
+          }}>
+            {stageStyles.label}
+          </span>
+        )}
+        {showUnmet && <span className={missionStyles.unmetBadge}>REQS UNMET</span>}
       </span>
     );
   }, [missionAssignments]);
+
+  const renderHoverCard = useCallback((ev, onCloseHover) => (
+    <DemoHoverCard
+      event={ev}
+      onClose={onCloseHover}
+      onApprovalAction={handleApprovalAction}
+      approvalCaps={activeProfile.approval}
+      onDelete={(id) => { handleEventDelete(id); onCloseHover(); }}
+    />
+  ), [activeProfile.approval, handleApprovalAction, handleEventDelete]);
 
   const calendar = (
     <WorksCalendar
@@ -810,8 +905,10 @@ function App() {
       onApprovalAction={handleApprovalAction}
       onEventClick={handleEventClick}
       renderEvent={renderEvent}
-      theme={theme}
+      renderHoverCard={renderHoverCard}
       showAddButton={true}
+      hideEventTemplates={true}
+      eventResourceSuggestions={suggestResourcesForCategory}
       categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
       locationProvider={assetLocationProvider}
       filterSchema={DEMO_FILTER_SCHEMA}

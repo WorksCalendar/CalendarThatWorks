@@ -274,11 +274,12 @@ export default function FilterGroupSidebar({
                   config={cascadeConfig}
                   selections={cascadeSelections}
                   onSelectionsChange={onCascadeSelectionsChange}
-                  onSave={() => {
-                    // The cascade currently captures into the saved-view system
-                    // via the host's onSaveView. Naming is auto-derived; the
-                    // host can offer a rename via the Saved tab.
-                    onSaveView('Custom view', null);
+                  onSave={(name) => {
+                    // The cascade prompts the user for a name before
+                    // calling back; we forward it straight into the
+                    // saved-view system. Color stays null so the chip
+                    // picks up the default styling.
+                    onSaveView(name, null);
                   }}
                 />
               ) : (

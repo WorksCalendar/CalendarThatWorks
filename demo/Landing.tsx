@@ -159,47 +159,35 @@ function DesktopFrame({
 }
 
 /* ─── Scaled monitor frame ───────────────────────────────────────── */
-// Renders the calendar inside a transform: scale wrapper so the whole UI
+// Renders the calendar inside a CSS `zoom` wrapper so the whole UI
 // (its own internal sidebars, toolbar, grid) shrinks together — the framed
 // window reads like a smaller monitor showing a real desktop calendar
-// instead of a cramped responsive layout. The inner stage is sized at
-// `frame / SCALE`, so after the visual scale-down it exactly fills the
-// frame (no whitespace, no cropping).
-const MONITOR_SCALE = 0.78;
+// instead of a cramped responsive layout.
+//
+// We use `zoom` instead of `transform: scale` because:
+//   - `transform: scale` distorts pointer-event coordinate math (a parent
+//     transform makes the child a containing block for position: fixed
+//     ghosts, and getBoundingClientRect returns scaled rects while
+//     internal layout uses logical pixels), which crashed the
+//     drag-and-drop in MonthView.
+//   - `zoom` actually resizes the layout box, so getBoundingClientRect
+//     and pointer events behave as if the calendar genuinely is at the
+//     zoomed size — drag works normally.
+//
+// `zoom` is Chromium/WebKit-only. Firefox users get the unscaled
+// calendar (no harm — it's just a touch larger).
+const MONITOR_ZOOM = 0.78;
 
 function ScaledMonitor({ children }: { children: ReactNode }) {
-  const frameRef = useRef<HTMLDivElement | null>(null);
-  // Sane defaults so the calendar mounts at a reasonable virtual size on
-  // first paint, before ResizeObserver fires.
-  const [stage, setStage] = useState({ w: 1280, h: 800 });
-
-  useEffect(() => {
-    const node = frameRef.current;
-    if (!node) return;
-    const update = () => {
-      const rect = node.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-      setStage({
-        w: Math.round(rect.width / MONITOR_SCALE),
-        h: Math.round(rect.height / MONITOR_SCALE),
-      });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(node);
-    return () => ro.disconnect();
-  }, []);
-
   return (
-    <div className={styles.calendarWindow} ref={frameRef}>
+    <div className={styles.calendarWindow}>
       <div
         className={styles.calendarStage}
         style={{
-          width: stage.w,
-          height: stage.h,
-          transform: `scale(${MONITOR_SCALE})`,
-          transformOrigin: 'top left',
-        }}
+          // The zoom property is non-standard but widely supported. Cast
+          // to bypass React's type narrowing.
+          zoom: MONITOR_ZOOM,
+        } as React.CSSProperties}
       >
         {children}
       </div>
@@ -233,14 +221,18 @@ function splitApprovalQueues(
       start: ev.start,
       category: ev.category,
     };
-    // Awaiting your action: stage matches the profile's open capability.
-    if (isAwaitingProfile(stage, profile)) {
+    const isOwnRequest = simulatedRequesterIdFor(ev.category) === profile.id;
+    // Awaiting your action: stage matches the profile's open capability —
+    // but you can't approve your own request. A Base Supervisor who
+    // submitted a maintenance request shouldn't see it back in their own
+    // queue; that goes to Ops for first approval. Skip self-submitted.
+    if (isAwaitingProfile(stage, profile) && !isOwnRequest) {
       awaiting.push(item);
     }
     // My requests: simulated submitter matches active profile, and the
     // request is still open (i.e. not finalized or denied).
     if (
-      simulatedRequesterIdFor(ev.category) === profile.id &&
+      isOwnRequest &&
       stage !== 'finalized' &&
       stage !== 'denied'
     ) {
