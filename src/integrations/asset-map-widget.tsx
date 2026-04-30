@@ -18,6 +18,11 @@ import type { WorksCalendarMapAdapter } from '../core/geo/mapAdapterTypes'
 import { isValidPosition } from '../core/geo/positionGuards'
 import styles from './asset-map-widget.module.css'
 
+// Re-exported so a single subpath import covers both the component and
+// the contract types a host needs to wire a custom renderer.
+export type { AssetTrackerPosition } from '../core/geo/geoTypes'
+export type { WorksCalendarMapAdapter } from '../core/geo/mapAdapterTypes'
+
 export type AssetMapWidgetMode = 'peek' | 'panel' | 'fullscreen'
 export type AssetMapWidgetCorner = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
 
