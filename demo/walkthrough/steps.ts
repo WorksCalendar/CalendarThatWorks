@@ -84,7 +84,7 @@ export const STEPS: readonly Step[] = [
     id: 'open-map',
     banner: {
       title: 'Bonus — See where your fleet is',
-      body:  'Click the corner map peek to expand it. Resource locations show at a glance.',
+      body:  'Click the Region map mini-plot to expand it. Resource locations show at a glance.',
     },
     spotlight: { selector: '[data-wc-map-widget="peek"]' },
     // Two emit paths: the dedicated MapPeekWidget (primary), or a host that
@@ -92,7 +92,7 @@ export const STEPS: readonly Step[] = [
     matches: (event) =>
       event.kind === 'map-widget-opened'
       || (event.kind === 'view-changed' && event.view === 'map'),
-    hint: 'Look for the small "Region map" tile in the corner of the calendar — click it to expand.',
+    hint: 'Look for the "Region map" preview in the right rail — click it to expand.',
   },
 
   {
