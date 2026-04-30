@@ -12,7 +12,13 @@ import {
 interface ApprovalEvent {
   id: string;
   title: string;
-  start: string;
+  // The host (demo/App.tsx) hands us events straight from its events
+  // state, which mixes string starts (from INITIAL_EVENTS) with Date
+  // starts (from `getSavedEventPayload → toLegacyEvent` after any
+  // drag-move or form save). Accept either and coerce when comparing —
+  // calling `.localeCompare` on a Date used to crash the chrome the
+  // moment a host saved a coord-tagged event.
+  start: string | Date;
   category: string;
   meta?: { approvalStage?: { stage?: string; updatedAt?: string } };
 }
@@ -201,11 +207,18 @@ interface ApprovalQueueItem {
   id: string;
   title: string;
   stage: string;
+  // ISO-string form so the queue's sort comparator is type-safe even when
+  // the upstream event arrives with a Date start (post-drag/save shape).
   start: string;
   category: string;
 }
 
-function splitApprovalQueues(
+function startToIso(value: string | Date): string {
+  if (value instanceof Date) return value.toISOString();
+  return value;
+}
+
+export function splitApprovalQueues(
   events: ApprovalEvent[],
   profile: DemoProfile,
 ): { myRequests: ApprovalQueueItem[]; awaiting: ApprovalQueueItem[] } {
@@ -218,7 +231,7 @@ function splitApprovalQueues(
       id: ev.id,
       title: ev.title,
       stage,
-      start: ev.start,
+      start: startToIso(ev.start),
       category: ev.category,
     };
     const isOwnRequest = simulatedRequesterIdFor(ev.category) === profile.id;
