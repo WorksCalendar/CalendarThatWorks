@@ -44,7 +44,7 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       entryRoot: 'src',
-      include: ['src/integrations/**/*.ts'],
+      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx'],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*'],
       outDir: 'dist',
       // No rollupTypes here — the subpath module imports types from
@@ -61,7 +61,8 @@ export default defineConfig({
     emptyOutDir: false,
     lib: {
       entry: {
-        'integrations/asset-tracker': resolve(__dirname, 'src/integrations/asset-tracker.ts'),
+        'integrations/asset-tracker':    resolve(__dirname, 'src/integrations/asset-tracker.ts'),
+        'integrations/asset-map-widget': resolve(__dirname, 'src/integrations/asset-map-widget.tsx'),
       },
       formats: ['es'],
       fileName: (_format, entryName) => `${entryName}.es.js`,
