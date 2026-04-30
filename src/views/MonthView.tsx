@@ -170,7 +170,18 @@ export default function MonthView({
     if (!d || !d.moved || !d.targetDay) return;
     if (isSameDay(d.targetDay, d.ev.start)) return;
 
-    const durationMs = d.ev.end.getTime() - d.ev.start.getTime();
+    // Bail before invoking onEventMove if the source event is missing a
+    // valid start/end. NormalizedEvent guarantees Dates at the type level,
+    // but some hosts feed partially-constructed payloads through and a NaN
+    // .getTime() here would propagate as Invalid Date into engine
+    // validation, which formats violations via date-fns — and `format()`
+    // throws RangeError on Invalid Date, surfacing as a calendar-wide
+    // crash on the next render rather than a silent no-op move.
+    const startMs = d.ev.start instanceof Date ? d.ev.start.getTime() : NaN;
+    const endMs   = d.ev.end   instanceof Date ? d.ev.end.getTime()   : NaN;
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return;
+
+    const durationMs = endMs - startMs;
     const newStart   = new Date(startOfDay(d.targetDay));
     if (!d.ev.allDay) {
       newStart.setHours(d.ev.start.getHours(), d.ev.start.getMinutes(), 0, 0);
