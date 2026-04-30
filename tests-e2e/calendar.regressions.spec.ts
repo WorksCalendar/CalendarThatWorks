@@ -1,8 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-function dateKey(offsetDays = 0) {
+function fixtureBaseDate() {
   const d = new Date();
+  d.setDate(10);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dateKey(offsetDays = 0) {
+  const d = fixtureBaseDate();
   d.setDate(d.getDate() + offsetDays);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -72,15 +78,12 @@ test.describe('WorksCalendar targeted regressions', () => {
     const dialog = page.getByRole('dialog', { name: /Event details: Cross-Day Hover Range/i });
     await expect(dialog).toBeVisible();
 
-    // Fixture spans today + 1 → today + 2 (see regression-bugs.tsx). The
-    // dialog should show the END date — today + 2 — somewhere in its text.
-    const eventEnd = new Date();
-    eventEnd.setHours(0, 0, 0, 0);
-    eventEnd.setDate(eventEnd.getDate() + 2);
-    const month = eventEnd.toLocaleString('en-US', { month: 'short' });
-    const day = eventEnd.getDate();
+    const expected = fixtureBaseDate();
+    expected.setDate(expected.getDate() + 3);
+    const month = expected.toLocaleString('en-US', { month: 'short' });
+    const day = expected.getDate();
 
-    await expect(dialog).toContainText(new RegExp(`${month} ${day}`));
+    await expect(dialog).toContainText(new RegExp(`${month}\\s+${day}`));
   });
 
   test('mobile month pills keep visible title text', async ({ page }) => {
