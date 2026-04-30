@@ -581,15 +581,14 @@
   position: relative;
 }
 
-/* The stage runs at a virtual size larger than the window, then gets
-   transform: scaled back down so the whole calendar (its own sidebars,
-   toolbar, grid) shrinks together as a single unit — like looking at a
-   smaller monitor. Inline width/height/transform are set by JS based on
-   the live frame size. */
+/* CSS `zoom` shrinks the entire layout box uniformly — sidebars,
+   toolbar, grid all scale together as one unit. Unlike transform: scale
+   it doesn't distort getBoundingClientRect / pointer-event math, so
+   drag-and-drop in MonthView keeps working. Chromium/WebKit only;
+   Firefox renders unscaled (acceptable degradation). */
 .calendarStage {
-  position: absolute;
-  top: 0;
-  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -600,7 +599,6 @@
 .calendarStage [data-testid='works-calendar'] {
   border-radius: 0 !important;
   border: none !important;
-  width: 100% !important;
   height: 100% !important;
   flex: 1;
   min-height: 0;
