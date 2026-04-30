@@ -9,7 +9,7 @@
  * Closing the modal returns to the rail preview; the mini never
  * unmounts, so the operator's "where am I" reference stays put.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import MapView from '../views/MapView'
 import styles from './MapPeekWidget.module.css'
@@ -28,6 +28,10 @@ export interface MapPeekWidgetProps {
   readonly onEventClick?: (event: EventLike) => void
   /** MapLibre style URL, forwarded to MapView. */
   readonly mapStyle?: string
+  /** Fires whenever the corner widget toggles its modal open or closed.
+   *  Used by the demo walkthrough to advance the "open the map" step; also
+   *  available to any host that wants to react to map peeks. */
+  readonly onOpenChange?: (open: boolean) => void
 }
 
 interface Plotted { id: string; lat: number; lon: number }
@@ -50,8 +54,22 @@ const MINI_W = 200
 const MINI_H = 96
 const MINI_PAD = 10
 
-export function MapPeekWidget({ events, onEventClick, mapStyle }: MapPeekWidgetProps) {
+export function MapPeekWidget({ events, onEventClick, mapStyle, onOpenChange }: MapPeekWidgetProps) {
   const [open, setOpen] = useState(false)
+
+  // Notify host on toggle. Skips the initial mount so consumers don't get a
+  // synthetic 'closed' event for the default state. Mirrors WorksCalendar's
+  // onViewChange pattern.
+  const lastOpenRef = useRef<boolean | null>(null)
+  useEffect(() => {
+    if (lastOpenRef.current === null) {
+      lastOpenRef.current = open
+      return
+    }
+    if (lastOpenRef.current === open) return
+    lastOpenRef.current = open
+    onOpenChange?.(open)
+  }, [open, onOpenChange])
 
   const plotted = useMemo<Plotted[]>(() => {
     const out: Plotted[] = []
@@ -74,7 +92,7 @@ export function MapPeekWidget({ events, onEventClick, mapStyle }: MapPeekWidgetP
 
   return (
     <>
-      <div className={styles['host']}>
+      <div className={styles['host']} data-wc-map-widget="peek">
         <button
           type="button"
           className={styles['mini']}

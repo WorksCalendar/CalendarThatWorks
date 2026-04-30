@@ -951,20 +951,36 @@ function App() {
   });
 
   // Snap the calendar to the walkthrough seed date on first guided mount so
-  // Mission Alpha is at the natural focus point (especially for Week/Day
-  // views, where today's date would otherwise hide the seeds entirely).
-  // Skipped in EMBED_MODE so e2e tests keep their real "today" landing.
-  const calendarRef = useRef(null);
-  const didSnapRef  = useRef(false);
-  useEffect(() => {
-    if (EMBED_MODE) return;
+  // Mission Alpha is at the natural focus point — important across views:
+  //   • Schedule view's 6-week window starts at startOfWeek(currentDate);
+  //     today (Apr 30) puts the window at Apr 26 → Jun 6, hiding the
+  //     Apr 23 seeds entirely.
+  //   • Week / Day views show only the current period.
+  //   • Month view is forgiving (April 23 is in April), but the pulse is
+  //     more obvious when alpha is the focused cell.
+  // Implemented as a callback ref rather than useEffect because the parent
+  // mount effect can occasionally fire before forwardRef + useImperativeHandle
+  // has populated the imperative handle. Callback refs run synchronously the
+  // moment the ref is attached, so we never race the calendar's mount.
+  // Skipped in EMBED_MODE so e2e tests keep their real "today" landing, and
+  // skipped if the user has already engaged with the walkthrough.
+  const calendarApiRef = useRef(null);
+  const didSnapRef     = useRef(false);
+  const walkthroughModeRef    = useRef(walkthrough.state.mode);
+  const walkthroughHistoryRef = useRef(walkthrough.state.history.length);
+  walkthroughModeRef.current    = walkthrough.state.mode;
+  walkthroughHistoryRef.current = walkthrough.state.history.length;
+
+  const calendarRef = useCallback((api) => {
+    calendarApiRef.current = api;
+    if (!api?.navigateTo) return;
     if (didSnapRef.current) return;
-    if (walkthrough.state.mode === 'free-play') return;
-    if (walkthrough.state.history.length > 0) return; // user has already engaged
-    if (!calendarRef.current?.navigateTo) return;
-    calendarRef.current.navigateTo(new Date(ALPHA_INITIAL_START_ISO));
+    if (EMBED_MODE) return;
+    if (walkthroughModeRef.current === 'free-play') return;
+    if (walkthroughHistoryRef.current > 0) return;
+    api.navigateTo(new Date(ALPHA_INITIAL_START_ISO));
     didSnapRef.current = true;
-  }, [walkthrough.state.mode, walkthrough.state.history.length]);
+  }, []);
 
   const calendar = (
     <WorksCalendar
@@ -987,6 +1003,7 @@ function App() {
       onNoteDelete={handleNoteDelete}
       onEventSave={EMBED_MODE ? handleEventSave : walkthrough.wrapped.onEventSave}
       onViewChange={EMBED_MODE ? undefined : walkthrough.wrapped.onViewChange}
+      onMapWidgetOpenChange={EMBED_MODE ? undefined : walkthrough.wrapped.onMapWidgetOpenChange}
       onEventDelete={handleEventDelete}
       onScheduleSave={handleEventSave}
       onAvailabilitySave={handleEventSave}

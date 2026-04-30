@@ -62,6 +62,7 @@ export interface HostDelegate {
   onEventSave?: (event: HostEvent) => void;
   onConflictCheck?: (event: HostEvent, candidate: HostEvent) => Promise<unknown> | unknown;
   onViewChange?: (view: string) => void;
+  onMapWidgetOpenChange?: (open: boolean) => void;
 }
 
 /** Minimal event shape the adapter cares about — kept loose so the demo's
@@ -179,6 +180,13 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
     onViewChange: (view) => {
       delegate.onViewChange?.(view);
       observe({ kind: 'view-changed', view });
+    },
+
+    onMapWidgetOpenChange: (open) => {
+      delegate.onMapWidgetOpenChange?.(open);
+      // Only the open transition advances the walkthrough; closing the modal
+      // shouldn't fire a redundant observation.
+      if (open) observe({ kind: 'map-widget-opened' });
     },
   }), [delegate, ctx.alphaEventId, ctx.bravoEventId, observe]);
 
