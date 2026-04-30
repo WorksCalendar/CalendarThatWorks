@@ -14,15 +14,41 @@
  * button that we'll wire when we mount the UI.
  */
 
-import { useCallback, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { INITIAL_STATE, reducer } from './reducer';
 import { STEPS } from './steps';
 import type {
   Step,
   StepContext,
   WalkthroughEvent,
+  WalkthroughMode,
   WalkthroughState,
 } from './types';
+
+/** localStorage key for the dismissed-tour flag. Only the mode is persisted —
+ *  the active step always resets so a returning visitor who restarts the tour
+ *  starts from step 1 with a clean event log. */
+const STORAGE_KEY = 'wc-walkthrough-mode';
+
+function readPersistedMode(): WalkthroughMode {
+  if (typeof window === 'undefined') return 'guided';
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === 'free-play'
+      ? 'free-play'
+      : 'guided';
+  } catch {
+    return 'guided';
+  }
+}
+
+function persistMode(mode: WalkthroughMode): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, mode);
+  } catch {
+    // quota / private mode — silent failure, just won't persist
+  }
+}
 
 interface UseWalkthroughArgs {
   ctx: StepContext;
@@ -62,8 +88,16 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
   const [state, dispatch] = useReducer(
     (s: WalkthroughState, a: Parameters<typeof reducer>[1]) =>
       reducer(s, a, { steps: STEPS, ctx }),
-    INITIAL_STATE,
+    undefined,
+    () => ({ ...INITIAL_STATE, mode: readPersistedMode() }),
   );
+
+  // Persist mode changes so a dismissed tour stays dismissed across reloads.
+  // Only the mode is saved — currentStep / history reset on each load so
+  // restarting starts cleanly at step 1.
+  useEffect(() => {
+    persistMode(state.mode);
+  }, [state.mode]);
 
   // Snapshot of the previous state of Alpha so we can tell a "move" (time
   // change, same resource) from a "reassign" (resource change). Refs because
