@@ -1,115 +1,96 @@
-/**
- * `asset-tracker` bridge — issue #386 v2 distance.
- *
- * Wraps a [`asset-tracker`](https://github.com/natehorst240-sketch/Map_Idea)
- * `PositionPluginRegistry` (or any object that exposes a
- * `Position[]`-shaped iterable keyed by `id`) as a
- * `ResourceLocationAdapter`, so a host that already feeds ADS-B /
- * NMEA / Traccar / APRS / Samsara / MQTT through the tracker can
- * point WorksCalendar's pool resolver at it without writing any
- * glue code.
- *
- * Why this lives in `src/integrations/`: the tracker is an optional
- * peer dependency. WorksCalendar's main bundle stays free of any
- * tracker-specific code; consumers reach for this path only when
- * they install both packages. We don't import the tracker package
- * here either — the bridge accepts a structural type so it works
- * whether the host is using the published `asset-tracker` package,
- * a fork, or a hand-rolled registry that happens to match the
- * normalized-position shape.
- */
+import type { EngineResource } from '../core/engine/schema/resourceSchema'
 import type { ResourceLocationAdapter, ResourceLocation } from '../core/pools/locationAdapters'
+import type {
+  GeoPoint,
+  ResourceTrackingMeta,
+  AssetTrackerPosition,
+} from '../core/geo/geoTypes'
+import type { WorksCalendarMapAdapter } from '../core/geo/mapAdapterTypes'
+import { isValidPosition } from '../core/geo/positionGuards'
+import { positionToResourceTrackingMeta } from '../core/geo/positionToResourceMeta'
 
-/**
- * The minimum surface from `asset-tracker` we depend on. The real
- * package's `PositionPluginRegistry` exposes much more — we only
- * need a way to look up the latest normalized position for a given
- * resource id. Two lookup styles are supported so this bridge fits
- * whichever shape the upstream package settles on:
- *
- *   - `getById(id)` returning the position (preferred — O(1))
- *   - `positions()` returning the whole list (fallback — O(n))
- */
+export type { GeoPoint, ResourceTrackingMeta, AssetTrackerPosition, WorksCalendarMapAdapter }
+export { isValidPosition, positionToResourceTrackingMeta }
+
 export interface AssetTrackerLikeRegistry {
   readonly getById?: (id: string) => AssetTrackerPosition | null | undefined
   readonly positions?: () => Iterable<AssetTrackerPosition>
 }
 
-export interface AssetTrackerPosition {
-  readonly id: string
-  readonly lat: number
-  readonly lon: number
-  readonly altitude?: number | null
-  readonly heading?: number | null
-  readonly speed?: number | null
-  readonly timestamp?: number
-  readonly source?: string
-  readonly label?: string
-  readonly meta?: Readonly<Record<string, unknown>>
-}
-
-export interface FromAssetTrackerOptions {
-  /** Override the adapter id; useful when you have multiple feeds. */
+export interface AssetMapIntegrationOptions {
   readonly id?: string
+  readonly staleThresholdSeconds?: number
+  readonly nowSeconds?: () => number
+  readonly resourceIdFromPosition?: (position: AssetTrackerPosition) => string
 }
 
-/**
- * Build a `ResourceLocationAdapter` backed by an asset-tracker-style
- * registry.
- *
- *   import { buildRegistry, adsbAdapter } from 'asset-tracker';
- *   import { fromAssetTrackerRegistry, attachLocations } from 'works-calendar';
- *
- *   const registry  = buildRegistry([adsbAdapter()]);
- *   await registry.refresh();   // host owns the polling cadence
- *   const located   = attachLocations(resources, [
- *     fromAssetTrackerRegistry(registry),
- *   ]);
- *
- * The adapter reads from the registry on each `resolve` call —
- * cheap when `getById` is available; the host should call this
- * helper once per registry refresh tick, not per resolve.
- */
-export function fromAssetTrackerRegistry(
+export interface AssetTrackerIntegration {
+  readonly locationAdapter: ResourceLocationAdapter
+  readonly mapPositionToResourceMeta: (position: AssetTrackerPosition) => ResourceTrackingMeta | null
+}
+
+export function mapPositionToResourceMeta(
+  position: AssetTrackerPosition,
+  nowSeconds: number,
+  staleThresholdSeconds: number,
+): ResourceTrackingMeta | null {
+  return positionToResourceTrackingMeta(position, nowSeconds, staleThresholdSeconds)
+}
+
+export function createAssetTrackerIntegration(
   registry: AssetTrackerLikeRegistry,
-  options: FromAssetTrackerOptions = {},
-): ResourceLocationAdapter {
-  return {
-    id: options.id ?? 'asset-tracker',
-    resolve(resource) {
-      const pos = lookup(registry, resource.id)
-      return pos ? toLocation(pos) : null
-    },
-  }
-}
+  options: AssetMapIntegrationOptions = {},
+): AssetTrackerIntegration {
+  const staleThresholdSeconds = options.staleThresholdSeconds ?? 120
+  const nowSeconds = options.nowSeconds ?? (() => Math.floor(Date.now() / 1000))
+  const resourceIdFromPosition = options.resourceIdFromPosition ?? ((p: AssetTrackerPosition) => p.id)
 
-// ─── Internals ────────────────────────────────────────────────────────────
+  let cachedIndex: ReadonlyMap<string, AssetTrackerPosition> | null = null
 
-function lookup(reg: AssetTrackerLikeRegistry, id: string): AssetTrackerPosition | null {
-  if (typeof reg.getById === 'function') {
-    return reg.getById(id) ?? null
-  }
-  if (typeof reg.positions === 'function') {
-    for (const p of reg.positions()) {
-      if (p.id === id) return p
+  const getOrBuildIndex = (): ReadonlyMap<string, AssetTrackerPosition> => {
+    if (cachedIndex) return cachedIndex
+    const map = new Map<string, AssetTrackerPosition>()
+    if (typeof registry.positions === 'function') {
+      for (const pos of registry.positions()) {
+        map.set(resourceIdFromPosition(pos), pos)
+      }
     }
+    cachedIndex = map
+    return cachedIndex
   }
-  return null
+
+  return {
+    locationAdapter: {
+      id: options.id ?? 'asset-tracker',
+      resolve(resource: EngineResource): ResourceLocation | null {
+        const pos = lookupPosition(registry, resource.id, getOrBuildIndex)
+        if (!pos || !isValidPosition(pos)) return null
+        return {
+          lat: pos.lat,
+          lon: pos.lon,
+          ...(pos.altitude != null ? { altitude: pos.altitude } : {}),
+          ...(pos.heading != null ? { heading: pos.heading } : {}),
+          ...(pos.speed != null ? { speed: pos.speed } : {}),
+          timestamp: pos.timestamp,
+          source: pos.source,
+          meta: {
+            tracking: mapPositionToResourceMeta(pos, nowSeconds(), staleThresholdSeconds),
+            label: pos.label,
+            ...(pos.meta ? { upstream: pos.meta } : {}),
+          },
+        }
+      },
+    },
+    mapPositionToResourceMeta: (position) =>
+      mapPositionToResourceMeta(position, nowSeconds(), staleThresholdSeconds),
+  }
 }
 
-function toLocation(p: AssetTrackerPosition): ResourceLocation {
-  // Map_Idea's normalized schema is already a strict superset of our
-  // `ResourceLocation` — pass it through unchanged so altitude /
-  // heading / speed / timestamp / source / meta survive into
-  // `resource.meta.location` for downstream consumers.
-  return {
-    lat: p.lat,
-    lon: p.lon,
-    ...(p.altitude  != null ? { altitude:  p.altitude  } : {}),
-    ...(p.heading   != null ? { heading:   p.heading   } : {}),
-    ...(p.speed     != null ? { speed:     p.speed     } : {}),
-    ...(p.timestamp != null ? { timestamp: p.timestamp } : {}),
-    ...(p.source    != null ? { source:    p.source    } : {}),
-    ...(p.meta      != null ? { meta:      p.meta      } : {}),
-  }
+function lookupPosition(
+  registry: AssetTrackerLikeRegistry,
+  resourceId: string,
+  getOrBuildIndex: () => ReadonlyMap<string, AssetTrackerPosition>,
+): AssetTrackerPosition | null {
+  if (typeof registry.getById === 'function') return registry.getById(resourceId) ?? null
+  return getOrBuildIndex().get(resourceId) ?? null
 }
