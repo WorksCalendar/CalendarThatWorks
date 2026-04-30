@@ -147,7 +147,7 @@ export default function InlineEventEditor({ event, x, y, onSave, onDelete, onClo
           <button
             type="button"
             className={styles['deleteBtn']}
-            onClick={() => { onDelete(event.id); onClose(); }}
+            onClick={() => { onDelete(); onClose(); }}
             aria-label="Delete event"
           >
             Delete

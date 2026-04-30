@@ -2339,14 +2339,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     });
   }, [inlineEditTarget, applyEngineOp, getSavedEventPayload, onEventSave]);
 
-  /** Delete an event directly from InlineEventEditor. */
-  const handleInlineDelete = useCallback((id: LooseValue) => {
-    const eventId = String(id);
+  /** Delete an event directly from InlineEventEditor. Mirrors the
+   *  recurring-aware id resolution used by handleInlineSave: a recurring
+   *  occurrence's `id` is the per-occurrence key, while `_eventId` is the
+   *  series master id the engine knows. Using the wrong one makes the
+   *  delete a no-op and emits the wrong id upstream. */
+  const handleInlineDelete = useCallback(() => {
+    const ev = inlineEditTarget?.event;
+    if (!ev) return;
+    const eventId = ev._eventId ?? String(ev.id);
     applyEngineOp({ type: 'delete', id: eventId, source: 'api' }, () => {
       onEventDelete?.(eventId);
       setInlineEditTarget(null);
     });
-  }, [applyEngineOp, onEventDelete]);
+  }, [inlineEditTarget, applyEngineOp, onEventDelete]);
 
   // ── Context value ────────────────────────────────────────────────────────
   const ctxValue = useMemo(() => ({
