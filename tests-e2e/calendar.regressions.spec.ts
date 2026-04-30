@@ -1,8 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-function dateKey(offsetDays = 0) {
+function fixtureBaseDate() {
   const d = new Date();
+  d.setDate(10);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dateKey(offsetDays = 0) {
+  const d = fixtureBaseDate();
   d.setDate(d.getDate() + offsetDays);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -72,13 +78,12 @@ test.describe('WorksCalendar targeted regressions', () => {
     const dialog = page.getByRole('dialog', { name: /Event details: Cross-Day Hover Range/i });
     await expect(dialog).toBeVisible();
 
-    const tomorrow = new Date();
-    tomorrow.setHours(0, 0, 0, 0);
-    tomorrow.setDate(tomorrow.getDate() + 3);
-    const month = tomorrow.toLocaleString('en-US', { month: 'short' });
-    const day = tomorrow.getDate();
+    const expected = fixtureBaseDate();
+    expected.setDate(expected.getDate() + 3);
+    const month = expected.toLocaleString('en-US', { month: 'short' });
+    const day = expected.getDate();
 
-    await expect(dialog).toContainText(new RegExp(`${month} ${day}`));
+    await expect(dialog).toContainText(new RegExp(`${month}\\s+${day}`));
   });
 
   test('mobile month pills keep visible title text', async ({ page }) => {

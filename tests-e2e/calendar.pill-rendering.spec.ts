@@ -1,8 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-function dateKey(offsetDays = 0) {
+function fixtureBaseDate() {
   const d = new Date();
+  d.setDate(10);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dateKey(offsetDays = 0) {
+  const d = fixtureBaseDate();
   d.setDate(d.getDate() + offsetDays);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
