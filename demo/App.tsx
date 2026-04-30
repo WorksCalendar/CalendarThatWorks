@@ -937,11 +937,20 @@ function App() {
   // user gestures (drag-to-move, drag-to-reassign, view switch) without
   // changing the demo's behavior. Suppressed in EMBED_MODE so the raw
   // calendar embed used by e2e tests stays free of demo chrome.
+  // Stable pilot-id set for the walkthrough's Step 3 matcher. Built from
+  // emsData.crew (which is `pilots`) so adding/removing pilots in the demo
+  // dataset auto-updates the walkthrough without a separate edit.
+  const walkthroughPilotIds = useMemo(
+    () => new Set<string>(crew.map(p => p.id)),
+    [],
+  );
+
   const walkthrough = useWalkthrough({
     ctx: {
       missionEventId:         WALKTHROUGH_MISSION_ID,
       conflictPilotId:        CONFLICT_PILOT_ID,
       missionInitialStartIso: ALPHA_INITIAL_START_ISO,
+      pilotIds:               walkthroughPilotIds,
     },
     delegate: { onEventSave: handleEventSave },
   });

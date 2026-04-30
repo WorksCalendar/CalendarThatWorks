@@ -63,6 +63,12 @@ export interface StepContext {
   conflictPilotId: string;
   /** Mission start at seed time; used to detect Step 1 (drag-to-new-time). */
   missionInitialStartIso: string;
+  /** Set of pilot ids. Step 3 (reassign-free) only advances when the mission
+   *  is reassigned to a pilot — mission-assignment events accept assets too,
+   *  but Step 4 promises the result on the pilot's row in Schedule view, so
+   *  asset reassignments would leave the user looking for a result that never
+   *  appears. */
+  pilotIds: ReadonlySet<string>;
 }
 
 export interface WalkthroughState {

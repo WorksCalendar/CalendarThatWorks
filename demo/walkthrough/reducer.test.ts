@@ -18,6 +18,7 @@ const CTX: StepContext = {
   missionEventId:         'wt-mission',
   conflictPilotId:        'emp-james',
   missionInitialStartIso: '2026-04-23T14:00:00',
+  pilotIds:               new Set(['emp-james', 'emp-priya', 'emp-derek']),
 };
 
 const DEPS: ReducerDeps = { steps: STEPS, ctx: CTX };
@@ -105,8 +106,26 @@ describe('walkthrough reducer', () => {
     state = reducer(state, { type: 'observe', event: assigned(CTX.conflictPilotId, CTX.conflictPilotId) }, DEPS);
     expect(state.currentStep).toBe('reassign-free');
 
-    // Any other resource clears it.
+    // Any other pilot clears it.
     state = reducer(state, { type: 'observe', event: assigned('emp-priya', CTX.conflictPilotId) }, DEPS);
+    expect(state.currentStep).toBe('switch-view');
+  });
+
+  it('reassign-free does not advance on asset reassignments — only pilots', () => {
+    // mission-assignment events accept assets too. The matcher must restrict
+    // to pilot ids so users don't end up on Step 4 ("see it on the pilot's
+    // row in Schedule view") having actually assigned to an aircraft.
+    let state = INITIAL_STATE;
+    state = reducer(state, { type: 'observe', event: moved(CTX.missionEventId) }, DEPS);
+    state = reducer(state, { type: 'observe', event: assigned(CTX.conflictPilotId, null) }, DEPS);
+    expect(state.currentStep).toBe('reassign-free');
+
+    // Aircraft id is not in pilotIds → must not advance.
+    state = reducer(state, { type: 'observe', event: assigned('ac-n801aw', CTX.conflictPilotId) }, DEPS);
+    expect(state.currentStep).toBe('reassign-free');
+
+    // Switching to a real pilot does advance.
+    state = reducer(state, { type: 'observe', event: assigned('emp-derek', 'ac-n801aw') }, DEPS);
     expect(state.currentStep).toBe('switch-view');
   });
 

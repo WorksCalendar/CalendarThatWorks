@@ -54,11 +54,16 @@ export const STEPS: readonly Step[] = [
       body:  'Reassign Mission Alpha to any other pilot — the conflict clears.',
     },
     spotlight: { eventId: WALKTHROUGH_MISSION_ID },
+    // mission-assignment events accept assets too, but the next step promises
+    // a result on the *pilot's* row in Schedule view — asset rows aren't a
+    // thing in Schedule view, which would leave users stuck. Restrict to
+    // pilot reassignments only.
     matches: (event, ctx) =>
       event.kind === 'mission-assigned'
       && event.eventId === ctx.missionEventId
       && event.toResource !== null
-      && event.toResource !== ctx.conflictPilotId,
+      && event.toResource !== ctx.conflictPilotId
+      && ctx.pilotIds.has(event.toResource),
     hint: 'Click the mission again, pick a different pilot in the form, save.',
   },
 
