@@ -1,23 +1,17 @@
 /**
- * MapPeekWidget — chrome-level situational-awareness overlay.
+ * MapPeekWidget — corner mini-map + expand-on-click full map.
  *
- * Replaces the prior `'map'` view tab. Sits in the calendar's
- * upper-right corner as a tiny pill (peek), expands on click into a
- * 360x280 floating card (panel), and from there to fullscreen ops
- * mode. Closing returns to peek so the workspace below is never
- * blocked for users who didn't ask for the map.
- *
- * Reads coordinate-bearing events out of the same `meta.coords`
- * convention `MapView` uses, so any host that already populates it
- * gets the widget for free.
+ * The corner shows an always-visible bounding-box-fit SVG plot of every
+ * coord-bearing event (dependency-free, no tile layer — same convention
+ * the legacy `RegionMapWidget` used). Clicking the mini-map opens a
+ * 70vw × 70vh modal that mounts the real `<MapView />` with a MapLibre
+ * basemap. Closing the modal returns to the corner preview; the corner
+ * never disappears, so the operator's "where am I" reference stays put.
  */
-import { useMemo, useState } from 'react'
-import type { ReactNode, CSSProperties } from 'react'
-import { Map as MapIcon, Maximize2, Minimize2, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { X } from 'lucide-react'
 import MapView from '../views/MapView'
 import styles from './MapPeekWidget.module.css'
-
-type WidgetMode = 'peek' | 'panel' | 'fullscreen'
 
 type EventLike = {
   id: string
@@ -35,94 +29,140 @@ export interface MapPeekWidgetProps {
   readonly mapStyle?: string
 }
 
-function hasCoords(ev: EventLike): boolean {
+interface Plotted { id: string; lat: number; lon: number }
+
+function readCoords(ev: EventLike): { lat: number; lon: number } | null {
   const meta = ev.meta
-  if (!meta) return false
+  if (!meta) return null
   const c = meta['coords']
   if (c && typeof c === 'object') {
     const cc = c as Record<string, unknown>
-    if (typeof cc['lat'] === 'number' && (typeof cc['lon'] === 'number' || typeof cc['lng'] === 'number')) {
-      return true
-    }
+    const lat = cc['lat']; const lon = cc['lon'] ?? cc['lng']
+    if (typeof lat === 'number' && typeof lon === 'number') return { lat, lon }
   }
-  if (typeof meta['lat'] === 'number' && (typeof meta['lon'] === 'number' || typeof meta['lng'] === 'number')) {
-    return true
-  }
-  return false
+  const lat = meta['lat']; const lon = meta['lon'] ?? meta['lng']
+  if (typeof lat === 'number' && typeof lon === 'number') return { lat, lon }
+  return null
 }
 
-export function MapPeekWidget({ events, onEventClick, mapStyle }: MapPeekWidgetProps) {
-  const [mode, setMode] = useState<WidgetMode>('peek')
-  const plottable = useMemo(() => events.filter(hasCoords), [events])
+const MINI_W = 200
+const MINI_H = 96
+const MINI_PAD = 10
 
-  if (mode === 'peek') {
-    return (
+export function MapPeekWidget({ events, onEventClick, mapStyle }: MapPeekWidgetProps) {
+  const [open, setOpen] = useState(false)
+
+  const plotted = useMemo<Plotted[]>(() => {
+    const out: Plotted[] = []
+    for (const ev of events) {
+      const c = readCoords(ev)
+      if (c) out.push({ id: String(ev.id ?? ''), ...c })
+    }
+    return out
+  }, [events])
+
+  // Esc closes the modal — keyboard parity with native dialogs.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  const project = useMemo(() => buildProjector(plotted), [plotted])
+
+  return (
+    <>
       <div className={styles['host']}>
         <button
           type="button"
-          className={styles['peek']}
-          onClick={() => setMode('panel')}
-          aria-label={`Open map (${plottable.length} events with coordinates)`}
+          className={styles['mini']}
+          onClick={() => setOpen(true)}
+          aria-label={`Open map (${plotted.length} events with coordinates)`}
           title="Open map"
         >
-          <MapIcon size={14} aria-hidden="true" />
-          <span>Map</span>
-          <span className={styles['peekCount']}>· {plottable.length}</span>
+          <span className={styles['miniHeader']}>
+            <span>Region map</span>
+            <span className={styles['count']}>{plotted.length}</span>
+          </span>
+          <span className={styles['miniBody']}>
+            {plotted.length === 0 ? (
+              <span className={styles['miniEmpty']}>No coords yet</span>
+            ) : (
+              <svg
+                className={styles['miniSvg']}
+                viewBox={`0 0 ${MINI_W} ${MINI_H}`}
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                {plotted.map(p => {
+                  const { x, y } = project(p)
+                  return <circle key={p.id} cx={x} cy={y} r={2.5} className={styles['miniDot']} />
+                })}
+              </svg>
+            )}
+          </span>
         </button>
       </div>
-    )
-  }
 
-  const isFullscreen = mode === 'fullscreen'
-  const containerClass = isFullscreen ? styles['fullscreen'] : styles['host']
-  const innerClass = isFullscreen ? styles['fullscreen'] : styles['panel']
-
-  // When in panel mode, the host wrapper is absolutely positioned in
-  // the corner; in fullscreen, the wrapper takes over the viewport
-  // (position: fixed, inset: 0). The inner shell carries the chrome.
-  const wrapperStyle: CSSProperties | undefined = isFullscreen ? undefined : { position: 'absolute', top: 12, right: 12 }
-
-  return (
-    <div className={containerClass} style={wrapperStyle} role="dialog" aria-label="Map">
-      <div className={innerClass}>
-        <div className={styles['toolbar']}>
-          <span className={styles['title']}>
-            <MapIcon size={13} aria-hidden="true" /> Map
-            <span className={styles['subtitle']}>
-              {plottable.length} event{plottable.length === 1 ? '' : 's'}
-            </span>
-          </span>
-          {!isFullscreen ? (
-            <ToolbarButton label="Expand to fullscreen" onClick={() => setMode('fullscreen')}>
-              <Maximize2 size={12} aria-hidden="true" />
-            </ToolbarButton>
-          ) : (
-            <ToolbarButton label="Restore panel" onClick={() => setMode('panel')}>
-              <Minimize2 size={12} aria-hidden="true" />
-            </ToolbarButton>
-          )}
-          <ToolbarButton label="Close map" onClick={() => setMode('peek')}>
-            <X size={12} aria-hidden="true" />
-          </ToolbarButton>
+      {open && (
+        <div
+          className={styles['backdrop']}
+          onClick={() => setOpen(false)}
+          role="presentation"
+        >
+          <div
+            className={styles['modal']}
+            onClick={stop}
+            role="dialog"
+            aria-label="Map"
+            aria-modal="true"
+          >
+            <div className={styles['toolbar']}>
+              <span className={styles['title']}>
+                Map
+                <span className={styles['subtitle']}>
+                  {plotted.length} event{plotted.length === 1 ? '' : 's'}
+                </span>
+              </span>
+              <button
+                type="button"
+                className={styles['iconBtn']}
+                onClick={() => setOpen(false)}
+                aria-label="Close map"
+                title="Close"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+            <div className={styles['body']}>
+              <MapView
+                events={events as never}
+                {...(onEventClick ? { onEventClick: onEventClick as never } : {})}
+                {...(mapStyle ? { mapStyle } : {})}
+              />
+            </div>
+          </div>
         </div>
-        <div className={styles['body']}>
-          <MapView
-            events={events as never}
-            {...(onEventClick ? { onEventClick: onEventClick as never } : {})}
-            {...(mapStyle ? { mapStyle } : {})}
-          />
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }
 
-function ToolbarButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
-  return (
-    <button type="button" className={styles['iconBtn']} onClick={onClick} aria-label={label} title={label}>
-      {children}
-    </button>
-  )
+function buildProjector(points: readonly Plotted[]): (p: { lat: number; lon: number }) => { x: number; y: number } {
+  if (points.length === 0) return () => ({ x: MINI_W / 2, y: MINI_H / 2 })
+  if (points.length === 1) return () => ({ x: MINI_W / 2, y: MINI_H / 2 })
+  const lats = points.map(p => p.lat), lons = points.map(p => p.lon)
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats)
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons)
+  const dLat = maxLat - minLat || 1
+  const dLon = maxLon - minLon || 1
+  return ({ lat, lon }) => ({
+    x: MINI_PAD + ((lon - minLon) / dLon) * (MINI_W - 2 * MINI_PAD),
+    y: MINI_PAD + (1 - (lat - minLat) / dLat) * (MINI_H - 2 * MINI_PAD),
+  })
 }
+
+function stop(e: { stopPropagation: () => void }) { e.stopPropagation() }
 
 export default MapPeekWidget
