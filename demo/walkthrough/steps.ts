@@ -1,0 +1,102 @@
+/**
+ * demo/walkthrough/steps.ts — the 6 guided steps + their match predicates.
+ *
+ * Each step is self-contained: banner copy, what to spotlight, and a pure
+ * predicate that the reducer calls against every observed WalkthroughEvent.
+ *
+ * Step order matches the spec in the demo-guided-walkthrough plan:
+ *   1. move-job        — drag highlighted job to a new time
+ *   2. cause-conflict  — drag it onto a busy resource → red highlight
+ *   3. fix-conflict    — reassign to a free resource → conflict clears
+ *   4. switch-view     — toolbar: switch to schedule (timeline)
+ *   5. open-map        — open map widget (deferred; detection wired by the
+ *                        map-widget branch when it lands)
+ *   6. done            — terminal CTA ("Now you get it")
+ */
+
+import type { Step } from './types';
+
+export const STEPS: readonly Step[] = [
+  {
+    id: 'move-job',
+    banner: {
+      title: 'Step 1 of 4 — Move a job',
+      body:  'Drag the highlighted mission to a new time on the calendar.',
+    },
+    spotlight: { /* eventId filled in by the host using ctx.alphaEventId */ },
+    matches: (event, ctx) =>
+      event.kind === 'event-moved' && event.eventId === ctx.alphaEventId,
+    hint: 'Click and hold the purple "Mission Alpha" pill, then drag it to a different hour.',
+  },
+
+  {
+    id: 'cause-conflict',
+    banner: {
+      title: 'Step 2 of 4 — Trigger a conflict',
+      body:  'Now drag Mission Alpha onto Mission Bravo’s aircraft at the same time.',
+    },
+    matches: (event, ctx) => {
+      // A reassign onto Bravo's aircraft should immediately overlap Bravo.
+      // We accept either signal — whichever the host emits first.
+      if (event.kind === 'conflict-detected') {
+        return event.eventId === ctx.alphaEventId
+          && event.conflictingEventId === ctx.bravoEventId;
+      }
+      if (event.kind === 'event-reassigned') {
+        return event.eventId === ctx.alphaEventId
+          && event.toResource === ctx.bravoResource;
+      }
+      return false;
+    },
+    hint: 'Drag Mission Alpha onto Bravo’s row — they’ll overlap and the calendar will flag the conflict.',
+  },
+
+  {
+    id: 'fix-conflict',
+    banner: {
+      title: 'Step 3 of 4 — Resolve the conflict',
+      body:  'Reassign Mission Alpha to any other available aircraft.',
+    },
+    matches: (event, ctx) =>
+      event.kind === 'event-reassigned'
+      && event.eventId === ctx.alphaEventId
+      && event.toResource !== null
+      && event.toResource !== ctx.bravoResource,
+    hint: 'Drag Mission Alpha to a different aircraft row — anything except Bravo’s aircraft works.',
+  },
+
+  {
+    id: 'switch-view',
+    banner: {
+      title: 'Step 4 of 4 — Switch to the schedule view',
+      body:  'See the same data as a resource timeline. Use the view toggle in the toolbar.',
+    },
+    spotlight: { selector: '[data-view-button="schedule"]' },
+    matches: (event) =>
+      event.kind === 'view-changed' && event.view === 'schedule',
+    hint: 'Look for the view toggle in the calendar toolbar and pick "Schedule".',
+  },
+
+  {
+    id: 'open-map',
+    banner: {
+      title: 'Bonus — See where your fleet is',
+      body:  'Open the map widget to see resource locations at a glance.',
+    },
+    // Two emit paths: dedicated map widget (preferred, coming on another
+    // branch) or the existing built-in `map` view as a fallback.
+    matches: (event) =>
+      event.kind === 'map-widget-opened'
+      || (event.kind === 'view-changed' && event.view === 'map'),
+    hint: 'Click the map icon — it shows where each aircraft is right now.',
+  },
+
+  {
+    id: 'done',
+    banner: {
+      title: 'You’ve got it.',
+      body:  'WorksCalendar manages resources, conflicts, and scheduling logic — not just events. Explore on your own, or restart the tour anytime.',
+    },
+    matches: () => false,
+  },
+];
