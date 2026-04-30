@@ -207,15 +207,27 @@ interface ApprovalQueueItem {
   id: string;
   title: string;
   stage: string;
-  // ISO-string form so the queue's sort comparator is type-safe even when
-  // the upstream event arrives with a Date start (post-drag/save shape).
-  start: string;
+  // Epoch ms so the queue's sort comparator stays correct regardless of
+  // whether the upstream event arrives as a naive local-time string
+  // (`YYYY-MM-DDTHH:mm`, what INITIAL_EVENTS produces) or as a Date
+  // serialised to UTC ISO (`...Z`, what the calendar emits via
+  // toLegacyEvent after a drag-move). Lexically comparing those mixed
+  // shapes inverts chronology in non-UTC time zones — e.g. a moved
+  // event at local 2026-04-24T23:45 becomes 2026-04-25T06:45:00.000Z
+  // and would sort *ahead* of an untouched 2026-04-25T00:30 even though
+  // it's earlier in real time. Comparing milliseconds removes the
+  // format axis entirely.
+  startMs: number;
   category: string;
 }
 
-function startToIso(value: string | Date): string {
-  if (value instanceof Date) return value.toISOString();
-  return value;
+function startToMs(value: string | Date): number {
+  if (value instanceof Date) {
+    const t = value.getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+  const t = Date.parse(value);
+  return Number.isFinite(t) ? t : 0;
 }
 
 export function splitApprovalQueues(
@@ -231,7 +243,7 @@ export function splitApprovalQueues(
       id: ev.id,
       title: ev.title,
       stage,
-      start: startToIso(ev.start),
+      startMs: startToMs(ev.start),
       category: ev.category,
     };
     const isOwnRequest = simulatedRequesterIdFor(ev.category) === profile.id;
@@ -253,8 +265,8 @@ export function splitApprovalQueues(
     }
   }
   // Most recent first.
-  awaiting.sort((a, b) => b.start.localeCompare(a.start));
-  myRequests.sort((a, b) => b.start.localeCompare(a.start));
+  awaiting.sort((a, b) => b.startMs - a.startMs);
+  myRequests.sort((a, b) => b.startMs - a.startMs);
   return { myRequests, awaiting };
 }
 
