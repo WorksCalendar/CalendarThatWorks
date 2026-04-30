@@ -64,7 +64,9 @@ if (!storedProfiles || storedProfiles === '[]' || storedProfileSeedVer < PROFILE
 }
 
 /* ─── Bases ─────────────────────────────────────────────────────── */
-const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
+// Include regionId so BaseGanttView can group bases by region, and the
+// Settings → Team tab can show / assign regions when editing bases.
+const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name, regionId: b.regionId }));
 
 /* ─── Config seed ───────────────────────────────────────────────── */
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
@@ -80,17 +82,20 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 //   2. Default view returns to Month. The seed previously hard-coded
 //      `defaultView: 'base'`; only the carried-over 'base' choice is reset
 //      so any user-picked view is respected.
-const DEMO_SEED_VERSION = 6;
+const DEMO_SEED_VERSION = 7;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
+
+// Seed the demo regions list (shared between the fresh-install and migration paths).
+const DEMO_REGIONS = regions.map(r => ({ id: r.id, name: r.name }));
 
 if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
     ...DEFAULT_CONFIG,
     title: 'Air EMS Operations',
     setup: { completed: true, preferredTheme: 'industrial-light' },
-    team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
+    team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
@@ -108,14 +113,16 @@ if (!storedCfg) {
     title:     existing.title ?? 'Air EMS Operations',
     setup:     { ...existing.setup, preferredTheme: nextTheme },
     display:   { ...existing.display, defaultView: nextDefaultView ?? 'month' },
-    team:      { ...existing.team, bases: DEMO_BASES },
+    team:      { ...existing.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...existing.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 }
 
-const _seedConfig  = loadConfig(DEMO_CALENDAR_ID);
-const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'industrial-light';
+// Theme is managed entirely inside the library's ownerConfig (setup.preferredTheme)
+// so we don't duplicate it here. The seed/migration above already writes the
+// correct initial value. Passing a `theme` prop from outside would shadow the
+// config-driven value and make in-settings theme switching appear broken.
 
 /* ─── Employees ────────────────────────────────────────────────── */
 // Pilots + medical crew + mechanics rendered as the people roster. Each
@@ -679,7 +686,6 @@ const EMBED_MODE =
 function App() {
   const [events,            setEvents]            = useState(INITIAL_EVENTS);
   const [notes,             setNotes]             = useState({});
-  const [theme,             setTheme]             = useState(INITIAL_THEME);
   const [employees,         setEmployees]         = useState(INITIAL_EMPLOYEES);
   const [eventLog,          setEventLog]          = useState([]);
   const [needsRefresh,      setNeedsRefresh]      = useState(false);
@@ -759,10 +765,8 @@ function App() {
 
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
-  const handleConfigSave = useCallback((cfg) => {
+  const handleConfigSave = useCallback(() => {
     log('Config saved');
-    const newTheme = cfg.setup?.preferredTheme;
-    if (newTheme) setTheme(newTheme);
   }, []);
 
   const handleEventSave = useCallback((ev) => {
@@ -872,8 +876,9 @@ function App() {
       onClose={onCloseHover}
       onApprovalAction={handleApprovalAction}
       approvalCaps={activeProfile.approval}
+      onDelete={(id) => { handleEventDelete(id); onCloseHover(); }}
     />
-  ), [activeProfile.approval, handleApprovalAction]);
+  ), [activeProfile.approval, handleApprovalAction, handleEventDelete]);
 
   const calendar = (
     <WorksCalendar
@@ -901,7 +906,6 @@ function App() {
       onEventClick={handleEventClick}
       renderEvent={renderEvent}
       renderHoverCard={renderHoverCard}
-      theme={theme}
       showAddButton={true}
       hideEventTemplates={true}
       eventResourceSuggestions={suggestResourcesForCategory}

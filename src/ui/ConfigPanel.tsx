@@ -205,7 +205,8 @@ type AssetPatch = Partial<Omit<AssetDraft, 'meta'>>;
 type AssetMetaPatch = Partial<AssetMeta>;
 type SmartViewFilters = Record<string, unknown>;
 type ManagerAssignment = { title?: string | undefined; phone?: string | undefined };
-type TeamBaseDraft = { id: string; name: string };
+type TeamRegionDraft = { id: string; name: string };
+type TeamBaseDraft = { id: string; name: string; regionId?: string };
 type TeamMemberDraft = {
   id: number;
   name?: string | undefined;
@@ -220,6 +221,7 @@ type TeamConfigPatch = {
   members?: TeamMemberDraft[];
   roles?: string[];
   bases?: TeamBaseDraft[];
+  regions?: TeamRegionDraft[];
   locationLabel?: string;
   assetsLabel?: string;
 };
@@ -707,6 +709,20 @@ function SetupTab({
             <div
               key={family.id}
               className={[styles['themeFamilyCard'], isSelected && styles['themeFamilyCardSelected']].filter(Boolean).join(' ')}
+              role="button"
+              tabIndex={0}
+              aria-label={`Select ${family.label} theme`}
+              onClick={() => {
+                // Clicking the card selects the light variant. If the card is
+                // already selected, toggle to dark (and vice-versa).
+                if (isSelected) {
+                  setPreferredTheme(selectedTheme === `${family.id}-light` ? `${family.id}-dark` : `${family.id}-light`);
+                } else {
+                  setPreferredTheme(`${family.id}-light`);
+                }
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPreferredTheme(isSelected && selectedTheme === `${family.id}-light` ? `${family.id}-dark` : `${family.id}-light`); } }}
+              style={{ cursor: 'pointer' }}
             >
               {/* Mini structural preview */}
               <div
@@ -930,6 +946,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
   const teamMembers = (config['team']?.members ?? []) as TeamMemberDraft[];
   const roles = (config['team']?.roles ?? []) as string[];
   const bases = (config['team']?.bases ?? []) as TeamBaseDraft[];
+  const regions = (config['team']?.regions ?? []) as TeamRegionDraft[];
 
   // ── Pending new member ──────────────────────────────────────────────────────
   const [pendingName, setPendingName] = useState('');
@@ -939,8 +956,12 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
   // ── Role management ─────────────────────────────────────────────────────────
   const [newRole, setNewRole] = useState('');
 
+  // ── Region management ────────────────────────────────────────────────────────
+  const [newRegionName, setNewRegionName] = useState('');
+
   // ── Base management ─────────────────────────────────────────────────────────
-  const [newBaseName, setNewBaseName] = useState('');
+  const [newBaseName,   setNewBaseName]   = useState('');
+  const [newBaseRegion, setNewBaseRegion] = useState('');
 
   useEffect(() => {
     if (isAdding) pendingInputRef.current?.focus();
@@ -966,23 +987,65 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
     updateTeam({ roles: roles.filter(x => x !== r) });
   };
 
+  // ── Region helpers ────────────────────────────────────────────────────────
+  const addRegion = () => {
+    const trimmed = newRegionName.trim();
+    if (!trimmed || regions.some(r => r.name === trimmed)) return;
+    const id = `region-${Date.now()}`;
+    updateTeam({ regions: [...regions, { id, name: trimmed }] });
+    setNewRegionName('');
+  };
+
+  const removeRegion = (id: string) => {
+    updateTeam({
+      regions: regions.filter(r => r.id !== id),
+      // Clear regionId on any base that was assigned to the deleted region.
+      bases: bases.map(b => {
+        if (b.regionId !== id) return b;
+        const { regionId: _r, ...rest } = b;
+        return rest as TeamBaseDraft;
+      }),
+    });
+  };
+
   // ── Base helpers ────────────────────────────────────────────────────────────
   const addBase = () => {
     const trimmed = newBaseName.trim();
     if (!trimmed) return;
     const id = `base-${Date.now()}`;
-    updateTeam({ bases: [...bases, { id, name: trimmed }] });
+    const newBase: TeamBaseDraft = newBaseRegion
+      ? { id, name: trimmed, regionId: newBaseRegion }
+      : { id, name: trimmed };
+    updateTeam({ bases: [...bases, newBase] });
     setNewBaseName('');
+    setNewBaseRegion('');
   };
 
   const removeBase = (id: string) => {
     updateTeam({ bases: bases.filter(b => b.id !== id) });
     // clear any members assigned to the removed base
-    updateMembers(teamMembers.map(m => m.base === id ? { ...m, base: undefined } : m));
+    updateMembers(teamMembers.map(m => {
+      if (m.base !== id) return m;
+      const { base: _b, ...rest } = m;
+      return rest as TeamMemberDraft;
+    }));
   };
 
   const renameBase = (id: string, name: string) => {
     updateTeam({ bases: bases.map(b => b.id === id ? { ...b, name } : b) });
+  };
+
+  const assignBaseRegion = (id: string, regionId: string) => {
+    updateTeam({
+      bases: bases.map(b => {
+        if (b.id !== id) return b;
+        if (!regionId) {
+          const { regionId: _r, ...rest } = b;
+          return rest as TeamBaseDraft;
+        }
+        return { ...b, regionId };
+      }),
+    });
   };
 
   // ── Member helpers ──────────────────────────────────────────────────────────
@@ -1051,9 +1114,33 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
         </button>
       </div>
 
+      {/* ── Regions ── */}
+      <p className={styles['fieldGroupLabel']} style={{ marginTop: 16 }}>Regions</p>
+      <p className={styles['sectionDesc']}>Optional top-level groupings for bases (e.g. Pacific Northwest, Rocky Mountain). Bases can then be assigned to a region.</p>
+      {regions.map((r) => (
+        <div key={r.id} className={styles['fieldRow']}>
+          <span className={styles['fieldLabel']}>{r.name}</span>
+          <button className={styles['removeBtn']} onClick={() => removeRegion(r.id)} aria-label={`Remove region ${r.name}`}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
+      <div className={styles['inlineAddRow']}>
+        <input
+          className={styles['input']}
+          value={newRegionName}
+          onChange={e => setNewRegionName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addRegion(); } }}
+          placeholder="New region name"
+        />
+        <button className={styles['addFieldBtn']} style={{ marginTop: 0 }} onClick={addRegion}>
+          <Plus size={13} /> Add
+        </button>
+      </div>
+
       {/* ── Bases / Locations ── */}
       <p className={styles['fieldGroupLabel']} style={{ marginTop: 16 }}>Bases / Locations</p>
-      <p className={styles['sectionDesc']}>Define bases, buildings, or regions. Employees can be assigned to one and the schedule can be filtered by base.</p>
+      <p className={styles['sectionDesc']}>Define bases or locations. Employees can be assigned to one and the schedule can be filtered by base.</p>
       <div className={styles['fieldRow']}>
         <label style={{ fontSize: 12, color: 'var(--wc-text-muted)', marginRight: 8 }}>Label these as</label>
         <select
@@ -1063,7 +1150,9 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
           aria-label="Location label"
         >
           <option value="Base">Base</option>
-          <option value="Region">Region</option>
+          <option value="Location">Location</option>
+          <option value="Station">Station</option>
+          <option value="Site">Site</option>
         </select>
       </div>
 
@@ -1090,19 +1179,44 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
             onChange={e => renameBase(b.id, e.target.value)}
             placeholder="Base name"
           />
+          {regions.length > 0 && (
+            <select
+              className={styles['select']}
+              value={b.regionId ?? ''}
+              onChange={e => assignBaseRegion(b.id, e.target.value)}
+              aria-label={`Region for ${b.name}`}
+              style={{ maxWidth: 160 }}
+            >
+              <option value="">— no region —</option>
+              {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          )}
           <button className={styles['removeBtn']} onClick={() => removeBase(b.id)} aria-label={`Remove base ${b.name}`}>
             <Trash2 size={13} />
           </button>
         </div>
       ))}
-      <div className={styles['inlineAddRow']}>
+      <div className={styles['inlineAddRow']} style={{ flexWrap: 'wrap', gap: 6 }}>
         <input
           className={styles['input']}
           value={newBaseName}
           onChange={e => setNewBaseName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addBase(); } }}
           placeholder="New base name"
+          style={{ flex: '1 1 140px', minWidth: 120 }}
         />
+        {regions.length > 0 && (
+          <select
+            className={styles['select']}
+            value={newBaseRegion}
+            onChange={e => setNewBaseRegion(e.target.value)}
+            aria-label="Assign to region"
+            style={{ flex: '1 1 140px', minWidth: 120 }}
+          >
+            <option value="">— region (optional) —</option>
+            {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        )}
         <button className={styles['addFieldBtn']} style={{ marginTop: 0 }} onClick={addBase}>
           <Plus size={13} /> Add
         </button>

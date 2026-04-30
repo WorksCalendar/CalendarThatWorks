@@ -13,7 +13,7 @@ const PRESET_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#64748b',
 ];
 
-export default function InlineEventEditor({ event, x, y, onSave, onClose }: any) {
+export default function InlineEventEditor({ event, x, y, onSave, onDelete, onClose }: any) {
   const [title, setTitle] = useState(event.title ?? '');
   const [color, setColor] = useState(event.color ?? PRESET_COLORS[0]);
   const [bold,  setBold]  = useState(!!(event.meta?._display?.bold));
@@ -143,6 +143,16 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
       <div className={styles['actions']}>
         <button type="button" className={styles['saveBtn']} onClick={handleSave}>Save</button>
         <button type="button" className={styles['cancelBtn']} onClick={onClose}>Cancel</button>
+        {onDelete && (
+          <button
+            type="button"
+            className={styles['deleteBtn']}
+            onClick={() => { onDelete(event.id); onClose(); }}
+            aria-label="Delete event"
+          >
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

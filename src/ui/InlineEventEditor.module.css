@@ -166,6 +166,22 @@
 }
 .cancelBtn:hover { background: var(--wc-border); }
 
+.deleteBtn {
+  padding: 7px 10px;
+  background: transparent;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.deleteBtn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
 /* Touch devices: guarantee comfortable tap targets. */
 @media (pointer: coarse) {
   .closeBtn {

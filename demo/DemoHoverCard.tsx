@@ -24,6 +24,7 @@ interface DemoHoverCardProps {
   event: any;
   onClose: () => void;
   onEdit?: ((ev: any) => void) | null;
+  onDelete?: ((eventId: string) => void) | null;
   onApprovalAction?: (event: any, actionId: string, payload?: any) => void;
   approvalCaps?: DemoApprovalCaps;
   resolveResourceLabel?: (id: string) => string;
@@ -105,6 +106,7 @@ export default function DemoHoverCard({
   event,
   onClose,
   onEdit,
+  onDelete,
   onApprovalAction,
   approvalCaps,
   resolveResourceLabel,
@@ -340,6 +342,28 @@ export default function DemoHoverCard({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Delete action */}
+        {onDelete && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
+            <button
+              type="button"
+              onClick={() => { onDelete(event.id); onClose(); }}
+              style={{
+                background: 'transparent',
+                border: '1px solid #fecaca',
+                borderRadius: 6,
+                color: '#b91c1c',
+                fontSize: 12,
+                fontWeight: 500,
+                padding: '5px 12px',
+                cursor: 'pointer',
+              }}
+            >
+              Delete event
+            </button>
           </div>
         )}
       </div>

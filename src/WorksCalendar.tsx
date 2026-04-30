@@ -2339,6 +2339,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     });
   }, [inlineEditTarget, applyEngineOp, getSavedEventPayload, onEventSave]);
 
+  /** Delete an event directly from InlineEventEditor. */
+  const handleInlineDelete = useCallback((id: LooseValue) => {
+    const eventId = String(id);
+    applyEngineOp({ type: 'delete', id: eventId, source: 'api' }, () => {
+      onEventDelete?.(eventId);
+      setInlineEditTarget(null);
+    });
+  }, [applyEngineOp, onEventDelete]);
+
   // ── Context value ────────────────────────────────────────────────────────
   const ctxValue = useMemo(() => ({
     renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
@@ -3130,6 +3139,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             x={inlineEditTarget.x}
             y={inlineEditTarget.y}
             onSave={handleInlineSave}
+            onDelete={onEventDelete ? handleInlineDelete : undefined}
             onClose={() => setInlineEditTarget(null)}
           />
         )}
