@@ -517,11 +517,6 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* Anchors absolutely-positioned chrome overlays (e.g. MapPeekWidget)
-     to the workspace below the SubToolbar — without this the host's
-     `position: absolute` would resolve up to the viewport and float
-     over the toolbar buttons / Owner gear. */
-  position: relative;
 }
 
 /* Main pane: padded shell holding the bordered calendar card. */

@@ -1,12 +1,13 @@
 /**
- * MapPeekWidget — corner mini-map + expand-on-click full map.
+ * MapPeekWidget — inline mini-map + expand-on-click full map.
  *
- * The corner shows an always-visible bounding-box-fit SVG plot of every
- * coord-bearing event (dependency-free, no tile layer — same convention
- * the legacy `RegionMapWidget` used). Clicking the mini-map opens a
- * 70vw × 70vh modal that mounts the real `<MapView />` with a MapLibre
- * basemap. Closing the modal returns to the corner preview; the corner
- * never disappears, so the operator's "where am I" reference stays put.
+ * Drops into the right rail's "Region map" section. Renders an
+ * always-visible bounding-box-fit SVG plot of every coord-bearing
+ * event (dependency-free, no tile layer — same convention the legacy
+ * `RegionMapWidget` used). Clicking the mini-map opens a 70vw × 70vh
+ * modal that mounts the real `<MapView />` with a MapLibre basemap.
+ * Closing the modal returns to the rail preview; the mini never
+ * unmounts, so the operator's "where am I" reference stays put.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
@@ -99,10 +100,6 @@ export function MapPeekWidget({ events, onEventClick, mapStyle, onOpenChange }: 
           aria-label={`Open map (${plotted.length} events with coordinates)`}
           title="Open map"
         >
-          <span className={styles['miniHeader']}>
-            <span>Region map</span>
-            <span className={styles['count']}>{plotted.length}</span>
-          </span>
           <span className={styles['miniBody']}>
             {plotted.length === 0 ? (
               <span className={styles['miniEmpty']}>No coords yet</span>

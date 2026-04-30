@@ -112,6 +112,44 @@ describe('MonthView — multi-day / allDay event span bars', () => {
     expect(onEventClick).toHaveBeenCalledOnce();
     expect(onEventClick).toHaveBeenCalledWith(events[0]);
   });
+
+  // Regression: a multi-day timed event (e.g. the demo's São Paulo → Munich
+  // 4-day mission) dragged onto an empty date in another week must not
+  // throw and must hand newStart/newEnd to onEventMove as valid Dates.
+  it('moves a multi-day timed event to an empty cell without throwing', () => {
+    const onEventMove = vi.fn();
+    const events = [
+      { id: 'mission', title: 'São Paulo → Munich Critical Care Transfer',
+        // 4-day window with non-midnight times — matches the demo mission.
+        start: new Date(2026, 3, 24, 6, 0),
+        end:   new Date(2026, 3, 28, 8, 0),
+        allDay: false,
+        category: 'mission-assignment' },
+    ];
+    render(
+      <CalendarContext.Provider value={{ permissions: { canDrag: true } } as any}>
+        <MonthView currentDate={currentDate} events={events as any} onEventMove={onEventMove} />
+      </CalendarContext.Provider>,
+    );
+
+    const span = screen.getAllByRole('button', { name: /São Paulo → Munich/i })[0]!;
+    const target = screen.getByRole('gridcell', { name: /April 1\b/ });
+    expect(() => {
+      fireEvent.pointerDown(span, { button: 0, pointerId: 1 });
+      fireEvent.pointerEnter(target);
+      fireEvent.pointerUp(target);
+    }).not.toThrow();
+
+    expect(onEventMove).toHaveBeenCalledOnce();
+    const [, newStart, newEnd] = onEventMove.mock.calls[0] as [unknown, Date, Date];
+    expect(newStart).toBeInstanceOf(Date);
+    expect(newEnd).toBeInstanceOf(Date);
+    expect(Number.isFinite(newStart.getTime())).toBe(true);
+    expect(Number.isFinite(newEnd.getTime())).toBe(true);
+    // 4-day duration preserved on the new dates.
+    expect(newEnd.getTime() - newStart.getTime())
+      .toBe(events[0]!.end.getTime() - events[0]!.start.getTime());
+  });
 });
 
 // ─── Date selection ───────────────────────────────────────────────────────────

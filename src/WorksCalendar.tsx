@@ -2561,12 +2561,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           }
           rightPanel={
             <RightPanel>
-              {/* The old `<RegionMapWidget>` SVG-dot plot used to live
-                  here. It's been replaced by the chrome-level
-                  `<MapPeekWidget>` (peek -> panel -> fullscreen) that
-                  renders the real MapLibre basemap; keeping a second,
-                  layer-less map in the side rail just confused the
-                  picture. */}
+              {/* Region map is the inline preview; clicking it pops a
+                  70vw modal that mounts the real MapLibre basemap.
+                  Sitting above Crew so the spatial reference is always
+                  the first thing the operator sees in the rail. */}
+              <RightPanelSection title="Region map">
+                <MapPeekWidget
+                  events={expandedEvents as never}
+                  onEventClick={handleEventClick as never}
+                  {...(mapStyle ? { mapStyle } : {})}
+                />
+              </RightPanelSection>
               <RightPanelSection title="Crew on shift">
                 <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
               </RightPanelSection>
@@ -2949,22 +2954,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEventClick={handleEventClick}
                 />
               )}
-              {/* Floating chrome-level map. Lives at the workspace
-                  level (not inside any view) so toggling it never
-                  unmounts the active view. Rendered last so its
-                  absolutely-positioned host stacks above the grid.
-                  Fed `expandedEvents` (the unscoped, recurring-expanded
-                  set), NOT `visibleEvents`, so opening the map from
-                  Month/Week doesn't drop coord-bearing schedule events
-                  the active tab's view-scope filtered out — that
-                  regressed the prior `'map'` view's all-events scope
-                  and could mislead operators about what's nearby. */}
-              <MapPeekWidget
-                events={expandedEvents as never}
-                onEventClick={handleEventClick as never}
-                {...(mapStyle ? { mapStyle } : {})}
-                {...(onMapWidgetOpenChange ? { onOpenChange: onMapWidgetOpenChange } : {})}
-              />
+              {/* Map lives in the right rail (see `rightPanel` above)
+                  rather than as a workspace overlay — it shouldn't sit
+                  on top of the active view's content. */}
             </>
           )}
         </div>
