@@ -774,6 +774,7 @@ function App() {
       medicalCrew,
       missionsById,
       isBookedAt,
+      baseCoords: BASE_COORDS,
     });
   }, [events]);
 

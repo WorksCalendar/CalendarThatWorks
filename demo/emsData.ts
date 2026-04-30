@@ -255,6 +255,8 @@ export const mission: DemoMissionRequest = {
   title: MISSION_TITLE,
   start: '2026-04-24T06:00',
   end:   '2026-04-28T08:00',
+  // São Paulo / Guarulhos (GRU) — pickup point for the patient transfer.
+  originCoords: { lat: -23.4356, lon: -46.4731 },
   requirements: {
     aircraft: { minHoursRemaining: 30, requiredCapabilities: ['IFR', 'International', 'Critical Care'] },
     crew: {

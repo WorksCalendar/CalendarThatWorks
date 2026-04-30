@@ -108,4 +108,6 @@ export interface DemoMissionRequest {
   assignments: MissionAssignments;
   legs: DemoMissionLeg[];
   compliance: DemoComplianceItem[];
+  /** Optional pickup coordinates so DispatchView can rank bases by distance. */
+  originCoords?: { lat: number; lon: number };
 }

@@ -27,13 +27,36 @@ export type DispatchEvaluatorInput = {
   missionsById: Record<string, DemoMissionRequest>;
   /** Returns true if the given resource (employee or asset) is booked at `at`. */
   isBookedAt: (resourceId: string, at: Date) => boolean;
+  /** Optional baseId → coordinates lookup so the verdict can rank by distance. */
+  baseCoords?: Record<string, LatLon>;
 };
 
 export type ReadinessVerdict = {
   crewReady: boolean;
   equipmentReady: boolean;
   missing: string[];
+  breakdown?: ReadonlyArray<{
+    id?: string;
+    kind: string;
+    label: string;
+    satisfied: boolean;
+    severity?: 'hard' | 'soft';
+    detail?: string;
+  }>;
 };
+
+type LatLon = { lat: number; lon: number };
+
+function haversineKm(a: LatLon, b: LatLon): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
 
 /**
  * Build the (assetId, missionId, asOf) evaluator the DispatchView wants.
@@ -96,6 +119,23 @@ export function makeDispatchEvaluator(
       }
     }
 
-    return { crewReady: crewSlotsCovered, equipmentReady, missing };
+    // ── Distance from request origin (advertised "by location" view) ──
+    const breakdown: NonNullable<ReadinessVerdict['breakdown']>[number][] = [];
+    const origin = mission.originCoords;
+    const baseLatLon = inputs.baseCoords?.[ac.basedAt];
+    if (origin && baseLatLon) {
+      const km = Math.round(haversineKm(baseLatLon, origin));
+      const nm = Math.round(km * 0.539957);
+      breakdown.push({
+        id: 'distance',
+        kind: 'distance',
+        label: `${nm.toLocaleString()} nm from request origin`,
+        satisfied: true,
+        severity: 'soft',
+        detail: `${km.toLocaleString()} km — base → pickup`,
+      });
+    }
+
+    return { crewReady: crewSlotsCovered, equipmentReady, missing, breakdown };
   };
 }
