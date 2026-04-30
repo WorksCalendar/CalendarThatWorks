@@ -950,6 +950,7 @@ function App() {
       role={activeProfile.permissionRole}
       dispatchMissions={dispatchMissions}
       dispatchEvaluator={dispatchEvaluator}
+      mapStyle="https://tiles.openfreemap.org/styles/liberty"
     />
   );
 
