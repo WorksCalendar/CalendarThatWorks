@@ -125,3 +125,14 @@
 .resumePill:hover {
   background: #1e293b;
 }
+
+/* Below 1100px the demo swaps the live calendar for a static MobileShowcase
+ * (see Landing.tsx). The walkthrough has nothing to operate on there, so
+ * suppress the banner and resume pill outright. Same breakpoint as Landing's
+ * MOBILE_BREAKPOINT_PX. */
+@media (max-width: 1099px) {
+  .banner,
+  .resumePill {
+    display: none;
+  }
+}

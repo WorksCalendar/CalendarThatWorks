@@ -1,5 +1,5 @@
 // @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
-import { StrictMode, useState, useCallback, useMemo, useEffect } from 'react';
+import { StrictMode, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import {
@@ -950,8 +950,25 @@ function App() {
     delegate: { onEventSave: handleEventSave },
   });
 
+  // Snap the calendar to the walkthrough seed date on first guided mount so
+  // Mission Alpha is at the natural focus point (especially for Week/Day
+  // views, where today's date would otherwise hide the seeds entirely).
+  // Skipped in EMBED_MODE so e2e tests keep their real "today" landing.
+  const calendarRef = useRef(null);
+  const didSnapRef  = useRef(false);
+  useEffect(() => {
+    if (EMBED_MODE) return;
+    if (didSnapRef.current) return;
+    if (walkthrough.state.mode === 'free-play') return;
+    if (walkthrough.state.history.length > 0) return; // user has already engaged
+    if (!calendarRef.current?.navigateTo) return;
+    calendarRef.current.navigateTo(new Date(ALPHA_INITIAL_START_ISO));
+    didSnapRef.current = true;
+  }, [walkthrough.state.mode, walkthrough.state.history.length]);
+
   const calendar = (
     <WorksCalendar
+      ref={calendarRef}
       events={events}
       employees={employees}
       assets={AIRCRAFT_RESOURCES}
