@@ -179,6 +179,41 @@
   gap: 6px;
 }
 
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.nameLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wc-text-muted, #6b5a44);
+  flex-shrink: 0;
+}
+
+.nameInput {
+  flex: 1;
+  min-width: 120px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--wc-border-dark, rgba(0, 0, 0, 0.18));
+  background: var(--wc-surface, #fff);
+  color: var(--wc-text, #2d1f0e);
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.nameInput:focus {
+  outline: 2px solid var(--wc-accent, #c2410c);
+  outline-offset: -1px;
+  border-color: var(--wc-accent, #c2410c);
+}
+
 .btnGhost,
 .btnPrimary {
   border-radius: 6px;

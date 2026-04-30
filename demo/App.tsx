@@ -854,6 +854,7 @@ function App() {
       renderHoverCard={renderHoverCard}
       theme={theme}
       showAddButton={true}
+      hideEventTemplates={true}
       categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
       locationProvider={assetLocationProvider}
       filterSchema={DEMO_FILTER_SCHEMA}

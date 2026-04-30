@@ -62,6 +62,12 @@ export default function EventForm({
    * week 2.
    */
   onLiveConflictsChange,
+  /**
+   * When true, hide the template dropdown entirely. Hosts whose domain
+   * doesn't map to the built-in templates (Daily standup, Sprint
+   * planning, etc.) can suppress the irrelevant picker.
+   */
+  hideTemplates = false,
 }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const draft   = useEventDraftState(event, categories, config);
@@ -337,12 +343,14 @@ export default function EventForm({
                 </span>
               </div>
             )}
-            <div className={styles['field']}>
-              <label className={styles['label']} htmlFor="ef-template">Template</label>
-              <select id="ef-template" className={styles['select']} value={d.templateId} onChange={e => d.applyTemplate(e.target.value)}>
-                {BUILT_IN_EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-              </select>
-            </div>
+            {!hideTemplates && (
+              <div className={styles['field']}>
+                <label className={styles['label']} htmlFor="ef-template">Template</label>
+                <select id="ef-template" className={styles['select']} value={d.templateId} onChange={e => d.applyTemplate(e.target.value)}>
+                  {BUILT_IN_EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+            )}
             <div className={styles['field']}>
               <label className={styles['label']} htmlFor="ef-title">Title <span className={styles['req']}>*</span></label>
               <input id="ef-title"

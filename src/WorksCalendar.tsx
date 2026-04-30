@@ -279,6 +279,13 @@ export type WorksCalendarProps = {
   cascadeConfig?: import('./ui/CascadePanel').CascadeConfig;
   showAddButton?: boolean;
   /**
+   * Hide the event-template dropdown in the Add/Edit Event form. Hosts
+   * whose domain doesn't map to the built-in templates ("Daily standup",
+   * "Sprint planning", etc.) can suppress the picker entirely instead
+   * of showing irrelevant options.
+   */
+  hideEventTemplates?: boolean;
+  /**
    * Opt-in interactive setup landing page. When true, first-time owners
    * (those with `config.setup.completed === false`) see a full-page
    * guided walkthrough before the calendar renders — with a prominent
@@ -572,6 +579,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── UI toggles ──
     showAddButton           = false,
+    hideEventTemplates       = false,
     showSetupLanding        = false,
 
     // ── Initial view (overrides saved config on first render) ──
@@ -2979,6 +2987,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onLiveConflictsChange={handleLiveConflicts}
             approvalCategories={Array.isArray(assetRequestCategories) ? assetRequestCategories : []}
             pools={rawPools ?? []}
+            hideTemplates={hideEventTemplates}
           />
         )}
 
