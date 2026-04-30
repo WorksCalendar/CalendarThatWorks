@@ -8,11 +8,11 @@
  */
 
 export type StepId =
-  | 'move-job'        // Step 1: drag highlighted event to a new time
-  | 'cause-conflict'  // Step 2: drag it onto a resource that's already busy
-  | 'fix-conflict'    // Step 3: reassign to a free resource
-  | 'switch-view'     // Step 4: switch to schedule (timeline) view
-  | 'open-map'        // Step 5: open the map widget (deferred — other branch)
+  | 'move-mission'    // Step 1: drag the unassigned mission request to a new time
+  | 'assign-busy'     // Step 2: open the request and try to assign a busy pilot → conflict
+  | 'reassign-free'   // Step 3: pick a different pilot → conflict clears
+  | 'switch-view'     // Step 4: switch to schedule view to see the result on the pilot's row
+  | 'open-map'        // Step 5: open the right-rail map widget
   | 'done';           // terminal: "now you get it" CTA
 
 export type WalkthroughMode = 'guided' | 'free-play';
@@ -22,9 +22,8 @@ export type WalkthroughMode = 'guided' | 'free-play';
  * Every step is an `expect` matcher over this union.
  */
 export type WalkthroughEvent =
-  | { kind: 'event-moved'; eventId: string; previousResource: string | null; previousStartIso: string }
-  | { kind: 'conflict-detected'; eventId: string; conflictingEventId: string }
-  | { kind: 'event-reassigned'; eventId: string; toResource: string | null }
+  | { kind: 'mission-moved'; eventId: string; previousStartIso: string }
+  | { kind: 'mission-assigned'; eventId: string; previousResource: string | null; toResource: string | null }
   | { kind: 'view-changed'; view: string }
   | { kind: 'map-widget-opened' }
   | { kind: 'manual-advance' };
@@ -53,15 +52,17 @@ export interface Step {
 
 /**
  * Per-step context the reducer threads through `matches`. Lets steps
- * reference walkthrough-seeded ids (alpha, bravo, free resource) without
- * hard-coding strings into the predicates.
+ * reference walkthrough-seeded ids without hard-coding strings into the
+ * predicates.
  */
 export interface StepContext {
-  alphaEventId: string;       // the highlighted event the user manipulates
-  bravoEventId: string;       // the decoy that creates the Step 2 conflict
-  bravoResource: string;      // aircraft id Bravo is parked on
-  alphaInitialResource: string;
-  alphaInitialStartIso: string; // start time from the seed; used to detect Step 1 moves
+  /** The unassigned mission request the user manipulates through every step. */
+  missionEventId: string;
+  /** Pilot id whose shift overlaps the mission slot — assigning the mission
+   *  to this pilot is the Step 2 "you tried to schedule a busy pilot" moment. */
+  conflictPilotId: string;
+  /** Mission start at seed time; used to detect Step 1 (drag-to-new-time). */
+  missionInitialStartIso: string;
 }
 
 export interface WalkthroughState {

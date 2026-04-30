@@ -4,6 +4,9 @@
  * Validates the four action types (observe / advance / restart / exit) drive
  * the right transitions across every step. The reducer has no React or DOM
  * dependencies, so we exercise it directly with synthetic events.
+ *
+ * Flow under test (matches steps.ts):
+ *   move-mission → assign-busy → reassign-free → switch-view → open-map → done
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,52 +15,49 @@ import { STEPS } from './steps';
 import type { StepContext, WalkthroughEvent } from './types';
 
 const CTX: StepContext = {
-  alphaEventId: 'wt-alpha',
-  bravoEventId: 'wt-bravo',
-  bravoResource: 'ac-n804aw',
-  alphaInitialResource: 'ac-n801aw',
-  alphaInitialStartIso: '2026-04-23T14:00:00',
+  missionEventId:         'wt-mission',
+  conflictPilotId:        'emp-james',
+  missionInitialStartIso: '2026-04-23T14:00:00',
 };
 
 const DEPS: ReducerDeps = { steps: STEPS, ctx: CTX };
 
 const moved = (eventId: string): WalkthroughEvent => ({
-  kind: 'event-moved',
+  kind: 'mission-moved',
   eventId,
-  previousResource: CTX.alphaInitialResource,
-  previousStartIso: '2026-04-23T14:00:00',
+  previousStartIso: CTX.missionInitialStartIso,
 });
 
-const reassigned = (toResource: string | null): WalkthroughEvent => ({
-  kind: 'event-reassigned',
-  eventId: CTX.alphaEventId,
+const assigned = (
+  toResource: string | null,
+  previousResource: string | null = null,
+): WalkthroughEvent => ({
+  kind: 'mission-assigned',
+  eventId: CTX.missionEventId,
+  previousResource,
   toResource,
 });
-
-const conflict: WalkthroughEvent = {
-  kind: 'conflict-detected',
-  eventId: CTX.alphaEventId,
-  conflictingEventId: CTX.bravoEventId,
-};
 
 const view = (v: string): WalkthroughEvent => ({ kind: 'view-changed', view: v });
 
 describe('walkthrough reducer', () => {
-  it('starts at move-job in guided mode', () => {
-    expect(INITIAL_STATE.currentStep).toBe('move-job');
+  it('starts at move-mission in guided mode', () => {
+    expect(INITIAL_STATE.currentStep).toBe('move-mission');
     expect(INITIAL_STATE.mode).toBe('guided');
     expect(INITIAL_STATE.history).toEqual([]);
   });
 
   it('advances through the full happy path on matching observations', () => {
     let state = INITIAL_STATE;
-    state = reducer(state, { type: 'observe', event: moved(CTX.alphaEventId) }, DEPS);
-    expect(state.currentStep).toBe('cause-conflict');
+    state = reducer(state, { type: 'observe', event: moved(CTX.missionEventId) }, DEPS);
+    expect(state.currentStep).toBe('assign-busy');
 
-    state = reducer(state, { type: 'observe', event: conflict }, DEPS);
-    expect(state.currentStep).toBe('fix-conflict');
+    // null → conflictPilot triggers Step 2.
+    state = reducer(state, { type: 'observe', event: assigned(CTX.conflictPilotId, null) }, DEPS);
+    expect(state.currentStep).toBe('reassign-free');
 
-    state = reducer(state, { type: 'observe', event: reassigned('ac-n802ec') }, DEPS);
+    // conflictPilot → some other pilot triggers Step 3.
+    state = reducer(state, { type: 'observe', event: assigned('emp-priya', CTX.conflictPilotId) }, DEPS);
     expect(state.currentStep).toBe('switch-view');
 
     state = reducer(state, { type: 'observe', event: view('schedule') }, DEPS);
@@ -67,51 +67,66 @@ describe('walkthrough reducer', () => {
     expect(state.currentStep).toBe('done');
 
     expect(state.history).toEqual([
-      'move-job', 'cause-conflict', 'fix-conflict', 'switch-view', 'open-map',
+      'move-mission', 'assign-busy', 'reassign-free', 'switch-view', 'open-map',
     ]);
     expect(state.bootstrapping).toBe(false);
   });
 
   it('ignores observations that do not match the current step', () => {
     const stateA = reducer(INITIAL_STATE, { type: 'observe', event: view('schedule') }, DEPS);
-    expect(stateA.currentStep).toBe('move-job');
+    expect(stateA.currentStep).toBe('move-mission');
 
     const stateB = reducer(INITIAL_STATE, { type: 'observe', event: moved('some-other-event') }, DEPS);
-    expect(stateB.currentStep).toBe('move-job');
+    expect(stateB.currentStep).toBe('move-mission');
   });
 
-  it('treats fix-conflict reassign back to bravo as not yet resolved', () => {
+  it('assign-busy only advances when the mission is assigned to the conflict pilot', () => {
     let state = INITIAL_STATE;
-    state = reducer(state, { type: 'observe', event: moved(CTX.alphaEventId) }, DEPS);
-    state = reducer(state, { type: 'observe', event: conflict }, DEPS);
-    expect(state.currentStep).toBe('fix-conflict');
+    state = reducer(state, { type: 'observe', event: moved(CTX.missionEventId) }, DEPS);
+    expect(state.currentStep).toBe('assign-busy');
 
-    // Reassigning back onto the same conflicting resource should NOT advance.
-    state = reducer(state, { type: 'observe', event: reassigned(CTX.bravoResource) }, DEPS);
-    expect(state.currentStep).toBe('fix-conflict');
+    // Assigning to a different pilot during step 2 must NOT advance — the
+    // teaching moment is specifically "you tried to schedule a busy pilot".
+    state = reducer(state, { type: 'observe', event: assigned('emp-priya', null) }, DEPS);
+    expect(state.currentStep).toBe('assign-busy');
+
+    // Now actually assigning to the conflict pilot advances.
+    state = reducer(state, { type: 'observe', event: assigned(CTX.conflictPilotId, 'emp-priya') }, DEPS);
+    expect(state.currentStep).toBe('reassign-free');
+  });
+
+  it('reassign-free does not advance if user picks the conflict pilot again', () => {
+    let state = INITIAL_STATE;
+    state = reducer(state, { type: 'observe', event: moved(CTX.missionEventId) }, DEPS);
+    state = reducer(state, { type: 'observe', event: assigned(CTX.conflictPilotId, null) }, DEPS);
+    expect(state.currentStep).toBe('reassign-free');
+
+    // Reassigning back to the conflict pilot should NOT advance.
+    state = reducer(state, { type: 'observe', event: assigned(CTX.conflictPilotId, CTX.conflictPilotId) }, DEPS);
+    expect(state.currentStep).toBe('reassign-free');
 
     // Any other resource clears it.
-    state = reducer(state, { type: 'observe', event: reassigned('ac-n802ec') }, DEPS);
+    state = reducer(state, { type: 'observe', event: assigned('emp-priya', CTX.conflictPilotId) }, DEPS);
     expect(state.currentStep).toBe('switch-view');
   });
 
   it('manual advance jumps forward without an observation', () => {
     const next = reducer(INITIAL_STATE, { type: 'advance' }, DEPS);
-    expect(next.currentStep).toBe('cause-conflict');
-    expect(next.history).toEqual(['move-job']);
+    expect(next.currentStep).toBe('assign-busy');
+    expect(next.history).toEqual(['move-mission']);
   });
 
   it('does not advance past done', () => {
     const done = { ...INITIAL_STATE, currentStep: 'done' as const };
     expect(reducer(done, { type: 'advance' }, DEPS)).toEqual(done);
-    expect(reducer(done, { type: 'observe', event: moved(CTX.alphaEventId) }, DEPS)).toEqual(done);
+    expect(reducer(done, { type: 'observe', event: moved(CTX.missionEventId) }, DEPS)).toEqual(done);
   });
 
   it('exit switches to free-play and ignores subsequent observations', () => {
     let state = reducer(INITIAL_STATE, { type: 'exit' }, DEPS);
     expect(state.mode).toBe('free-play');
-    state = reducer(state, { type: 'observe', event: moved(CTX.alphaEventId) }, DEPS);
-    expect(state.currentStep).toBe('move-job');
+    state = reducer(state, { type: 'observe', event: moved(CTX.missionEventId) }, DEPS);
+    expect(state.currentStep).toBe('move-mission');
     expect(state.mode).toBe('free-play');
   });
 
@@ -122,14 +137,6 @@ describe('walkthrough reducer', () => {
 
     const exited = reducer(INITIAL_STATE, { type: 'exit' }, DEPS);
     expect(reducer(exited, { type: 'restart' }, DEPS)).toEqual(INITIAL_STATE);
-  });
-
-  it('cause-conflict accepts either a conflict-detected or a reassign-onto-bravo event', () => {
-    const afterMove = reducer(INITIAL_STATE, { type: 'observe', event: moved(CTX.alphaEventId) }, DEPS);
-    expect(afterMove.currentStep).toBe('cause-conflict');
-
-    const viaReassign = reducer(afterMove, { type: 'observe', event: reassigned(CTX.bravoResource) }, DEPS);
-    expect(viaReassign.currentStep).toBe('fix-conflict');
   });
 
   it('open-map step accepts either map-widget-opened or view-changed:map', () => {
