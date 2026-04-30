@@ -246,3 +246,9 @@ export type {
   BookingLifecyclePayload, AssignmentLifecyclePayload,
   EventBusPayload, EventBusHandler, EventBusUnsubscribe, EventBusOptions,
 } from './core/engine/eventBus';
+
+export { evaluateGeoConflicts, geoConflictRules } from './core/conflicts/geoConflictRules';
+export type {
+  GeoConflictRule, GeoTravelFeasibilityRule,
+  GeoEventInput, GeoConflictViolation,
+} from './core/conflicts/geoConflictRules';
