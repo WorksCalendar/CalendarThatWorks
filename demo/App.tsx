@@ -987,6 +987,7 @@ function App() {
       onNoteDelete={handleNoteDelete}
       onEventSave={EMBED_MODE ? handleEventSave : walkthrough.wrapped.onEventSave}
       onViewChange={EMBED_MODE ? undefined : walkthrough.wrapped.onViewChange}
+      onMapWidgetOpenChange={EMBED_MODE ? undefined : walkthrough.wrapped.onMapWidgetOpenChange}
       onEventDelete={handleEventDelete}
       onScheduleSave={handleEventSave}
       onAvailabilitySave={handleEventSave}

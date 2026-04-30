@@ -218,6 +218,7 @@ export type WorksCalendarProps = {
   onEventGroupChange?: (event: WorksCalendarEvent, patch: EventGroupPatch) => void;
   onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
   onViewChange?: (view: CalendarView) => void;
+  onMapWidgetOpenChange?: (open: boolean) => void;
   supabaseUrl?: string;
   supabaseKey?: string;
   supabaseTable?: string;
@@ -552,6 +553,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventGroupChange,
     onDateSelect,
     onViewChange,
+    onMapWidgetOpenChange,
 
     // ── Supabase realtime ──
     supabaseUrl,
@@ -2961,6 +2963,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 events={expandedEvents as never}
                 onEventClick={handleEventClick as never}
                 {...(mapStyle ? { mapStyle } : {})}
+                {...(onMapWidgetOpenChange ? { onOpenChange: onMapWidgetOpenChange } : {})}
               />
             </>
           )}

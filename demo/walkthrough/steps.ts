@@ -84,14 +84,15 @@ export const STEPS: readonly Step[] = [
     id: 'open-map',
     banner: {
       title: 'Bonus — See where your fleet is',
-      body:  'Open the map widget to see resource locations at a glance.',
+      body:  'Click the corner map peek to expand it. Resource locations show at a glance.',
     },
-    // Two emit paths: dedicated map widget (preferred, coming on another
-    // branch) or the existing built-in `map` view as a fallback.
+    spotlight: { selector: '[data-wc-map-widget="peek"]' },
+    // Two emit paths: the dedicated MapPeekWidget (primary), or a host that
+    // routes the legacy 'map' view as a fallback.
     matches: (event) =>
       event.kind === 'map-widget-opened'
       || (event.kind === 'view-changed' && event.view === 'map'),
-    hint: 'Click the map icon — it shows where each aircraft is right now.',
+    hint: 'Look for the small "Region map" tile in the corner of the calendar — click it to expand.',
   },
 
   {
