@@ -45,13 +45,30 @@ export function createAssetTrackerIntegration(
   const nowSeconds = options.nowSeconds ?? (() => Math.floor(Date.now() / 1000))
   const resourceIdFromPosition = options.resourceIdFromPosition ?? ((p: AssetTrackerPosition) => p.id)
 
+  // Index cache. The previous version rebuilt this Map on every
+  // resolve() call — O(N) per asset, so O(N×P) per attachLocations
+  // pass for fleets sized N with P positions. The cache is keyed on the
+  // identity of the iterable returned by `registry.positions()`: in-
+  // memory snapshots that return the same array reference build the
+  // index exactly once, while live feeds that return a fresh iterator
+  // each call (e.g. generators) still rebuild on demand and stay
+  // current. This cache is also bypassed entirely when the registry
+  // exposes `getById`, since that path doesn't need the index.
+  let cachedIterable: Iterable<AssetTrackerPosition> | null = null
+  let cachedMap: ReadonlyMap<string, AssetTrackerPosition> | null = null
+
   const byResourceId = (): ReadonlyMap<string, AssetTrackerPosition> => {
-    const map = new Map<string, AssetTrackerPosition>()
-    if (typeof registry.positions === 'function') {
-      for (const pos of registry.positions()) {
-        map.set(resourceIdFromPosition(pos), pos)
-      }
+    if (typeof registry.positions !== 'function') {
+      return cachedMap ?? (cachedMap = new Map())
     }
+    const iterable = registry.positions()
+    if (cachedIterable === iterable && cachedMap) return cachedMap
+    const map = new Map<string, AssetTrackerPosition>()
+    for (const pos of iterable) {
+      map.set(resourceIdFromPosition(pos), pos)
+    }
+    cachedIterable = iterable
+    cachedMap = map
     return map
   }
 
@@ -59,7 +76,7 @@ export function createAssetTrackerIntegration(
     locationAdapter: {
       id: options.id ?? 'asset-tracker',
       resolve(resource: EngineResource): ResourceLocation | null {
-        const pos = lookupPosition(registry, resource.id, byResourceId())
+        const pos = lookupPosition(registry, resource.id, byResourceId)
         if (!pos || !isValidPosition(pos)) return null
         return {
           lat: pos.lat,
@@ -85,8 +102,11 @@ export function createAssetTrackerIntegration(
 function lookupPosition(
   registry: AssetTrackerLikeRegistry,
   resourceId: string,
-  indexed: ReadonlyMap<string, AssetTrackerPosition>,
+  // Lazy: only invoked when `getById` is absent, so callers that pass
+  // a registry with a fast lookup path never pay to build the fallback
+  // index.
+  indexed: () => ReadonlyMap<string, AssetTrackerPosition>,
 ): AssetTrackerPosition | null {
   if (typeof registry.getById === 'function') return registry.getById(resourceId) ?? null
-  return indexed.get(resourceId) ?? null
+  return indexed().get(resourceId) ?? null
 }
