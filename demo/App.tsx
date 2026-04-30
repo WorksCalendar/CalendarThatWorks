@@ -26,6 +26,7 @@ import MissionHoverCard, { allRequirementsMet } from './MissionHoverCard';
 import missionStyles from './MissionHoverCard.module.css';
 import { makeDispatchEvaluator } from './dispatchEvaluator';
 import Landing from './Landing';
+import DemoHoverCard from './DemoHoverCard';
 import {
   DEFAULT_PROFILE_ID,
   findProfile,
@@ -206,6 +207,16 @@ function categoryColor(cat) {
 }
 
 const APPROVAL_CATS = new Set(['maintenance', 'aircraft-request', 'asset-request']);
+
+// Visual styles for the approval-stage chip rendered inside event pills via
+// `renderEvent`. Same color logic as the Awaiting-your-approval card in the
+// chrome so the pill chip and queue list read consistently.
+const STAGE_PILL_STYLES = {
+  requested: { label: 'Requested', bg: '#fef3c7', fg: '#92400e' },
+  approved:  { label: 'Approved',  bg: '#dbeafe', fg: '#1e40af' },
+  finalized: { label: 'Finalized', bg: '#dcfce7', fg: '#15803d' },
+  denied:    { label: 'Denied',    bg: '#fee2e2', fg: '#991b1b' },
+};
 
 // Categories that represent "schedule grain" content — shifts, PTO, on-call.
 // The library's viewScope filters these out of Month/Week/Day/Agenda when an
@@ -771,19 +782,49 @@ function App() {
     }
   }, []);
 
-  // Appends pulsing "REQS UNMET" badge to mission pills when not fully staffed
+  // Append visual cues to event pills:
+  //   - "REQS UNMET" pulsing badge when a mission isn't fully staffed
+  //   - Approval-stage chip (REQUESTED / APPROVED / FINALIZED / DENIED) so
+  //     users can see the workflow state at a glance without opening the
+  //     hover card. Without this, an aircraft-request pill looks identical
+  //     whether it's awaiting first approval or already finalized.
   const renderEvent = useCallback((ev) => {
-    if (ev.category !== 'mission-assignment' && ev.category !== 'aircraft-request') return null;
-    if (allRequirementsMet(missionAssignments, mission, EMS_ASSETS)) return null;
+    const stage = ev?.meta?.approvalStage?.stage ?? null;
+    const isMissionLike = ev.category === 'mission-assignment' || ev.category === 'aircraft-request';
+    const showUnmet = isMissionLike && !allRequirementsMet(missionAssignments, mission, EMS_ASSETS);
+
+    if (!stage && !showUnmet) return null;
+
+    const stageStyles = stage ? STAGE_PILL_STYLES[stage] : null;
+
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', width: '100%' }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
           {ev.title}
         </span>
-        <span className={missionStyles.unmetBadge}>REQS UNMET</span>
+        {stageStyles && (
+          <span style={{
+            fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em',
+            textTransform: 'uppercase', padding: '1px 5px', borderRadius: 3,
+            background: stageStyles.bg, color: stageStyles.fg,
+            flexShrink: 0, lineHeight: 1.4,
+          }}>
+            {stageStyles.label}
+          </span>
+        )}
+        {showUnmet && <span className={missionStyles.unmetBadge}>REQS UNMET</span>}
       </span>
     );
   }, [missionAssignments]);
+
+  const renderHoverCard = useCallback((ev, onCloseHover) => (
+    <DemoHoverCard
+      event={ev}
+      onClose={onCloseHover}
+      onApprovalAction={handleApprovalAction}
+      approvalCaps={activeProfile.approval}
+    />
+  ), [activeProfile.approval, handleApprovalAction]);
 
   const calendar = (
     <WorksCalendar
@@ -810,6 +851,7 @@ function App() {
       onApprovalAction={handleApprovalAction}
       onEventClick={handleEventClick}
       renderEvent={renderEvent}
+      renderHoverCard={renderHoverCard}
       theme={theme}
       showAddButton={true}
       categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
