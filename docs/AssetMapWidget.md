@@ -158,7 +158,7 @@ never depends on it.
 | `initialMode`           | `'peek' \| 'panel' \| 'fullscreen'`               | `'peek'`       | Persist via `onModeChange` if you want to restore. |
 | `position`              | `'top-right' \| 'top-left' \| 'bottom-right' \| 'bottom-left'` | `'top-right'` | Anchor for `peek` and `panel`. |
 | `staleThresholdSeconds` | `number`                                          | `120`          | Above this, a position renders with the stale color and counts toward the peek's stale dot. |
-| `nowSeconds`            | `() => number`                                    | `Date.now`     | Override for tests / SSR snapshots. |
+| `nowSeconds`            | `() => number`                                    | `Math.floor(Date.now() / 1000)` | Returns **epoch seconds**, not milliseconds — matches `AssetTrackerPosition.timestamp`. Override for tests / SSR snapshots. |
 | `title`                 | `string`                                          | `'Asset map'`  | Shown in the peek pill and toolbar. |
 | `onModeChange`          | `(mode) => void`                                  | —              | Fired on every transition so hosts can persist `panel` / `fullscreen`. |
 
