@@ -54,7 +54,7 @@ import { AppHeader }          from './ui/AppHeader';
 import { LeftRail }           from './ui/LeftRail';
 import { SubToolbar }         from './ui/SubToolbar';
 import { DayWindowPills }     from './ui/DayWindowPills';
-import { RightPanel, RightPanelSection, RegionMapWidget, CrewOnShiftList } from './ui/RightPanel';
+import { RightPanel, RightPanelSection, CrewOnShiftList } from './ui/RightPanel';
 import { shiftEmployeeIdsAt } from './hooks/useShiftOverlap';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
@@ -2539,9 +2539,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           }
           rightPanel={
             <RightPanel>
-              <RightPanelSection title="Region map">
-                <RegionMapWidget events={visibleEvents} />
-              </RightPanelSection>
+              {/* The old `<RegionMapWidget>` SVG-dot plot used to live
+                  here. It's been replaced by the chrome-level
+                  `<MapPeekWidget>` (peek -> panel -> fullscreen) that
+                  renders the real MapLibre basemap; keeping a second,
+                  layer-less map in the side rail just confused the
+                  picture. */}
               <RightPanelSection title="Crew on shift">
                 <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
               </RightPanelSection>
