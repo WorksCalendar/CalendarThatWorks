@@ -25,6 +25,9 @@ if (typeof window !== 'undefined') {
 function App() {
   const today = useMemo(() => {
     const d = new Date();
+    // Pin fixtures near the middle of the active month so +N day offsets
+    // stay inside the visible month grid regardless of when CI runs.
+    d.setDate(10);
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
