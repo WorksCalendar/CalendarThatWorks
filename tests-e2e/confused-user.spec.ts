@@ -22,8 +22,18 @@ async function screenshot(page: Page, name: string): Promise<void> {
 async function safeClick(locator: Locator, label: string): Promise<string> {
   const count = await locator.count();
   if (count === 0) return `Skipped: no visible target found for ${label}.`;
-  await locator.first().click();
-  return `Clicked ${label}.`;
+  // Confused-user QA is exploratory. We want to capture *what happens* on
+  // each click, not bail at the first obstacle. If an open modal / overlay
+  // / pulsing banner intercepts pointer events, that's a finding worth
+  // recording — not a reason to abort the rest of the run. Clamp the per-
+  // click attempt to 5s so the test stays responsive on a stuck overlay.
+  try {
+    await locator.first().click({ timeout: 5000 });
+    return `Clicked ${label}.`;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message.split('\n')[0] : String(err);
+    return `Could not click ${label}: ${message}`;
+  }
 }
 
 function writeNotes(notes: readonly StepNote[]): void {
