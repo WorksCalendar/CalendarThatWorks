@@ -119,12 +119,7 @@ describe('WorksCalendar schedule model integration', () => {
     });
   }, 30000);
 
-  // Suspended on CI — calls requestPtoForAlex() twice with a button-find
-  // in between, routinely brushes the 30s timeout on slow runners. Locally
-  // it's stable. Re-enable (and bump timeout if needed) on any PR that
-  // alters the PTO workflow / shift coverage path so the regression
-  // signal isn't lost. Tracked alongside #386.
-  it.skip('does not create duplicate open-shift records when PTO is re-saved', async () => {
+  it('does not create duplicate open-shift records when PTO is re-saved', async () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
@@ -228,14 +223,7 @@ describe('WorksCalendar schedule model integration', () => {
     });
   }, 30000);
 
-  // Suspended on CI — chains four sequential user interactions
-  // (PTO → coverage → clear → PTO → coverage), routinely overshoots
-  // the 30s timeout on slow runners. Locally stable. Re-enable (and
-  // bump timeout if needed) on any PR that alters the PTO workflow,
-  // shift coverage path, or the open-shift dedup logic so the
-  // regression signal isn't lost. Tracked alongside #386 (same
-  // policy as the earlier line-104 suspension).
-  it.skip('keeps exactly one covering record when coverage is reassigned', async () => {
+  it('keeps exactly one covering record when coverage is reassigned', async () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
