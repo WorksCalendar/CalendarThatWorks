@@ -5,15 +5,29 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.6.0] — 2026-05-01
 
-Library and demo changes since 0.5.0 that originated in the
-guided-walkthrough work — limited to the public-API surface a downstream
-consumer would feel. Many other PRs have landed against `main` since
-0.5.0 (strict-null migration, asset setup flow, dispatch board, base
-view redesign, map layer, invoicing integration, etc.); those should be
-folded into this section by their respective authors before the next
-release is cut.
+The "Embedder slots + walkthrough" release. Documents the public-API
+surface changes that originated in the guided-walkthrough work and the
+chrome-customization additions, plus a callout for the broader main-line
+work that landed since 0.5.0.
+
+### Other changes since 0.5.0
+
+A large body of work landed on `main` between 0.5.0 and this release
+that's not enumerated here individually — strict-null migration sprints,
+the asset setup flow, dispatch board, base view redesign, map layer +
+integrations, invoicing integration, e2e fixes, the nightly AI QA
+workflow, the visual drag-conflict overlay, and others. For the full
+set, run:
+
+```sh
+git log v0.5.0..v0.6.0 --first-parent --oneline
+```
+
+The sections below cover the public-API additions / changes / breaking
+items I have direct context on; consumers upgrading from 0.5.0 should
+read both this section and the bulk git log together.
 
 ### Added
 
