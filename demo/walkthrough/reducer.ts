@@ -46,16 +46,30 @@ export function reducer(
 
   switch (action.type) {
     case 'observe': {
-      if (state.currentStep === 'done') return state;
-      const step = findStep(deps.steps, state.currentStep);
-      if (!step) return state;
-      if (!step.matches(action.event, deps.ctx)) return state;
-      return {
-        ...state,
-        bootstrapping: false,
-        currentStep: nextStepId(deps.steps, state.currentStep),
-        history: [...state.history, state.currentStep],
-      };
+      // Cascade through consecutive matching steps. A single user gesture
+      // can satisfy more than one step's matcher: e.g. clicking Mission
+      // Alpha and assigning Capt. Wright directly emits ONE
+      // `mission-assigned` event that matches both `move-mission` (any
+      // first action on the mission) and `assign-busy` (toResource is the
+      // conflict pilot). Without cascade, the user would land on
+      // `assign-busy` with their action already done and the banner
+      // telling them to do it again.
+      let next = state;
+      // Bound the loop by step count so a self-matching step (which
+      // shouldn't exist) can't infinite-loop.
+      for (let i = 0; i < deps.steps.length; i++) {
+        if (next.currentStep === 'done') break;
+        const step = findStep(deps.steps, next.currentStep);
+        if (!step) break;
+        if (!step.matches(action.event, deps.ctx)) break;
+        next = {
+          ...next,
+          bootstrapping: false,
+          currentStep: nextStepId(deps.steps, next.currentStep),
+          history: [...next.history, next.currentStep],
+        };
+      }
+      return next;
     }
 
     case 'advance': {

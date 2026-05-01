@@ -27,13 +27,21 @@ import type {
 
 /** localStorage key for the dismissed-tour flag. Only the mode is persisted —
  *  the active step always resets so a returning visitor who restarts the tour
- *  starts from step 1 with a clean event log. */
-const STORAGE_KEY = 'wc-walkthrough-mode';
+ *  starts from step 1 with a clean event log.
+ *
+ *  Scoped per calendarId so two demo instances on the same origin (or a
+ *  staging vs prod with the same domain) don't share dismissal state.
+ *  Falls back to a generic key when no calendarId is provided. */
+const DEFAULT_STORAGE_KEY = 'wc-walkthrough-mode';
 
-function readPersistedMode(): WalkthroughMode {
+function storageKey(calendarId: string | undefined): string {
+  return calendarId ? `${DEFAULT_STORAGE_KEY}-${calendarId}` : DEFAULT_STORAGE_KEY;
+}
+
+function readPersistedMode(calendarId: string | undefined): WalkthroughMode {
   if (typeof window === 'undefined') return 'guided';
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === 'free-play'
+    return window.localStorage.getItem(storageKey(calendarId)) === 'free-play'
       ? 'free-play'
       : 'guided';
   } catch {
@@ -41,10 +49,10 @@ function readPersistedMode(): WalkthroughMode {
   }
 }
 
-function persistMode(mode: WalkthroughMode): void {
+function persistMode(mode: WalkthroughMode, calendarId: string | undefined): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, mode);
+    window.localStorage.setItem(storageKey(calendarId), mode);
   } catch {
     // quota / private mode — silent failure, just won't persist
   }
@@ -55,6 +63,9 @@ interface UseWalkthroughArgs {
   /** Pre-existing host callbacks. Each `wrap*` returns a decorated version
    *  that calls the original and then emits the right WalkthroughEvent. */
   delegate: HostDelegate;
+  /** Optional calendar id used to scope localStorage persistence. Two demo
+   *  instances on the same origin will otherwise share dismissal state. */
+  calendarId?: string;
 }
 
 export interface HostDelegate {
@@ -84,20 +95,21 @@ export interface WalkthroughHandle {
   exit: () => void;
 }
 
-export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): WalkthroughHandle {
+export function useWalkthrough({ ctx, delegate, calendarId }: UseWalkthroughArgs): WalkthroughHandle {
   const [state, dispatch] = useReducer(
     (s: WalkthroughState, a: Parameters<typeof reducer>[1]) =>
       reducer(s, a, { steps: STEPS, ctx }),
     undefined,
-    () => ({ ...INITIAL_STATE, mode: readPersistedMode() }),
+    () => ({ ...INITIAL_STATE, mode: readPersistedMode(calendarId) }),
   );
 
   // Persist mode changes so a dismissed tour stays dismissed across reloads.
   // Only the mode is saved — currentStep / history reset on each load so
-  // restarting starts cleanly at step 1.
+  // restarting starts cleanly at step 1. Scoped per calendarId so multiple
+  // demo instances don't share dismissal state.
   useEffect(() => {
-    persistMode(state.mode);
-  }, [state.mode]);
+    persistMode(state.mode, calendarId);
+  }, [state.mode, calendarId]);
 
   // Snapshot of the mission's previous state so we can tell "moved" (time
   // changed, resource unchanged) from "assigned" (resource changed). Refs

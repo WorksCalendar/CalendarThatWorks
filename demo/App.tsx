@@ -954,6 +954,7 @@ function App() {
       pilotIds:               walkthroughPilotIds,
     },
     delegate: { onEventSave: handleEventSave },
+    calendarId: DEMO_CALENDAR_ID,
   });
 
   // Snap the calendar to the walkthrough seed slot on first guided mount.

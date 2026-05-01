@@ -6,12 +6,38 @@
  * rotation, maintenance, training, aircraft requests, and one international
  * critical-care transfer mission (São Paulo → Munich, 4 legs).
  *
- * All datetimes are local-time ISO-8601 strings anchored to the week of
- * 2026-04-20 (Mon). All records are plain objects — no Date, Map, Set, or
+ * All datetimes are local-time ISO-8601 strings, anchored to the Monday
+ * of the current week (whatever "today" is at module load). Originally the
+ * dataset was hardcoded to the week of 2026-04-20; without anchoring, the
+ * events drifted out of the calendar's visible window once the system
+ * clock moved past late April 2026, leaving public visitors with a blank
+ * demo. The week-relative offsets below preserve the original schedule
+ * shape (Mon → Sun = offsets 0–6, next-week Mon → Tue = 7–8, week-3 Mon
+ * = 14) so the same narrative reads the same regardless of when the
+ * demo loads. Records are still plain objects — no Date, Map, Set, or
  * class instances.
  */
 
+import { addDays, format, startOfWeek } from 'date-fns';
+
 import type { DemoRegion, DemoBase, DemoAircraft } from './types';
+
+// ── Date anchor ──────────────────────────────────────────────────────────────
+// `_DATASET_ANCHOR` = Monday of the current week. Every event below derives
+// its date from `ymd(offset)` so the dataset slides forward with real time.
+// Computed once at module load so a multi-day session doesn't shift events
+// mid-render. Refreshing the page picks up the new anchor.
+const _DATASET_ANCHOR = startOfWeek(new Date(), { weekStartsOn: 1 });
+
+/** YYYY-MM-DD for an offset (in days) from the dataset's Monday anchor. */
+function ymd(offset: number): string {
+  return format(addDays(_DATASET_ANCHOR, offset), 'yyyy-MM-dd');
+}
+
+/** Local-time ISO `YYYY-MM-DDTHH:MM` for an offset + time-of-day. */
+function dt(offset: number, time: string): string {
+  return `${ymd(offset)}T${time}`;
+}
 
 // ── Geography ─────────────────────────────────────────────────────────────────
 
@@ -146,10 +172,10 @@ function nightShifts(
   }));
 }
 
-// Weekdays of the anchor week (Mon Apr 20 – Fri Apr 24, 2026)
-const WD: readonly string[] = ['2026-04-20','2026-04-21','2026-04-22','2026-04-23','2026-04-24'];
-// Full week (Mon Apr 20 – Sun Apr 26)
-const W1: readonly string[] = [...WD, '2026-04-25', '2026-04-26'];
+// Weekdays of the anchor week (Mon–Fri, offsets 0–4).
+const WD: readonly string[] = [ymd(0), ymd(1), ymd(2), ymd(3), ymd(4)];
+// Full week (Mon–Sun, offsets 0–6).
+const W1: readonly string[] = [...WD, ymd(5), ymd(6)];
 
 // ── Dispatch shifts ───────────────────────────────────────────────────────────
 
@@ -167,9 +193,9 @@ export const dispatchShifts: DemoEvent[] = [
 ];
 
 // ── Pilot shifts ──────────────────────────────────────────────────────────────
-// James and Elena are on the mission Apr 24, so their shifts end Thu Apr 23.
+// James and Elena are on the mission Fri (offset 4), so their shifts end Thu (offset 3).
 
-const WD_PRE_MISSION: readonly string[] = ['2026-04-20','2026-04-21','2026-04-22','2026-04-23'];
+const WD_PRE_MISSION: readonly string[] = [ymd(0), ymd(1), ymd(2), ymd(3)];
 
 export const pilotShifts: DemoEvent[] = [
   ...dayShifts  ('ps-james',  'Pilot Day',   'emp-james',  'b-seattle',  WD_PRE_MISSION, 'pilot-shift'),
@@ -189,7 +215,7 @@ export const medicalShifts: DemoEvent[] = [
   ...dayShifts  ('ms-nina',   'Medical Day',   'emp-nina',   'b-denver',   WD,             'medical-shift'),
   ...nightShifts('ms-david',  'Medical Night', 'emp-david',  'b-denver',   WD,             'medical-shift'),
   // Grace Taylor — PTO Mon/Tue, day shifts Wed–Fri
-  ...dayShifts  ('ms-grace',  'Medical Day',   'emp-grace',  'b-slc',      ['2026-04-22','2026-04-23','2026-04-24'], 'medical-shift'),
+  ...dayShifts  ('ms-grace',  'Medical Day',   'emp-grace',  'b-slc',      [ymd(2), ymd(3), ymd(4)], 'medical-shift'),
 ];
 
 // ── Mechanic shifts ───────────────────────────────────────────────────────────
@@ -201,11 +227,11 @@ export const mechanicShifts: DemoEvent[] = [
 // ── On-call rotation (week-long blocks) ───────────────────────────────────────
 
 export const mechanicOnCall: DemoEvent[] = [
-  { id: 'oc-mike-w1',  title: 'On Call – Week A', category: 'on-call', visualPriority: 'muted', start: '2026-04-20T00:00', end: '2026-04-27T00:00', assignedTo: 'emp-mike',  basedAt: 'b-seattle' },
-  { id: 'oc-sarah-w2', title: 'On Call – Week B', category: 'on-call', visualPriority: 'muted', start: '2026-04-27T00:00', end: '2026-05-04T00:00', assignedTo: 'emp-sarah', basedAt: 'b-denver'  },
-  { id: 'oc-sam-w1',   title: 'On Call – Week A', category: 'on-call', visualPriority: 'muted', start: '2026-04-20T00:00', end: '2026-04-27T00:00', assignedTo: 'emp-sam',   basedAt: 'b-seattle' },
-  { id: 'oc-grace-w2', title: 'On Call – Week B', category: 'on-call', visualPriority: 'muted', start: '2026-04-27T00:00', end: '2026-05-04T00:00', assignedTo: 'emp-grace', basedAt: 'b-slc'     },
-  { id: 'oc-cody-w1',  title: 'On Call – Week A', category: 'on-call', visualPriority: 'muted', start: '2026-04-20T00:00', end: '2026-04-27T00:00', assignedTo: 'emp-cody',  basedAt: 'b-bozeman' },
+  { id: 'oc-mike-w1',  title: 'On Call – Week A', category: 'on-call', visualPriority: 'muted', start: dt(0,  '00:00'), end: dt(7,  '00:00'), assignedTo: 'emp-mike',  basedAt: 'b-seattle' },
+  { id: 'oc-sarah-w2', title: 'On Call – Week B', category: 'on-call', visualPriority: 'muted', start: dt(7,  '00:00'), end: dt(14, '00:00'), assignedTo: 'emp-sarah', basedAt: 'b-denver'  },
+  { id: 'oc-sam-w1',   title: 'On Call – Week A', category: 'on-call', visualPriority: 'muted', start: dt(0,  '00:00'), end: dt(7,  '00:00'), assignedTo: 'emp-sam',   basedAt: 'b-seattle' },
+  { id: 'oc-grace-w2', title: 'On Call – Week B', category: 'on-call', visualPriority: 'muted', start: dt(7,  '00:00'), end: dt(14, '00:00'), assignedTo: 'emp-grace', basedAt: 'b-slc'     },
+  { id: 'oc-cody-w1',  title: 'On Call – Week A', category: 'on-call', visualPriority: 'muted', start: dt(0,  '00:00'), end: dt(7,  '00:00'), assignedTo: 'emp-cody',  basedAt: 'b-bozeman' },
 ];
 
 import type { DemoMissionRequest } from './types';
@@ -213,37 +239,37 @@ import type { DemoMissionRequest } from './types';
 // ── PTO ───────────────────────────────────────────────────────────────────────
 
 export const ptoEvents: DemoEvent[] = [
-  { id: 'pto-derek', title: 'PTO – Derek Mills',  category: 'pto', visualPriority: 'muted', start: '2026-04-24T00:00', end: '2026-04-26T00:00', assignedTo: 'emp-derek', basedAt: 'b-portland' },
-  { id: 'pto-grace', title: 'PTO – Grace Taylor', category: 'pto', visualPriority: 'muted', start: '2026-04-20T00:00', end: '2026-04-22T00:00', assignedTo: 'emp-grace', basedAt: 'b-slc'      },
+  { id: 'pto-derek', title: 'PTO – Derek Mills',  category: 'pto', visualPriority: 'muted', start: dt(4, '00:00'), end: dt(6, '00:00'), assignedTo: 'emp-derek', basedAt: 'b-portland' },
+  { id: 'pto-grace', title: 'PTO – Grace Taylor', category: 'pto', visualPriority: 'muted', start: dt(0, '00:00'), end: dt(2, '00:00'), assignedTo: 'emp-grace', basedAt: 'b-slc'      },
 ];
 
 // ── Maintenance ───────────────────────────────────────────────────────────────
 
 export const maintenanceEvents: DemoEvent[] = [
-  { id: 'maint-n806ec', title: 'Scheduled Inspection – EC135 N806EC', category: 'maintenance', visualPriority: 'high',  start: '2026-04-21T08:00', end: '2026-04-24T17:00', assignedTo: 'ac-n806ec', basedAt: 'b-bozeman' },
-  { id: 'maint-n803lj', title: 'Pre-Mission Check – Learjet N803LJ',  category: 'maintenance', visualPriority: 'high',  start: '2026-04-22T07:00', end: '2026-04-23T12:00', assignedTo: 'ac-n803lj', basedAt: 'b-seattle'  },
+  { id: 'maint-n806ec', title: 'Scheduled Inspection – EC135 N806EC', category: 'maintenance', visualPriority: 'high',  start: dt(1, '08:00'), end: dt(4, '17:00'), assignedTo: 'ac-n806ec', basedAt: 'b-bozeman' },
+  { id: 'maint-n803lj', title: 'Pre-Mission Check – Learjet N803LJ',  category: 'maintenance', visualPriority: 'high',  start: dt(2, '07:00'), end: dt(3, '12:00'), assignedTo: 'ac-n803lj', basedAt: 'b-seattle'  },
 ];
 
 // ── Training ──────────────────────────────────────────────────────────────────
 
 export const trainingEvents: DemoEvent[] = [
-  { id: 'trn-cody', title: 'IFR Recurrent – Cody Barnes',    category: 'training', visualPriority: 'muted', start: '2026-04-23T09:00', end: '2026-04-23T15:00', assignedTo: 'emp-cody',  basedAt: 'b-bozeman' },
-  { id: 'trn-sam',  title: 'ECMO Recertification – Sam Nguyen', category: 'training', visualPriority: 'muted', start: '2026-04-22T08:00', end: '2026-04-22T16:00', assignedTo: 'emp-sam',   basedAt: 'b-seattle'  },
+  { id: 'trn-cody', title: 'IFR Recurrent – Cody Barnes',    category: 'training', visualPriority: 'muted', start: dt(3, '09:00'), end: dt(3, '15:00'), assignedTo: 'emp-cody',  basedAt: 'b-bozeman' },
+  { id: 'trn-sam',  title: 'ECMO Recertification – Sam Nguyen', category: 'training', visualPriority: 'muted', start: dt(2, '08:00'), end: dt(2, '16:00'), assignedTo: 'emp-sam',   basedAt: 'b-seattle'  },
 ];
 
 // ── Aircraft + asset requests ─────────────────────────────────────────────────
 
 export const requests: DemoEvent[] = [
-  { id: 'req-n803lj', title: 'Lift Request – N803LJ (International Mission)', category: 'aircraft-request', visualPriority: 'high',  start: '2026-04-23T08:00', end: '2026-04-23T17:00', assignedTo: 'ac-n803lj', basedAt: 'b-seattle'  },
-  { id: 'req-nicu',   title: 'NICU Equipment Check – AW139 N801AW',            category: 'asset-request',    visualPriority: 'muted', start: '2026-04-24T09:00', end: '2026-04-24T11:00', assignedTo: 'ac-n801aw', basedAt: 'b-seattle'  },
+  { id: 'req-n803lj', title: 'Lift Request – N803LJ (International Mission)', category: 'aircraft-request', visualPriority: 'high',  start: dt(3, '08:00'), end: dt(3, '17:00'), assignedTo: 'ac-n803lj', basedAt: 'b-seattle'  },
+  { id: 'req-nicu',   title: 'NICU Equipment Check – AW139 N801AW',            category: 'asset-request',    visualPriority: 'muted', start: dt(4, '09:00'), end: dt(4, '11:00'), assignedTo: 'ac-n801aw', basedAt: 'b-seattle'  },
 ];
 
 // ── Base events ───────────────────────────────────────────────────────────────
 
 export const baseEvents: DemoEvent[] = [
-  { id: 'base-sea-allhands', title: 'Seattle All-Hands',        category: 'base-event', visualPriority: 'muted', start: '2026-04-21T08:00', end: '2026-04-21T09:00', basedAt: 'b-seattle' },
-  { id: 'base-sea-brief',    title: 'Pre-Mission Briefing',     category: 'base-event', visualPriority: 'high',  start: '2026-04-23T14:00', end: '2026-04-23T15:30', basedAt: 'b-seattle' },
-  { id: 'base-den-standup',  title: 'Denver Crew Standup',      category: 'base-event', visualPriority: 'muted', start: '2026-04-21T07:30', end: '2026-04-21T08:00', basedAt: 'b-denver'  },
+  { id: 'base-sea-allhands', title: 'Seattle All-Hands',        category: 'base-event', visualPriority: 'muted', start: dt(1, '08:00'), end: dt(1, '09:00'), basedAt: 'b-seattle' },
+  { id: 'base-sea-brief',    title: 'Pre-Mission Briefing',     category: 'base-event', visualPriority: 'high',  start: dt(3, '14:00'), end: dt(3, '15:30'), basedAt: 'b-seattle' },
+  { id: 'base-den-standup',  title: 'Denver Crew Standup',      category: 'base-event', visualPriority: 'muted', start: dt(1, '07:30'), end: dt(1, '08:00'), basedAt: 'b-denver'  },
 ];
 
 // ── International mission ─────────────────────────────────────────────────────
@@ -253,8 +279,8 @@ const MISSION_TITLE = 'São Paulo → Munich Critical Care Transfer';
 export const mission: DemoMissionRequest = {
   id: 'mission-sao-muc',
   title: MISSION_TITLE,
-  start: '2026-04-24T06:00',
-  end:   '2026-04-28T08:00',
+  start: dt(4, '06:00'),
+  end:   dt(8, '08:00'),
   // São Paulo / Guarulhos (GRU) — pickup point for the patient transfer.
   originCoords: { lat: -23.4356, lon: -46.4731 },
   requirements: {
@@ -282,10 +308,10 @@ export const mission: DemoMissionRequest = {
     aircraft: { resourceId: 'ac-n803lj', resourceType: 'aircraft' },
   },
   legs: [
-    { id: 'leg-1', from: 'São Paulo (GRU)', to: 'New York (JFK)', start: '2026-04-24T06:00', end: '2026-04-24T14:00' },
-    { id: 'leg-2', from: 'New York (JFK)',  to: 'London (LHR)',   start: '2026-04-24T16:00', end: '2026-04-25T06:00' },
-    { id: 'leg-3', from: 'London (LHR)',    to: 'Munich (MUC)',   start: '2026-04-25T08:00', end: '2026-04-25T11:00' },
-    { id: 'leg-4', from: 'Munich (MUC)',    to: 'Seattle (SEA)',  start: '2026-04-27T10:00', end: '2026-04-28T08:00' },
+    { id: 'leg-1', from: 'São Paulo (GRU)', to: 'New York (JFK)', start: dt(4, '06:00'), end: dt(4, '14:00') },
+    { id: 'leg-2', from: 'New York (JFK)',  to: 'London (LHR)',   start: dt(4, '16:00'), end: dt(5, '06:00') },
+    { id: 'leg-3', from: 'London (LHR)',    to: 'Munich (MUC)',   start: dt(5, '08:00'), end: dt(5, '11:00') },
+    { id: 'leg-4', from: 'Munich (MUC)',    to: 'Seattle (SEA)',  start: dt(7, '10:00'), end: dt(8, '08:00') },
   ],
   compliance: [
     { id: 'comp-1', label: 'Brazil Exit Clearance',       status: 'approved' },
