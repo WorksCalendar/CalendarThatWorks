@@ -25,26 +25,32 @@ export const STEPS: readonly Step[] = [
     id: 'move-mission',
     banner: {
       title: 'Move the mission request',
-      body:  'A new mission request landed on the calendar. Drag it to a different time slot.',
+      body:  'A new mission request landed on the calendar. Drag it to a different time slot — or click in to fill the crew now.',
     },
     spotlight: { eventId: WALKTHROUGH_MISSION_ID },
+    // Accept any first action on Mission Alpha — drag to a new time *or*
+    // open the form and assign a pilot. Users who skip straight to
+    // assignment aren't left stuck on Step 1; the assign step's matcher
+    // handles its own filter (toResource === conflictPilotId), so an
+    // assign here naturally falls through.
     matches: (event, ctx) =>
-      event.kind === 'mission-moved' && event.eventId === ctx.missionEventId,
-    hint: 'Click and hold the highlighted "Mission Alpha" request, then drag it to another hour or day.',
+      (event.kind === 'mission-moved' || event.kind === 'mission-assigned')
+      && event.eventId === ctx.missionEventId,
+    hint: 'Click and hold the highlighted "Mission Alpha" request, then drag it to another hour or day. Or click into it to assign crew right away.',
   },
 
   {
     id: 'assign-busy',
     banner: {
       title: 'Assign a pilot — and watch what happens',
-      body:  'Click Mission Alpha and assign Capt. James Wright. He\'s already on shift at that time, so the calendar will flag the conflict.',
+      body:  'Click Mission Alpha and assign Capt. James Wright. He\'s already on shift at that time, so the calendar will flag the conflict — click "Apply anyway" on the prompt to keep going.',
     },
     spotlight: { eventId: WALKTHROUGH_MISSION_ID },
     matches: (event, ctx) =>
       event.kind === 'mission-assigned'
       && event.eventId === ctx.missionEventId
       && event.toResource === ctx.conflictPilotId,
-    hint: 'Click the mission, set the resource to Capt. James Wright in the form, save — confirm the conflict prompt to apply anyway.',
+    hint: 'Click the mission, set the resource to Capt. James Wright in the form, save — when the conflict prompt appears, click "Apply anyway" to commit the assignment.',
   },
 
   {

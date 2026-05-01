@@ -144,8 +144,13 @@
 
 /* Below 1100px the demo swaps the live calendar for a static MobileShowcase
  * (see Landing.tsx). The walkthrough has nothing to operate on there, so
- * suppress the banner and resume pill outright. Same breakpoint as Landing's
- * MOBILE_BREAKPOINT_PX. */
+ * suppress the banner and resume pill outright.
+ *
+ * IMPORTANT: this 1099px threshold (= MOBILE_BREAKPOINT_PX − 1) MUST stay in
+ * sync with `MOBILE_BREAKPOINT_PX` in demo/Landing.tsx. CSS modules can't
+ * import JS constants, so this is a manual cross-reference — if you change
+ * the breakpoint there, change it here too. Grep for MOBILE_BREAKPOINT_PX
+ * before editing the constant. */
 @media (max-width: 1099px) {
   .banner,
   .resumePill {

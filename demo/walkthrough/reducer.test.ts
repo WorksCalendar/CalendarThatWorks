@@ -81,6 +81,33 @@ describe('walkthrough reducer', () => {
     expect(stateB.currentStep).toBe('move-mission');
   });
 
+  it('move-mission also advances on a mission-assigned event (not just move)', () => {
+    // W2: a user who clicks Mission Alpha and assigns a pilot directly,
+    // skipping the drag, should not be left stuck on Step 1.
+    const state = reducer(
+      INITIAL_STATE,
+      { type: 'observe', event: assigned('emp-priya', null) },
+      DEPS,
+    );
+    expect(state.currentStep).toBe('assign-busy');
+  });
+
+  it('cascades through multiple steps a single event satisfies', () => {
+    // Pathological-but-realistic case: user assigns to the conflict pilot
+    // directly on first action. The mission-assigned event matches both
+    // move-mission (any first action on the mission) AND assign-busy
+    // (toResource is the conflict pilot). Without cascading the user
+    // would land on assign-busy with the action they just performed
+    // already complete — banner would read "now do the thing you did".
+    const state = reducer(
+      INITIAL_STATE,
+      { type: 'observe', event: assigned(CTX.conflictPilotId, null) },
+      DEPS,
+    );
+    expect(state.currentStep).toBe('reassign-free');
+    expect(state.history).toEqual(['move-mission', 'assign-busy']);
+  });
+
   it('assign-busy only advances when the mission is assigned to the conflict pilot', () => {
     let state = INITIAL_STATE;
     state = reducer(state, { type: 'observe', event: moved(CTX.missionEventId) }, DEPS);

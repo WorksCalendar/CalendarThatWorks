@@ -67,11 +67,13 @@ export default function WalkthroughBanner({
           </>
         ) : (
           <>
+            {/* Distinct labels so users don't conflate exiting the entire tour
+             *  with advancing past one step. */}
             <button type="button" className={styles['button']} onClick={onExit}>
-              Skip tour
+              Exit tour
             </button>
             <button type="button" className={styles['button']} onClick={onAdvance}>
-              Skip step
+              Skip this step
             </button>
           </>
         )}
