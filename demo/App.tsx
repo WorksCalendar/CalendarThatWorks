@@ -960,29 +960,37 @@ function App() {
   // teaches lives there ("a request lands on the week, scheduler moves it,
   // then fills it"), and (b) navigates currentDate to the seed date so the
   // unassigned mission is on screen regardless of "today".
-  // Implemented as a callback ref rather than useEffect because the parent
-  // mount effect can occasionally fire before forwardRef + useImperativeHandle
-  // has populated the imperative handle. Callback refs run synchronously the
-  // moment the ref is attached, so we never race the calendar's mount.
+  //
+  // Wiring: callback ref populates calendarApiRef when WorksCalendar attaches
+  // its imperative handle. The actual setView/navigateTo calls live in a
+  // parent useEffect so they run AFTER the calendar's own mount effects —
+  // specifically the defaultView-applied effect at WorksCalendar.tsx:745
+  // which would otherwise reset state.view to the stored 'schedule' (or
+  // whatever returning visitors had) right after our snap.
+  //
   // Skipped in EMBED_MODE so e2e tests keep their real "today" landing, and
   // skipped if the user has already engaged with the walkthrough.
   const calendarApiRef = useRef(null);
   const didSnapRef     = useRef(false);
-  const walkthroughModeRef    = useRef(walkthrough.state.mode);
-  const walkthroughHistoryRef = useRef(walkthrough.state.history.length);
-  walkthroughModeRef.current    = walkthrough.state.mode;
-  walkthroughHistoryRef.current = walkthrough.state.history.length;
 
   const calendarRef = useCallback((api) => {
     calendarApiRef.current = api;
-    if (!api?.navigateTo) return;
+  }, []);
+
+  useEffect(() => {
     if (didSnapRef.current) return;
     if (EMBED_MODE) return;
-    if (walkthroughModeRef.current === 'free-play') return;
-    if (walkthroughHistoryRef.current > 0) return;
-    api.setView?.('week');
+    if (walkthrough.state.mode === 'free-play') return;
+    if (walkthrough.state.history.length > 0) return;
+    const api = calendarApiRef.current;
+    if (!api?.navigateTo || !api?.setView) return;
+    api.setView('week');
     api.navigateTo(new Date(ALPHA_INITIAL_START_ISO));
     didSnapRef.current = true;
+    // Intentionally empty deps: this is a once-on-mount snap. Re-running on
+    // mode/history changes would risk yanking the user back to the seed
+    // date if they've navigated away.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const calendar = (
