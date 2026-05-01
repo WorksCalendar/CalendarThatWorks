@@ -1,10 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
 import { WorksCalendar } from '../WorksCalendar.tsx';
 
 describe('WorksCalendar schedule workflow entry points', () => {
+  // Pin "today" to a date in the same week as the hardcoded April 1
+  // fixtures, but NOT April 1 itself. The schedule view's gridcell
+  // aria-label appends ", today" when the cell day is today
+  // (ScheduleView.tsx:988), and several tests assert on the `empty`
+  // suffix coming immediately after the date — so making April 1 itself
+  // "today" would shift the suffix and break the regex.
+  // April 8 sits in the same 6-week window (window starts at the
+  // startOfWeek that contains April 1), so the April 1 cells stay in
+  // range without taking on the "today" decoration.
+  // shouldAdvanceTime keeps real timers ticking so testing-library's
+  // waitFor still works.
+  beforeAll(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-04-08T08:00:00.000Z'));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   const employees = [
     { id: 'emp-1', name: 'Alex Rivera', role: 'RN' },
   ];

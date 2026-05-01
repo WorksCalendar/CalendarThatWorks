@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { createRef } from 'react';
 
@@ -29,6 +29,24 @@ function getByKind(events: ScheduleEventLike[], kind: string) {
 }
 
 describe('WorksCalendar schedule model integration', () => {
+  // Pin "today" to a date in the same week as the hardcoded April 1
+  // fixtures (shift + PTO). The schedule view renders a 6-week window
+  // starting at startOfWeek(currentDate), so once the system clock
+  // drifts past April 2026 the April 1 fixtures fall out of range and
+  // the open-shift / covering events the test asserts on never appear
+  // in visibleEvents. April 8 keeps April 1 in range. (We deliberately
+  // avoid April 1 itself; the gridcell aria-label appends ", today"
+  // when the cell day matches today — which the sibling
+  // scheduleWorkflow tests' regex chokes on.)
+  // shouldAdvanceTime keeps real timers ticking so waitFor still works.
+  beforeAll(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-04-08T08:00:00.000Z'));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   const employees = [
     { id: 'emp-1', name: 'Alex Rivera', role: 'RN' },
     { id: 'emp-2', name: 'Bailey Chen', role: 'RN' },
