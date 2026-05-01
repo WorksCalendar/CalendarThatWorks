@@ -52,6 +52,7 @@ import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './
 import { AppShell }           from './ui/AppShell';
 import { AppHeader }          from './ui/AppHeader';
 import { LeftRail }           from './ui/LeftRail';
+import type { LeftRailAction } from './ui/LeftRail';
 import { SubToolbar }         from './ui/SubToolbar';
 import { DayWindowPills }     from './ui/DayWindowPills';
 import { RightPanel, RightPanelSection, CrewOnShiftList } from './ui/RightPanel';
@@ -243,6 +244,19 @@ export type WorksCalendarProps = {
   renderEvent?: (event: WorksCalendarEvent, context?: UnknownRecord) => ReactNode;
   renderHoverCard?: (event: WorksCalendarEvent, onClose: () => void) => ReactNode;
   renderToolbar?: (api: CalendarApi) => ReactNode;
+  /** Extra icon-button actions appended to the LeftRail after the built-in
+   *  Saved-views / Focus-filters / Settings buttons. Each entry has the
+   *  same shape as the rail's internal actions (see `LeftRailAction` in
+   *  the package's public exports): `{ id, label, icon, hint?, active?,
+   *  onClick }`. Use this to surface embedder-specific shortcuts (export,
+   *  notifications, custom drawers, etc.) without forking the chrome. */
+  leftRailExtras?: LeftRailAction[];
+  /** ReactNode appended to the RightPanel after the built-in Region map
+   *  + Crew on shift sections. For visual consistency wrap your content
+   *  in `<RightPanelSection title="…">…</RightPanelSection>` (also
+   *  exported). Pass any number of sections; they stack vertically and
+   *  inherit theme tokens. */
+  rightPanelExtras?: ReactNode;
   renderFilterBar?: (args: UnknownRecord) => ReactNode;
   renderSavedViewsBar?: (args: UnknownRecord) => ReactNode;
   /**
@@ -588,6 +602,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderEvent,
     renderHoverCard,
     renderToolbar,
+    leftRailExtras,
+    rightPanelExtras,
     renderFilterBar,
     renderSavedViewsBar,
     focusChips,
@@ -2556,6 +2572,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   icon: <Settings size={18} aria-hidden="true" />,
                   onClick: () => ownerCfg.setConfigOpen(true),
                 }] : []),
+                // Embedder-supplied actions (optional). Appended last so
+                // the built-in actions keep stable positions across
+                // consumer apps. Filter out any id collisions defensively.
+                ...(leftRailExtras ?? []).filter(extra =>
+                  !['saved-views', 'focus', 'settings'].includes(extra.id),
+                ),
               ]}
             />
           }
@@ -2575,6 +2597,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               <RightPanelSection title="Crew on shift">
                 <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
               </RightPanelSection>
+              {/* Embedder-supplied sections (optional). Appended after the
+                  built-ins so the stock content keeps stable position. */}
+              {rightPanelExtras}
             </RightPanel>
           }
           header={<>
