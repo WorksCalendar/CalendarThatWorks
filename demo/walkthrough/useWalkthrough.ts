@@ -60,7 +60,6 @@ interface UseWalkthroughArgs {
 export interface HostDelegate {
   onEventMove?: (event: HostEvent, newStart: Date, newEnd: Date) => void;
   onEventSave?: (event: HostEvent) => void;
-  onConflictCheck?: (event: HostEvent, candidate: HostEvent) => Promise<unknown> | unknown;
   onViewChange?: (view: string) => void;
   onMapWidgetOpenChange?: (open: boolean) => void;
 }
@@ -114,7 +113,19 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
   }, []);
 
   const advance = useCallback(() => dispatch({ type: 'advance' }), []);
-  const restart = useCallback(() => dispatch({ type: 'restart' }), []);
+  const restart = useCallback(() => {
+    // Reset the mission snapshot in lockstep with the state-machine reset so
+    // the first user gesture after restart isn't compared against a stale
+    // post-tour assignment. Without this, a user who finishes the tour with
+    // Mission Alpha assigned to emp-priya and then clicks "Restart" would
+    // see their next drag misclassified as an `event-reassigned` (priya →
+    // null) instead of `mission-moved`, leaving Step 1 stuck.
+    lastMissionSnapshot.current = {
+      resource: null,
+      startIso: ctx.missionInitialStartIso,
+    };
+    dispatch({ type: 'restart' });
+  }, [ctx.missionInitialStartIso]);
   const exit    = useCallback(() => dispatch({ type: 'exit' }), []);
 
   const wrapped = useMemo<HostDelegate>(() => ({
@@ -160,13 +171,6 @@ export function useWalkthrough({ ctx, delegate }: UseWalkthroughArgs): Walkthrou
       }
 
       lastMissionSnapshot.current = { resource: nextResource, startIso: nextStartIso };
-    },
-
-    onConflictCheck: async (ev, candidate) => {
-      // The walkthrough doesn't use this for advancement (the assign step
-      // is satisfied by mission-assigned events). Kept for future use and
-      // so wrapping it stays a no-op pass-through if a host wires it.
-      return delegate.onConflictCheck?.(ev, candidate);
     },
 
     onViewChange: (view) => {

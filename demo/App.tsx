@@ -37,6 +37,7 @@ import { useWalkthrough } from './walkthrough/useWalkthrough';
 import {
   ALPHA_INITIAL_START_ISO,
   CONFLICT_PILOT_ID,
+  WALKTHROUGH_DECOY_SHIFT_ID,
   WALKTHROUGH_MISSION_ID,
   buildWalkthroughEvents,
 } from './walkthrough/fixtures';
@@ -993,6 +994,26 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Restart wraps walkthrough.restart with the cleanup the state-machine
+  // alone can't do: re-seed the demo events (so Mission Alpha is unassigned
+  // and Bravo's conflicting shift is back in place) and snap the calendar
+  // view + date back to the seed slot. Without this, hitting "Restart tour"
+  // after completing the run sends the user to Step 1 ("drag the unassigned
+  // mission") with the mission still pinned to whatever pilot they assigned
+  // last time — narrative breaks immediately.
+  const handleRestart = useCallback(() => {
+    setEvents(prev => {
+      const nonWalkthrough = prev.filter(e =>
+        e.id !== WALKTHROUGH_MISSION_ID && e.id !== WALKTHROUGH_DECOY_SHIFT_ID,
+      );
+      return [...nonWalkthrough, ...buildWalkthroughEvents()];
+    });
+    const api = calendarApiRef.current;
+    api?.setView?.('week');
+    api?.navigateTo?.(new Date(ALPHA_INITIAL_START_ISO));
+    walkthrough.restart();
+  }, [walkthrough.restart]);
+
   const calendar = (
     <WorksCalendar
       ref={calendarRef}
@@ -1074,7 +1095,7 @@ function App() {
           state={walkthrough.state}
           steps={walkthrough.steps}
           onAdvance={walkthrough.advance}
-          onRestart={walkthrough.restart}
+          onRestart={handleRestart}
           onExit={walkthrough.exit}
         />
       )}
