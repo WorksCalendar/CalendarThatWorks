@@ -28,6 +28,20 @@ release is cut.
 - **`onOpenChange?: (open: boolean) => void`** prop on `MapPeekWidget`.
   Same semantics as the WorksCalendar passthrough above; useful when
   embedding the widget directly outside the calendar.
+- **`leftRailExtras?: LeftRailAction[]`** prop on `<WorksCalendar>`.
+  Appended after the built-in saved-views / focus / settings buttons so
+  embedders can plug their own icon shortcuts (export, notifications,
+  custom drawers, etc.) into the chrome. Built-in ids are reserved —
+  extras with `id` matching `'saved-views'` / `'focus'` / `'settings'`
+  are filtered out defensively.
+- **`rightPanelExtras?: ReactNode`** prop on `<WorksCalendar>`. Appended
+  after the built-in Region map + Crew on shift sections. For visual
+  consistency wrap each section in
+  `<RightPanelSection title="…">…</RightPanelSection>` (also exported);
+  theme tokens + section dividers stay aligned with the stock chrome.
+- **New public exports** to support the slot props:
+  - `RightPanel`, `RightPanelSection` (components)
+  - `RightPanelSectionProps`, `LeftRailAction` (types)
 - **DOM hooks for host tooling**:
   - `data-wc-event-id="<id>"` on event pills in Day, Week, Month, and
     Schedule views. Lets host code (e.g. tour overlays, automated
@@ -48,6 +62,22 @@ release is cut.
   and Resource only. **The pill `aria-label` retains the full hour
   range for screen readers.** Visual change for any consumer asserting
   on those exact strings.
+- **LeftRail + RightPanel surfaces now extend the full body height.**
+  Previously the inner `.root` of each rail collapsed to content height,
+  leaving a transparent gap below the buttons / sections that bled the
+  parent surface through and made the rails read as "cut off" against
+  a tall calendar grid. Now both inner roots `height: 100%` so their
+  surface + border match the body's bottom edge.
+- **Demo dataset is now date-relative.** `demo/emsData.ts` and the
+  walkthrough's seed events used to hardcode the week of 2026-04-20.
+  Once the system clock moved past that week, the events fell outside
+  the calendar's visible window and visitors saw a blank demo.
+  Replaced 26 hardcoded ISO date strings with offsets relative to
+  `startOfWeek(new Date(), { weekStartsOn: 1 })`. The schedule shape
+  is preserved exactly; the dataset just slides forward with real time.
+  Only affects consumers who imported `emsData` directly (it's a demo
+  fixture, not part of the public API surface), but called out for
+  visibility.
 
 ### Breaking
 
