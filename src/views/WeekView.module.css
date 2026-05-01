@@ -428,6 +428,75 @@
   border: 2px dashed rgba(255,255,255,0.7);
 }
 
+/* ── Visual-only drag conflict wash ────────────────────────────── */
+/*
+  The real conflict engine still runs on drop. These selectors only give the
+  user early feedback while an existing event ghost is hovering in a day
+  column. We intentionally avoid create ghosts so empty-slot drafting does not
+  make the calendar look blocked before an event exists.
+*/
+.dayCol:has(.ghost:not(.ghostCreate))::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--wc-danger, #ef4444) 7%, transparent),
+      color-mix(in srgb, var(--wc-danger, #ef4444) 7%, transparent) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  outline: 1px dashed color-mix(in srgb, var(--wc-danger, #ef4444) 34%, transparent);
+  outline-offset: -2px;
+}
+
+.dayCol:has(.ghost:not(.ghostCreate))::after {
+  content: 'Conflict check on drop';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 30;
+  max-width: calc(100% - 16px);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wc-danger, #ef4444) 88%, #111827);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.dayCol:has(.ghost:not(.ghostCreate)) .event:not(.dragging) {
+  outline: 2px solid color-mix(in srgb, var(--wc-danger, #ef4444) 70%, #fff);
+  outline-offset: 1px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--wc-danger, #ef4444) 28%, transparent),
+    0 8px 18px rgba(239, 68, 68, 0.18);
+}
+
+.dayCol:has(.ghost:not(.ghostCreate)) .event:not(.dragging)::after {
+  content: 'possible conflict';
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  z-index: 3;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.42);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 /* ── All-day drag ghost ── */
 .allDayGhost {
   position: absolute;
