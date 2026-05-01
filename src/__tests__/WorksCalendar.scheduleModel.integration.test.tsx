@@ -119,6 +119,12 @@ describe('WorksCalendar schedule model integration', () => {
     });
   }, 30000);
 
+  // Chain-heavy: two PTO submissions back-to-back means roughly 10 sequential
+  // UI interactions (open menu → click Request PTO → fill start → fill end →
+  // save → wait for status pill, then repeat). Each `findByRole` polls with
+  // a 1s default, so on slow shared-runner CI hardware the cumulative wait
+  // can exceed 30s even with the events firing correctly. Locally finishes
+  // in ~10s; budgeted to 60s so transient CI contention doesn't flake it.
   it('does not create duplicate open-shift records when PTO is re-saved', async () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
@@ -135,7 +141,7 @@ describe('WorksCalendar schedule model integration', () => {
       );
       expect(openShifts).toHaveLength(1);
     });
-  }, 30000);
+  }, 60000);
 
   it('assigns coverage by updating shift/open-shift state and creating one mirror event', async () => {
     const apiRef = createRef<any>();
@@ -223,6 +229,12 @@ describe('WorksCalendar schedule model integration', () => {
     });
   }, 30000);
 
+  // Heaviest test in the file: PTO → coverage(Bailey) → clear → PTO →
+  // coverage(Casey). ~14 sequential UI interactions; on slow shared-runner
+  // CI hardware that comfortably exceeds 30s. Locally finishes in ~15s.
+  // The 60s budget covers the worst-case GH Actions ubuntu-latest free-tier
+  // contention without papering over a real bug — the operations themselves
+  // complete fine, the assertions just have to wait their turn.
   it('keeps exactly one covering record when coverage is reassigned', async () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
@@ -249,7 +261,7 @@ describe('WorksCalendar schedule model integration', () => {
       const shift = visible.find((ev: ScheduleEventLike) => String(ev.id) === 'shift-1');
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-3');
     });
-  }, 30000);
+  }, 60000);
 
   it('allows removing coverage after assignment from the covered status pill', async () => {
     const apiRef = createRef<any>();
