@@ -12,7 +12,9 @@ permissions:
 jobs:
   qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Must exceed the cumulative bounded step runtime so if an early step
+    # times out, the always-run reporting and artifact upload steps still fire.
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
