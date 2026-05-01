@@ -5,6 +5,67 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Library and demo changes since 0.5.0 that originated in the
+guided-walkthrough work — limited to the public-API surface a downstream
+consumer would feel. Many other PRs have landed against `main` since
+0.5.0 (strict-null migration, asset setup flow, dispatch board, base
+view redesign, map layer, invoicing integration, etc.); those should be
+folded into this section by their respective authors before the next
+release is cut.
+
+### Added
+
+- **`onViewChange?: (view: CalendarView) => void`** prop on
+  `<WorksCalendar>`. Fires whenever the active view changes (toolbar
+  click, keyboard shortcut, programmatic `cal.setView`, saved-view
+  apply). Skips the initial mount so consumers don't get a synthetic
+  event for the default view.
+- **`onMapWidgetOpenChange?: (open: boolean) => void`** prop on
+  `<WorksCalendar>`, forwarded to the embedded `<MapPeekWidget>`. Fires
+  on the open / close transition of the rail map peek's expanded modal.
+- **`onOpenChange?: (open: boolean) => void`** prop on `MapPeekWidget`.
+  Same semantics as the WorksCalendar passthrough above; useful when
+  embedding the widget directly outside the calendar.
+- **DOM hooks for host tooling**:
+  - `data-wc-event-id="<id>"` on event pills in Day, Week, Month, and
+    Schedule views. Lets host code (e.g. tour overlays, automated
+    tests) target a specific event pill across views by id rather than
+    the volatile module-scoped CSS class.
+  - `data-wc-view-button="<viewId>"` on the toolbar view buttons so
+    automation can pick a specific view button without relying on
+    accessible-name regexes.
+  - `data-wc-map-widget="peek"` on the `MapPeekWidget` host wrapper.
+
+### Changed
+
+- **WeekView pills no longer render duplicate time text.** The pill's
+  vertical position and height already encode the start / end visually,
+  and the timeRange ("8:00 AM – 4:00 PM") + Start / End rows just
+  starved the title of legible space when columns were narrow. Pills
+  now render the title (with ApprovalDot + EventStatusBadge prefixes)
+  and Resource only. **The pill `aria-label` retains the full hour
+  range for screen readers.** Visual change for any consumer asserting
+  on those exact strings.
+
+### Breaking
+
+- **`TimelineView` component renamed to `ScheduleView`.** The toolbar
+  user-facing label has always been "Schedule" and the view id has
+  always been `'schedule'`; the internal component name was an
+  outlier. The public re-export is now `import { ScheduleView } from
+  'works-calendar'` (was `TimelineView`). The view id stays
+  `'schedule'`, so consumer config (`display.defaultView`,
+  `cal.setView('schedule')`, saved views, etc.) does **not** need to
+  change.
+- **Dead `ScheduleView` 6-week grid component removed.** This was an
+  earlier prototype that hadn't been re-rendered since the production
+  ScheduleView (formerly TimelineView) shipped. It had no public
+  re-export and no consumer references, but is being noted here for
+  completeness in case a consumer was reaching into `src/views/`
+  directly.
+
 ## [0.5.0] — 2026-04-19
 
 The "Full TypeScript" release. The library is now written end-to-end in
