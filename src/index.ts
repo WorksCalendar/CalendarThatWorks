@@ -61,6 +61,15 @@ export { WorksCalendar }                  from './WorksCalendar.tsx';
 export { default as ScheduleView }        from './views/ScheduleView';
 export { default as MapView }             from './views/MapView';
 export type { MapViewProps }              from './views/MapView';
+
+// Embedder slot helpers — paired with the WorksCalendar `leftRailExtras` /
+// `rightPanelExtras` props. Consumer apps wrap their custom widgets in
+// these so the appended content blends with the stock chrome (theme
+// tokens, section headers, icon-button styling) instead of looking
+// pasted-on.
+export { RightPanel, RightPanelSection } from './ui/RightPanel';
+export type { RightPanelSectionProps }   from './ui/RightPanel';
+export type { LeftRailAction }           from './ui/LeftRail';
 export { normalizeEvent, normalizeEvents } from './core/eventModel';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine';

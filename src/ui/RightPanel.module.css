@@ -7,6 +7,12 @@
 
 .root {
   width: 240px;
+  /* Fill the aside's full height so the panel's surface + border-left
+   * extend down to match the calendar grid below. Same reason as
+   * LeftRail's .root: the parent aside stretches via flex but our
+   * inner block collapses to content-height without an explicit
+   * height. */
+  height: 100%;
   flex-shrink: 0;
   background: var(--wc-surface);
   border-left: var(--wc-border-width, 1px) solid var(--wc-border);

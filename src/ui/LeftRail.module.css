@@ -7,6 +7,13 @@
 
 .root {
   width: 56px;
+  /* Fill the aside's full height so the rail's surface + border-right
+   * extend to match the calendar grid below. The parent aside is a flex
+   * item in AppShell.body and stretches via the default align-items, but
+   * `.root` is a normal block child of that aside — without explicit
+   * height it collapses to content-height and leaves a transparent gap
+   * below the buttons. */
+  height: 100%;
   flex-shrink: 0;
   background: var(--wc-surface);
   border-right: var(--wc-border-width, 1px) solid var(--wc-border);
