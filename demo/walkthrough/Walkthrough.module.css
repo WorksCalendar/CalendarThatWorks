@@ -24,6 +24,22 @@
   line-height: 1.45;
   display: grid;
   gap: 10px;
+  /* The walkthrough is meant to coexist with the app (user is supposed to
+   * interact with the calendar while the tour is active). A fixed-position
+   * panel covering the calendar grid would otherwise eat clicks on event
+   * pills + cells underneath the banner. Make the panel itself
+   * click-transparent and re-enable pointer events on the interactive
+   * children below. */
+  pointer-events: none;
+}
+
+/* Re-enable interactivity for everything the user is meant to click in the
+ * banner: skip / advance / dismiss buttons. Text content stays
+ * pointer-events: none so clicks on banner copy pass through to the calendar
+ * underneath. */
+.banner button,
+.resumePill {
+  pointer-events: auto;
 }
 
 .bannerHeader {

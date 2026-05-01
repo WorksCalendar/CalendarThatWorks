@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { createRef } from 'react';
 
@@ -29,6 +29,24 @@ function getByKind(events: ScheduleEventLike[], kind: string) {
 }
 
 describe('WorksCalendar schedule model integration', () => {
+  // Pin "today" to a date in the same week as the hardcoded April 1
+  // fixtures (shift + PTO). The schedule view renders a 6-week window
+  // starting at startOfWeek(currentDate), so once the system clock
+  // drifts past April 2026 the April 1 fixtures fall out of range and
+  // the open-shift / covering events the test asserts on never appear
+  // in visibleEvents. April 8 keeps April 1 in range. (We deliberately
+  // avoid April 1 itself; the gridcell aria-label appends ", today"
+  // when the cell day matches today — which the sibling
+  // scheduleWorkflow tests' regex chokes on.)
+  // shouldAdvanceTime keeps real timers ticking so waitFor still works.
+  beforeAll(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-04-08T08:00:00.000Z'));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   const employees = [
     { id: 'emp-1', name: 'Alex Rivera', role: 'RN' },
     { id: 'emp-2', name: 'Bailey Chen', role: 'RN' },
@@ -101,12 +119,13 @@ describe('WorksCalendar schedule model integration', () => {
     });
   }, 30000);
 
-  // Suspended on CI — calls requestPtoForAlex() twice with a button-find
-  // in between, routinely brushes the 30s timeout on slow runners. Locally
-  // it's stable. Re-enable (and bump timeout if needed) on any PR that
-  // alters the PTO workflow / shift coverage path so the regression
-  // signal isn't lost. Tracked alongside #386.
-  it.skip('does not create duplicate open-shift records when PTO is re-saved', async () => {
+  // Chain-heavy: two PTO submissions back-to-back means roughly 10 sequential
+  // UI interactions (open menu → click Request PTO → fill start → fill end →
+  // save → wait for status pill, then repeat). Each `findByRole` polls with
+  // a 1s default, so on slow shared-runner CI hardware the cumulative wait
+  // can exceed 30s even with the events firing correctly. Locally finishes
+  // in ~10s; budgeted to 60s so transient CI contention doesn't flake it.
+  it('does not create duplicate open-shift records when PTO is re-saved', async () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
@@ -122,7 +141,7 @@ describe('WorksCalendar schedule model integration', () => {
       );
       expect(openShifts).toHaveLength(1);
     });
-  }, 30000);
+  }, 60000);
 
   it('assigns coverage by updating shift/open-shift state and creating one mirror event', async () => {
     const apiRef = createRef<any>();
@@ -210,14 +229,13 @@ describe('WorksCalendar schedule model integration', () => {
     });
   }, 30000);
 
-  // Suspended on CI — chains four sequential user interactions
-  // (PTO → coverage → clear → PTO → coverage), routinely overshoots
-  // the 30s timeout on slow runners. Locally stable. Re-enable (and
-  // bump timeout if needed) on any PR that alters the PTO workflow,
-  // shift coverage path, or the open-shift dedup logic so the
-  // regression signal isn't lost. Tracked alongside #386 (same
-  // policy as the earlier line-104 suspension).
-  it.skip('keeps exactly one covering record when coverage is reassigned', async () => {
+  // Heaviest test in the file: PTO → coverage(Bailey) → clear → PTO →
+  // coverage(Casey). ~14 sequential UI interactions; on slow shared-runner
+  // CI hardware that comfortably exceeds 30s. Locally finishes in ~15s.
+  // The 60s budget covers the worst-case GH Actions ubuntu-latest free-tier
+  // contention without papering over a real bug — the operations themselves
+  // complete fine, the assertions just have to wait their turn.
+  it('keeps exactly one covering record when coverage is reassigned', async () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
@@ -243,7 +261,7 @@ describe('WorksCalendar schedule model integration', () => {
       const shift = visible.find((ev: ScheduleEventLike) => String(ev.id) === 'shift-1');
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-3');
     });
-  }, 30000);
+  }, 60000);
 
   it('allows removing coverage after assignment from the covered status pill', async () => {
     const apiRef = createRef<any>();
