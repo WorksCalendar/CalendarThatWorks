@@ -16,6 +16,7 @@ function readSafe(path) {
 
 const visual = readSafe('qa-output/visual-review.md');
 const confused = readSafe('qa-output/confused-user/confused-user-notes.md');
+const playwrightReport = readSafe('qa-output/playwright-report.json');
 
 function splitFindings(text) {
   const bugs = [];
@@ -29,7 +30,62 @@ function splitFindings(text) {
   return { bugs, polish };
 }
 
+function pushOnce(list, value) {
+  if (!list.includes(value)) list.push(value);
+}
+
+function countFailedResults(reportText) {
+  if (!reportText) return 0;
+
+  try {
+    const report = JSON.parse(reportText);
+    let count = 0;
+
+    function walk(suite) {
+      for (const spec of suite.specs || []) {
+        for (const test of spec.tests || []) {
+          for (const result of test.results || []) {
+            if (result.status !== 'passed' && result.status !== 'skipped') count += 1;
+          }
+        }
+      }
+      for (const child of suite.suites || []) walk(child);
+    }
+
+    for (const suite of report.suites || []) walk(suite);
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+function autoPromoteBugs(bugs) {
+  const combined = `${visual}\n${confused}`.toLowerCase();
+  const failedResults = countFailedResults(playwrightReport);
+
+  if (failedResults > 0) {
+    pushOnce(bugs, `- [AUTO][BUG][CRITICAL] Playwright reported ${failedResults} non-passing result(s).`);
+  }
+
+  if (!visual.trim()) {
+    pushOnce(bugs, '- [AUTO][BUG][MAJOR] Visual QA output is missing.');
+  }
+
+  if (!confused.trim()) {
+    pushOnce(bugs, '- [AUTO][BUG][MAJOR] Confused-user walkthrough notes are missing.');
+  }
+
+  if (combined.includes('no events visible') || combined.includes('empty schedule') || combined.includes('blank schedule')) {
+    pushOnce(bugs, '- [AUTO][BUG][MAJOR] Demo appears to have no visible events; check current-week seed data.');
+  }
+
+  if (combined.includes('summary generation failed') || combined.includes('rate limit') || combined.includes('quota exceeded')) {
+    pushOnce(bugs, '- [AUTO][BUG][MAJOR] AI visual QA did not complete cleanly.');
+  }
+}
+
 const { bugs, polish } = splitFindings(visual);
+autoPromoteBugs(bugs);
 
 const status = bugs.length > 0
   ? '🔴 Bugs Found'
