@@ -1,0 +1,53 @@
+name: Nightly AI QA
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run type-check
+
+      - run: npm run test
+
+      - run: npm run build:demo
+
+      - run: npx playwright install --with-deps
+
+      - run: npm run test:browser
+
+      - run: npx playwright test tests-e2e/confused-user.spec.ts
+
+      - run: npm run qa:visual
+        env:
+          OPENAI_BASE_URL: https://api.openai.com/v1
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LM_STUDIO_MODEL: gpt-4o-mini
+
+      - run: node scripts/post-nightly-qa-issue.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-qa
+          path: qa-output/
