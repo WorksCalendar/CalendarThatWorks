@@ -120,6 +120,62 @@ import 'works-calendar/styles/ocean';
 
 Included packaged themes: `aviation`, `soft`, `minimal`, `corporate`, `forest`, `ocean`.
 
+## Customizing the chrome
+
+The calendar's left icon rail and right panel are two slots embedders can
+extend without forking. The stock chrome (saved-views, focus filters,
+settings, region map, crew on shift) keeps stable positions; your
+content lands after the built-ins.
+
+```tsx
+import {
+  WorksCalendar,
+  RightPanelSection,
+  type LeftRailAction,
+} from 'works-calendar';
+import { Bell, Download } from 'lucide-react';
+
+const railExtras: LeftRailAction[] = [
+  {
+    id: 'export',
+    label: 'Export',
+    hint: 'Download visible events as CSV',
+    icon: <Download size={18} aria-hidden="true" />,
+    onClick: () => exportCsv(),
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    icon: <Bell size={18} aria-hidden="true" />,
+    onClick: () => openNotificationDrawer(),
+  },
+];
+
+<WorksCalendar
+  events={events}
+  leftRailExtras={railExtras}
+  rightPanelExtras={
+    <>
+      <RightPanelSection title="Open tickets">
+        <MyTicketWidget />
+      </RightPanelSection>
+      <RightPanelSection title="Compliance">
+        <MyComplianceWidget />
+      </RightPanelSection>
+    </>
+  }
+/>
+```
+
+`leftRailExtras` takes `LeftRailAction[]` (`id` / `label` / `icon` /
+optional `hint` / optional `active` / `onClick`). Built-in ids
+(`saved-views`, `focus`, `settings`) are reserved — extras using them
+are filtered out so a typo can't shadow the chrome.
+
+`rightPanelExtras` takes any `ReactNode`. Wrap each section in
+`<RightPanelSection title="…">` so theme tokens + section dividers
+match the stock content above.
+
 ## Optional view plugins
 
 Some views are shipped behind optional peer dependencies so the core bundle

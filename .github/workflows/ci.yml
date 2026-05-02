@@ -68,6 +68,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Cache Playwright's browser binaries between runs so we only pay
+      # the ~112 MB chromium download once per package-lock change. Key
+      # on the lockfile hash so a Playwright bump invalidates correctly;
+      # restore-keys allows partial hits when other deps change. With a
+      # cache hit, the install step below collapses to a fast apt-get
+      # verification of system libraries (~30s) instead of a 2–4 min
+      # download from playwright.azureedge.net.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
