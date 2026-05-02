@@ -48,6 +48,9 @@ export type MapViewProps = {
    * self-hosted, etc).
    */
   mapStyle?: string;
+  /** Whether to render the NavigationControl. Default true. Set to false for
+   *  compact/preview contexts where the control would obscure the view. */
+  controls?: boolean;
 };
 
 const DEFAULT_STYLE = 'https://demotiles.maplibre.org/style.json';
@@ -152,6 +155,7 @@ export default function MapView({
   initialCenter,
   initialZoom,
   mapStyle = DEFAULT_STYLE,
+  controls = true,
 }: MapViewProps) {
   const ctx = useCalendarContext();
   const load = useMapModule();
@@ -215,7 +219,7 @@ export default function MapView({
         mapStyle={mapStyle}
         style={{ width: '100%', height: '100%' } as CSSProperties}
       >
-        <NavigationControl position="top-right" />
+        {controls && <NavigationControl position="top-right" />}
         {plotted.map(({ ev, pos, color }) => (
           <Marker
             key={ev.id}
