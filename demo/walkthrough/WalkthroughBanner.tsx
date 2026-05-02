@@ -6,6 +6,7 @@
  * the calendar — just shows what's happening and offers a way out.
  */
 
+import type { CSSProperties, HTMLAttributes } from 'react';
 import type { Step, WalkthroughState } from './types';
 import styles from './Walkthrough.module.css';
 
@@ -19,6 +20,10 @@ interface WalkthroughBannerProps {
   onAdvance: () => void;
   onRestart: () => void;
   onExit: () => void;
+  /** Inline style applied to the root banner element (e.g. drag offset). */
+  style?: CSSProperties;
+  /** Props spread onto the drag-handle header div (onMouseDown etc.). */
+  dragHandleProps?: HTMLAttributes<HTMLDivElement>;
 }
 
 export default function WalkthroughBanner({
@@ -29,14 +34,16 @@ export default function WalkthroughBanner({
   onAdvance,
   onRestart,
   onExit,
+  style,
+  dragHandleProps,
 }: WalkthroughBannerProps) {
   if (state.mode === 'free-play') return null;
 
   const isDone = step.id === 'done';
 
   return (
-    <div className={styles['banner']} role="dialog" aria-live="polite" aria-label="Guided walkthrough">
-      <div className={styles['bannerHeader']}>
+    <div className={styles['banner']} role="dialog" aria-live="polite" aria-label="Guided walkthrough" style={style}>
+      <div className={`${styles['bannerHeader']} ${styles['dragHandle']}`} {...dragHandleProps}>
         {!isDone && stepIndex > 0 && (
           <span className={styles['progress']}>
             Step {stepIndex} of {totalSteps}
