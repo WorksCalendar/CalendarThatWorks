@@ -295,7 +295,7 @@
 .event {
   position: absolute;
   /* left and width set inline as percentages for overlap layout */
-  min-width: 52px; /* floor: at extreme overlap densities pills stay legible */
+  min-width: 0;
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;

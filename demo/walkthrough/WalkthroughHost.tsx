@@ -45,6 +45,11 @@ export default function WalkthroughHost({
   // stale closure issues in the mousemove handler.
   const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const dragStart = useRef<{ mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
+  // Mirrors `offset` state in a ref so the mousemove handler can read the
+  // current value without a stale closure.
+  const currentOffset = useRef({ x: 0, y: 0 });
+  // Ref to the banner DOM node for getBoundingClientRect-based clamping.
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   const handleDragMouseDown = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
     // Only left-button drag.
@@ -61,10 +66,36 @@ export default function WalkthroughHost({
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
       if (!dragStart.current) return;
-      setOffset({
-        x: dragStart.current.offsetX + (e.clientX - dragStart.current.mouseX),
-        y: dragStart.current.offsetY + (e.clientY - dragStart.current.mouseY),
-      });
+
+      const proposedX = dragStart.current.offsetX + (e.clientX - dragStart.current.mouseX);
+      const proposedY = dragStart.current.offsetY + (e.clientY - dragStart.current.mouseY);
+
+      let clampedX = proposedX;
+      let clampedY = proposedY;
+
+      if (bannerRef.current) {
+        // Project the banner's current rect to where it would land at the
+        // proposed offset, then clamp so it stays fully within the viewport.
+        const rect = bannerRef.current.getBoundingClientRect();
+        const dx = proposedX - currentOffset.current.x;
+        const dy = proposedY - currentOffset.current.y;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        const projLeft   = rect.left   + dx;
+        const projTop    = rect.top    + dy;
+        const projRight  = rect.right  + dx;
+        const projBottom = rect.bottom + dy;
+
+        if (projLeft < 0)       clampedX = proposedX - projLeft;
+        else if (projRight > vw) clampedX = proposedX - (projRight - vw);
+
+        if (projTop < 0)         clampedY = proposedY - projTop;
+        else if (projBottom > vh) clampedY = proposedY - (projBottom - vh);
+      }
+
+      currentOffset.current = { x: clampedX, y: clampedY };
+      setOffset({ x: clampedX, y: clampedY });
     }
     function onMouseUp() {
       dragStart.current = null;
@@ -97,6 +128,7 @@ export default function WalkthroughHost({
     <>
       {spotlightCss && <style>{spotlightCss}</style>}
       <WalkthroughBanner
+        ref={bannerRef}
         step={step}
         state={state}
         stepIndex={stepIndex}
