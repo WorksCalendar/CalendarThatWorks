@@ -34,12 +34,21 @@
 }
 
 /* Re-enable interactivity for everything the user is meant to click in the
- * banner: skip / advance / dismiss buttons. Text content stays
- * pointer-events: none so clicks on banner copy pass through to the calendar
- * underneath. */
+ * banner: skip / advance / dismiss buttons, and the drag handle. Text content
+ * stays pointer-events: none so clicks on banner copy pass through to the
+ * calendar underneath. */
 .banner button,
+.dragHandle,
 .resumePill {
   pointer-events: auto;
+}
+
+.dragHandle {
+  cursor: grab;
+  user-select: none;
+}
+.dragHandle:active {
+  cursor: grabbing;
 }
 
 .bannerHeader {

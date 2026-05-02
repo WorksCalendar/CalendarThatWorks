@@ -10,7 +10,8 @@
  * corner so users who skipped can opt back in.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import WalkthroughBanner from './WalkthroughBanner';
 import type { Step, StepSpotlight, WalkthroughState } from './types';
 import styles from './Walkthrough.module.css';
@@ -39,6 +40,82 @@ export default function WalkthroughHost({
 
   const spotlightCss = buildSpotlightCss(step.spotlight);
 
+  // Drag-to-reposition state. `offset` is the delta from the CSS default
+  // position (top-center). We use a ref for the drag-start snapshot to avoid
+  // stale closure issues in the mousemove handler.
+  const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dragStart = useRef<{ mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
+  // Mirrors `offset` state in a ref so the mousemove handler can read the
+  // current value without a stale closure.
+  const currentOffset = useRef({ x: 0, y: 0 });
+  // Ref to the banner DOM node for getBoundingClientRect-based clamping.
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  const handleDragMouseDown = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
+    // Only left-button drag.
+    if (e.button !== 0) return;
+    e.preventDefault();
+    dragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      offsetX: offset.x,
+      offsetY: offset.y,
+    };
+  }, [offset]);
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!dragStart.current) return;
+
+      const proposedX = dragStart.current.offsetX + (e.clientX - dragStart.current.mouseX);
+      const proposedY = dragStart.current.offsetY + (e.clientY - dragStart.current.mouseY);
+
+      let clampedX = proposedX;
+      let clampedY = proposedY;
+
+      if (bannerRef.current) {
+        // Project the banner's current rect to where it would land at the
+        // proposed offset, then clamp so it stays fully within the viewport.
+        const rect = bannerRef.current.getBoundingClientRect();
+        const dx = proposedX - currentOffset.current.x;
+        const dy = proposedY - currentOffset.current.y;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        const projLeft   = rect.left   + dx;
+        const projTop    = rect.top    + dy;
+        const projRight  = rect.right  + dx;
+        const projBottom = rect.bottom + dy;
+
+        if (projLeft < 0)       clampedX = proposedX - projLeft;
+        else if (projRight > vw) clampedX = proposedX - (projRight - vw);
+
+        if (projTop < 0)         clampedY = proposedY - projTop;
+        else if (projBottom > vh) clampedY = proposedY - (projBottom - vh);
+      }
+
+      currentOffset.current = { x: clampedX, y: clampedY };
+      setOffset({ x: clampedX, y: clampedY });
+    }
+    function onMouseUp() {
+      dragStart.current = null;
+    }
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  // Apply offset as a CSS translate on top of the banner's default transform.
+  // The banner's CSS sets `transform: translateX(-50%)` for centering; we
+  // compose an additional translate so both effects apply.
+  const bannerStyle: CSSProperties =
+    offset.x !== 0 || offset.y !== 0
+      ? { transform: `translateX(calc(-50% + ${offset.x}px)) translateY(${offset.y}px)` }
+      : {};
+
   if (state.mode === 'free-play') {
     return (
       <button type="button" className={styles['resumePill']} onClick={onRestart}>
@@ -51,6 +128,7 @@ export default function WalkthroughHost({
     <>
       {spotlightCss && <style>{spotlightCss}</style>}
       <WalkthroughBanner
+        ref={bannerRef}
         step={step}
         state={state}
         stepIndex={stepIndex}
@@ -58,6 +136,8 @@ export default function WalkthroughHost({
         onAdvance={onAdvance}
         onRestart={onRestart}
         onExit={onExit}
+        style={bannerStyle}
+        dragHandleProps={{ onMouseDown: handleDragMouseDown }}
       />
     </>
   );

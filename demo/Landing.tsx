@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Check, ChevronDown, ChevronRight, Inbox, Send, X as XIcon } from 'lucide-react';
 import styles from './Landing.module.css';
+import WorksCalendarLogo from './WorksCalendarLogo';
 import {
   USER_PROFILES,
   isAwaitingProfile,
@@ -82,7 +83,7 @@ function HeaderBar() {
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
-        <span className={styles.logo}>WC</span>
+        <WorksCalendarLogo size={28} />
         <span>WorksCalendar</span>
       </div>
       <nav className={styles.nav}>
@@ -569,7 +570,7 @@ function MobileShowcase({ activeProfile: _activeProfile }: { activeProfile: Demo
     <div className={styles.mobile}>
       <div className={styles.mobileHeader}>
         <div className={styles.brand}>
-          <span className={styles.logo}>WC</span>
+          <WorksCalendarLogo size={28} />
           <span>WorksCalendar</span>
         </div>
         <a
