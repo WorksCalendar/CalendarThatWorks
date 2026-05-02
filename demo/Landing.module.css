@@ -97,6 +97,22 @@
   overflow: hidden;
 }
 
+/* ─── Tablet: 1100–1380px ────────────────────────────────────────── */
+/* Between the MobileShowcase cutoff (1099px) and full-desktop widths the
+   fixed 300px sidebar leaves the calendar uncomfortably narrow. Shrink the
+   chrome and tighten spacing to give the calendar more breathing room. */
+@media (max-width: 1380px) {
+  .main {
+    grid-template-columns: 220px 1fr;
+    gap: 10px;
+    padding: 8px 10px;
+  }
+  .heroTitle  { font-size: 20px; }
+  .heroSub    { font-size: 12px; max-width: 36ch; }
+  .card       { padding: 12px 14px; gap: 8px; }
+  .statusGrid { grid-template-columns: 1fr 1fr; }
+}
+
 /* ─── Left chrome ────────────────────────────────────────────────── */
 
 .chrome {

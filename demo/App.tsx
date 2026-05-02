@@ -926,7 +926,8 @@ function App() {
             fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em',
             textTransform: 'uppercase', padding: '1px 5px', borderRadius: 3,
             background: stageStyles.bg, color: stageStyles.fg,
-            flexShrink: 0, lineHeight: 1.4,
+            flexShrink: 1, minWidth: 0, overflow: 'hidden',
+            textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4,
           }}>
             {stageStyles.label}
           </span>
