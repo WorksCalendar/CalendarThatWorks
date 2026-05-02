@@ -100,7 +100,12 @@ const BASE_COORDS: Record<string, { lat: number; lon: number }> = {
 //   2. Default view returns to Month. The seed previously hard-coded
 //      `defaultView: 'base'`; only the carried-over 'base' choice is reset
 //      so any user-picked view is respected.
-const DEMO_SEED_VERSION = 8;
+// v9: add 'dispatch' and 'requests' to enabledViews so both tabs appear in
+//     the nav out of the box. The default schema only includes
+//     ['day','agenda','schedule','base','assets'] — Dispatch was wired up with
+//     dispatchMissions/dispatchEvaluator props but the tab never rendered
+//     because it wasn't in enabledViews.
+const DEMO_SEED_VERSION = 9;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
@@ -108,11 +113,16 @@ const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
 // Seed the demo regions list (shared between the fresh-install and migration paths).
 const DEMO_REGIONS = regions.map(r => ({ id: r.id, name: r.name }));
 
+// Views the Air EMS demo needs visible from the start. Includes 'dispatch'
+// and 'requests' which are not in DEFAULT_CONFIG.display.enabledViews.
+const DEMO_ENABLED_VIEWS = [...DEFAULT_CONFIG.display.enabledViews, 'dispatch', 'requests'];
+
 if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
     ...DEFAULT_CONFIG,
     title: 'Air EMS Operations',
     setup: { completed: true, preferredTheme: 'industrial-light' },
+    display: { ...DEFAULT_CONFIG.display, enabledViews: DEMO_ENABLED_VIEWS },
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
@@ -126,11 +136,14 @@ if (!storedCfg) {
   // old default in place; preserve any other theme the user actively chose.
   const carriedTheme = existing.setup?.preferredTheme;
   const nextTheme = carriedTheme && carriedTheme !== 'ops-dark' ? carriedTheme : 'industrial-light';
+  // Merge dispatch + requests into whatever views the user had enabled.
+  const carriedViews: string[] = existing.display?.enabledViews ?? [...DEFAULT_CONFIG.display.enabledViews];
+  const nextEnabledViews = Array.from(new Set([...carriedViews, 'dispatch', 'requests']));
   saveConfig(DEMO_CALENDAR_ID, {
     ...existing,
     title:     existing.title ?? 'Air EMS Operations',
     setup:     { ...existing.setup, preferredTheme: nextTheme },
-    display:   { ...existing.display, defaultView: nextDefaultView ?? 'month' },
+    display:   { ...existing.display, defaultView: nextDefaultView ?? 'month', enabledViews: nextEnabledViews },
     team:      { ...existing.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...existing.approvals, enabled: true },
   });
