@@ -36,7 +36,21 @@ jobs:
       - run: npm run build:demo
         timeout-minutes: 8
 
-      - run: npx playwright install --with-deps
+      # Cache Playwright browsers between runs (same key shape as ci.yml).
+      # On a hit, the install step collapses to fast apt-get verification.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      # Pin to chromium only — playwright.config.ts targets chromium, so
+      # downloading firefox + webkit (the default with no browser arg) was
+      # ~3x the bandwidth for zero test value. This was the dominant cost
+      # of the original 10-minute timeout.
+      - run: npx playwright install --with-deps chromium
         timeout-minutes: 10
 
       # Keep this to a focused smoke pass. The visual QA and confused-user
