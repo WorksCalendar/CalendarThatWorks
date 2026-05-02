@@ -117,6 +117,11 @@ test.describe('confused user QA', () => {
       });
     }
 
+    // The Map step opens the MapPeekWidget modal. Press Escape to close it so
+    // its backdrop doesn't intercept the Settings button click below.
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+
     const settingsTarget = page.getByRole('button', { name: /settings|configure|customize/i });
     const settingsResult = await safeClick(settingsTarget, 'settings/configure/customize control');
     await page.waitForTimeout(500);
