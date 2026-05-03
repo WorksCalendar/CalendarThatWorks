@@ -844,6 +844,16 @@ function App() {
     log(`Saved: ${ev.title}`);
   }, []);
 
+  const handleEventMove = useCallback((ev, newStart, newEnd) => {
+    const moved = {
+      ...ev,
+      start: newStart,
+      end: newEnd,
+    };
+    handleEventSave(moved);
+    log(`Moved: ${ev.title}`);
+  }, [handleEventSave]);
+
   // When the dispatcher clicks "Assign" on an available aircraft row, create
   // a mission-assignment event that books the aircraft for the mission window.
   const handleDispatchAssign = useCallback((assetId, missionId, _asOf) => {
