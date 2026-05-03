@@ -35,8 +35,9 @@ export default function DayView({
   const pxPerHour = 64;
   const bizHours  = ctx?.['businessHours'] ?? null;
 
-  const gridRef = useRef<HTMLDivElement | null>(null);
-  const days    = useMemo(() => [currentDate], [currentDate]);
+  const gridRef            = useRef<HTMLDivElement | null>(null);
+  const clickCandidateRef  = useRef<{ ev: CalendarViewEvent; startX: number; startY: number; moved: boolean } | null>(null);
+  const days               = useMemo(() => [currentDate], [currentDate]);
 
   const hours: number[] = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
@@ -135,11 +136,25 @@ export default function DayView({
 
   const handleGridPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     drag.onPointerMove(e);
+    const cc = clickCandidateRef.current;
+    if (cc && !cc.moved) {
+      const dx = Math.abs(e.clientX - cc.startX);
+      const dy = Math.abs(e.clientY - cc.startY);
+      if (dx > 4 || dy > 4) cc.moved = true;
+    }
   }, [drag.onPointerMove]);
 
   const handleGridPointerUp = useCallback(() => {
+    const candidate = clickCandidateRef.current;
+    clickCandidateRef.current = null;
     const result = drag.onPointerUp();
-    if (!result) return;
+    if (!result) {
+      // Only treat as click when the pointer never moved past the drag threshold.
+      // onPointerUp also returns null for drags that snap back to the original
+      // timeslot; candidate.moved distinguishes those from a true click.
+      if (candidate && !candidate.moved) onEventClick?.(candidate.ev);
+      return;
+    }
     if (result.type === 'create') {
       onDateSelect?.(result.newStart, result.newEnd);
     } else if (result.type === 'resize' || result.type === 'resize-top') {
@@ -147,7 +162,7 @@ export default function DayView({
     } else if (result.type === 'move') {
       onEventMove?.(result.ev, result.newStart, result.newEnd);
     }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect, onEventClick]);
 
   // ── Renderers ─────────────────────────────────────────────────────────
   function renderEvent(ev: CalendarViewEvent) {
@@ -180,7 +195,7 @@ export default function DayView({
             aria-label={ariaLabel}
             onClick={onClick}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = { ev, startX: e.clientX, startY: e.clientY, moved: false }; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           >
             <div className={styles['resizeHandleTop']}
               onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
@@ -205,7 +220,7 @@ export default function DayView({
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = { ev, startX: e.clientX, startY: e.clientY, moved: false }; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles['resizeHandleTop']}
           onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
@@ -303,7 +318,7 @@ export default function DayView({
           onPointerDown={handleGridPointerDown}
           onPointerMove={handleGridPointerMove}
           onPointerUp={handleGridPointerUp}
-          onPointerCancel={drag.cancel}
+          onPointerCancel={() => { clickCandidateRef.current = null; drag.cancel(); }}
         >
           {/* Background hour lines */}
           {hours.map(h => (
