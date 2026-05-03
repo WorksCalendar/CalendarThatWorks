@@ -35,8 +35,9 @@ export default function DayView({
   const pxPerHour = 64;
   const bizHours  = ctx?.['businessHours'] ?? null;
 
-  const gridRef = useRef<HTMLDivElement | null>(null);
-  const days    = useMemo(() => [currentDate], [currentDate]);
+  const gridRef            = useRef<HTMLDivElement | null>(null);
+  const clickCandidateRef  = useRef<CalendarViewEvent | null>(null);
+  const days               = useMemo(() => [currentDate], [currentDate]);
 
   const hours: number[] = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
@@ -138,8 +139,14 @@ export default function DayView({
   }, [drag.onPointerMove]);
 
   const handleGridPointerUp = useCallback(() => {
+    const candidate = clickCandidateRef.current;
+    clickCandidateRef.current = null;
     const result = drag.onPointerUp();
-    if (!result) return;
+    if (!result) {
+      // No real drag — pointer capture ate the click event, so fire it manually.
+      if (candidate) onEventClick?.(candidate);
+      return;
+    }
     if (result.type === 'create') {
       onDateSelect?.(result.newStart, result.newEnd);
     } else if (result.type === 'resize' || result.type === 'resize-top') {
@@ -147,7 +154,7 @@ export default function DayView({
     } else if (result.type === 'move') {
       onEventMove?.(result.ev, result.newStart, result.newEnd);
     }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect, onEventClick]);
 
   // ── Renderers ─────────────────────────────────────────────────────────
   function renderEvent(ev: CalendarViewEvent) {
@@ -180,7 +187,7 @@ export default function DayView({
             aria-label={ariaLabel}
             onClick={onClick}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = ev; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           >
             <div className={styles['resizeHandleTop']}
               onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
@@ -205,7 +212,7 @@ export default function DayView({
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = ev; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles['resizeHandleTop']}
           onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
@@ -303,7 +310,7 @@ export default function DayView({
           onPointerDown={handleGridPointerDown}
           onPointerMove={handleGridPointerMove}
           onPointerUp={handleGridPointerUp}
-          onPointerCancel={drag.cancel}
+          onPointerCancel={() => { clickCandidateRef.current = null; drag.cancel(); }}
         >
           {/* Background hour lines */}
           {hours.map(h => (
