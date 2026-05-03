@@ -20,8 +20,8 @@ test('guided walkthrough happy path reaches schedule step with mission move/save
   await page.mouse.move(box.x + box.width / 2 + 180, box.y + box.height / 2 + 90, { steps: 12 });
   await page.mouse.up();
 
-  // Step 1 can advance from either a successful drag move or a direct
-  // assignment path; don't hard-fail here on timing-sensitive drag variance.
+  // Step 1 should advance after mission move; tolerate animation timing with a bounded wait.
+  await expect(banner.getByText(/assign a pilot/i)).toBeVisible({ timeout: 5000 });
 
   // Step 2: open built-in event form path from Mission Alpha and assign James.
   await mission.click();

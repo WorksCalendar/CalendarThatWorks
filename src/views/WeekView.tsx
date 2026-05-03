@@ -408,12 +408,6 @@ export default function WeekView({
                         if (!isDimmed) onEventClick?.(ev);
                       }}
                       onPointerDown={e => startSpanDrag(ev, e, startCol, endCol)}
-                      onKeyDown={e => {
-                        if (e.key !== 'Enter' && e.key !== ' ') return;
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (!isDimmed) onEventClick?.(ev);
-                      }}
                       aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
                     >
                       {!continuesBefore && (
