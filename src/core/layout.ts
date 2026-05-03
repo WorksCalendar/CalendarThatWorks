@@ -4,7 +4,7 @@
  *   layoutOverlaps  — column-pack timed events that share the same time slot
  *   layoutSpans     — lane-pack multi-day events for month/all-day row rendering
  */
-import { startOfDay, differenceInCalendarDays, addDays, isSameDay } from 'date-fns';
+import { differenceInCalendarDays, addDays } from 'date-fns';
 
 type LayoutEvent = {
   start: Date;
@@ -48,13 +48,27 @@ export function layoutOverlaps<T extends LayoutEvent>(
 // ─── Multi-day event span layout (month view / all-day row) ───────────────
 
 /**
+ * Return the start of the UTC calendar day that contains `d`.
+ * Using UTC avoids local-timezone shifts that would cause `startOfDay` from
+ * date-fns (which respects local time) to return the wrong calendar day when
+ * the host machine is not in UTC.
+ */
+function startOfUTCDay(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+/**
  * The "display end day" of an event — the last calendar day the event
  * occupies (inclusive), accounting for exclusive all-day ends.
+ *
+ * All calculations are performed in UTC to ensure consistent behaviour
+ * regardless of the host machine's local timezone.
  */
 export function displayEndDay(ev: LayoutEvent): Date {
   const end = ev.end;
-  const day = startOfDay(end);
-  const atMidnight = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
+  // Work in UTC to stay timezone-independent.
+  const day = startOfUTCDay(end);
+  const atMidnight = end.getUTCHours() === 0 && end.getUTCMinutes() === 0 && end.getUTCSeconds() === 0;
   if (ev.allDay) {
     // All-day events use iCal's exclusive DTEND convention:
     // DTEND=Jan4 means the event covers Jan1–Jan3, not Jan4.
@@ -63,7 +77,9 @@ export function displayEndDay(ev: LayoutEvent): Date {
   // Timed events that end exactly at midnight and started on an earlier date
   // should not "occupy" the boundary day in month-span lane packing.
   // This prevents adjacent back-to-back rotations from double-stacking.
-  if (atMidnight && !isSameDay(ev.start, end)) return addDays(day, -1);
+  // Use UTC-based same-day check to match our UTC day boundary.
+  const startUTCDay = startOfUTCDay(ev.start);
+  if (atMidnight && startUTCDay.getTime() !== day.getTime()) return addDays(day, -1);
   // Otherwise, timed events use their real end day.
   return day;
 }
@@ -99,22 +115,27 @@ export function layoutSpans<T extends LayoutEvent>(
   weekStart: Date,
   weekEnd: Date,
 ): LayoutSpanItem<T>[] {
+  // Normalise weekStart/weekEnd to UTC day boundaries so all comparisons are
+  // consistent with displayEndDay (which is also UTC-based).
+  const weekStartUTC = startOfUTCDay(weekStart);
+  const weekEndUTC   = startOfUTCDay(weekEnd);
+
   const items = events
     .map(ev => {
-      const evStartDay = startOfDay(ev.start);
+      const evStartDay = startOfUTCDay(ev.start);
       const evEndDay   = displayEndDay(ev);
       return {
         ev,
         evStartDay,
         evEndDay,
-        startCol: Math.max(0, differenceInCalendarDays(evStartDay, weekStart)),
-        endCol:   Math.min(6, differenceInCalendarDays(evEndDay,   weekStart)),
-        continuesBefore: evStartDay < weekStart,
-        continuesAfter:  evEndDay   > weekEnd,
+        startCol: Math.max(0, differenceInCalendarDays(evStartDay, weekStartUTC)),
+        endCol:   Math.min(6, differenceInCalendarDays(evEndDay,   weekStartUTC)),
+        continuesBefore: evStartDay < weekStartUTC,
+        continuesAfter:  evEndDay   > weekEndUTC,
       };
     })
     // Must actually overlap this week
-    .filter(item => item.evStartDay <= weekEnd && item.evEndDay >= weekStart)
+    .filter(item => item.evStartDay <= weekEndUTC && item.evEndDay >= weekStartUTC)
     // Sort by visual start position, then longer spans first
     .sort((a, b) => a.startCol - b.startCol || (b.endCol - b.startCol) - (a.endCol - a.startCol));
 
