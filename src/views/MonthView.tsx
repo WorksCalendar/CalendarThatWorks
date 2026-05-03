@@ -20,11 +20,7 @@ const OVERFLOW_TRACK_H = SPAN_H + 4;
 
 function isMultiDay(ev: NormalizedEvent) {
   if (ev.allDay) return true;
-  // For timed events, displayEndDay returns UTC-midnight; compare UTC days.
-  const startUTCMs = Date.UTC(ev.start.getUTCFullYear(), ev.start.getUTCMonth(), ev.start.getUTCDate());
-  const endDay = displayEndDay(ev);
-  const endUTCMs = Date.UTC(endDay.getUTCFullYear(), endDay.getUTCMonth(), endDay.getUTCDate());
-  return startUTCMs !== endUTCMs;
+  return startOfDay(ev.start).getTime() !== startOfDay(ev.end).getTime();
 }
 
 type MonthViewProps = {

@@ -76,16 +76,16 @@ export default function AgendaView({
   // start day (#148). displayEndDay handles iCal's exclusive DTEND convention
   // and the midnight-boundary edge case used by MonthView. Clamp the end so
   // zero-duration all-day events (start === end) still render on their start day.
-  // Use UTC-based day boundaries to stay consistent with displayEndDay.
+  // Use local calendar days — agenda rows are labelled by local date.
   const grouped = useMemo(() => {
-    const toUTCDay = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     return days
       .map((day) => {
-        const dayMs = toUTCDay(day).getTime();
+        const dayMs = startOfDay(day).getTime();
         const dayEvents = events.filter((e) => {
-          const startMs = toUTCDay(e.start).getTime();
-          // Normalise displayEndDay to UTC regardless of allDay/timed mix.
-          const endMs   = Math.max(toUTCDay(displayEndDay(e)).getTime(), startMs);
+          const startMs = startOfDay(e.start).getTime();
+          // All-day events use iCal exclusive DTEND; timed events use their real end.
+          const endDayDate = e.allDay ? displayEndDay(e) : e.end;
+          const endMs = Math.max(startOfDay(endDayDate).getTime(), startMs);
           return dayMs >= startMs && dayMs <= endMs;
         });
         return {
