@@ -377,8 +377,8 @@ export default function WeekView({
              *  (non-time, useful when row identity is grid-conveyed but
              *  pills overlap or wrap). aria-label still includes everything
              *  for screen readers. */}
-            {isCompact ? null : (
-              <span className={styles['evMeta']}>Resource: {pillResource(ev)}</span>
+            {isCompact ? null : ev.resource && (
+              <span className={styles['evMeta']}>{ev.resource}</span>
             )}
           </>
         )}
@@ -486,12 +486,12 @@ export default function WeekView({
                     onClick={() => !isDimmedBar && onEventClick?.(ev)}
                     onPointerDown={e => startAllDayBarDrag(ev, e, startCol, endCol)}
                   >
-                    <span className={styles['allDayTitleLine']}>Title: {ev.title}</span>
-                    <span className={styles['allDayMetaLine']}>
-                      <span>Start: {startLabel}</span>
-                      <span>End: {endLabel}</span>
-                      <span>Resource: {resourceLabel}</span>
-                    </span>
+                    <span className={styles['allDayTitleLine']}>{ev.title}</span>
+                    {ev.resource && (
+                      <span className={styles['allDayMetaLine']}>
+                        <span>{resourceLabel}</span>
+                      </span>
+                    )}
                   </button>
                 );
               })}
