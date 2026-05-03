@@ -36,7 +36,7 @@ export default function DayView({
   const bizHours  = ctx?.['businessHours'] ?? null;
 
   const gridRef            = useRef<HTMLDivElement | null>(null);
-  const clickCandidateRef  = useRef<CalendarViewEvent | null>(null);
+  const clickCandidateRef  = useRef<{ ev: CalendarViewEvent; startX: number; startY: number; moved: boolean } | null>(null);
   const days               = useMemo(() => [currentDate], [currentDate]);
 
   const hours: number[] = [];
@@ -136,6 +136,12 @@ export default function DayView({
 
   const handleGridPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     drag.onPointerMove(e);
+    const cc = clickCandidateRef.current;
+    if (cc && !cc.moved) {
+      const dx = Math.abs(e.clientX - cc.startX);
+      const dy = Math.abs(e.clientY - cc.startY);
+      if (dx > 4 || dy > 4) cc.moved = true;
+    }
   }, [drag.onPointerMove]);
 
   const handleGridPointerUp = useCallback(() => {
@@ -143,8 +149,10 @@ export default function DayView({
     clickCandidateRef.current = null;
     const result = drag.onPointerUp();
     if (!result) {
-      // No real drag — pointer capture ate the click event, so fire it manually.
-      if (candidate) onEventClick?.(candidate);
+      // Only treat as click when the pointer never moved past the drag threshold.
+      // onPointerUp also returns null for drags that snap back to the original
+      // timeslot; candidate.moved distinguishes those from a true click.
+      if (candidate && !candidate.moved) onEventClick?.(candidate.ev);
       return;
     }
     if (result.type === 'create') {
@@ -187,7 +195,7 @@ export default function DayView({
             aria-label={ariaLabel}
             onClick={onClick}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = ev; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = { ev, startX: e.clientX, startY: e.clientY, moved: false }; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           >
             <div className={styles['resizeHandleTop']}
               onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
@@ -212,7 +220,7 @@ export default function DayView({
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = ev; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); clickCandidateRef.current = { ev, startX: e.clientX, startY: e.clientY, moved: false }; drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles['resizeHandleTop']}
           onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
