@@ -1,0 +1,99 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug", "needs-repro"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more detail you provide, the faster we can reproduce and fix it.
+
+  - type: textarea
+    id: what-were-you-doing
+    attributes:
+      label: What were you trying to do?
+      description: Describe the workflow or action you were attempting.
+      placeholder: "e.g. I was trying to drag an event from Monday to Wednesday in the week view."
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior — error message, visual glitch, broken interaction, etc.
+      placeholder: "e.g. The event snapped back to Monday after I released the drag."
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-did-you-expect
+    attributes:
+      label: What did you expect?
+      placeholder: "e.g. The event should have moved to Wednesday and persisted."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: view
+    attributes:
+      label: Screen / view
+      options:
+        - Month
+        - Week
+        - Day
+        - Agenda
+        - Schedule
+        - Assets
+        - Dispatch
+        - Requests
+        - Map
+        - Config panel / settings
+        - Request form
+        - Event editor
+        - Setup wizard
+        - Other / multiple
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & device
+      placeholder: "e.g. Chrome 124, macOS 14 / iPhone 15 Safari"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: works-calendar version
+      placeholder: "e.g. 0.6.1 — run `npm ls works-calendar` to check"
+
+  - type: input
+    id: profile
+    attributes:
+      label: Profile / config used
+      placeholder: "e.g. air_medical preset, custom config with approvals enabled"
+
+  - type: textarea
+    id: console-error
+    attributes:
+      label: Console error (if any)
+      description: Paste any errors from the browser DevTools console.
+      render: text
+
+  - type: textarea
+    id: repro-steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the demo at …
+        2. Switch to Week view
+        3. Drag event "…" from …
+        4. See error
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recording
+      description: Drag and drop images or a video here.
