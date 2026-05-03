@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow-y: auto; /* single scroll container so header + body share scrollbar gutter */
+  overflow: hidden;
 }
 
 /* ── Header row ── */
@@ -12,9 +12,7 @@
   grid-template-columns: repeat(7, 1fr);
   background: var(--wc-surface);
   border-bottom: 1px solid var(--wc-border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex-shrink: 0;
 }
 
 .dayHead {
@@ -58,6 +56,7 @@
 .body {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .daysArea {
