@@ -75,11 +75,11 @@
   },
   "dependencies": {
     "date-fns": "^3.6.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.378.0"
   },
   "optionalDependencies": {
-    "@supabase/supabase-js": "^2.43.4",
-    "xlsx": "^0.18.5"
+    "@supabase/supabase-js": "^2.43.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.0",
