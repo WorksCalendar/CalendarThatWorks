@@ -116,7 +116,15 @@ export default function WeekView({
   }, [onDateSelect]);
 
   // ── Span bar drag (multi-day events, day-to-day) ──────────────────────────
-  type SpanDrag = { ev: WeekViewEvent; startCol: number; endCol: number; width: number; clickOffset: number; colW: number };
+  type SpanDrag = {
+    ev: WeekViewEvent;
+    startCol: number;
+    endCol: number;
+    width: number;
+    clickOffset: number;
+    colW: number;
+    moved: boolean;
+  };
   const spanDragRef  = useRef<SpanDrag | null>(null);
   const [spanGhost, setSpanGhost] = useState<{ ev: WeekViewEvent; startCol: number; endCol: number } | null>(null);
   const spansRef     = useRef<HTMLDivElement | null>(null);
@@ -176,7 +184,15 @@ export default function WeekView({
     const rect   = grid.getBoundingClientRect();
     const colW   = rect.width / 7;
     const clickCol = Math.max(0, Math.min(6, Math.floor((e.clientX - rect.left) / colW)));
-    spanDragRef.current = { ev, startCol, endCol, width: endCol - startCol, clickOffset: clickCol - startCol, colW };
+    spanDragRef.current = {
+      ev,
+      startCol,
+      endCol,
+      width: endCol - startCol,
+      clickOffset: clickCol - startCol,
+      colW,
+      moved: false,
+    };
     grid.setPointerCapture(e.pointerId);
     setSpanGhost({ ev, startCol, endCol });
   }
@@ -187,6 +203,7 @@ export default function WeekView({
     const rect   = spansRef.current.getBoundingClientRect();
     const col    = Math.max(0, Math.min(6, Math.floor((e.clientX - rect.left) / d.colW)));
     const start  = Math.max(0, Math.min(7 - d.width - 1, col - d.clickOffset));
+    if (!d.moved && start !== d.startCol) d.moved = true;
     setSpanGhost({ ev: d.ev, startCol: start, endCol: start + d.width });
   }
 
@@ -196,6 +213,10 @@ export default function WeekView({
     spanDragRef.current = null;
     setSpanGhost(null);
     if (!d || !g) return;
+    if (!d.moved) {
+      onEventClick?.(d.ev);
+      return;
+    }
     const diff = g.startCol - d.startCol;
     if (diff === 0) return;
     onEventMove?.(d.ev, addDays(d.ev.start, diff), addDays(d.ev.end, diff));
@@ -376,7 +397,7 @@ export default function WeekView({
                         top:    lane * (SPAN_H + SPAN_GAP),
                         height: SPAN_H,
                       }}
-                      onClick={e => { e.stopPropagation(); if (!isDimmed) onEventClick?.(ev); }}
+                      onClick={e => { e.stopPropagation(); }}
                       onPointerDown={e => startSpanDrag(ev, e, startCol, endCol)}
                       aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
                     >

@@ -967,9 +967,6 @@ function App() {
   }, [missionAssignments]);
 
   const renderHoverCard = useCallback((ev, onCloseHover) => {
-    // wt-mission uses the built-in HoverCard → Edit → EventForm path so the
-    // walkthrough can intercept onEventSave for pilot assignment.
-    if (ev.id === WALKTHROUGH_MISSION_ID) return null;
     return (
       <DemoHoverCard
         event={ev}
@@ -1001,7 +998,7 @@ function App() {
       missionInitialStartIso: ALPHA_INITIAL_START_ISO,
       pilotIds:               walkthroughPilotIds,
     },
-    delegate: { onEventSave: handleEventSave },
+    delegate: { onEventMove: handleEventMove, onEventSave: handleEventSave },
     calendarId: DEMO_CALENDAR_ID,
   });
 
@@ -1083,6 +1080,7 @@ function App() {
       onNoteSave={handleNoteSave}
       onNoteDelete={handleNoteDelete}
       onEventSave={EMBED_MODE ? handleEventSave : walkthrough.wrapped.onEventSave}
+      onEventMove={EMBED_MODE ? handleEventMove : walkthrough.wrapped.onEventMove}
       onViewChange={EMBED_MODE ? undefined : walkthrough.wrapped.onViewChange}
       onMapWidgetOpenChange={EMBED_MODE ? undefined : walkthrough.wrapped.onMapWidgetOpenChange}
       onEventDelete={handleEventDelete}
