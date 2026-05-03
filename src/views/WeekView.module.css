@@ -23,6 +23,7 @@
   align-items: center;
   padding: calc(8px * var(--wc-density, 1)) calc(4px * var(--wc-density, 1));
   border-right: 1px solid var(--wc-border);
+  box-sizing: border-box;
   gap: 4px;
 }
 .dayHead:last-child { border-right: none; }
@@ -96,6 +97,18 @@
   padding: 4px 6px 8px;
 }
 
+/* Horizontal rule drawn at the bottom of the spans zone so the grid reads
+   as a continuous surface rather than two disconnected sections. */
+.spansEdge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--wc-border);
+  pointer-events: none;
+  z-index: 2;
+}
+
 /* ── Spanning bars layer ── */
 .spansLayer {
   position: absolute;
@@ -130,6 +143,11 @@
 
 .continuesBefore { border-top-left-radius: 0; border-bottom-left-radius: 0; left: 0 !important; }
 .continuesAfter  { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+/* Highlighted column shown while dragging a pill to a new day */
+.pillDragTarget {
+  background: color-mix(in srgb, var(--wc-accent) 8%, transparent) !important;
+}
 
 .spanBar.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
 .spanBar.cancelled { opacity: 0.45; text-decoration: line-through; }

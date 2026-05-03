@@ -896,6 +896,11 @@ function App() {
 
   const handleEventClick = useCallback((ev) => {
     log(`Clicked: ${ev.title}`);
+    // wt-mission is the walkthrough's Mission Alpha — it uses the standard
+    // HoverCard → Edit → EventForm flow so onEventSave fires and the
+    // walkthrough can detect the pilot assignment. Exclude it from opening
+    // the São Paulo MissionHoverCard.
+    if (ev.id === WALKTHROUGH_MISSION_ID) return;
     if (ev.category === 'mission-assignment' || ev.category === 'aircraft-request') {
       setMissionOpen(true);
     }
@@ -937,15 +942,20 @@ function App() {
     );
   }, [missionAssignments]);
 
-  const renderHoverCard = useCallback((ev, onCloseHover) => (
-    <DemoHoverCard
-      event={ev}
-      onClose={onCloseHover}
-      onApprovalAction={handleApprovalAction}
-      approvalCaps={activeProfile.approval}
-      onDelete={(id) => { handleEventDelete(id); onCloseHover(); }}
-    />
-  ), [activeProfile.approval, handleApprovalAction, handleEventDelete]);
+  const renderHoverCard = useCallback((ev, onCloseHover) => {
+    // wt-mission uses the built-in HoverCard → Edit → EventForm path so the
+    // walkthrough can intercept onEventSave for pilot assignment.
+    if (ev.id === WALKTHROUGH_MISSION_ID) return null;
+    return (
+      <DemoHoverCard
+        event={ev}
+        onClose={onCloseHover}
+        onApprovalAction={handleApprovalAction}
+        approvalCaps={activeProfile.approval}
+        onDelete={(id) => { handleEventDelete(id); onCloseHover(); }}
+      />
+    );
+  }, [activeProfile.approval, handleApprovalAction, handleEventDelete]);
 
   // ── Guided walkthrough wiring ───────────────────────────────────
   // The walkthrough wraps the existing host callbacks so it can detect

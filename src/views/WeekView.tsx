@@ -121,6 +121,44 @@ export default function WeekView({
   const [spanGhost, setSpanGhost] = useState<{ ev: WeekViewEvent; startCol: number; endCol: number } | null>(null);
   const spansRef     = useRef<HTMLDivElement | null>(null);
 
+  // ── Pill drag (single-day events, day-to-day only) ────────────────────────
+  type PillDrag = { ev: WeekViewEvent; startCol: number; colW: number; moved: boolean };
+  const pillDragRef    = useRef<PillDrag | null>(null);
+  const [pillTargetCol, setPillTargetCol] = useState<number | null>(null);
+  const daysAreaRef    = useRef<HTMLDivElement | null>(null);
+
+  function startPillDrag(ev: WeekViewEvent, e: ReactPointerEvent<HTMLButtonElement>, dayCol: number) {
+    if (!ctx?.['permissions']?.canDrag) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const grid = daysAreaRef.current;
+    if (!grid) return;
+    const colW = grid.getBoundingClientRect().width / 7;
+    pillDragRef.current = { ev, startCol: dayCol, colW, moved: false };
+    grid.setPointerCapture(e.pointerId);
+    setPillTargetCol(dayCol);
+  }
+
+  function handleDaysAreaPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const d = pillDragRef.current;
+    if (!d || !daysAreaRef.current) return;
+    const rect = daysAreaRef.current.getBoundingClientRect();
+    const col  = Math.max(0, Math.min(6, Math.floor((e.clientX - rect.left) / d.colW)));
+    if (!d.moved && col !== d.startCol) d.moved = true;
+    setPillTargetCol(col);
+  }
+
+  function handleDaysAreaPointerUp() {
+    const d = pillDragRef.current;
+    const targetCol = pillTargetCol;
+    pillDragRef.current = null;
+    setPillTargetCol(null);
+    if (!d || !d.moved || targetCol === null) return;
+    const diff = targetCol - d.startCol;
+    if (diff === 0) return;
+    onEventMove?.(d.ev, addDays(d.ev.start, diff), addDays(d.ev.end, diff));
+  }
+
   function startSpanDrag(ev: WeekViewEvent, e: ReactPointerEvent<HTMLButtonElement>, startCol: number, endCol: number) {
     e.preventDefault();
     e.stopPropagation();
@@ -155,9 +193,10 @@ export default function WeekView({
   }
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-  function renderPill(ev: WeekViewEvent, onAfterClick?: () => void) {
+  function renderPill(ev: WeekViewEvent, dayCol?: number, onAfterClick?: () => void) {
     const color    = resolveColor(ev as never, ctx?.['colorRules']);
-    const onClick  = () => { onEventClick?.(ev); onAfterClick?.(); };
+    const isDragging = pillDragRef.current?.ev.id === ev.id;
+    const onClick  = () => { if (isDragging) return; onEventClick?.(ev); onAfterClick?.(); };
     const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
     const statusClass   = ev.status === 'cancelled' ? styles['cancelled']
       : ev.status === 'tentative' ? styles['tentative'] : '';
@@ -170,13 +209,14 @@ export default function WeekView({
 
     return (
       <button key={ev.id}
-        className={[styles['pill'], statusClass].filter(Boolean).join(' ')}
+        className={[styles['pill'], statusClass, isDragging && styles['dragging']].filter(Boolean).join(' ')}
         data-wc-event-id={ev.id}
         data-wc-conflicting={isConflicting ? 'true' : undefined}
         data-wc-priority={ev.visualPriority ?? undefined}
         style={{ '--ev-color': color }}
         onClick={e => { e.stopPropagation(); onClick(); }}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
+        onPointerDown={dayCol !== undefined ? (e: ReactPointerEvent<HTMLButtonElement>) => startPillDrag(ev, e, dayCol) : undefined}
         aria-label={ev.lifecycle ? `${ariaLabel}, lifecycle ${ev.lifecycle}` : ariaLabel}
       >
         {inner ?? (
@@ -217,7 +257,13 @@ export default function WeekView({
 
       {/* ── Body ── */}
       <div className={styles['body']}>
-        <div className={styles['daysArea']}>
+        <div
+          className={styles['daysArea']}
+          ref={daysAreaRef}
+          onPointerMove={handleDaysAreaPointerMove}
+          onPointerUp={handleDaysAreaPointerUp}
+          onPointerCancel={() => { pillDragRef.current = null; setPillTargetCol(null); }}
+        >
           {/* Day cells */}
           <div className={styles['weekCells']} role="row" aria-rowindex={2}>
             {days.map((day, di) => {
@@ -231,6 +277,7 @@ export default function WeekView({
               const isOverflowOpen = overflowDay && isSameDay(overflowDay, day);
               const totalEvents   = daySingles.length + spansOnDay.length;
               const cellLabel     = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
+              const isPillTarget  = pillTargetCol === di && pillDragRef.current !== null;
 
               return (
                 <div
@@ -240,7 +287,7 @@ export default function WeekView({
                   data-date={dayKey}
                   aria-label={cellLabel}
                   aria-selected={isFocused}
-                  className={[styles['cell'], isToday(day) && styles['todayCell']].filter(Boolean).join(' ')}
+                  className={[styles['cell'], isToday(day) && styles['todayCell'], isPillTarget && styles['pillDragTarget']].filter(Boolean).join(' ')}
                   onClick={() => {
                     setFocusedDay(startOfDay(day));
                     if (!onDateSelect) return;
@@ -251,7 +298,7 @@ export default function WeekView({
                   onKeyDown={e => handleCellKeyDown(e, day)}
                 >
                   <div className={styles['events']} style={{ paddingTop: spansHeight }}>
-                    {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev))}
+                    {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, di))}
                     {overflow > 0 && (
                       <button
                         className={styles['moreLink']}
@@ -271,13 +318,18 @@ export default function WeekView({
                         <span>{format(day, 'MMMM d')}</span>
                         <button onClick={() => setOverflowDay(null)} aria-label="Close">×</button>
                       </div>
-                      {daySingles.slice(MAX_PILLS).map(ev => renderPill(ev, () => setOverflowDay(null)))}
+                      {daySingles.slice(MAX_PILLS).map(ev => renderPill(ev, undefined, () => setOverflowDay(null)))}
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* Horizontal rule at the bottom of the spans zone */}
+          {laneCount > 0 && (
+            <div className={styles['spansEdge']} style={{ top: spansHeight }} aria-hidden="true" />
+          )}
 
           {/* Spanning event bars */}
           {laneCount > 0 && (

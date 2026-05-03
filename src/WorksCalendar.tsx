@@ -3025,21 +3025,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
         {/* ── Hover card ── */}
         {selectedEvent && (
-          renderHoverCard
-            ? renderHoverCard(selectedEvent, () => setSelectedEvent(null))
-            : (
-              <HoverCard
-                event={selectedEvent}
-                config={ownerCfg.config}
-                note={notes[selectedEvent.id]}
-                onClose={() => setSelectedEvent(null)}
-                onNoteSave={onNoteSave}
-                onNoteDelete={onNoteDelete}
-                onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
-                anchor={null}
-                resolveResourceLabel={resolveResourceLabel}
-              />
-            )
+          (renderHoverCard && renderHoverCard(selectedEvent, () => setSelectedEvent(null))) ?? (
+            <HoverCard
+              event={selectedEvent}
+              config={ownerCfg.config}
+              note={notes[selectedEvent.id]}
+              onClose={() => setSelectedEvent(null)}
+              onNoteSave={onNoteSave}
+              onNoteDelete={onNoteDelete}
+              onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
+              anchor={null}
+              resolveResourceLabel={resolveResourceLabel}
+            />
+          )
         )}
 
         {/* ── Event form ── */}
