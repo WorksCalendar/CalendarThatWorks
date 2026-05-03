@@ -20,6 +20,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { createId } from '../core/createId'
+import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage'
 import type { Workflow, WorkflowLayout } from '../core/workflow/workflowSchema'
 
 const STORAGE_VERSION = 1
@@ -71,7 +72,7 @@ function isSavedWorkflow(value: unknown): value is SavedWorkflow {
 
 function loadWorkflows(calendarId: string): SavedWorkflow[] {
   try {
-    const raw = localStorage.getItem(storageKey(calendarId))
+    const raw = safeGetLocalStorage(storageKey(calendarId))
     if (!raw) return []
     const parsed = JSON.parse(raw)
     if (
@@ -93,7 +94,7 @@ function persistWorkflows(
   workflows: readonly SavedWorkflow[],
 ): void {
   try {
-    localStorage.setItem(
+    safeSetLocalStorage(
       storageKey(calendarId),
       JSON.stringify({ version: STORAGE_VERSION, workflows }),
     )

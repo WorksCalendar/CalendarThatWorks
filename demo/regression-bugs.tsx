@@ -2,6 +2,7 @@
 import { StrictMode, useCallback, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { WorksCalendar } from '../src/index.ts';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../src/core/safeLocalStorage';
 
 const CALENDAR_ID = 'regression-bug-fixtures';
 
@@ -15,10 +16,10 @@ function at(base, dayOffset, hour, minute = 0) {
 if (typeof window !== 'undefined') {
   const configKey = `wc-config-${CALENDAR_ID}`;
   try {
-    const existing = JSON.parse(window.localStorage.getItem(configKey) ?? '{}');
-    window.localStorage.setItem(configKey, JSON.stringify({ ...existing, setupCompleted: true }));
+    const existing = JSON.parse(safeGetLocalStorage(configKey) ?? '{}');
+    safeSetLocalStorage(configKey, JSON.stringify({ ...existing, setupCompleted: true }));
   } catch {
-    window.localStorage.setItem(configKey, JSON.stringify({ setupCompleted: true }));
+    safeSetLocalStorage(configKey, JSON.stringify({ setupCompleted: true }));
   }
 }
 
