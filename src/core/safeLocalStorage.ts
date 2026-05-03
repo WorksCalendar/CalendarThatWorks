@@ -23,3 +23,11 @@ export function safeRemoveLocalStorage(key: string): boolean {
     return false;
   }
 }
+
+export function safeLocalStorageKeys(): string[] {
+  try {
+    return Object.keys(localStorage);
+  } catch {
+    return [];
+  }
+}
