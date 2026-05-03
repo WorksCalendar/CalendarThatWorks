@@ -2598,7 +2598,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 <MapPeekWidget
                   events={(expandedEvents as any[]).filter(ev => !isScheduleWorkflowEvent(ev)) as never}
                   onEventClick={handleEventClick as never}
-                  onOpenChange={onMapWidgetOpenChange}
+                  {...(onMapWidgetOpenChange ? { onOpenChange: onMapWidgetOpenChange } : {})}
                   {...(mapStyle ? { mapStyle } : {})}
                 />
               </RightPanelSection>
