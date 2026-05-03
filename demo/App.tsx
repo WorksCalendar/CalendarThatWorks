@@ -758,7 +758,7 @@ function App() {
     ...mission.assignments,
     aircraft: null, // starts unassigned so the pulsing badge is visible on load
   });
-  const [missionOpen,       setMissionOpen]       = useState(false);
+  const [activeMissionEvent, setActiveMissionEvent] = useState<any | null>(null);
   const [activeProfileId,   setActiveProfileId]   = useState(DEFAULT_PROFILE_ID);
   const activeProfile = useMemo(() => findProfile(activeProfileId), [activeProfileId]);
   const [pools, setPools] = useState(() => {
@@ -936,7 +936,7 @@ function App() {
     // the São Paulo MissionHoverCard.
     if (ev.id === WALKTHROUGH_MISSION_ID) return;
     if (ev.category === 'mission-assignment' || ev.category === 'aircraft-request') {
-      setMissionOpen(true);
+      setActiveMissionEvent(ev);
     }
   }, []);
 
@@ -986,6 +986,10 @@ function App() {
         onClose={onCloseHover}
         onApprovalAction={handleApprovalAction}
         approvalCaps={activeProfile.approval}
+        onEdit={(event) => {
+          setActiveMissionEvent(null);
+          calendarApiRef.current?.openEvent?.(event.id);
+        }}
         onDelete={(id) => { handleEventDelete(id); onCloseHover(); }}
       />
     );
@@ -1132,14 +1136,14 @@ function App() {
         </Landing>
       )}
 
-      {missionOpen && (
+      {activeMissionEvent && (
         <MissionHoverCard
-          mission={mission}
+          mission={{ ...mission, title: activeMissionEvent.title }}
           assignments={missionAssignments}
           employees={MISSION_EMPLOYEES}
           aircraft={EMS_ASSETS}
           onAssignmentChange={setMissionAssignments}
-          onClose={() => setMissionOpen(false)}
+          onClose={() => setActiveMissionEvent(null)}
         />
       )}
 
