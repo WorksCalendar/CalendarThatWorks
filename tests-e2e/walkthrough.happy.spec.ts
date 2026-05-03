@@ -1,9 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-test('guided walkthrough happy path reaches schedule step with mission move/save', async ({ page }) => {
+test('guided walkthrough happy path: move, edit, save, apply-anyway, and schedule update', async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+
+  const restartTour = page.getByRole('button', { name: /restart tour/i });
+  if (await restartTour.isVisible()) {
+    await restartTour.click();
+  }
 
   const banner = page.getByRole('dialog', { name: /guided walkthrough/i });
   await expect(banner).toBeVisible();
@@ -28,7 +33,7 @@ test('guided walkthrough happy path reaches schedule step with mission move/save
   await page.getByLabel(/^resource$/i).selectOption('emp-james');
   await page.getByRole('button', { name: /^save$/i }).click();
 
-  await expect(page.getByText(/conflict/i)).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /conflicts found/i })).toBeVisible();
   await page.getByRole('button', { name: /apply anyway/i }).click();
 
   await expect(banner.getByText(/resolve the conflict/i)).toBeVisible();
@@ -47,6 +52,6 @@ test('guided walkthrough happy path reaches schedule step with mission move/save
   await expect(page.getByText(/mission alpha/i).first()).toBeVisible();
 
   // Evidence that move and save callbacks fired for walkthrough mission.
-  const log = page.locator('text=/Moved: Mission Alpha|Saved: Mission Alpha/i');
-  await expect(log.first()).toBeVisible();
+  await expect(page.getByText(/Moved: Mission Alpha/i).first()).toBeVisible();
+  await expect(page.getByText(/Saved: Mission Alpha/i).first()).toBeVisible();
 });
