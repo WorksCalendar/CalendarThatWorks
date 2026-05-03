@@ -14,6 +14,7 @@ import { saveProfiles } from '../src/core/profileStore';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema';
 import { loadPools, savePools } from '../src/core/pools/poolStore';
 import { buildDefaultFilterSchema } from '../src/filters/filterSchema';
+import { CASCADE_FILTER_DEFINITIONS, buildDemoCascadeConfig } from './filterConfig';
 import {
   regions,
   bases,
@@ -512,28 +513,22 @@ function valueHas(value, key) {
 // Category / Resource / Source aren't useful as *grouping* axes for this
 // dataset (the cascade owns scoping, the toolbar owns display mode), so we
 // flag them ungroupable.
-const CASCADE_FIELDS = [
-  {
-    key:       'region',
-    label:     'Region',
+const CASCADE_FIELD_BY_KEY = {
+  region: {
     type:      'multi-select',
     operators: ['in', 'not-in'],
     groupable: false,
     predicate: (item, value) => valueHas(value, resolveEventRegion(item)),
     getOptions: () => regions.map(r => ({ value: r.id, label: r.name })),
   },
-  {
-    key:       'base',
-    label:     'Base',
+  base: {
     type:      'multi-select',
     operators: ['in', 'not-in'],
     groupable: false,
     predicate: (item, value) => valueHas(value, resolveEventBase(item)),
     getOptions: () => bases.map(b => ({ value: b.id, label: b.name })),
   },
-  {
-    key:       'type',
-    label:     'Type',
+  type: {
     type:      'multi-select',
     operators: ['in', 'not-in'],
     groupable: false,
@@ -544,9 +539,7 @@ const CASCADE_FIELDS = [
       { value: 'asset', label: 'Asset' },
     ],
   },
-  {
-    key:       'subType',
-    label:     'Sub-type',
+  subType: {
     type:      'multi-select',
     operators: ['in', 'not-in'],
     groupable: false,
@@ -560,9 +553,7 @@ const CASCADE_FIELDS = [
       { value: 'fixed-wing',  label: 'Fixed-wing'  },
     ],
   },
-  {
-    key:       'shiftPattern',
-    label:     'Shift pattern',
+  shiftPattern: {
     type:      'multi-select',
     operators: ['in', 'not-in'],
     groupable: false,
@@ -573,9 +564,7 @@ const CASCADE_FIELDS = [
       { value: 'on-call', label: 'On call' },
     ],
   },
-  {
-    key:       'certifications',
-    label:     'Certifications',
+  certifications: {
     type:      'multi-select',
     operators: ['in', 'not-in'],
     groupable: false,
@@ -591,19 +580,13 @@ const CASCADE_FIELDS = [
       return [...seen].sort().map(c => ({ value: c, label: c }));
     },
   },
-];
+};
 
-const DEMO_FILTER_SCHEMA = [
-  ...buildDefaultFilterSchema({
-    employees: INITIAL_EMPLOYEES,
-    assets:    AIRCRAFT_RESOURCES,
-  }).map(f => (
-    f.key === 'categories' || f.key === 'resources' || f.key === 'sources'
-      ? { ...f, groupable: false }
-      : f
-  )),
-  ...CASCADE_FIELDS,
-];
+const CASCADE_FIELDS = CASCADE_FILTER_DEFINITIONS.map(def => ({
+  key: def.key,
+  label: def.label,
+  ...CASCADE_FIELD_BY_KEY[def.key],
+}));
 
 /* ─── Cascade config ────────────────────────────────────────────── */
 // Tier ids match the filter-schema field keys above so the cascade UI's
@@ -623,76 +606,25 @@ const SUBTYPE_LABELS = {
   'fixed-wing':'Fixed-wing',
 };
 
-const DEMO_CASCADE_CONFIG = {
-  tiers: [
-    {
-      id:          'region',
-      label:       'Region',
-      filterField: 'region',
-      hint:        'multi-select',
-      getOptions: () => regions.map(r => ({ value: r.id, label: r.name })),
-    },
-    {
-      id:          'base',
-      label:       'Base',
-      filterField: 'base',
-      hint:        'pruned by Region',
-      getOptions: (sel) => {
-        const regionFilter = sel.region ?? [];
-        return bases
-          .filter(b => regionFilter.length === 0 || regionFilter.includes(b.regionId))
-          .map(b => ({ value: b.id, label: b.name }));
-      },
-    },
-    {
-      id:          'type',
-      label:       'Type',
-      filterField: 'type',
-      getOptions: () => [
-        { value: 'crew',  label: 'Crew'  },
-        { value: 'base',  label: 'Base'  },
-        { value: 'asset', label: 'Asset' },
-      ],
-    },
-    {
-      id:          'subType',
-      label:       'Sub-type',
-      filterField: 'subType',
-      hint:        'pruned by Type',
-      getOptions: (sel) => {
-        const typeFilter = sel.type ?? [];
-        const allowed = typeFilter.length === 0
-          ? Object.values(SUBTYPE_BY_TYPE).flat()
-          : typeFilter.flatMap(t => SUBTYPE_BY_TYPE[t] ?? []);
-        return allowed.map(v => ({ value: v, label: SUBTYPE_LABELS[v] ?? v }));
-      },
-    },
-  ],
-  moreOptions: [
-    {
-      id:          'shiftPattern',
-      label:       'Shift pattern',
-      filterField: 'shiftPattern',
-      getOptions: () => [
-        { value: 'day',     label: 'Day'     },
-        { value: 'night',   label: 'Night'   },
-        { value: 'on-call', label: 'On call' },
-      ],
-    },
-    {
-      id:          'certifications',
-      label:       'Certifications',
-      filterField: 'certifications',
-      hint:        'matches if any selected cert is held',
-      getOptions: () => {
-        const seen = new Set();
-        ALL_EMPLOYEES.forEach(e => e.certifications.forEach(c => seen.add(c)));
-        return [...seen].sort().map(c => ({ value: c, label: c }));
-      },
-    },
-  ],
-  moreOptionsLabel: 'More options',
-};
+const DEMO_CASCADE_CONFIG = buildDemoCascadeConfig({
+  region:        CASCADE_FIELD_BY_KEY.region.getOptions,
+  base: (sel) => {
+    const regionFilter = sel.region ?? [];
+    return bases
+      .filter(b => regionFilter.length === 0 || regionFilter.includes(b.regionId))
+      .map(b => ({ value: b.id, label: b.name }));
+  },
+  type:          CASCADE_FIELD_BY_KEY.type.getOptions,
+  subType: (sel) => {
+    const typeFilter = sel.type ?? [];
+    const allowed = typeFilter.length === 0
+      ? Object.values(SUBTYPE_BY_TYPE).flat()
+      : typeFilter.flatMap(t => SUBTYPE_BY_TYPE[t] ?? []);
+    return allowed.map(v => ({ value: v, label: SUBTYPE_LABELS[v] ?? v }));
+  },
+  shiftPattern:  CASCADE_FIELD_BY_KEY.shiftPattern.getOptions,
+  certifications: CASCADE_FIELD_BY_KEY.certifications.getOptions,
+});
 
 /* ─── Approval state machine (demo) ─────────────────────────────── */
 function nextStageFor(currentStage, actionId) {
