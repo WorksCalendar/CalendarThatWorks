@@ -758,7 +758,7 @@ function App() {
     ...mission.assignments,
     aircraft: null, // starts unassigned so the pulsing badge is visible on load
   });
-  const [missionOpen,       setMissionOpen]       = useState(false);
+  const [activeMissionEvent, setActiveMissionEvent] = useState<any | null>(null);
   const [activeProfileId,   setActiveProfileId]   = useState(DEFAULT_PROFILE_ID);
   const activeProfile = useMemo(() => findProfile(activeProfileId), [activeProfileId]);
   const [pools, setPools] = useState(() => {
@@ -844,6 +844,16 @@ function App() {
     log(`Saved: ${ev.title}`);
   }, []);
 
+  const handleEventMove = useCallback((ev, newStart, newEnd) => {
+    const moved = {
+      ...ev,
+      start: newStart,
+      end: newEnd,
+    };
+    handleEventSave(moved);
+    log(`Moved: ${ev.title}`);
+  }, [handleEventSave]);
+
   // When the dispatcher clicks "Assign" on an available aircraft row, create
   // a mission-assignment event that books the aircraft for the mission window.
   const handleDispatchAssign = useCallback((assetId, missionId, _asOf) => {
@@ -926,7 +936,7 @@ function App() {
     // the São Paulo MissionHoverCard.
     if (ev.id === WALKTHROUGH_MISSION_ID) return;
     if (ev.category === 'mission-assignment' || ev.category === 'aircraft-request') {
-      setMissionOpen(true);
+      setActiveMissionEvent(ev);
     }
   }, []);
 
@@ -967,8 +977,8 @@ function App() {
   }, [missionAssignments]);
 
   const renderHoverCard = useCallback((ev, onCloseHover) => {
-    // wt-mission uses the built-in HoverCard → Edit → EventForm path so the
-    // walkthrough can intercept onEventSave for pilot assignment.
+    // Keep walkthrough mission on the built-in HoverCard so Edit routes to
+    // the stock EventForm/onEventSave flow used by guided Step 2/3.
     if (ev.id === WALKTHROUGH_MISSION_ID) return null;
     return (
       <DemoHoverCard
@@ -976,6 +986,10 @@ function App() {
         onClose={onCloseHover}
         onApprovalAction={handleApprovalAction}
         approvalCaps={activeProfile.approval}
+        onEdit={(event) => {
+          setActiveMissionEvent(null);
+          calendarApiRef.current?.openEvent?.(event.id);
+        }}
         onDelete={(id) => { handleEventDelete(id); onCloseHover(); }}
       />
     );
@@ -1001,7 +1015,7 @@ function App() {
       missionInitialStartIso: ALPHA_INITIAL_START_ISO,
       pilotIds:               walkthroughPilotIds,
     },
-    delegate: { onEventSave: handleEventSave },
+    delegate: { onEventMove: handleEventMove, onEventSave: handleEventSave },
     calendarId: DEMO_CALENDAR_ID,
   });
 
@@ -1083,6 +1097,7 @@ function App() {
       onNoteSave={handleNoteSave}
       onNoteDelete={handleNoteDelete}
       onEventSave={EMBED_MODE ? handleEventSave : walkthrough.wrapped.onEventSave}
+      onEventMove={EMBED_MODE ? handleEventMove : walkthrough.wrapped.onEventMove}
       onViewChange={EMBED_MODE ? undefined : walkthrough.wrapped.onViewChange}
       onMapWidgetOpenChange={EMBED_MODE ? undefined : walkthrough.wrapped.onMapWidgetOpenChange}
       onEventDelete={handleEventDelete}
@@ -1121,14 +1136,14 @@ function App() {
         </Landing>
       )}
 
-      {missionOpen && (
+      {activeMissionEvent && (
         <MissionHoverCard
-          mission={mission}
+          mission={{ ...mission, title: activeMissionEvent.title }}
           assignments={missionAssignments}
           employees={MISSION_EMPLOYEES}
           aircraft={EMS_ASSETS}
           onAssignmentChange={setMissionAssignments}
-          onClose={() => setMissionOpen(false)}
+          onClose={() => setActiveMissionEvent(null)}
         />
       )}
 
