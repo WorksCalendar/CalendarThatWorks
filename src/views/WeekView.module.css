@@ -59,17 +59,25 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* flex column so .daysArea can take flex:1, giving it a definite height
+     that percentage children (weekCells height:100%) can resolve against */
+  display: flex;
+  flex-direction: column;
 }
 
 .daysArea {
   position: relative;
-  min-height: 100%;
+  flex: 1;
+  min-height: 240px;
 }
 
 .weekCells {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  min-height: 100%;
+  /* height:100% resolves now because .daysArea has a definite flex height;
+     min-height keeps cells from collapsing when content is sparse */
+  height: 100%;
+  min-height: 240px;
 }
 
 .cell {
@@ -98,69 +106,11 @@
   padding: 4px 6px 8px;
 }
 
-/* Horizontal rule drawn at the bottom of the spans zone so the grid reads
-   as a continuous surface rather than two disconnected sections. */
-.spansEdge {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--wc-border);
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* ── Spanning bars layer ── */
-.spansLayer {
-  position: absolute;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-}
-
-.spanBar {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  border-radius: var(--wc-radius-sm);
-  background: var(--ev-color, var(--wc-accent));
-  color: #fff;
-  font-size: calc(12px * var(--wc-font-scale, 1));
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  box-sizing: border-box;
-  transition: filter 0.1s;
-  box-shadow: var(--wc-event-glow, none);
-  pointer-events: auto;
-  touch-action: none;
-}
-.spanBar:hover { filter: brightness(1.1); }
-.spanBar:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: -2px; }
-
-.continuesBefore { border-top-left-radius: 0; border-bottom-left-radius: 0; left: 0 !important; }
-.continuesAfter  { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-
 /* Highlighted column shown while dragging a pill to a new day */
 .pillDragTarget {
   background: color-mix(in srgb, var(--wc-accent) 8%, transparent) !important;
 }
 
-.spanBar.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
-.spanBar.cancelled { opacity: 0.45; text-decoration: line-through; }
-.spanBar.dragging  { opacity: 0.35; pointer-events: none; }
-
-.spanGhost {
-  opacity: 0.45;
-  pointer-events: none;
-  border: 2px dashed rgba(255,255,255,0.6);
-}
-
-.spanBar[data-wc-conflicting="true"],
 .pill[data-wc-conflicting="true"] {
   outline: 2px solid var(--wc-danger, #e53935);
   outline-offset: -1px;

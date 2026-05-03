@@ -6,16 +6,12 @@ import {
 } from 'date-fns';
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
-import { layoutSpans } from '../core/layout';
 import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './WeekView.module.css';
 import type { CalendarViewEvent } from '../types/ui';
 
-const SPAN_H            = 28;
-const SPAN_GAP          = 3;
-const MAX_SPANS_VISIBLE = 4;
-const MAX_PILLS         = 8;
+const MAX_PILLS = 8;
 
 type WeekViewEvent = CalendarViewEvent & { color?: string };
 
@@ -28,11 +24,6 @@ interface WeekViewProps {
   onDateSelect?: (start: Date, end: Date) => void;
   config?: { display?: { dayStart?: number; dayEnd?: number } };
   weekStartDay?: Day;
-}
-
-function isMultiDay(ev: WeekViewEvent) {
-  if (ev.allDay) return true;
-  return startOfDay(ev.start).getTime() !== startOfDay(ev.end).getTime();
 }
 
 export default function WeekView({
@@ -56,34 +47,28 @@ export default function WeekView({
   const weekStart = days[0]!;
   const weekEnd   = days[6]!;
 
-  const { multiDay, singleDay } = useMemo(() => {
-    const multi: WeekViewEvent[] = [];
-    const single: WeekViewEvent[] = [];
-    events.forEach(ev => (isMultiDay(ev) ? multi : single).push(ev));
-    return { multiDay: multi, singleDay: single };
-  }, [events]);
-
-  const singleByDay = useMemo(() => {
+  // All events — both single-day and multi-day — are shown as pills within
+  // each day cell they fall on. Multi-day events appear in every day of the
+  // visible week they overlap, so there is no separate all-day row.
+  const eventsByDay = useMemo(() => {
     const map = new Map<string, WeekViewEvent[]>();
-    singleDay.forEach(ev => {
-      const key = format(ev.start, 'yyyy-MM-dd');
-      let bucket = map.get(key);
-      if (!bucket) { bucket = []; map.set(key, bucket); }
-      bucket.push(ev);
+    days.forEach(day => map.set(format(day, 'yyyy-MM-dd'), []));
+    events.forEach(ev => {
+      days.forEach(day => {
+        const dayStart = startOfDay(day);
+        const dayEnd   = new Date(dayStart.getTime() + 86_400_000 - 1);
+        // Event overlaps this day if it starts before day-end and ends after day-start.
+        if (ev.start <= dayEnd && ev.end > dayStart) {
+          map.get(format(day, 'yyyy-MM-dd'))!.push(ev);
+        }
+      });
     });
     map.forEach((dayEvs, key) => {
       dayEvs.sort((a, b) => a.start.getTime() - b.start.getTime());
       map.set(key, dayEvs);
     });
     return map;
-  }, [singleDay]);
-
-  const spans = useMemo(
-    () => layoutSpans(multiDay, weekStart, weekEnd),
-    [multiDay, weekStart, weekEnd],
-  );
-  const laneCount   = spans.length ? Math.max(...spans.map(s => s.lane)) + 1 : 0;
-  const spansHeight = Math.min(laneCount, MAX_SPANS_VISIBLE) * (SPAN_H + SPAN_GAP);
+  }, [events, days]);
 
   // ── Keyboard navigation ───────────────────────────────────────────────────
   const lastKeyNav = useRef(false);
@@ -115,13 +100,7 @@ export default function WeekView({
     }
   }, [onDateSelect]);
 
-  // ── Span bar drag (day-to-day only) ──────────────────────────────────────
-  type SpanDrag = { ev: WeekViewEvent; startCol: number; endCol: number; width: number; clickOffset: number; colW: number };
-  const spanDragRef  = useRef<SpanDrag | null>(null);
-  const [spanGhost, setSpanGhost] = useState<{ ev: WeekViewEvent; startCol: number; endCol: number } | null>(null);
-  const spansRef     = useRef<HTMLDivElement | null>(null);
-
-  // ── Pill drag (single-day events, day-to-day only) ────────────────────────
+  // ── Pill drag (day-to-day only) ──────────────────────────────────────────
   type PillDrag = { ev: WeekViewEvent; startCol: number; colW: number; moved: boolean };
   const pillDragRef    = useRef<PillDrag | null>(null);
   const [pillTargetCol, setPillTargetCol] = useState<number | null>(null);
@@ -164,39 +143,6 @@ export default function WeekView({
     }
     if (targetCol === null) return;
     const diff = targetCol - d.startCol;
-    if (diff === 0) return;
-    onEventMove?.(d.ev, addDays(d.ev.start, diff), addDays(d.ev.end, diff));
-  }
-
-  function startSpanDrag(ev: WeekViewEvent, e: ReactPointerEvent<HTMLButtonElement>, startCol: number, endCol: number) {
-    e.preventDefault();
-    e.stopPropagation();
-    const grid = spansRef.current;
-    if (!grid) return;
-    const rect   = grid.getBoundingClientRect();
-    const colW   = rect.width / 7;
-    const clickCol = Math.max(0, Math.min(6, Math.floor((e.clientX - rect.left) / colW)));
-    spanDragRef.current = { ev, startCol, endCol, width: endCol - startCol, clickOffset: clickCol - startCol, colW };
-    grid.setPointerCapture(e.pointerId);
-    setSpanGhost({ ev, startCol, endCol });
-  }
-
-  function handleSpanPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
-    const d = spanDragRef.current;
-    if (!d || !spansRef.current) return;
-    const rect   = spansRef.current.getBoundingClientRect();
-    const col    = Math.max(0, Math.min(6, Math.floor((e.clientX - rect.left) / d.colW)));
-    const start  = Math.max(0, Math.min(7 - d.width - 1, col - d.clickOffset));
-    setSpanGhost({ ev: d.ev, startCol: start, endCol: start + d.width });
-  }
-
-  function handleSpanPointerUp() {
-    const d = spanDragRef.current;
-    const g = spanGhost;
-    spanDragRef.current = null;
-    setSpanGhost(null);
-    if (!d || !g) return;
-    const diff = g.startCol - d.startCol;
     if (diff === 0) return;
     onEventMove?.(d.ev, addDays(d.ev.start, diff), addDays(d.ev.end, diff));
   }
@@ -273,20 +219,16 @@ export default function WeekView({
           onPointerUp={handleDaysAreaPointerUp}
           onPointerCancel={() => { pillDragRef.current = null; setPillTargetCol(null); }}
         >
-          {/* Day cells */}
+          {/* Day cells — all events (single-day and multi-day) are pills here */}
           <div className={styles['weekCells']} role="row" aria-rowindex={2}>
             {days.map((day, di) => {
-              const dayKey     = format(day, 'yyyy-MM-dd');
-              const daySingles = singleByDay.get(dayKey) || [];
-              const isFocused  = isSameDay(day, focusedDay);
-
-              const spansOnDay    = spans.filter(s => s.startCol <= di && s.endCol >= di);
-              const hiddenSpans   = spansOnDay.filter(s => s.lane >= MAX_SPANS_VISIBLE).length;
-              const overflow      = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
+              const dayKey  = format(day, 'yyyy-MM-dd');
+              const dayEvs  = eventsByDay.get(dayKey) || [];
+              const isFocused = isSameDay(day, focusedDay);
+              const overflow = Math.max(0, dayEvs.length - MAX_PILLS);
               const isOverflowOpen = overflowDay && isSameDay(overflowDay, day);
-              const totalEvents   = daySingles.length + spansOnDay.length;
-              const cellLabel     = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
-              const isPillTarget  = pillTargetCol === di && pillDragRef.current !== null;
+              const cellLabel = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${dayEvs.length > 0 ? `, ${dayEvs.length} event${dayEvs.length === 1 ? '' : 's'}` : ''}`;
+              const isPillTarget = pillTargetCol === di && pillDragRef.current !== null;
 
               return (
                 <div
@@ -306,8 +248,8 @@ export default function WeekView({
                   }}
                   onKeyDown={e => handleCellKeyDown(e, day)}
                 >
-                  <div className={styles['events']} style={{ paddingTop: spansHeight }}>
-                    {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, di))}
+                  <div className={styles['events']}>
+                    {dayEvs.slice(0, MAX_PILLS).map(ev => renderPill(ev, di))}
                     {overflow > 0 && (
                       <button
                         className={styles['moreLink']}
@@ -327,85 +269,13 @@ export default function WeekView({
                         <span>{format(day, 'MMMM d')}</span>
                         <button onClick={() => setOverflowDay(null)} aria-label="Close">×</button>
                       </div>
-                      {daySingles.slice(MAX_PILLS).map(ev => renderPill(ev, undefined, () => setOverflowDay(null)))}
+                      {dayEvs.slice(MAX_PILLS).map(ev => renderPill(ev, undefined, () => setOverflowDay(null)))}
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-
-          {/* Horizontal rule at the bottom of the spans zone */}
-          {laneCount > 0 && (
-            <div className={styles['spansEdge']} style={{ top: spansHeight }} aria-hidden="true" />
-          )}
-
-          {/* Spanning event bars */}
-          {laneCount > 0 && (
-            <div
-              className={styles['spansLayer']}
-              style={{ top: 0, height: spansHeight }}
-              ref={spansRef}
-              onPointerMove={handleSpanPointerMove}
-              onPointerUp={handleSpanPointerUp}
-              onPointerCancel={() => { spanDragRef.current = null; setSpanGhost(null); }}
-            >
-              {spans
-                .filter(s => s.lane < MAX_SPANS_VISIBLE)
-                .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                  const color = resolveColor(ev as never, ctx?.['colorRules']);
-                  const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
-                  const statusClass = ev.status === 'cancelled' ? styles['cancelled']
-                    : ev.status === 'tentative' ? styles['tentative'] : '';
-                  const isDimmed = spanGhost?.ev?.id === ev.id;
-                  return (
-                    <button
-                      key={ev.id}
-                      className={[
-                        styles['spanBar'],
-                        continuesBefore && styles['continuesBefore'],
-                        continuesAfter  && styles['continuesAfter'],
-                        statusClass,
-                        isDimmed && styles['dragging'],
-                      ].filter(Boolean).join(' ')}
-                      data-wc-conflicting={isConflicting ? 'true' : undefined}
-                      style={{
-                        '--ev-color': color,
-                        left:   `${(startCol / 7) * 100}%`,
-                        width:  `${((endCol - startCol + 1) / 7) * 100}%`,
-                        top:    lane * (SPAN_H + SPAN_GAP),
-                        height: SPAN_H,
-                      }}
-                      onClick={e => { e.stopPropagation(); if (!isDimmed) onEventClick?.(ev); }}
-                      onPointerDown={e => startSpanDrag(ev, e, startCol, endCol)}
-                      aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
-                    >
-                      {!continuesBefore && (
-                        <>
-                          <EventStatusBadge lifecycle={(ev as { lifecycle?: unknown }).lifecycle as never} variant="compact" />
-                          {ev.title}
-                        </>
-                      )}
-                    </button>
-                  );
-                })}
-
-              {/* Drag ghost */}
-              {spanGhost && (
-                <div
-                  className={[styles['spanBar'], styles['spanGhost']].join(' ')}
-                  aria-hidden="true"
-                  style={{
-                    '--ev-color': resolveColor(spanGhost.ev as never, ctx?.['colorRules']),
-                    left:   `${(spanGhost.startCol / 7) * 100}%`,
-                    width:  `${((spanGhost.endCol - spanGhost.startCol + 1) / 7) * 100}%`,
-                    top:    0,
-                    height: SPAN_H,
-                  }}
-                />
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
