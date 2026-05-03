@@ -14,6 +14,7 @@
  *   toggleFeed   — flip the enabled flag by id
  */
 import { useState, useCallback, useEffect } from 'react';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 
 // ── Shape ──────────────────────────────────────────────────────────────────────
 //
@@ -44,7 +45,7 @@ function key(calendarId: string): string {
 
 function load(calendarId: string): StoredFeed[] {
   try {
-    const raw = localStorage.getItem(key(calendarId));
+    const raw = safeGetLocalStorage(key(calendarId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -53,7 +54,7 @@ function load(calendarId: string): StoredFeed[] {
 
 function persist(calendarId: string, feeds: StoredFeed[]): void {
   try {
-    localStorage.setItem(key(calendarId), JSON.stringify(feeds));
+    safeSetLocalStorage(key(calendarId), JSON.stringify(feeds));
   } catch {
     // storage quota exceeded or private-mode restriction — silently skip
   }

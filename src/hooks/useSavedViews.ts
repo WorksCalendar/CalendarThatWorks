@@ -14,6 +14,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { createId } from '../core/createId';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 type GroupByInput = any;
 type SavedView = {
   id: string;
@@ -180,7 +181,7 @@ function migrateSavedViewsPayload(payload: unknown, calendarId: string): SavedVi
 function migrateProfiles(calendarId: string): SavedView[] {
   try {
     const legacyKey = `wc-profiles-${calendarId}`;
-    const raw = localStorage.getItem(legacyKey);
+    const raw = safeGetLocalStorage(legacyKey);
     if (!raw) return [];
     const profiles = JSON.parse(raw);
     // Convert profile shape to saved view shape
@@ -197,7 +198,7 @@ function migrateProfiles(calendarId: string): SavedView[] {
 
 function loadViews(calendarId: string): SavedView[] {
   try {
-    const raw = localStorage.getItem(viewsKey(calendarId));
+    const raw = safeGetLocalStorage(viewsKey(calendarId));
     if (raw) {
       const migrated = migrateSavedViewsPayload(JSON.parse(raw), calendarId);
       if (migrated.length > 0) return migrated;
@@ -211,7 +212,7 @@ function loadViews(calendarId: string): SavedView[] {
 
 function persistViews(calendarId: string, views: SavedView[]): void {
   try {
-    localStorage.setItem(viewsKey(calendarId), JSON.stringify({
+    safeSetLocalStorage(viewsKey(calendarId), JSON.stringify({
       version: STORAGE_VERSION,
       views,
     }));

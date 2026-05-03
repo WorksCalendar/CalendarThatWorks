@@ -49,12 +49,15 @@ import {
 // Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
 // through. Returning users see a clean slate with Air EMS defaults.
 const DEMO_CALENDAR_ID = 'air-ems-demo';
+// Demo feature kill switches. Flip any flag to false (or set the matching
+// VITE_ENABLE_DEMO_* env var to '0') to disable a surface without redeploying
+// deeper app logic.
 const DEMO_FEATURES = {
-  walkthrough: true,
-  missionHoverCard: true,
+  walkthrough: import.meta.env.VITE_ENABLE_DEMO_WALKTHROUGH !== '0',
+  missionHoverCard: import.meta.env.VITE_ENABLE_DEMO_MISSION_HOVERCARD !== '0',
   pwaRegistration: import.meta.env.VITE_ENABLE_DEMO_PWA !== '0',
-  mapWidget: true,
-  workflowBuilder: true,
+  mapWidget: import.meta.env.VITE_ENABLE_DEMO_MAP_WIDGET !== '0',
+  workflowBuilder: import.meta.env.VITE_ENABLE_DEMO_WORKFLOW_BUILDER !== '0',
 } as const;
 
 if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('resetDemo') === '1') {
@@ -134,7 +137,11 @@ const DEMO_REGIONS = regions.map(r => ({ id: r.id, name: r.name }));
 
 // Views the Air EMS demo needs visible from the start. Includes 'dispatch'
 // and 'requests' which are not in DEFAULT_CONFIG.display.enabledViews.
-const DEMO_ENABLED_VIEWS = [...DEFAULT_CONFIG.display.enabledViews, 'dispatch', 'requests'];
+const DEMO_ENABLED_VIEWS = [
+  ...DEFAULT_CONFIG.display.enabledViews,
+  'dispatch',
+  'requests',
+];
 
 if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
@@ -1055,6 +1062,7 @@ function App() {
   // skipped if the user has already engaged with the walkthrough.
   const calendarApiRef = useRef(null);
   const didSnapRef     = useRef(false);
+  const shouldSnapWalkthroughRef = useRef(DEMO_FEATURES.walkthrough && !EMBED_MODE && walkthrough.state.mode !== 'free-play' && walkthrough.state.history.length === 0);
 
   const calendarRef = useCallback((api) => {
     calendarApiRef.current = api;
@@ -1062,15 +1070,13 @@ function App() {
 
   useEffect(() => {
     if (didSnapRef.current) return;
-    if (EMBED_MODE) return;
-    if (walkthrough.state.mode === 'free-play') return;
-    if (walkthrough.state.history.length > 0) return;
+    if (!shouldSnapWalkthroughRef.current) return;
     const api = calendarApiRef.current;
     if (!api?.navigateTo || !api?.setView) return;
     api.setView('week');
     api.navigateTo(new Date(ALPHA_INITIAL_START_ISO));
     didSnapRef.current = true;
-  }, [walkthrough.state.mode, walkthrough.state.history.length]);
+  }, []);
 
   // Restart wraps walkthrough.restart with the cleanup the state-machine
   // alone can't do: re-seed the demo events (so Mission Alpha is unassigned
@@ -1134,6 +1140,8 @@ function App() {
       dispatchEvaluator={dispatchEvaluator}
       onDispatchAssign={handleDispatchAssign}
       mapStyle="https://tiles.openfreemap.org/styles/liberty"
+      showMapWidget={DEMO_FEATURES.mapWidget}
+      enableApprovalFlowsTab={DEMO_FEATURES.workflowBuilder}
     />
   );
 

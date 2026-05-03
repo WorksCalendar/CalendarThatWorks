@@ -1,6 +1,7 @@
 /**
  * localStorage adapter used by CalendarExternalForm examples and smoke tests.
  */
+import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 export function createLocalStorageDataAdapter({ key = 'works-calendar:external-events' } = {}) {
   return {
     async submitEvent(payload: Record<string, unknown>) {
@@ -11,7 +12,7 @@ export function createLocalStorageDataAdapter({ key = 'works-calendar:external-e
         ...payload,
       };
       const next = [...events, record];
-      localStorage.setItem(key, JSON.stringify(next));
+      safeSetLocalStorage(key, JSON.stringify(next));
       return record;
     },
   };
@@ -19,7 +20,7 @@ export function createLocalStorageDataAdapter({ key = 'works-calendar:external-e
 
 function readEvents(key: string) {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = safeGetLocalStorage(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];

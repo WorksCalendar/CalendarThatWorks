@@ -19,6 +19,7 @@
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { createId } from '../core/createId';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 import type { WorksCalendarEvent } from '../types/events';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
@@ -73,11 +74,11 @@ function legacyKey(calendarId: string): string { return `${LEGACY_PREFIX}${calen
 
 export function loadSources(calendarId: string): CalendarSource[] {
   try {
-    const raw = localStorage.getItem(sourceKey(calendarId));
+    const raw = safeGetLocalStorage(sourceKey(calendarId));
     if (raw) return JSON.parse(raw);
 
     // One-time migration: convert legacy wc-feeds- entries to typed sources
-    const legacy = localStorage.getItem(legacyKey(calendarId));
+    const legacy = safeGetLocalStorage(legacyKey(calendarId));
     if (legacy) {
       const migrated = (JSON.parse(legacy) as Array<Omit<IcsSource, 'type'>>).map((f) => ({ ...f, type: 'ics' as const }));
       persistSources(calendarId, migrated);
@@ -89,7 +90,7 @@ export function loadSources(calendarId: string): CalendarSource[] {
 
 export function persistSources(calendarId: string, sources: CalendarSource[]): void {
   try {
-    localStorage.setItem(sourceKey(calendarId), JSON.stringify(sources));
+    safeSetLocalStorage(sourceKey(calendarId), JSON.stringify(sources));
   } catch {}
 }
 

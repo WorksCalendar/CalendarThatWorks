@@ -140,8 +140,6 @@ const SEARCH_INDEX: Array<{ label: string; keywords?: string; tabId: string }> =
   { label: 'Viewer password',               tabId: 'access',     keywords: 'read only password' },
 ];
 
-const TAB_BY_ID = Object.fromEntries(TABS.map(t => [t.id, t]));
-
 type ConfigPanelSectionProps = {
   config: AnyRecord;
   onUpdate: UpdateConfig;
@@ -298,6 +296,7 @@ export default function ConfigPanel({
   calendarId = 'default',
   // Restart the guided setup; the SetupTab renders a button when set.
   onReopenSetup,
+  enableApprovalFlowsTab = true,
 }: ConfigPanelProps) {
   // Saved-flash plumbing: every host write committed through this panel
   // pulses the header pill so users see their change land. Wrappers stay
@@ -317,12 +316,24 @@ export default function ConfigPanel({
   const onEmployeeAdd              = useFlashWrapped(onEmployeeAddRaw,              trigger);
   const onEmployeeDelete           = useFlashWrapped(onEmployeeDeleteRaw,           trigger);
 
+  const visibleTabs = useMemo(
+    () => (enableApprovalFlowsTab ? TABS : TABS.filter(t => t.id !== 'approvalFlows')),
+    [enableApprovalFlowsTab],
+  );
+  const visibleSections = useMemo(
+    () => (enableApprovalFlowsTab
+      ? SECTIONS
+      : SECTIONS.map(section => ({ ...section, tabs: section.tabs.filter(tabId => tabId !== 'approvalFlows') }))),
+    [enableApprovalFlowsTab],
+  );
+  const tabById = useMemo(() => Object.fromEntries(visibleTabs.map(t => [t.id, t])), [visibleTabs]);
+
   const [tab, setTab] = useState<string>(() =>
-    initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
+    initialTab && visibleTabs.some(t => t.id === initialTab) ? initialTab : 'setup',
   );
   // Open the section containing the active tab; allow others to be expanded
   // independently. Re-keys when `tab` changes so deep-links auto-expand.
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({ [sectionContaining(tab)]: true }));
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({ [(visibleSections.find(s => s.tabs.includes(tab as any))?.id ?? visibleSections[0]!.id)]: true }));
   const [searchQuery, setSearchQuery] = useState('');
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -332,25 +343,25 @@ export default function ConfigPanel({
     if (!q) return [] as Array<{ label: string; tabId: string; tabLabel: string }>;
     return SEARCH_INDEX
       .filter(entry => {
-        const hay = `${entry.label} ${entry.keywords ?? ''} ${TAB_BY_ID[entry.tabId]?.label ?? ''}`.toLowerCase();
+        const hay = `${entry.label} ${entry.keywords ?? ''} ${tabById[entry.tabId]?.label ?? ''}`.toLowerCase();
         return hay.includes(q);
       })
       .map(entry => ({
         label: entry.label,
         tabId: entry.tabId,
-        tabLabel: TAB_BY_ID[entry.tabId]?.label ?? entry.tabId,
+        tabLabel: tabById[entry.tabId]?.label ?? entry.tabId,
       }));
   }, [searchQuery]);
 
   useEffect(() => {
-    if (initialTab && TABS.some(t => t.id === initialTab)) {
+    if (initialTab && visibleTabs.some(t => t.id === initialTab)) {
       setTab(initialTab);
     }
   }, [initialTab]);
 
   // Auto-expand the section that owns the active tab whenever it changes.
   useEffect(() => {
-    const sid = sectionContaining(tab);
+    const sid = (visibleSections.find(s => s.tabs.includes(tab as any))?.id ?? visibleSections[0]!.id);
     setOpenSections(prev => (prev[sid] ? prev : { ...prev, [sid]: true }));
   }, [tab]);
 
@@ -370,13 +381,13 @@ export default function ConfigPanel({
   // search so the sidebar returns to its normal section layout, expands the
   // owning section, and switches the active tab.
   function goTo(tabId: string) {
-    if (!TAB_BY_ID[tabId]) return;
+    if (!tabById[tabId]) return;
     setSearchQuery('');
     setOpenSections(prev => ({ ...prev, [sectionContaining(tabId)]: true }));
     setTab(tabId);
   }
 
-  const activeTabLabel = useMemo(() => TAB_BY_ID[tab]?.label ?? '', [tab]);
+  const activeTabLabel = useMemo(() => tabById[tab]?.label ?? '', [tab]);
 
   return (
     <div className={styles['overlay']} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -434,7 +445,7 @@ export default function ConfigPanel({
                   aria-selected={tab === 'overview'}
                 >Overview</button>
 
-                {SECTIONS.map(section => {
+                {visibleSections.map(section => {
                   const isOpen = !!openSections[section.id];
                   const headerId = `cfg-section-${section.id}-header`;
                   const panelId  = `cfg-section-${section.id}-panel`;
@@ -463,7 +474,7 @@ export default function ConfigPanel({
                           className={styles['sectionTabs']}
                         >
                           {section.tabs.map(tabId => {
-                            const t = TAB_BY_ID[tabId];
+                            const t = tabById[tabId];
                             if (!t) return null;
                             return (
                               <button
@@ -535,7 +546,7 @@ export default function ConfigPanel({
             />
           )}
           {tab === 'approvals'   && <ApprovalsTab   config={config} onUpdate={onUpdate} />}
-          {tab === 'approvalFlows' && (
+          {enableApprovalFlowsTab && tab === 'approvalFlows' && (
             <Suspense fallback={<div role="status">Loading…</div>}>
               <ApprovalFlowsTab calendarId={calendarId} />
             </Suspense>

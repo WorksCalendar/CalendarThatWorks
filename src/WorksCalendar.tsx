@@ -220,6 +220,8 @@ export type WorksCalendarProps = {
   onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
   onViewChange?: (view: CalendarView) => void;
   onMapWidgetOpenChange?: (open: boolean) => void;
+  showMapWidget?: boolean;
+  enableApprovalFlowsTab?: boolean;
   supabaseUrl?: string;
   supabaseKey?: string;
   supabaseTable?: string;
@@ -574,6 +576,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onDateSelect,
     onViewChange,
     onMapWidgetOpenChange,
+    showMapWidget = true,
+    enableApprovalFlowsTab = true,
 
     // ── Supabase realtime ──
     supabaseUrl,
@@ -2594,14 +2598,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   70vw modal that mounts the real MapLibre basemap.
                   Sitting above Crew so the spatial reference is always
                   the first thing the operator sees in the rail. */}
-              <RightPanelSection title="Region map">
-                <MapPeekWidget
+              {showMapWidget && (
+                <RightPanelSection title="Region map">
+                  <MapPeekWidget
                   events={(expandedEvents as any[]).filter(ev => !isScheduleWorkflowEvent(ev)) as never}
                   onEventClick={handleEventClick as never}
                   {...(onMapWidgetOpenChange ? { onOpenChange: onMapWidgetOpenChange } : {})}
                   {...(mapStyle ? { mapStyle } : {})}
-                />
-              </RightPanelSection>
+                  />
+                </RightPanelSection>
+              )}
               <RightPanelSection title="Crew on shift">
                 <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
               </RightPanelSection>
