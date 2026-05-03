@@ -3,15 +3,15 @@
  * that `useSavedViews` migrates from on first load.
  */
 
+import { safeGetLocalStorage, safeSetLocalStorage } from './safeLocalStorage';
+
 export function saveProfiles(calendarId: string, profiles: unknown): void {
-  try {
-    localStorage.setItem(`wc-profiles-${calendarId}`, JSON.stringify(profiles));
-  } catch {}
+  safeSetLocalStorage(`wc-profiles-${calendarId}`, JSON.stringify(profiles));
 }
 
 export function loadProfiles(calendarId: string): unknown {
   try {
-    const raw = localStorage.getItem(`wc-profiles-${calendarId}`);
+    const raw = safeGetLocalStorage(`wc-profiles-${calendarId}`);
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }

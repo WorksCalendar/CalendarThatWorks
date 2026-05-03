@@ -5,13 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Set VITE_BASE=/CalendarThatWorks/ when building for GitHub Pages.
 // Defaults to '/' for local dev and preview.
 const base = process.env['VITE_BASE'] ?? '/';
+const demoPwaEnabled = process.env['VITE_ENABLE_DEMO_PWA'] !== '0';
 
 export default defineConfig({
   base,
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
+    demoPwaEnabled && VitePWA({
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.svg', 'icon-192.svg', 'icon-512.svg'],
       manifest: {
         name: 'WorksCalendar — Air EMS Operations Demo',

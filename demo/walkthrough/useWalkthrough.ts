@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../../src/core/safeLocalStorage';
 import { INITIAL_STATE, reducer } from './reducer';
 import { STEPS } from './steps';
 import type {
@@ -41,7 +42,7 @@ function storageKey(calendarId: string | undefined): string {
 function readPersistedMode(calendarId: string | undefined): WalkthroughMode {
   if (typeof window === 'undefined') return 'guided';
   try {
-    return window.localStorage.getItem(storageKey(calendarId)) === 'free-play'
+    return safeGetLocalStorage(storageKey(calendarId)) === 'free-play'
       ? 'free-play'
       : 'guided';
   } catch {
@@ -52,7 +53,7 @@ function readPersistedMode(calendarId: string | undefined): WalkthroughMode {
 function persistMode(mode: WalkthroughMode, calendarId: string | undefined): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(storageKey(calendarId), mode);
+    safeSetLocalStorage(storageKey(calendarId), mode);
   } catch {
     // quota / private mode — silent failure, just won't persist
   }

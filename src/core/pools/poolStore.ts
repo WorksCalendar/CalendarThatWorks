@@ -16,6 +16,7 @@
 
 import type { ResourcePool, PoolStrategy, PoolType } from './resourcePoolSchema';
 import type { ResourceQuery } from './poolQuerySchema';
+import { safeGetLocalStorage, safeRemoveLocalStorage, safeSetLocalStorage } from '../safeLocalStorage';
 
 // ─── Storage key ─────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ export function savePools(
 ): void {
   try {
     const arr = Array.isArray(pools) ? pools : Array.from((pools as ReadonlyMap<string, ResourcePool>).values());
-    localStorage.setItem(poolStorageKey(calendarId), JSON.stringify(arr));
+    safeSetLocalStorage(poolStorageKey(calendarId), JSON.stringify(arr));
   } catch { /* non-fatal: private mode, quota, serialization */ }
 }
 
@@ -77,7 +78,7 @@ export interface LoadPoolsResult {
 export function loadPoolsDetailed(calendarId: string): LoadPoolsResult {
   let raw: string | null = null;
   try {
-    raw = localStorage.getItem(poolStorageKey(calendarId));
+    raw = safeGetLocalStorage(poolStorageKey(calendarId));
   } catch {
     return { pools: [], dropped: 0, storageError: true };
   }
@@ -103,7 +104,7 @@ export function loadPoolsDetailed(calendarId: string): LoadPoolsResult {
 
 /** Remove the stored pools entry (e.g. on "reset demo" actions). */
 export function clearPools(calendarId: string): void {
-  try { localStorage.removeItem(poolStorageKey(calendarId)); } catch { /* ignore */ }
+  safeRemoveLocalStorage(poolStorageKey(calendarId));
 }
 
 // ─── Internals ───────────────────────────────────────────────────────────────

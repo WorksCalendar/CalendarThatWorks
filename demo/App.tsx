@@ -1,12 +1,15 @@
-// @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
+// @ts-nocheck — demo fixture with progressive typing work in progress
 import { StrictMode, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import {
   WorksCalendar,
+  type WorksCalendarEvent,
   DEFAULT_CATEGORIES,
   createManualLocationProvider,
 } from '../src/index.ts';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../src/core/safeLocalStorage';
+import DemoErrorBoundary from './DemoErrorBoundary';
 import { saveProfiles } from '../src/core/profileStore';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema';
 import { loadPools, savePools } from '../src/core/pools/poolStore';
@@ -46,6 +49,24 @@ import {
 // Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
 // through. Returning users see a clean slate with Air EMS defaults.
 const DEMO_CALENDAR_ID = 'air-ems-demo';
+const DEMO_FEATURES = {
+  walkthrough: true,
+  missionHoverCard: true,
+  pwaRegistration: import.meta.env.VITE_ENABLE_DEMO_PWA !== '0',
+  mapWidget: true,
+  workflowBuilder: true,
+} as const;
+
+if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('resetDemo') === '1') {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('wc-'))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {}
+  if ('serviceWorker' in navigator) {
+    void navigator.serviceWorker.getRegistrations().then((regs) => Promise.all(regs.map((r) => r.unregister())));
+  }
+}
 
 /* ─── Profiles (saved filter sets in the profile bar) ──────────── */
 // Sprint 3 (issue #268 Task 5): seed the 6 required operational saved
@@ -64,12 +85,12 @@ const DEMO_PROFILES = [
 // Reseed profiles on first load AND when DEMO_SEED_VERSION bumps so
 // returning visitors pick up new profile-list changes (like the Sprint 3
 // rename from "Full Ops / Pilots / …" to the 6 issue-required views).
-const storedProfiles = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
-const storedProfileSeedVer = Number(localStorage.getItem(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`) ?? 0);
+const storedProfiles = safeGetLocalStorage(`wc-profiles-${DEMO_CALENDAR_ID}`);
+const storedProfileSeedVer = Number(safeGetLocalStorage(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`) ?? 0);
 const PROFILES_SEED_VERSION = 3;
 if (!storedProfiles || storedProfiles === '[]' || storedProfileSeedVer < PROFILES_SEED_VERSION) {
   saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
-  localStorage.setItem(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`, String(PROFILES_SEED_VERSION));
+  safeSetLocalStorage(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`, String(PROFILES_SEED_VERSION));
 }
 
 /* ─── Bases ─────────────────────────────────────────────────────── */
@@ -107,8 +128,8 @@ const BASE_COORDS: Record<string, { lat: number; lon: number }> = {
 //     because it wasn't in enabledViews.
 const DEMO_SEED_VERSION = 9;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
-const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
-const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
+const storedCfg         = safeGetLocalStorage(`wc-config-${DEMO_CALENDAR_ID}`);
+const storedSeedVer     = Number(safeGetLocalStorage(SEED_VER_KEY) ?? 0);
 
 // Seed the demo regions list (shared between the fresh-install and migration paths).
 const DEMO_REGIONS = regions.map(r => ({ id: r.id, name: r.name }));
@@ -126,7 +147,7 @@ if (!storedCfg) {
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
-  localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
+  safeSetLocalStorage(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 } else if (storedSeedVer < DEMO_SEED_VERSION) {
   const existing = loadConfig(DEMO_CALENDAR_ID);
   const carriedDefaultView = existing.display?.defaultView;
@@ -147,7 +168,7 @@ if (!storedCfg) {
     team:      { ...existing.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...existing.approvals, enabled: true },
   });
-  localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
+  safeSetLocalStorage(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 }
 
 // Theme is managed entirely inside the library's ownerConfig (setup.preferredTheme)
@@ -758,7 +779,7 @@ function App() {
     ...mission.assignments,
     aircraft: null, // starts unassigned so the pulsing badge is visible on load
   });
-  const [activeMissionEvent, setActiveMissionEvent] = useState<any | null>(null);
+  const [activeMissionEvent, setActiveMissionEvent] = useState<WorksCalendarEvent | null>(null);
   const [activeProfileId,   setActiveProfileId]   = useState(DEFAULT_PROFILE_ID);
   const activeProfile = useMemo(() => findProfile(activeProfileId), [activeProfileId]);
   const [pools, setPools] = useState(() => {
@@ -810,7 +831,7 @@ function App() {
   }, [events]);
 
   const [updateSW] = useState(() =>
-    registerSW({
+    DEMO_FEATURES.pwaRegistration ? registerSW({
       onNeedRefresh()  { setNeedsRefresh(true); },
       onOfflineReady() { console.info('[PWA] App ready to work offline.'); },
       onRegisteredSW(_swUrl, r) {
@@ -820,7 +841,7 @@ function App() {
         window.addEventListener('focus', check);
         document.addEventListener('visibilitychange', check);
       },
-    })
+    }) : (() => undefined)
   );
 
   useEffect(() => {
@@ -1051,11 +1072,7 @@ function App() {
     api.setView('week');
     api.navigateTo(new Date(ALPHA_INITIAL_START_ISO));
     didSnapRef.current = true;
-    // Intentionally empty deps: this is a once-on-mount snap. Re-running on
-    // mode/history changes would risk yanking the user back to the seed
-    // date if they've navigated away.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [walkthrough.state.mode, walkthrough.state.history.length]);
 
   // Restart wraps walkthrough.restart with the cleanup the state-machine
   // alone can't do: re-seed the demo events (so Mission Alpha is unassigned
@@ -1154,7 +1171,7 @@ function App() {
         />
       )}
 
-      {!EMBED_MODE && (
+      {!EMBED_MODE && DEMO_FEATURES.walkthrough && (
         <WalkthroughHost
           step={walkthrough.step}
           state={walkthrough.state}
@@ -1168,6 +1185,6 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode><App /></StrictMode>
+createRoot(document.getElementById('root')!).render(
+  <StrictMode><DemoErrorBoundary><App /></DemoErrorBoundary></StrictMode>
 );
