@@ -18,17 +18,13 @@ const SPAN_GAP = 3;
 const MAX_SPANS_VISIBLE = 3;
 const OVERFLOW_TRACK_H = SPAN_H + 4;
 
-function startOfUTCDay(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-}
-
 function isMultiDay(ev: NormalizedEvent) {
   if (ev.allDay) return true;
-  // Compare UTC calendar days to stay consistent with displayEndDay (which
-  // uses UTC boundaries) and avoid timezone-shift false positives.
-  const startUTCDay = startOfUTCDay(ev.start);
-  const endUTCDay   = displayEndDay(ev);
-  return startUTCDay.getTime() !== endUTCDay.getTime();
+  // For timed events, displayEndDay returns UTC-midnight; compare UTC days.
+  const startUTCMs = Date.UTC(ev.start.getUTCFullYear(), ev.start.getUTCMonth(), ev.start.getUTCDate());
+  const endDay = displayEndDay(ev);
+  const endUTCMs = Date.UTC(endDay.getUTCFullYear(), endDay.getUTCMonth(), endDay.getUTCDate());
+  return startUTCMs !== endUTCMs;
 }
 
 type MonthViewProps = {

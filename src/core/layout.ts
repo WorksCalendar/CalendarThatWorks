@@ -4,7 +4,7 @@
  *   layoutOverlaps  — column-pack timed events that share the same time slot
  *   layoutSpans     — lane-pack multi-day events for month/all-day row rendering
  */
-import { differenceInCalendarDays, addDays } from 'date-fns';
+import { differenceInCalendarDays, addDays, startOfDay } from 'date-fns';
 
 type LayoutEvent = {
   start: Date;
@@ -61,26 +61,37 @@ function startOfUTCDay(d: Date): Date {
  * The "display end day" of an event — the last calendar day the event
  * occupies (inclusive), accounting for exclusive all-day ends.
  *
- * All calculations are performed in UTC to ensure consistent behaviour
- * regardless of the host machine's local timezone.
+ * Strategy:
+ * - All-day events: use LOCAL calendar days (the calendar cells are labeled by
+ *   local date). iCal DTEND is a local-midnight exclusive end, so we subtract
+ *   one local day.
+ * - Timed events: use UTC calendar days (timed events with explicit UTC times
+ *   are placed in UTC-based day cells). A timed event ending exactly at UTC
+ *   midnight should not occupy the boundary day.
+ *
+ * Returns a UTC-midnight Date for timed events and a local-midnight Date for
+ * all-day events (matching the day-cell coordinates used in each case).
  */
 export function displayEndDay(ev: LayoutEvent): Date {
   const end = ev.end;
-  // Work in UTC to stay timezone-independent.
-  const day = startOfUTCDay(end);
-  const atMidnight = end.getUTCHours() === 0 && end.getUTCMinutes() === 0 && end.getUTCSeconds() === 0;
+
   if (ev.allDay) {
-    // All-day events use iCal's exclusive DTEND convention:
-    // DTEND=Jan4 means the event covers Jan1–Jan3, not Jan4.
-    return atMidnight ? addDays(day, -1) : day;
+    // All-day events use iCal's exclusive DTEND convention in LOCAL time:
+    // DTEND=Jan4 (local midnight) means the event covers Jan1–Jan3.
+    const localDay = startOfDay(end);
+    const atLocalMidnight = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
+    return atLocalMidnight ? addDays(localDay, -1) : localDay;
   }
-  // Timed events that end exactly at midnight and started on an earlier date
-  // should not "occupy" the boundary day in month-span lane packing.
+
+  // Timed events: use UTC days.
+  const day = startOfUTCDay(end);
+  const atMidnightUTC = end.getUTCHours() === 0 && end.getUTCMinutes() === 0 && end.getUTCSeconds() === 0;
+  // Timed events that end exactly at UTC midnight and started on an earlier UTC
+  // day should not "occupy" the boundary day in month-span lane packing.
   // This prevents adjacent back-to-back rotations from double-stacking.
-  // Use UTC-based same-day check to match our UTC day boundary.
   const startUTCDay = startOfUTCDay(ev.start);
-  if (atMidnight && startUTCDay.getTime() !== day.getTime()) return addDays(day, -1);
-  // Otherwise, timed events use their real end day.
+  if (atMidnightUTC && startUTCDay.getTime() !== day.getTime()) return addDays(day, -1);
+  // Otherwise, timed events use their real UTC end day.
   return day;
 }
 
@@ -115,15 +126,17 @@ export function layoutSpans<T extends LayoutEvent>(
   weekStart: Date,
   weekEnd: Date,
 ): LayoutSpanItem<T>[] {
-  // Normalise weekStart/weekEnd to UTC day boundaries so all comparisons are
-  // consistent with displayEndDay (which is also UTC-based).
+  // Normalise all day boundaries to UTC midnight so comparisons are consistent
+  // regardless of whether weekStart/weekEnd are local-midnight or UTC-midnight.
   const weekStartUTC = startOfUTCDay(weekStart);
   const weekEndUTC   = startOfUTCDay(weekEnd);
 
   const items = events
     .map(ev => {
       const evStartDay = startOfUTCDay(ev.start);
-      const evEndDay   = displayEndDay(ev);
+      // displayEndDay returns UTC-midnight for timed events, local-midnight for
+      // all-day events. Normalise to UTC so the comparisons below are uniform.
+      const evEndDay   = startOfUTCDay(displayEndDay(ev));
       return {
         ev,
         evStartDay,
