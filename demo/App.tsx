@@ -8,7 +8,7 @@ import {
   DEFAULT_CATEGORIES,
   createManualLocationProvider,
 } from '../src/index.ts';
-import { safeGetLocalStorage, safeRemoveLocalStorage, safeSetLocalStorage } from '../src/core/safeLocalStorage';
+import { safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage, safeLocalStorageKeys } from '../src/core/safeLocalStorage';
 import DemoErrorBoundary from './DemoErrorBoundary';
 import { saveProfiles } from '../src/core/profileStore';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema';
@@ -61,11 +61,9 @@ const DEMO_FEATURES = {
 } as const;
 
 if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('resetDemo') === '1') {
-  try {
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith('wc-'))
-      .forEach((k) => { safeRemoveLocalStorage(k); });
-  } catch {}
+  safeLocalStorageKeys()
+    .filter((k) => k.startsWith('wc-'))
+    .forEach((k) => { safeRemoveLocalStorage(k); });
   if ('serviceWorker' in navigator) {
     void navigator.serviceWorker.getRegistrations().then((regs) => Promise.all(regs.map((r) => r.unregister())));
   }
@@ -782,19 +780,19 @@ function App() {
   const [employees,         setEmployees]         = useState(INITIAL_EMPLOYEES);
   const [eventLog,          setEventLog]          = useState([]);
   const [needsRefresh,      setNeedsRefresh]      = useState(false);
-  const [missionAssignments, setMissionAssignments] = useState({
+  const [missionAssignments, setMissionAssignments] = useState<typeof mission.assignments & { aircraft: string | null }>({
     ...mission.assignments,
     aircraft: null, // starts unassigned so the pulsing badge is visible on load
   });
   const [activeMissionEvent, setActiveMissionEvent] = useState<WorksCalendarEvent | null>(null);
   const [activeProfileId,   setActiveProfileId]   = useState(DEFAULT_PROFILE_ID);
   const activeProfile = useMemo(() => findProfile(activeProfileId), [activeProfileId]);
-  const [pools, setPools] = useState(() => {
+  const [pools, setPools] = useState<typeof DEMO_POOLS_DEFAULT>(() => {
     const persisted = loadPools(DEMO_CALENDAR_ID);
     return persisted.length > 0 ? persisted : DEMO_POOLS_DEFAULT;
   });
 
-  const handlePoolsChange = useCallback((next) => {
+  const handlePoolsChange = useCallback((next: typeof DEMO_POOLS_DEFAULT) => {
     setPools(next);
     savePools(DEMO_CALENDAR_ID, next);
   }, []);
@@ -857,13 +855,13 @@ function App() {
     setNeedsRefresh(false);
   }, [needsRefresh, updateSW]);
 
-  const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
+  const log = (msg: string) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
   const handleConfigSave = useCallback(() => {
     log('Config saved');
   }, []);
 
-  const handleEventSave = useCallback((ev) => {
+  const handleEventSave = useCallback((ev: WorksCalendarEvent) => {
     setEvents(prev => {
       const idx = prev.findIndex(e => e.id === ev.id);
       if (idx >= 0) { const next = [...prev]; next[idx] = ev; return next; }
@@ -872,7 +870,7 @@ function App() {
     log(`Saved: ${ev.title}`);
   }, []);
 
-  const handleEventMove = useCallback((ev, newStart, newEnd) => {
+  const handleEventMove = useCallback((ev: WorksCalendarEvent, newStart: Date, newEnd: Date) => {
     const moved = {
       ...ev,
       start: newStart,
@@ -906,7 +904,7 @@ function App() {
     log(`Dispatched ${assetName} to ${m.title}`);
   }, [handleEventSave]);
 
-  const handleEventDelete = useCallback((id) => {
+  const handleEventDelete = useCallback((id: string) => {
     setEvents(prev => prev.filter(e => e.id !== id));
     log(`Deleted: ${id}`);
   }, []);
@@ -936,7 +934,7 @@ function App() {
     log(`Removed employee: ${id}`);
   }, []);
 
-  const handleApprovalAction = useCallback((event, actionId, payload) => {
+  const handleApprovalAction = useCallback((event: WorksCalendarEvent, actionId: string, payload?: { actor?: string; tier?: number; reason?: string }) => {
     // Profile-driven gating: each role has a capability matrix in
     // demo/profiles.ts. A dispatcher can request but not approve; an
     // ops manager can finalize and revoke; etc. Block actions the
@@ -956,7 +954,7 @@ function App() {
     log(`Approval: ${event.title} → ${nextStage} (as ${activeProfile.role})`);
   }, [activeProfile]);
 
-  const handleEventClick = useCallback((ev) => {
+  const handleEventClick = useCallback((ev: WorksCalendarEvent) => {
     log(`Clicked: ${ev.title}`);
     // wt-mission is the walkthrough's Mission Alpha — it uses the standard
     // HoverCard → Edit → EventForm flow so onEventSave fires and the
@@ -974,7 +972,7 @@ function App() {
   //     users can see the workflow state at a glance without opening the
   //     hover card. Without this, an aircraft-request pill looks identical
   //     whether it's awaiting first approval or already finalized.
-  const renderEvent = useCallback((ev) => {
+  const renderEvent = useCallback((ev: WorksCalendarEvent) => {
     const stage = ev?.meta?.approvalStage?.stage ?? null;
     const isMissionLike = ev.category === 'mission-assignment' || ev.category === 'aircraft-request';
     const showUnmet = isMissionLike && !allRequirementsMet(missionAssignments, mission, EMS_ASSETS);
@@ -1004,7 +1002,7 @@ function App() {
     );
   }, [missionAssignments]);
 
-  const renderHoverCard = useCallback((ev, onCloseHover) => {
+  const renderHoverCard = useCallback((ev: WorksCalendarEvent, onCloseHover: () => void) => {
     // Keep walkthrough mission on the built-in HoverCard so Edit routes to
     // the stock EventForm/onEventSave flow used by guided Step 2/3.
     if (ev.id === WALKTHROUGH_MISSION_ID) return null;
@@ -1161,7 +1159,7 @@ function App() {
         </Landing>
       )}
 
-      {DEMO_FEATURES.missionHoverCard && activeMissionEvent && (
+      {activeMissionEvent && DEMO_FEATURES.missionHoverCard && (
         <MissionHoverCard
           mission={{ ...mission, title: activeMissionEvent.title }}
           assignments={missionAssignments}

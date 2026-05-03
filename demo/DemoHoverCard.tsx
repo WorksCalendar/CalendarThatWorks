@@ -14,8 +14,9 @@
 //     title, time, category, resource, notes) so the rest of the
 //     calendar's events keep their familiar look.
 
-// @ts-nocheck — demo hover card with progressive typing work in progress
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { Anchor, Check, Clock, Pencil, Tag, X } from 'lucide-react';
 import type { DemoApprovalCaps } from './profiles';
@@ -30,6 +31,7 @@ interface DemoHoverCardProps {
   approvalCaps?: DemoApprovalCaps;
   resolveResourceLabel?: (id: string) => string;
 }
+type ApprovalStageMeta = { stage?: string; history?: Array<{ action: string; at?: string; actor?: string }> };
 
 const STAGE_PRESENTATION: Record<
   string,
@@ -97,7 +99,7 @@ function actionsForStage(stage: string): StageAction[] {
   }
 }
 
-const ACTION_VARIANT_STYLES: Record<string, React.CSSProperties> = {
+const ACTION_VARIANT_STYLES: Record<string, CSSProperties> = {
   primary: { background: '#c2410c', color: '#fff', border: '1px solid #c2410c' },
   ghost:   { background: '#fff',    color: '#4b5563', border: '1px solid rgba(60, 35, 10, 0.18)' },
   danger:  { background: '#fff',    color: '#b91c1c', border: '1px solid #fecaca' },
@@ -132,17 +134,17 @@ export default function DemoHoverCard({
   }, [onClose]);
 
   const start = event.start instanceof Date ? event.start : new Date(event.start);
-  const end   = event.end   instanceof Date ? event.end   : new Date(event.end);
+  const end   = event.end   instanceof Date ? event.end   : new Date(event.end ?? event.start);
   const timeRangeText = event.allDay
     ? 'All day'
     : isSameDay(start, end)
       ? `${format(start, 'MMM d, h:mm a')} – ${format(end, 'h:mm a')}`
       : `${format(start, 'MMM d, h:mm a')} – ${format(end, 'MMM d, h:mm a')}`;
 
-  const approvalStage = event?.meta?.approvalStage;
+  const approvalStage = event.meta?.['approvalStage'] as ApprovalStageMeta | undefined;
   const stage: string | undefined = approvalStage?.stage;
   const stageInfo = stage ? STAGE_PRESENTATION[stage] : null;
-  const history: Array<{ action: string; at: string; actor?: string }> =
+  const history: Array<{ action: string; at?: string; actor?: string }> =
     Array.isArray(approvalStage?.history) ? approvalStage.history : [];
 
   const actions = stage ? actionsForStage(stage) : [];
@@ -324,7 +326,7 @@ export default function DemoHoverCard({
         {/* Resource */}
         {event.resource && (
           <Field icon={<Anchor size={13} />}>
-            <span>{resolveResourceLabel?.(event.resource) ?? event.resource}</span>
+            <span>{resolveResourceLabel?.(String(event.resource)) ?? String(event.resource)}</span>
           </Field>
         )}
 
@@ -351,7 +353,7 @@ export default function DemoHoverCard({
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
             <button
               type="button"
-              onClick={() => { onDelete(event.id); onClose(); }}
+              onClick={() => { onDelete(String(event.id)); onClose(); }}
               style={{
                 background: 'transparent',
                 border: '1px solid #fecaca',
@@ -372,7 +374,7 @@ export default function DemoHoverCard({
   );
 }
 
-function Field({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function Field({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8,
