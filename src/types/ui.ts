@@ -104,6 +104,8 @@ export interface ConfigPanelProps {
   /** Re-trigger the SetupLanding guide. Only wired when the host enables
    *  showSetupLanding; undefined elsewhere so the button can self-hide. */
   onReopenSetup?: (() => void) | undefined;
+  /** Hide the experimental Approval Flows tab/workflow builder when false. */
+  enableApprovalFlowsTab?: boolean | undefined;
 }
 
 export type InputChangeHandler = (value: string) => void;

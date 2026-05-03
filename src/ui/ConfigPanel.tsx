@@ -140,7 +140,11 @@ const SEARCH_INDEX: Array<{ label: string; keywords?: string; tabId: string }> =
   { label: 'Viewer password',               tabId: 'access',     keywords: 'read only password' },
 ];
 
-const TAB_BY_ID = Object.fromEntries(TABS.map(t => [t.id, t]));
+const visibleTabs = enableApprovalFlowsTab ? TABS : TABS.filter(t => t.id !== 'approvalFlows');
+const visibleSections = enableApprovalFlowsTab
+  ? SECTIONS
+  : SECTIONS.map(section => ({ ...section, tabs: section.tabs.filter(tabId => tabId !== 'approvalFlows') }));
+const TAB_BY_ID = Object.fromEntries(visibleTabs.map(t => [t.id, t]));
 
 type ConfigPanelSectionProps = {
   config: AnyRecord;
@@ -434,7 +438,7 @@ export default function ConfigPanel({
                   aria-selected={tab === 'overview'}
                 >Overview</button>
 
-                {SECTIONS.map(section => {
+                {visibleSections.map(section => {
                   const isOpen = !!openSections[section.id];
                   const headerId = `cfg-section-${section.id}-header`;
                   const panelId  = `cfg-section-${section.id}-panel`;
@@ -535,7 +539,7 @@ export default function ConfigPanel({
             />
           )}
           {tab === 'approvals'   && <ApprovalsTab   config={config} onUpdate={onUpdate} />}
-          {tab === 'approvalFlows' && (
+          {enableApprovalFlowsTab && tab === 'approvalFlows' && (
             <Suspense fallback={<div role="status">Loading…</div>}>
               <ApprovalFlowsTab calendarId={calendarId} />
             </Suspense>

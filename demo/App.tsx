@@ -143,8 +143,6 @@ const DEMO_ENABLED_VIEWS = [
   ...DEFAULT_CONFIG.display.enabledViews,
   'dispatch',
   'requests',
-  ...(DEMO_FEATURES.mapWidget ? ['map'] : []),
-  ...(DEMO_FEATURES.workflowBuilder ? ['approvalFlows'] : []),
 ];
 
 if (!storedCfg) {
@@ -1066,7 +1064,7 @@ function App() {
   // skipped if the user has already engaged with the walkthrough.
   const calendarApiRef = useRef(null);
   const didSnapRef     = useRef(false);
-  const shouldSnapWalkthroughRef = useRef(!EMBED_MODE && walkthrough.state.mode !== 'free-play' && walkthrough.state.history.length === 0);
+  const shouldSnapWalkthroughRef = useRef(DEMO_FEATURES.walkthrough && !EMBED_MODE && walkthrough.state.mode !== 'free-play' && walkthrough.state.history.length === 0);
 
   const calendarRef = useCallback((api) => {
     calendarApiRef.current = api;
@@ -1144,6 +1142,8 @@ function App() {
       dispatchEvaluator={dispatchEvaluator}
       onDispatchAssign={handleDispatchAssign}
       mapStyle="https://tiles.openfreemap.org/styles/liberty"
+      showMapWidget={DEMO_FEATURES.mapWidget}
+      enableApprovalFlowsTab={DEMO_FEATURES.workflowBuilder}
     />
   );
 
