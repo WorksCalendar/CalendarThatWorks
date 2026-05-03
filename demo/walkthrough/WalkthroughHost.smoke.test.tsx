@@ -10,6 +10,7 @@ const step: Step = {
     body: 'Drag Mission Alpha to a new slot.',
   },
   spotlight: { eventId: 'wt-mission' },
+  matches: () => false,
 };
 
 describe('WalkthroughHost smoke', () => {
@@ -17,7 +18,7 @@ describe('WalkthroughHost smoke', () => {
     const { container } = render(
       <WalkthroughHost
         step={step}
-        state={{ mode: 'guided', currentStepId: step.id }}
+        state={{ mode: 'guided', currentStep: step.id, history: [], bootstrapping: false }}
         steps={[step]}
         onAdvance={vi.fn()}
         onRestart={vi.fn()}
