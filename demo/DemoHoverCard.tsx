@@ -1,4 +1,3 @@
-// @ts-nocheck — demo hover card, follows App.tsx convention
 //
 // Custom hover card for the Air EMS demo. Replaces the library's default
 // HoverCard via WorksCalendar's `renderHoverCard` prop. The default card
@@ -15,17 +14,19 @@
 //     title, time, category, resource, notes) so the rest of the
 //     calendar's events keep their familiar look.
 
+// @ts-nocheck — demo hover card with progressive typing work in progress
 import { useEffect, useRef, useState } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { Anchor, Check, Clock, Pencil, Tag, X } from 'lucide-react';
 import type { DemoApprovalCaps } from './profiles';
+import type { WorksCalendarEvent } from '../src';
 
 interface DemoHoverCardProps {
-  event: any;
+  event: WorksCalendarEvent;
   onClose: () => void;
-  onEdit?: ((ev: any) => void) | null;
+  onEdit?: ((ev: WorksCalendarEvent) => void) | null;
   onDelete?: ((eventId: string) => void) | null;
-  onApprovalAction?: (event: any, actionId: string, payload?: any) => void;
+  onApprovalAction?: (event: WorksCalendarEvent, actionId: string, payload?: unknown) => void;
   approvalCaps?: DemoApprovalCaps;
   resolveResourceLabel?: (id: string) => string;
 }

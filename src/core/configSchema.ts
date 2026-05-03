@@ -2,6 +2,8 @@
  * configSchema.js — Owner config schema, defaults, and localStorage persistence.
  */
 
+import { safeGetLocalStorage, safeSetLocalStorage } from './safeLocalStorage';
+
 /**
  * On-disk schema version for `wc-config-<calendarId>`.
  *
@@ -208,7 +210,7 @@ function mergeDeep(target: ConfigObject, source: ConfigObject): ConfigObject {
 export function loadConfig(calendarId: string): ConfigObject {
   const key = `wc-config-${calendarId}`;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = safeGetLocalStorage(key);
     if (!raw) return DEFAULT_CONFIG as ConfigObject;
 
     const parsed = JSON.parse(raw);
@@ -251,7 +253,7 @@ export function loadConfig(calendarId: string): ConfigObject {
 export function saveConfig(calendarId: string, config: unknown): void {
   const key = `wc-config-${calendarId}`;
   try {
-    localStorage.setItem(key, JSON.stringify(config));
+    safeSetLocalStorage(key, JSON.stringify(config));
   } catch {
     // quota exceeded or SSR — silent fail
   }
