@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('guided walkthrough end-to-end restores real move/edit/save/conflict/apply-anyway/schedule path', async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
