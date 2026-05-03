@@ -434,27 +434,27 @@ describe('WeekView ARIA semantics', () => {
     expect(headers.length).toBe(7);
   });
 
-  it('renders time slot cells with role="gridcell"', () => {
+  it('renders 7 day cells with role="gridcell"', () => {
     renderWeek();
     const cells = screen.getAllByRole('gridcell');
-    expect(cells.length).toBeGreaterThanOrEqual(70);
+    expect(cells.length).toBe(7);
   });
 
-  it('exactly one slot cell has tabIndex=0 (roving tabIndex)', () => {
+  it('exactly one day cell has tabIndex=0 (roving tabIndex)', () => {
     renderWeek();
     const cells = screen.getAllByRole('gridcell');
     const focused = cells.filter((cell) => cell.tabIndex === 0);
     expect(focused.length).toBe(1);
   });
 
-  it('slot cell aria-label includes day name and time', () => {
+  it('day cell aria-label includes day name and date', () => {
     renderWeek();
     const cells = screen.getAllByRole('gridcell');
-    const mondaySlot = cells.find((cell) =>
+    const mondayCell = cells.find((cell) =>
       cell.getAttribute('aria-label')?.includes('Monday') &&
-      cell.getAttribute('aria-label')?.includes('8:00 AM'),
+      cell.getAttribute('aria-label')?.includes('April 6'),
     );
-    expect(mondaySlot).toBeTruthy();
+    expect(mondayCell).toBeTruthy();
   });
 
   it('ArrowRight moves focused slot to the next day column', () => {
@@ -469,17 +469,18 @@ describe('WeekView ARIA semantics', () => {
     expect(newFocused.getAttribute('aria-label')).not.toBe(firstLabel);
   });
 
-  it('ArrowDown moves focused slot to the next hour', () => {
+  it('ArrowRight moves focused day cell to the next day', () => {
     renderWeek();
     const firstFocused = getFocusedGridCell();
     firstFocused.focus();
 
-    expect(firstFocused.getAttribute('data-slot')).toBe('0-0');
+    const firstDate = firstFocused.getAttribute('data-date');
+    expect(firstDate).toBeTruthy();
 
-    fireEvent.keyDown(firstFocused, { key: 'ArrowDown' });
+    fireEvent.keyDown(firstFocused, { key: 'ArrowRight' });
 
     const newFocused = getFocusedGridCell();
-    expect(newFocused.getAttribute('data-slot')).toBe('0-1');
+    expect(newFocused.getAttribute('data-date')).not.toBe(firstDate);
   });
 
   it('Enter on slot cell calls onDateSelect', () => {

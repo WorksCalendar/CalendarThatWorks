@@ -46,6 +46,7 @@ export default defineConfig({
           react: 'React',
           'react-dom': 'ReactDOM',
         },
+        assetFileNames: (info) => info.name === 'works-calendar.css' ? 'style.css' : (info.name ?? '[name][extname]'),
       },
     },
   },
