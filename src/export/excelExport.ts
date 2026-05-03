@@ -1,6 +1,3 @@
-/**
- * excelExport.js — Export visible events to Excel (SheetJS) with CSV fallback.
- */
 import { format } from 'date-fns';
 import type { NormalizedEvent } from '../types/events';
 
@@ -28,10 +25,9 @@ function toCSV(rows: Row[]): string {
   ].join('\n');
 }
 
-function downloadFile(content: string, filename: string, mime: string): void {
-  const blob = new Blob([content], { type: mime });
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -42,15 +38,24 @@ export async function exportToExcel(events: NormalizedEvent[], filename = 'calen
   const rows = eventsToRows(events);
 
   try {
-    // Attempt SheetJS
-    const XLSX = await import('xlsx');
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Events');
-    XLSX.writeFile(wb, `${filename}.xlsx`);
+    const ExcelJS = await import('exceljs');
+    const workbook  = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Events');
+
+    if (rows.length > 0) {
+      const headers = Object.keys(rows[0]!);
+      worksheet.columns = headers.map(key => ({ header: key, key, width: 20 }));
+      rows.forEach(row => worksheet.addRow(row));
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob   = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    downloadBlob(blob, `${filename}.xlsx`);
   } catch {
-    // Fallback to CSV
     const csv = toCSV(rows);
-    downloadFile(csv, `${filename}.csv`, 'text/csv;charset=utf-8;');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    downloadBlob(blob, `${filename}.csv`);
   }
 }

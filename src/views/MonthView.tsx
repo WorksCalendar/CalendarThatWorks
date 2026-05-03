@@ -20,7 +20,7 @@ const OVERFLOW_TRACK_H = SPAN_H + 4;
 
 function isMultiDay(ev: NormalizedEvent) {
   if (ev.allDay) return true;
-  return !isSameDay(startOfDay(ev.start), displayEndDay(ev));
+  return startOfDay(ev.start).getTime() !== startOfDay(ev.end).getTime();
 }
 
 type MonthViewProps = {

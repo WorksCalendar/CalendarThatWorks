@@ -348,7 +348,9 @@ function _parseMDY(v: string): Date {
   if (parts.length !== 3) return new Date(v);
   const [m, d, y] = parts;
   if (m === undefined || d === undefined || y === undefined) return new Date(v);
-  const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}${timePart ? 'T' + timePart : ''}`;
+  // Without a time component, append T00:00:00 so the string is treated as
+  // local midnight (not UTC midnight, which ISO date-only strings default to).
+  const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${timePart ?? '00:00:00'}`;
   return new Date(iso);
 }
 
@@ -360,7 +362,9 @@ function _parseDMY(v: string): Date {
   if (parts.length !== 3) return new Date(v);
   const [d, m, y] = parts;
   if (m === undefined || d === undefined || y === undefined) return new Date(v);
-  const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}${timePart ? 'T' + timePart : ''}`;
+  // Without a time component, append T00:00:00 so the string is treated as
+  // local midnight (not UTC midnight, which ISO date-only strings default to).
+  const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${timePart ?? '00:00:00'}`;
   return new Date(iso);
 }
 

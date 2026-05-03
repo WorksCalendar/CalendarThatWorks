@@ -20,7 +20,7 @@ import type { CategoryDef } from '../../types/assets';
 import type { Hold } from '../holds/holdRegistry';
 import type { AvailabilityRule } from '../availability/availabilityRule';
 
-const day = (d: number, h = 9, m = 0) => new Date(2026, 3, d, h, m);
+const day = (d: number, h = 9, m = 0) => new Date(Date.UTC(2026, 3, d, h, m));
 
 const base: ConflictEvent = {
   id: 'proposed',
@@ -222,7 +222,7 @@ describe('conflictEngine — min-rest rule', () => {
     // Nudge start to 11:30 so gap = 30 min.
     const otherClose: ConflictEvent = {
       ...other,
-      start: new Date(2026, 3, 10, 11, 30),
+      start: new Date(Date.UTC(2026, 3, 10, 11, 30)),
     };
     const result = evaluateConflicts({
       proposed: base,

@@ -76,13 +76,16 @@ export default function AgendaView({
   // start day (#148). displayEndDay handles iCal's exclusive DTEND convention
   // and the midnight-boundary edge case used by MonthView. Clamp the end so
   // zero-duration all-day events (start === end) still render on their start day.
+  // Use local calendar days — agenda rows are labelled by local date.
   const grouped = useMemo(() => {
     return days
       .map((day) => {
-        const dayMs = day.getTime();
+        const dayMs = startOfDay(day).getTime();
         const dayEvents = events.filter((e) => {
           const startMs = startOfDay(e.start).getTime();
-          const endMs   = Math.max(displayEndDay(e).getTime(), startMs);
+          // All-day events use iCal exclusive DTEND; timed events use their real end.
+          const endDayDate = e.allDay ? displayEndDay(e) : e.end;
+          const endMs = Math.max(startOfDay(endDayDate).getTime(), startMs);
           return dayMs >= startMs && dayMs <= endMs;
         });
         return {
@@ -166,10 +169,15 @@ export default function AgendaView({
   function renderEventItem(ev: CalendarViewEvent, opts: { crossGroup?: boolean; sourceLabel?: string | null; nativePath?: string | null; dayTree?: GroupTreeNode[] | null; dayKey?: string | null } = {}) {
     const { crossGroup = false, sourceLabel = null, nativePath = null, dayTree = null, dayKey = null } = opts;
     const color = resolveColor(ev as NormalizedEvent, ctx?.['colorRules']);
-    const evStartDay = startOfDay(ev.start);
-    const rawEndDay  = displayEndDay(ev);
+    // Use local-midnight dates for display formatting so date-fns format()
+    // (which uses local time) shows the correct day name.
+    // displayEndDay returns local-midnight for allDay events (correct for
+    // display) and UTC-midnight for timed events (convert to local).
+    const toLocalDay = (d: Date) => startOfDay(d);
+    const evStartDay = toLocalDay(ev.start);
+    const rawEndDay  = toLocalDay(displayEndDay(ev));
     const evEndDay   = rawEndDay < evStartDay ? evStartDay : rawEndDay;
-    const isMultiDay = !isSameDay(evStartDay, evEndDay);
+    const isMultiDay = evStartDay.getTime() !== evEndDay.getTime();
     const onClick = () => onEventClick?.(ev);
     const statusClass = ev.status === 'cancelled' ? styles['cancelled']
       : ev.status === 'tentative' ? styles['tentative'] : '';

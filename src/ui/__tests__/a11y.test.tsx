@@ -344,7 +344,8 @@ describe('MonthView ARIA semantics', () => {
     expect(newFocused).not.toBe(focusedCell);
     const oldDate = new Date(requireElement(focusedCell.getAttribute('data-date'), 'Expected old data-date'));
     const newDate = new Date(requireElement(newFocused.getAttribute('data-date'), 'Expected new data-date'));
-    expect(newDate.getDate() - oldDate.getDate()).toBe(1);
+    const dayDiff = Math.round((newDate.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24));
+    expect(dayDiff).toBe(1);
   });
 
   it('ArrowDown on focused cell moves focus 7 days ahead', () => {
