@@ -62,6 +62,17 @@ export { default as ScheduleView }        from './views/ScheduleView';
 export { default as MapView }             from './views/MapView';
 export type { MapViewProps }              from './views/MapView';
 
+export { default as MissionHoverCard, allRequirementsMet, meetsAircraftReqs } from './ui/MissionHoverCard';
+export type {
+  MissionHoverCardProps,
+  MissionRequest,
+  MissionCrewMember,
+  MissionAircraft,
+  MissionLeg,
+  MissionComplianceItem,
+  MissionSlotKind,
+} from './ui/MissionHoverCard';
+
 // Embedder slot helpers — paired with the WorksCalendar `leftRailExtras` /
 // `rightPanelExtras` props. Consumer apps wrap their custom widgets in
 // these so the appended content blends with the stock chrome (theme
