@@ -214,7 +214,6 @@ export default function WeekView({
     spanDragRef.current = null;
     setSpanGhost(null);
     if (!d || !g) return;
-    swallowNextSpanClickRef.current = true;
     if (!d.moved) {
       onEventClick?.(d.ev);
       return;
@@ -399,14 +398,7 @@ export default function WeekView({
                         top:    lane * (SPAN_H + SPAN_GAP),
                         height: SPAN_H,
                       }}
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (swallowNextSpanClickRef.current) {
-                          swallowNextSpanClickRef.current = false;
-                          return;
-                        }
-                        if (!isDimmed) onEventClick?.(ev);
-                      }}
+                      onClick={e => { e.stopPropagation(); }}
                       onPointerDown={e => startSpanDrag(ev, e, startCol, endCol)}
                       aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
                     >
