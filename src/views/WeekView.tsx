@@ -1,37 +1,23 @@
-import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
-import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import {
   startOfWeek, endOfWeek, eachDayOfInterval,
-  format, isSameDay, isToday,
-  getHours, getMinutes,
-  startOfDay, addDays, addMinutes,
+  format, isSameDay, isToday, startOfDay, addDays,
 } from 'date-fns';
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
-import { hoursInTimezone } from '../core/engine/time/timezone';
-import { layoutOverlaps, layoutSpans } from '../core/layout';
-import { useDrag } from '../hooks/useDrag';
-import { useFocusTrap } from '../hooks/useFocusTrap';
+import { layoutSpans } from '../core/layout';
 import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './WeekView.module.css';
 import type { CalendarViewEvent } from '../types/ui';
 
-const SPAN_H    = 34;
-const SPAN_GAP  = 3;
-const MAX_SPANS = 4;
-const GUTTER_W  = 56;
+const SPAN_H            = 28;
+const SPAN_GAP          = 3;
+const MAX_SPANS_VISIBLE = 4;
+const MAX_PILLS         = 8;
 
-type WeekViewConfig = {
-  display?: {
-    dayStart?: number;
-    dayEnd?: number;
-  };
-};
-
-type WeekViewEvent = CalendarViewEvent & {
-  color?: string;
-};
+type WeekViewEvent = CalendarViewEvent & { color?: string };
 
 interface WeekViewProps {
   currentDate: Date;
@@ -40,44 +26,26 @@ interface WeekViewProps {
   onEventMove?: (ev: WeekViewEvent, newStart: Date, newEnd: Date) => void;
   onEventResize?: (ev: WeekViewEvent, newStart: Date, newEnd: Date) => void;
   onDateSelect?: (start: Date, end: Date) => void;
-  config?: WeekViewConfig;
+  config?: { display?: { dayStart?: number; dayEnd?: number } };
   weekStartDay?: Day;
 }
 
 function isMultiDay(ev: WeekViewEvent) {
-  return ev.allDay || !isSameDay(ev.start, ev.end);
+  if (ev.allDay) return true;
+  return startOfDay(ev.start).getTime() !== startOfDay(ev.end).getTime();
 }
 
-function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
-
 export default function WeekView({
-  currentDate, events, onEventClick, onEventMove, onEventResize, onDateSelect,
-  config, weekStartDay = 0,
+  currentDate, events, onEventClick, onEventMove, onDateSelect, weekStartDay = 0,
 }: WeekViewProps) {
   const ctx = useCalendarContext();
-  const dayStart   = config?.display?.dayStart ?? 6;
-  const dayEnd     = config?.display?.dayEnd   ?? 22;
-  const totalHours = dayEnd - dayStart;
-  const pxPerHour  = 64;
-  const bizHours   = ctx?.['businessHours'] ?? null;
-
-  const gridRef    = useRef<HTMLDivElement | null>(null);
-  const allDayRef  = useRef<HTMLDivElement | null>(null);
-  // Tracks whether the most recent pointer-up was a real drag (not a click).
-  // Used to guard onClick handlers so a just-finished drag doesn't fire onEventClick.
-  const wasDragRef = useRef(false);
-
-  // ── Roving tabIndex for time-slot keyboard navigation ─────────────────────
-  const [focusedSlot, setFocusedSlot] = useState({ dayIdx: 0, hourIdx: 0 });
-  const lastKeyNavSlot = useRef(false);
+  const [focusedDay,   setFocusedDay]   = useState(() => startOfDay(currentDate));
+  const [overflowDay,  setOverflowDay]  = useState<Date | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!lastKeyNavSlot.current || !gridRef.current) return;
-    lastKeyNavSlot.current = false;
-    const { dayIdx, hourIdx } = focusedSlot;
-    const el = gridRef.current.querySelector<HTMLElement>(`[data-slot="${dayIdx}-${hourIdx}"]`);
-    el?.focus({ preventScroll: false });
-  }, [focusedSlot]);
+    setFocusedDay(startOfDay(currentDate));
+  }, [currentDate]);
 
   const days = useMemo(() => {
     const start = startOfWeek(currentDate, { weekStartsOn: weekStartDay });
@@ -85,332 +53,142 @@ export default function WeekView({
     return eachDayOfInterval({ start, end });
   }, [currentDate, weekStartDay]);
 
-  // days is built by generating exactly 7 entries above, so [0] and [6] are safe.
   const weekStart = days[0]!;
   const weekEnd   = days[6]!;
 
-  // Slot hours = hours that have a full 1-hour slot below them
-  const slotHours = useMemo(() => {
-    const arr: number[] = [];
-    for (let h = dayStart; h < dayEnd; h++) arr.push(h);
-    return arr;
-  }, [dayStart, dayEnd]);
-
-  // ── Slot keyboard navigation ───────────────────────────────────────────────
-  const handleSlotKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>, di: number, hi: number, slotStart: Date, slotEnd: Date) => {
-    const maxDi = days.length - 1;
-    const maxHi = slotHours.length - 1;
-    let nextDi = di, nextHi = hi;
-    let move = false;
-    switch (e.key) {
-      case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     move = true; break;
-      case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
-      case 'ArrowUp':    nextHi = Math.max(0, hi - 1);     move = true; break;
-      case 'ArrowDown':  nextHi = Math.min(maxHi, hi + 1); move = true; break;
-      case 'Home':       nextDi = 0;                        move = true; break;
-      case 'End':        nextDi = maxDi;                    move = true; break;
-      case 'Enter':
-      case ' ':
-        e.preventDefault();
-        onDateSelect?.(slotStart, slotEnd);
-        return;
-      default: return;
-    }
-    if (move) {
-      e.preventDefault();
-      lastKeyNavSlot.current = true;
-      setFocusedSlot({ dayIdx: nextDi, hourIdx: nextHi });
-    }
-  }, [days.length, slotHours.length, onDateSelect]);
-
-  // ── All-day overflow popover ───────────────────────────────────────────────
-  const [allDayOverflowOpen, setAllDayOverflowOpen] = useState(false);
-  const overflowTrapRef = useFocusTrap<HTMLDivElement>(() => setAllDayOverflowOpen(false), allDayOverflowOpen);
-
-  const { allDayEvents, timedEvents } = useMemo(() => {
-    const allDay: WeekViewEvent[] = [];
-    const timed: WeekViewEvent[] = [];
-    events.forEach(ev => (isMultiDay(ev) ? allDay : timed).push(ev));
-    return { allDayEvents: allDay, timedEvents: timed };
+  const { multiDay, singleDay } = useMemo(() => {
+    const multi: WeekViewEvent[] = [];
+    const single: WeekViewEvent[] = [];
+    events.forEach(ev => (isMultiDay(ev) ? multi : single).push(ev));
+    return { multiDay: multi, singleDay: single };
   }, [events]);
 
-  const allDaySpans = useMemo(
-    () => layoutSpans(allDayEvents, weekStart, weekEnd),
-    [allDayEvents, weekStart, weekEnd],
-  );
-  const allDayLanes   = allDaySpans.length ? Math.max(...allDaySpans.map(s => s.lane)) + 1 : 0;
-  const allDayVisible = Math.min(allDayLanes, MAX_SPANS);
-  const allDayHeight  = allDayVisible * (SPAN_H + SPAN_GAP);
-  const overflowCount = allDayLanes > MAX_SPANS ? allDayLanes - MAX_SPANS : 0;
-
-  const timedByDay = useMemo(() => {
+  const singleByDay = useMemo(() => {
     const map = new Map<string, WeekViewEvent[]>();
-    days.forEach(day => {
-      const key    = format(day, 'yyyy-MM-dd');
-      const dayEvs = timedEvents.filter(e => isSameDay(e.start, day));
-      map.set(key, layoutOverlaps(dayEvs));
+    singleDay.forEach(ev => {
+      const key = format(ev.start, 'yyyy-MM-dd');
+      let bucket = map.get(key);
+      if (!bucket) { bucket = []; map.set(key, bucket); }
+      bucket.push(ev);
+    });
+    map.forEach((dayEvs, key) => {
+      dayEvs.sort((a, b) => a.start.getTime() - b.start.getTime());
+      map.set(key, dayEvs);
     });
     return map;
-  }, [days, timedEvents]);
+  }, [singleDay]);
 
-  const hours: number[] = [];
-  for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
+  const spans = useMemo(
+    () => layoutSpans(multiDay, weekStart, weekEnd),
+    [multiDay, weekStart, weekEnd],
+  );
+  const laneCount   = spans.length ? Math.max(...spans.map(s => s.lane)) + 1 : 0;
+  const spansHeight = Math.min(laneCount, MAX_SPANS_VISIBLE) * (SPAN_H + SPAN_GAP);
 
-  function isBizHour(h: number, day: Date) {
-    if (!bizHours) return true;
-    const bizDays = bizHours.days ?? [1, 2, 3, 4, 5];
-    return bizDays.includes(day.getDay()) && h >= bizHours.start && h < bizHours.end;
-  }
+  // ── Keyboard navigation ───────────────────────────────────────────────────
+  const lastKeyNav = useRef(false);
+  useEffect(() => {
+    if (!lastKeyNav.current || !gridRef.current) return;
+    lastKeyNav.current = false;
+    const key = format(focusedDay, 'yyyy-MM-dd');
+    const cell = gridRef.current.querySelector<HTMLElement>(`[data-date="${key}"]`);
+    cell?.focus({ preventScroll: false });
+  }, [focusedDay]);
 
-  const displayTz = ctx?.['displayTimezone'] ?? null;
-
-  function eventPosition(start: Date, end: Date) {
-    const startH = displayTz ? hoursInTimezone(start, displayTz) : getHours(start) + getMinutes(start) / 60;
-    const endH   = displayTz ? hoursInTimezone(end,   displayTz) : getHours(end)   + getMinutes(end)   / 60;
-    const startMin = (startH - dayStart) * 60;
-    const endMin   = (endH   - dayStart) * 60;
-    const totalMin = (dayEnd - dayStart) * 60;
-    const visStart = Math.max(0, startMin);
-    const visEnd   = Math.min(totalMin, endMin);
-    if (visEnd <= visStart) return null;
-    return {
-      top:    visStart / 60 * pxPerHour,
-      height: Math.max(22, visEnd - visStart) / 60 * pxPerHour,
-    };
-  }
-
-  const now = new Date();
-  const nowHour     = displayTz ? hoursInTimezone(now, displayTz) : getHours(now) + getMinutes(now) / 60;
-  const nowTop      = (nowHour - dayStart) * pxPerHour;
-  const showNowLine = nowHour >= dayStart && nowHour < dayEnd;
-
-  // ── Timed-grid drag ───────────────────────────────────────────────────────
-  const drag = useDrag({ pxPerHour, dayStart, dayEnd });
-
-  const handleGridPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    if (!ctx?.['permissions']?.canAddEvent) return;
-    if (!gridRef.current) return;
-    drag.startCreate(e, gridRef.current, days, GUTTER_W);
-  }, [drag.startCreate, days, ctx?.['permissions']?.canAddEvent]);
-
-  const handleGridPointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    drag.onPointerMove(e);
-  }, [drag.onPointerMove]);
-
-  const handleGridPointerUp = useCallback(() => {
-    const result = drag.onPointerUp();
-    if (!result) return;
-    // Mark that a real drag just ended so the subsequent click event is ignored.
-    wasDragRef.current = true;
-    requestAnimationFrame(() => { wasDragRef.current = false; });
-    if (result.type === 'create') {
-      onDateSelect?.(result.newStart, result.newEnd);
-    } else if (result.type === 'resize' || result.type === 'resize-top') {
-      onEventResize?.(result.ev, result.newStart, result.newEnd);
-    } else if (result.type === 'move') {
-      onEventMove?.(result.ev, result.newStart, result.newEnd);
+  const handleCellKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>, day: Date) => {
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault(); lastKeyNav.current = true;
+        setFocusedDay(addDays(startOfDay(day), -1)); break;
+      case 'ArrowRight':
+        e.preventDefault(); lastKeyNav.current = true;
+        setFocusedDay(addDays(startOfDay(day), 1)); break;
+      case 'Enter': case ' ':
+        e.preventDefault();
+        if (onDateSelect) {
+          const s = new Date(day); s.setHours(9, 0, 0, 0);
+          const end = new Date(day); end.setHours(10, 0, 0, 0);
+          onDateSelect(s, end);
+        }
+        break;
+      default: return;
     }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect]);
+  }, [onDateSelect]);
 
-  // Single click on an empty time slot → create a 1-hour event at that time.
-  // Drags are excluded via wasDragRef (set true in handleGridPointerUp for real drags).
-  const handleGridClick = useCallback((e: MouseEvent<HTMLDivElement>) => {
-    if (wasDragRef.current) return;
-    if (!ctx?.['permissions']?.canAddEvent) return;
-    if ((e.target as HTMLElement | null)?.closest?.('[data-event]')) return; // click was on an event, not empty space
-    if (!gridRef.current) return;
-    const rect = gridRef.current.getBoundingClientRect();
-    const colWidth = (rect.width - GUTTER_W) / days.length;
-    const relX = e.clientX - rect.left - GUTTER_W;
-    const relY = e.clientY - rect.top;
-    const dayIdx = clamp(Math.floor(relX / colWidth), 0, days.length - 1);
-    const clickedHour = Math.floor(relY / pxPerHour) + dayStart;
-    const h = clamp(clickedHour, dayStart, dayEnd - 1);
-    const day = days[dayIdx];
-    if (day === undefined) return;
-    const start = new Date(day); start.setHours(h, 0, 0, 0);
-    const end   = new Date(day); end.setHours(h + 1, 0, 0, 0);
-    onDateSelect?.(start, end);
-  }, [ctx?.['permissions']?.canAddEvent, days, dayStart, dayEnd, pxPerHour, onDateSelect]);
+  // ── Span bar drag (day-to-day only) ──────────────────────────────────────
+  type SpanDrag = { ev: WeekViewEvent; startCol: number; endCol: number; width: number; clickOffset: number; colW: number };
+  const spanDragRef  = useRef<SpanDrag | null>(null);
+  const [spanGhost, setSpanGhost] = useState<{ ev: WeekViewEvent; startCol: number; endCol: number } | null>(null);
+  const spansRef     = useRef<HTMLDivElement | null>(null);
 
-  // ── All-day bar drag ──────────────────────────────────────────────────────
-  type AllDayDragState = {
-    ev: WeekViewEvent;
-    spanStartCol: number;
-    spanEndCol: number;
-    spanWidth: number;
-    clickOffset: number;
-    colWidth: number;
-  };
-  type AllDayGhost = { ev: WeekViewEvent; startCol: number; endCol: number };
-  const allDayDragRef  = useRef<AllDayDragState | null>(null);
-  const allDayGhostRef = useRef<AllDayGhost | null>(null);
-  const [allDayGhost, setAllDayGhost] = useState<AllDayGhost | null>(null);
-
-  function updateAllDayGhost(next: AllDayGhost | null) {
-    allDayGhostRef.current = next;
-    setAllDayGhost(prev => {
-      if (!next && !prev) return prev;
-      if (!next) return null;
-      if (!prev) return next;
-      if (prev.startCol === next.startCol && prev.endCol === next.endCol) return prev;
-      return next;
-    });
-  }
-
-  function startAllDayBarDrag(ev: WeekViewEvent, e: PointerEvent<HTMLButtonElement>, spanStartCol: number, spanEndCol: number) {
+  function startSpanDrag(ev: WeekViewEvent, e: ReactPointerEvent<HTMLButtonElement>, startCol: number, endCol: number) {
     e.preventDefault();
     e.stopPropagation();
-    const grid     = allDayRef.current;
+    const grid = spansRef.current;
     if (!grid) return;
-    const rect     = grid.getBoundingClientRect();
-    const colWidth = rect.width / 7;
-    const relX     = e.clientX - rect.left;
-    const clickCol = clamp(Math.floor(relX / colWidth), 0, 6);
-    allDayDragRef.current = {
-      ev, spanStartCol, spanEndCol,
-      spanWidth:    spanEndCol - spanStartCol,
-      clickOffset:  clickCol - spanStartCol,
-      colWidth,
-    };
+    const rect   = grid.getBoundingClientRect();
+    const colW   = rect.width / 7;
+    const clickCol = Math.max(0, Math.min(6, Math.floor((e.clientX - rect.left) / colW)));
+    spanDragRef.current = { ev, startCol, endCol, width: endCol - startCol, clickOffset: clickCol - startCol, colW };
     grid.setPointerCapture(e.pointerId);
-    updateAllDayGhost({ ev, startCol: spanStartCol, endCol: spanEndCol });
+    setSpanGhost({ ev, startCol, endCol });
   }
 
-  function handleAllDayPointerMove(e: PointerEvent<HTMLDivElement>) {
-    const d = allDayDragRef.current;
-    if (!d) return;
-    if (!allDayRef.current) return;
-    const rect       = allDayRef.current.getBoundingClientRect();
-    const relX       = e.clientX - rect.left;
-    const currentCol = clamp(Math.floor(relX / d.colWidth), 0, 6);
-    const newStart   = clamp(currentCol - d.clickOffset, 0, 7 - d.spanWidth - 1);
-    const newEnd     = newStart + d.spanWidth;
-    updateAllDayGhost({ ev: d.ev, startCol: newStart, endCol: newEnd });
+  function handleSpanPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const d = spanDragRef.current;
+    if (!d || !spansRef.current) return;
+    const rect   = spansRef.current.getBoundingClientRect();
+    const col    = Math.max(0, Math.min(6, Math.floor((e.clientX - rect.left) / d.colW)));
+    const start  = Math.max(0, Math.min(7 - d.width - 1, col - d.clickOffset));
+    setSpanGhost({ ev: d.ev, startCol: start, endCol: start + d.width });
   }
 
-  function handleAllDayPointerUp() {
-    const d     = allDayDragRef.current;
-    const ghost = allDayGhostRef.current;
-    allDayDragRef.current  = null;
-    allDayGhostRef.current = null;
-    setAllDayGhost(null);
-    if (!d || !ghost) return;
-    const colDiff = ghost.startCol - d.spanStartCol;
-    if (colDiff === 0) return;
-    const newStart = addDays(d.ev.start, colDiff);
-    const newEnd   = addDays(d.ev.end,   colDiff);
-    onEventMove?.(d.ev, newStart, newEnd);
+  function handleSpanPointerUp() {
+    const d = spanDragRef.current;
+    const g = spanGhost;
+    spanDragRef.current = null;
+    setSpanGhost(null);
+    if (!d || !g) return;
+    const diff = g.startCol - d.startCol;
+    if (diff === 0) return;
+    onEventMove?.(d.ev, addDays(d.ev.start, diff), addDays(d.ev.end, diff));
   }
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-
-
-  function formatPillDate(date: Date) {
-    return format(date, 'M/d h:mma');
-  }
-
-  function pillResource(ev: WeekViewEvent) {
-    return ev.resource || 'Unassigned';
-  }
-
-  function renderTimedEvent(ev: WeekViewEvent) {
-    const isDimmed = drag.draggedId === ev.id;
+  function renderPill(ev: WeekViewEvent, onAfterClick?: () => void) {
     const color    = resolveColor(ev as never, ctx?.['colorRules']);
-    const onClick  = () => !wasDragRef.current && onEventClick?.(ev);
-    const pos = eventPosition(ev.start, ev.end);
-    if (!pos) return null;
-    const { top, height } = pos;
-    const numCols  = ev._numCols ?? 1;
-    const col      = ev._col     ?? 0;
-    const pctLeft  = (col / numCols) * 100;
-    const pctWidth = (1 / numCols) * 100;
-    const statusClass = ev.status === 'cancelled' ? styles['cancelled']
-      : ev.status === 'tentative' ? styles['tentative'] : '';
+    const onClick  = () => { onEventClick?.(ev); onAfterClick?.(); };
     const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
-    const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}${isConflicting ? ', conflicts with current draft' : ''}`;
-    const display = ((ev.meta ?? {}) as { _display?: { large?: boolean; bold?: boolean } })._display ?? {};
-    const isUltraCompact = height < 42;
-    const isCompact = height < 72;
+    const statusClass   = ev.status === 'cancelled' ? styles['cancelled']
+      : ev.status === 'tentative' ? styles['tentative'] : '';
+    const timeLabel = ev.allDay ? 'All day' : format(ev.start, 'h:mm a');
+    const ariaLabel = `${ev.title}, ${timeLabel}${ev.category ? `, ${ev.category}` : ''}`;
 
     const inner = ctx?.renderEvent
       ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
       : null;
 
     return (
-      <div key={ev.id} data-event="1"
-        className={[
-          styles['event'], statusClass,
-          isCompact && styles['eventCompact'],
-          isUltraCompact && styles['eventUltraCompact'],
-          isDimmed && styles['dragging'],
-          ctx?.['editMode'] && styles['editModeEvent'],
-        ].filter(Boolean).join(' ')}
+      <button key={ev.id}
+        className={[styles['pill'], statusClass].filter(Boolean).join(' ')}
         data-wc-event-id={ev.id}
-        data-wc-priority={ev.visualPriority ?? undefined}
         data-wc-conflicting={isConflicting ? 'true' : undefined}
-        style={{
-          top, height, '--ev-color': color,
-          left: `${pctLeft}%`, width: `${pctWidth}%`,
-          fontSize: display.large ? '12px' : undefined,
-        }}
-        role="button" tabIndex={0}
-        aria-label={ariaLabel}
-        onClick={onClick}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={e => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startMove(ev as never, e, gridRef.current, days, GUTTER_W); }}
+        data-wc-priority={ev.visualPriority ?? undefined}
+        style={{ '--ev-color': color }}
+        onClick={e => { e.stopPropagation(); onClick(); }}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
+        aria-label={ev.lifecycle ? `${ariaLabel}, lifecycle ${ev.lifecycle}` : ariaLabel}
       >
-        <div className={styles['resizeHandleTop']}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResizeTop(ev as never, e, gridRef.current, days, GUTTER_W); }}
-          aria-hidden="true" />
         {inner ?? (
           <>
-            <span className={styles['evTitle']} style={{ fontWeight: display.bold ? '700' : undefined }}>
-              <ApprovalDot event={ev as any} />
-              <EventStatusBadge lifecycle={(ev as { lifecycle?: unknown }).lifecycle as never} variant="compact" />
-              {ev.title}
-            </span>
-            {/* Pill height + grid position already encode start/end visually,
-             *  so the duplicated time labels (timeRange, Start, End) only
-             *  starved the title of legible space. Keep the resource line
-             *  (non-time, useful when row identity is grid-conveyed but
-             *  pills overlap or wrap). aria-label still includes everything
-             *  for screen readers. */}
-            {isCompact ? null : ev.resource && (
-              <span className={styles['evMeta']}>{ev.resource}</span>
-            )}
+            <ApprovalDot event={ev as never} />
+            <EventStatusBadge lifecycle={(ev as { lifecycle?: unknown }).lifecycle as never} variant="compact" />
+            {!ev.allDay && <span className={styles['pillTime']}>{format(ev.start, 'h:mm a')}</span>}
+            <span className={styles['pillTitle']}>{ev.title}</span>
+            {ev.resource && <span className={styles['pillResource']}>{ev.resource}</span>}
           </>
         )}
-        <div className={styles['resizeHandle']}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.['permissions']?.canDrag || !gridRef.current) return; e.stopPropagation(); drag.startResize(ev as never, e, gridRef.current, days, GUTTER_W); }}
-          aria-hidden="true" />
-      </div>
-    );
-  }
-
-  function renderGhost(day: Date) {
-    const g = drag.ghost;
-    if (!g || !isSameDay(g.start, day)) return null;
-    const pos = eventPosition(g.start, g.end);
-    if (!pos) return null;
-    const { top, height } = pos;
-    let left, width;
-    if (g.ev) {
-      const numCols = g.ev._numCols ?? 1;
-      const col     = g.ev._col     ?? 0;
-      left  = `${(col / numCols) * 100}%`;
-      width = `${(1 / numCols) * 100}%`;
-    } else {
-      left  = '2px';
-      width = 'calc(100% - 4px)';
-    }
-    const color = g.ev ? resolveColor(g.ev as never, ctx?.['colorRules']) : undefined;
-    return (
-      <div key="ghost" className={[styles['ghost'], !g.ev && styles['ghostCreate']].filter(Boolean).join(' ')}
-        aria-hidden="true"
-        style={{ top, height, '--ev-color': color, left, width }}
-      />
+      </button>
     );
   }
 
@@ -419,15 +197,16 @@ export default function WeekView({
       className={styles['week']}
       role="grid"
       aria-label={`Week of ${format(weekStart, 'MMMM d')} – ${format(weekEnd, 'MMMM d, yyyy')}`}
+      ref={gridRef}
     >
-      {/* ── Header row ── */}
+      {/* ── Header ── */}
       <div className={styles['headerRow']} role="row" aria-rowindex={1}>
-        <div className={styles['timeGutter']} role="presentation" />
         {days.map(day => (
           <div key={format(day, 'yyyy-MM-dd')}
             role="columnheader"
             aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
-            className={[styles['dayHead'], isToday(day) && styles['todayHead']].filter(Boolean).join(' ')}>
+            className={[styles['dayHead'], isToday(day) && styles['todayHead']].filter(Boolean).join(' ')}
+          >
             <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
             <span className={[styles['dayNum'], isToday(day) && styles['todayNum']].filter(Boolean).join(' ')} aria-hidden="true">
               {format(day, 'd')}
@@ -436,209 +215,137 @@ export default function WeekView({
         ))}
       </div>
 
-      {/* ── All-day / multi-day row ── */}
-      {allDayLanes > 0 && (
-        <div className={styles['allDayRow']} role="row" aria-rowindex={2}>
-          <div className={styles['timeGutter']} role="rowheader" aria-label="All-day events">
-            <span aria-hidden="true">all&#8209;day</span>
-          </div>
-          <div
-            className={styles['allDayGrid']}
-            style={{ height: allDayHeight }}
-            ref={allDayRef}
-            role="gridcell"
-            aria-label="All-day events area"
-            onPointerMove={handleAllDayPointerMove}
-            onPointerUp={handleAllDayPointerUp}
-            onPointerCancel={() => { allDayDragRef.current = null; setAllDayGhost(null); }}
-          >
-            {allDaySpans
-              .filter(s => s.lane < MAX_SPANS)
-              .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                const color = resolveColor(ev as never, ctx?.['colorRules']);
-                const pctLeft  = (startCol / 7) * 100;
-                const pctWidth = ((endCol - startCol + 1) / 7) * 100;
-                const statusClass = ev.status === 'cancelled' ? styles['cancelled']
-                  : ev.status === 'tentative' ? styles['tentative'] : '';
-                const isDimmedBar = allDayGhost?.ev?.id === ev.id;
-                const startLabel = formatPillDate(ev.start);
-                const endLabel = formatPillDate(ev.end);
-                const resourceLabel = pillResource(ev);
-                const ariaLabel = `${ev.title}, start ${startLabel}, end ${endLabel}, resource ${resourceLabel}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
-                return (
-                  <button key={ev.id}
-                    className={[
-                      styles['allDaySpan'],
-                      continuesBefore && styles['continuesBefore'],
-                      continuesAfter  && styles['continuesAfter'],
-                      statusClass,
-                      isDimmedBar && styles['dragging'],
-                    ].filter(Boolean).join(' ')}
-                    style={{
-                      '--ev-color': color,
-                      left:   `${pctLeft}%`,
-                      width:  `${pctWidth}%`,
-                      top:    lane * (SPAN_H + SPAN_GAP),
-                      height: SPAN_H,
-                      cursor: 'grab',
-                    }}
-                    aria-label={ariaLabel}
-                    onClick={() => !isDimmedBar && onEventClick?.(ev)}
-                    onPointerDown={e => startAllDayBarDrag(ev, e, startCol, endCol)}
-                  >
-                    <span className={styles['allDayTitleLine']}>{ev.title}</span>
-                    {ev.resource && (
-                      <span className={styles['allDayMetaLine']}>
-                        <span>{resourceLabel}</span>
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+      {/* ── Body ── */}
+      <div className={styles['body']}>
+        <div className={styles['daysArea']}>
+          {/* Day cells */}
+          <div className={styles['weekCells']} role="row" aria-rowindex={2}>
+            {days.map((day, di) => {
+              const dayKey     = format(day, 'yyyy-MM-dd');
+              const daySingles = singleByDay.get(dayKey) || [];
+              const isFocused  = isSameDay(day, focusedDay);
 
-            {/* All-day drag ghost */}
-            {allDayGhost && (() => {
-              const g = allDayGhost;
-              const color = resolveColor(g.ev as never, ctx?.['colorRules']);
+              const spansOnDay    = spans.filter(s => s.startCol <= di && s.endCol >= di);
+              const hiddenSpans   = spansOnDay.filter(s => s.lane >= MAX_SPANS_VISIBLE).length;
+              const overflow      = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
+              const isOverflowOpen = overflowDay && isSameDay(overflowDay, day);
+              const totalEvents   = daySingles.length + spansOnDay.length;
+              const cellLabel     = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
+
               return (
-                <div key="allday-ghost" className={styles['allDayGhost']} aria-hidden="true"
+                <div
+                  key={dayKey}
+                  role="gridcell"
+                  tabIndex={isFocused ? 0 : -1}
+                  data-date={dayKey}
+                  aria-label={cellLabel}
+                  aria-selected={isFocused}
+                  className={[styles['cell'], isToday(day) && styles['todayCell']].filter(Boolean).join(' ')}
+                  onClick={() => {
+                    setFocusedDay(startOfDay(day));
+                    if (!onDateSelect) return;
+                    const s = new Date(day); s.setHours(9, 0, 0, 0);
+                    const e = new Date(day); e.setHours(10, 0, 0, 0);
+                    onDateSelect(s, e);
+                  }}
+                  onKeyDown={e => handleCellKeyDown(e, day)}
+                >
+                  <div className={styles['events']} style={{ paddingTop: spansHeight }}>
+                    {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev))}
+                    {overflow > 0 && (
+                      <button
+                        className={styles['moreLink']}
+                        aria-label={`${overflow} more event${overflow === 1 ? '' : 's'} on ${format(day, 'MMMM d')}`}
+                        aria-expanded={!!isOverflowOpen}
+                        onClick={e => { e.stopPropagation(); setOverflowDay(isOverflowOpen ? null : day); }}
+                      >
+                        +{overflow} more
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Per-day overflow popover */}
+                  {isOverflowOpen && (
+                    <div className={styles['overflowPopover']} onClick={e => e.stopPropagation()}>
+                      <div className={styles['overflowHead']}>
+                        <span>{format(day, 'MMMM d')}</span>
+                        <button onClick={() => setOverflowDay(null)} aria-label="Close">×</button>
+                      </div>
+                      {daySingles.slice(MAX_PILLS).map(ev => renderPill(ev, () => setOverflowDay(null)))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Spanning event bars */}
+          {laneCount > 0 && (
+            <div
+              className={styles['spansLayer']}
+              style={{ top: 0, height: spansHeight }}
+              ref={spansRef}
+              onPointerMove={handleSpanPointerMove}
+              onPointerUp={handleSpanPointerUp}
+              onPointerCancel={() => { spanDragRef.current = null; setSpanGhost(null); }}
+            >
+              {spans
+                .filter(s => s.lane < MAX_SPANS_VISIBLE)
+                .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
+                  const color = resolveColor(ev as never, ctx?.['colorRules']);
+                  const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+                  const statusClass = ev.status === 'cancelled' ? styles['cancelled']
+                    : ev.status === 'tentative' ? styles['tentative'] : '';
+                  const isDimmed = spanGhost?.ev?.id === ev.id;
+                  return (
+                    <button
+                      key={ev.id}
+                      className={[
+                        styles['spanBar'],
+                        continuesBefore && styles['continuesBefore'],
+                        continuesAfter  && styles['continuesAfter'],
+                        statusClass,
+                        isDimmed && styles['dragging'],
+                      ].filter(Boolean).join(' ')}
+                      data-wc-conflicting={isConflicting ? 'true' : undefined}
+                      style={{
+                        '--ev-color': color,
+                        left:   `${(startCol / 7) * 100}%`,
+                        width:  `${((endCol - startCol + 1) / 7) * 100}%`,
+                        top:    lane * (SPAN_H + SPAN_GAP),
+                        height: SPAN_H,
+                      }}
+                      onClick={e => { e.stopPropagation(); if (!isDimmed) onEventClick?.(ev); }}
+                      onPointerDown={e => startSpanDrag(ev, e, startCol, endCol)}
+                      aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
+                    >
+                      {!continuesBefore && (
+                        <>
+                          <EventStatusBadge lifecycle={(ev as { lifecycle?: unknown }).lifecycle as never} variant="compact" />
+                          {ev.title}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+
+              {/* Drag ghost */}
+              {spanGhost && (
+                <div
+                  className={[styles['spanBar'], styles['spanGhost']].join(' ')}
+                  aria-hidden="true"
                   style={{
-                    '--ev-color': color,
-                    left:   `${(g.startCol / 7) * 100}%`,
-                    width:  `${((g.endCol - g.startCol + 1) / 7) * 100}%`,
+                    '--ev-color': resolveColor(spanGhost.ev as never, ctx?.['colorRules']),
+                    left:   `${(spanGhost.startCol / 7) * 100}%`,
+                    width:  `${((spanGhost.endCol - spanGhost.startCol + 1) / 7) * 100}%`,
                     top:    0,
                     height: SPAN_H,
                   }}
                 />
-              );
-            })()}
-
-            {/* Overflow button + popover */}
-            {overflowCount > 0 && (
-              <div className={styles['allDayMoreWrapper']}>
-                <button
-                  className={styles['allDayMore']}
-                  aria-label={`${overflowCount} more all-day event${overflowCount === 1 ? '' : 's'}, ${allDayOverflowOpen ? 'expanded' : 'collapsed'}`}
-                  aria-expanded={allDayOverflowOpen}
-                  aria-controls="wc-allday-overflow"
-                  onClick={e => { e.stopPropagation(); setAllDayOverflowOpen(v => !v); }}
-                >
-                  +{overflowCount} more
-                </button>
-
-                {allDayOverflowOpen && (
-                  <div
-                    id="wc-allday-overflow"
-                    ref={overflowTrapRef}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Hidden all-day events"
-                    className={styles['allDayOverflowPopover']}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div className={styles['allDayOverflowHead']}>
-                      <span>All-day events</span>
-                      <button
-                        className={styles['allDayOverflowClose']}
-                        onClick={() => setAllDayOverflowOpen(false)}
-                        aria-label="Close"
-                      >×</button>
-                    </div>
-                    {allDaySpans
-                      .filter(s => s.lane >= MAX_SPANS)
-                      .map(({ ev }) => {
-                        const color = resolveColor(ev as never, ctx?.['colorRules']);
-                        return (
-                          <button
-                            key={ev.id}
-                            className={styles['allDayOverflowItem']}
-                            style={{ '--ev-color': color }}
-                            aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}`}
-                            onClick={() => { onEventClick?.(ev); setAllDayOverflowOpen(false); }}
-                          >
-                            {ev.title}
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Time grid ── */}
-      <div
-        className={styles['grid']}
-        ref={gridRef}
-        onPointerDown={handleGridPointerDown}
-        onPointerMove={handleGridPointerMove}
-        onPointerUp={handleGridPointerUp}
-        onPointerCancel={drag.cancel}
-        onClick={handleGridClick}
-      >
-        <div className={styles['timeCol']} role="presentation">
-          {hours.map(h => (
-            <div key={h} className={styles['hourLabel']} style={{ height: pxPerHour }} aria-hidden="true">
-              {h === dayStart ? '' : format(new Date().setHours(h, 0, 0, 0), 'h a')}
-            </div>
-          ))}
-        </div>
-
-        {days.map((day, di) => {
-          const key    = format(day, 'yyyy-MM-dd');
-          const dayEvs = timedByDay.get(key) || [];
-          return (
-            <div key={key}
-              className={[styles['dayCol'], isToday(day) && styles['todayCol']].filter(Boolean).join(' ')}
-              style={{ height: totalHours * pxPerHour }}
-            >
-              {/* Background hour lines */}
-              {hours.map(h => (
-                <div key={h}
-                  className={[
-                    styles['hourLine'],
-                    bizHours && !isBizHour(h, day) && styles['offHour'],
-                  ].filter(Boolean).join(' ')}
-                  style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
-                />
-              ))}
-
-              {/* Keyboard-interactive slot cells (transparent to mouse, focusable by keyboard) */}
-              {slotHours.map((h, hi) => {
-                const isFocused = focusedSlot.dayIdx === di && focusedSlot.hourIdx === hi;
-                const slotStart = new Date(day); slotStart.setHours(h, 0, 0, 0);
-                const slotEnd   = new Date(day); slotEnd.setHours(h + 1, 0, 0, 0);
-                return (
-                  <div
-                    key={`slot-${h}`}
-                    role="gridcell"
-                    tabIndex={isFocused ? 0 : -1}
-                    data-slot={`${di}-${hi}`}
-                    aria-label={`${format(day, 'EEEE, MMMM d')}, ${format(slotStart, 'h:mm a')}${isToday(day) ? ', today' : ''}`}
-                    aria-rowindex={hi + 3}
-                    aria-colindex={di + 1}
-                    className={styles['slotCell']}
-                    style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
-                    onKeyDown={e => handleSlotKeyDown(e, di, hi, slotStart, slotEnd)}
-                  />
-                );
-              })}
-
-              {/* Now line */}
-              {isToday(day) && showNowLine && (
-                <div className={styles['nowLine']} style={{ top: nowTop }}>
-                  <div className={styles['nowDot']} />
-                </div>
               )}
-
-              {/* Timed events (above slot cells) */}
-              {dayEvs.map(ev => renderTimedEvent(ev))}
-              {renderGhost(day)}
             </div>
-          );
-        })}
+          )}
+        </div>
       </div>
     </div>
   );

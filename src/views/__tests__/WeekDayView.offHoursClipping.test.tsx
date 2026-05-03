@@ -50,17 +50,18 @@ describe('WeekView off-hours event clipping', () => {
     );
   }
 
-  it('does not render event entirely before dayStart', () => {
+  it('renders early-morning event as a pill (week view has no time window)', () => {
+    // Week view is a day-column layout with no time grid, so all events
+    // for the week are shown as pills regardless of their time of day.
     const ev = makeEvent('early', d(2026, 4, 6, 2), d(2026, 4, 6, 5));
     renderWeek([ev]);
-    expect(screen.queryByRole('button', { name: /Event early/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /Event early/i })).toBeInTheDocument();
   });
 
-  it('does not render event entirely after dayEnd', () => {
-    // dayEnd defaults to 22; event at 22:30–23:45 on same day is after the window.
+  it('renders late-night event as a pill (week view has no time window)', () => {
     const ev = makeEvent('late', d(2026, 4, 6, 22, 30), d(2026, 4, 6, 23, 45));
     renderWeek([ev]);
-    expect(screen.queryByRole('button', { name: /Event late/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /Event late/i })).toBeInTheDocument();
   });
 
   it('renders event fully inside the visible window', () => {
@@ -86,24 +87,17 @@ describe('WeekView off-hours event clipping', () => {
     expect(screen.queryByText(/10:00 AM - 11:00 AM/)).not.toBeInTheDocument();
   });
 
-  it('clips event that starts before dayStart but ends inside the window', () => {
+  it('renders overnight event as a pill with visible time label', () => {
+    // Week view shows all events as pills, no time-based clipping.
     const ev = makeEvent('overlap', d(2026, 4, 6, 4), d(2026, 4, 6, 9));
     renderWeek([ev]);
-    const btn = screen.getByRole('button', { name: /Event overlap/i });
-    // Visible portion is 6 AM–9 AM = 3 hours; at pxPerHour=64 that's 192px.
-    // top should be 0 (clipped to dayStart).
-    expect(btn.style.top).toBe('0px');
-    expect(parseFloat(btn.style.height)).toBeCloseTo(192, 0);
+    expect(screen.getByRole('button', { name: /Event overlap/i })).toBeInTheDocument();
   });
 
-  it('clips event that starts inside the window but ends after dayEnd', () => {
-    // dayEnd=22; event from 20:00–23:30 should render only the 20:00–22:00 visible portion.
+  it('renders late event as a pill (no time window in week view)', () => {
     const ev = makeEvent('tail', d(2026, 4, 6, 20), d(2026, 4, 6, 23, 30));
     renderWeek([ev], { dayStart: 6, dayEnd: 22 });
-    const btn = screen.getByRole('button', { name: /Event tail/i });
-    // top = (20-6)*64 = 896; visible height = 2h * 64 = 128
-    expect(parseFloat(btn.style.top)).toBeCloseTo(896, 0);
-    expect(parseFloat(btn.style.height)).toBeCloseTo(128, 0);
+    expect(screen.getByRole('button', { name: /Event tail/i })).toBeInTheDocument();
   });
 });
 

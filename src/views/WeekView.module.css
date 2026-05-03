@@ -1,3 +1,4 @@
+/* ── Shell ── */
 .week {
   display: flex;
   flex-direction: column;
@@ -5,22 +6,13 @@
   overflow: hidden;
 }
 
-/* ── Header ── */
+/* ── Header row ── */
 .headerRow {
   display: grid;
-  grid-template-columns: 56px repeat(7, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   background: var(--wc-surface);
   border-bottom: 1px solid var(--wc-border);
   flex-shrink: 0;
-}
-
-.timeGutter {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px * var(--wc-font-scale, 1));
-  color: var(--wc-text-faint);
-  border-right: 1px solid var(--wc-border);
 }
 
 .dayHead {
@@ -32,6 +24,8 @@
   gap: 4px;
 }
 .dayHead:last-child { border-right: none; }
+
+.todayHead { background: color-mix(in srgb, var(--wc-accent) 5%, transparent); }
 
 .dayAbbr {
   font-size: calc(11px * var(--wc-font-scale, 1));
@@ -57,130 +51,206 @@
   color: #fff;
 }
 
-/* ── All-day / multi-day row ── */
-.allDayRow {
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  border-bottom: 1px solid var(--wc-border);
-  flex-shrink: 0;
+/* ── Body ── */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
-.allDayGrid {
+.daysArea {
   position: relative;
-  /* overflow intentionally visible so the overflow popover can appear above the grid */
+  min-height: 100%;
 }
 
-.allDaySpan {
+.weekCells {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  min-height: 100%;
+}
+
+.cell {
+  border-right: 1px solid var(--wc-border);
+  min-height: 240px;
+  cursor: pointer;
+  position: relative;
+  box-sizing: border-box;
+}
+.cell:last-child { border-right: none; }
+.cell:focus {
+  outline: 2px solid var(--wc-accent, #0066cc);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.todayCell {
+  background: color-mix(in srgb, var(--wc-accent) 4%, transparent);
+}
+
+/* Events list inside each day cell */
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 6px 8px;
+}
+
+/* ── Spanning bars layer ── */
+.spansLayer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.spanBar {
   position: absolute;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   padding: 0 8px;
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
-  font-size: 11px;
+  font-size: calc(12px * var(--wc-font-scale, 1));
   font-weight: 500;
   border: none;
   cursor: pointer;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   box-sizing: border-box;
   transition: filter 0.1s;
   box-shadow: var(--wc-event-glow, none);
-  z-index: 2;
+  pointer-events: auto;
   touch-action: none;
 }
-.allDaySpan:hover { filter: brightness(1.1); }
-.allDaySpan.continuesBefore { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 3px; left: 0 !important; }
-.allDaySpan.continuesAfter  { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 3px; }
-.allDaySpan.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
-.allDaySpan.cancelled { opacity: 0.45; text-decoration: line-through; }
+.spanBar:hover { filter: brightness(1.1); }
+.spanBar:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: -2px; }
 
+.continuesBefore { border-top-left-radius: 0; border-bottom-left-radius: 0; left: 0 !important; }
+.continuesAfter  { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 
-.allDayTitleLine {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
+.spanBar.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
+.spanBar.cancelled { opacity: 0.45; text-decoration: line-through; }
+.spanBar.dragging  { opacity: 0.35; pointer-events: none; }
+
+.spanGhost {
+  opacity: 0.45;
+  pointer-events: none;
+  border: 2px dashed rgba(255,255,255,0.6);
 }
 
-.allDayMetaLine {
+.spanBar[data-wc-conflicting="true"],
+.pill[data-wc-conflicting="true"] {
+  outline: 2px solid var(--wc-danger, #e53935);
+  outline-offset: -1px;
+}
+
+/* ── Event pills (single-day timed events) ── */
+.pill {
   display: flex;
-  gap: 6px;
-  font-size: 10px;
-  line-height: 1.2;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: var(--wc-radius-sm);
+  background: var(--ev-color, var(--wc-accent));
+  color: #fff;
+  font-size: calc(12px * var(--wc-font-scale, 1));
+  font-weight: 500;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ev-color, var(--wc-accent)) 65%, #000);
+  cursor: pointer;
   white-space: nowrap;
-  overflow: hidden;
-  opacity: 0.85;
-}
-
-.allDayMetaLine > span {
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity 0.1s;
+  box-shadow: var(--wc-event-glow, none);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.pill:hover { opacity: 0.87; }
+.pill:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: -2px; }
+.pill.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
+.pill.cancelled { opacity: 0.5; text-decoration: line-through; }
+
+.pillTime {
+  font-size: calc(11px * var(--wc-font-scale, 1));
+  opacity: 0.82;
+  flex-shrink: 0;
+  font-weight: 400;
 }
 
-/* Overflow button wrapper — sits at bottom-right of the all-day grid */
-.allDayMoreWrapper {
-  position: absolute;
-  bottom: 2px;
-  right: 4px;
-  z-index: 20;
-}
-
-.allDayMore {
-  font-size: 10px;
-  color: var(--wc-text-muted);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  cursor: pointer;
-  padding: 1px 5px;
+.pillTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-}
-.allDayMore:hover {
-  background: var(--wc-surface);
-  border-color: var(--wc-border);
-  color: var(--wc-text);
-}
-.allDayMore:focus {
-  outline: 2px solid var(--wc-accent, #0066cc);
-  outline-offset: 2px;
+  font-weight: 600;
 }
 
-/* Overflow popover — opens upward from the button */
-.allDayOverflowPopover {
+.pillResource {
+  font-size: calc(10px * var(--wc-font-scale, 1));
+  opacity: 0.8;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 30%;
+}
+
+/* ── "+N more" button ── */
+.moreLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px;
+  background: none;
+  color: var(--wc-text-muted);
+  font-size: calc(11px * var(--wc-font-scale, 1));
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  border-radius: 3px;
+}
+.moreLink:hover { color: var(--wc-accent); background: color-mix(in srgb, var(--wc-accent) 8%, transparent); }
+.moreLink:focus { outline: 2px solid var(--wc-accent, #0066cc); outline-offset: 1px; }
+
+/* ── Per-day overflow popover ── */
+.overflowPopover {
   position: absolute;
-  bottom: calc(100% + 4px);
-  right: 0;
+  top: calc(100% + 4px);
+  left: 0;
   z-index: 100;
-  min-width: 188px;
-  max-height: 220px;
+  min-width: 200px;
+  max-height: 280px;
   overflow-y: auto;
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
   border-radius: var(--wc-radius, 8px);
   box-shadow: var(--wc-shadow-sm);
   padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.allDayOverflowHead {
+.overflowHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   border-bottom: 1px solid var(--wc-border);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--wc-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-
-.allDayOverflowClose {
+.overflowHead button {
   background: none;
   border: none;
   cursor: pointer;
@@ -190,384 +260,12 @@
   padding: 0 2px;
   border-radius: 3px;
 }
-.allDayOverflowClose:hover { color: var(--wc-text); }
-.allDayOverflowClose:focus { outline: 2px solid var(--wc-accent, #0066cc); }
+.overflowHead button:hover { color: var(--wc-text); }
 
-.allDayOverflowItem {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 5px 8px;
-  margin-bottom: 3px;
-  border-radius: var(--wc-radius-sm, 4px);
-  background: var(--ev-color, var(--wc-accent));
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.allDayOverflowItem:last-child { margin-bottom: 0; }
-.allDayOverflowItem:hover { filter: brightness(1.1); }
-.allDayOverflowItem:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: -2px; }
-
-/* ── Scrollable time grid ── */
-.grid {
-  display: grid;
-  grid-template-columns: 56px repeat(7, 1fr);
-  overflow-y: auto;
-  flex: 1;
-}
-
-.timeCol {
-  border-right: 1px solid var(--wc-border);
-}
-
-.hourLabel {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding-right: 8px;
-  padding-top: 4px;
-  font-size: calc(10px * var(--wc-font-scale, 1));
-  color: var(--wc-text-faint);
-  box-sizing: border-box;
-  border-top: 1px solid transparent;
-}
-
-.dayCol {
-  position: relative;
-  border-right: 1px solid var(--wc-border);
-  box-sizing: border-box;
-}
-.dayCol:last-child { border-right: none; }
-
-.todayCol {
-  background: color-mix(in srgb, var(--wc-accent) 4%, transparent);
-}
-
-.hourLine {
-  position: absolute;
-  left: 0; right: 0;
-  border-top: 1px solid var(--wc-border);
-  box-sizing: border-box;
-  pointer-events: none;
-}
-
-/* Keyboard-interactive time slot cells (transparent to pointer, focusable by keyboard) */
-.slotCell {
-  position: absolute;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-  z-index: 2;
-}
-.slotCell:focus {
-  outline: 2px solid var(--wc-accent, #0066cc);
-  outline-offset: -2px;
-  z-index: 3;
-}
-
-/* Business-hours off-peak shading */
-.offHour {
-  background: color-mix(in srgb, var(--wc-text) 4%, transparent);
-}
-
-.nowLine {
-  position: absolute;
-  left: 0; right: 0;
-  height: 2px;
-  background: var(--wc-danger);
-  z-index: 10;
-  pointer-events: none;
-}
-.nowDot {
-  position: absolute;
-  left: -4px; top: -4px;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: var(--wc-danger);
-}
-
-/* ── Timed events (with overlap columns) ── */
-.event {
-  position: absolute;
-  /* left and width set inline as percentages for overlap layout */
-  min-width: 0;
-  border-radius: var(--wc-radius-sm);
-  background: var(--ev-color, var(--wc-accent));
-  color: #fff;
-  padding: calc(3px * var(--wc-density, 1)) calc(6px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1)); /* extra bottom for resize handle */
-  border: 2px solid var(--wc-bg); /* gap between side-by-side events */
-  cursor: grab;
-  text-align: left;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  z-index: 5;
-  transition: filter 0.1s;
-  box-shadow: var(--wc-event-glow, none);
-  box-sizing: border-box;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.event:hover { filter: brightness(1.1); }
-.event:active { cursor: grabbing; }
-/* In edit mode: dashed outline signals the event is editable */
-.editModeEvent { outline: 1.5px dashed rgba(255,255,255,0.55); outline-offset: -3px; cursor: cell; }
-.event.dragging { opacity: 0.35; pointer-events: none; }
-/* Touch: claim the pointer for move/resize so the browser doesn't steal it
-   for vertical scroll.  The grid around the event stays pannable. */
-.event { touch-action: none; }
-.event.tentative {
-  opacity: 0.65;
-  background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px);
-}
-.event.cancelled { opacity: 0.45; }
-.event.cancelled .evTitle { text-decoration: line-through; }
-.event[data-wc-conflicting="true"] {
-  outline: 2px solid var(--wc-danger, #ef4444);
-  outline-offset: 1px;
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
-}
-
-.evTitle {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.35;
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.evTimeRange {
-  font-size: 11px;
-  opacity: 0.95;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.evTime { font-size: 11px; opacity: 0.9; line-height: 1.2; }
-.evMeta { font-size: 11px; opacity: 0.9; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.eventCompact {
-  padding-top: calc(2px * var(--wc-density, 1));
-  padding-bottom: calc(8px * var(--wc-density, 1));
-  gap: 0;
-}
-
-.eventCompact .evTitle {
-  font-size: 12px;
-  -webkit-line-clamp: 2;
-}
-
-.eventUltraCompact {
-  padding-top: calc(1px * var(--wc-density, 1));
-}
-
-/* ── Resize handles ── */
-.resizeHandle {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 5px;
-  cursor: ns-resize;
-  border-radius: 0 0 var(--wc-radius-sm) var(--wc-radius-sm);
-  z-index: 2;
-  touch-action: none;
-}
-.resizeHandle::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px; height: 2px;
-  border-radius: 1px;
-  background: rgba(255,255,255,0.5);
-}
-
-.resizeHandleTop {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 5px;
-  cursor: ns-resize;
-  border-radius: var(--wc-radius-sm) var(--wc-radius-sm) 0 0;
-  z-index: 2;
-  touch-action: none;
-}
-.resizeHandleTop::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px; height: 2px;
-  border-radius: 1px;
-  background: rgba(255,255,255,0.5);
-}
-
-/* ── Drag ghost (move/resize preview) ── */
-.ghost {
-  position: absolute;
-  border-radius: var(--wc-radius-sm);
-  background: var(--ev-color, var(--wc-accent));
-  opacity: 0.55;
-  pointer-events: none;
-  z-index: 20;
-  box-sizing: border-box;
-  border: 2px dashed rgba(255,255,255,0.6);
-}
-
-/* ── Create ghost (drag-to-create preview) ── */
-.ghostCreate {
-  background: var(--wc-accent);
-  border: 2px dashed rgba(255,255,255,0.7);
-}
-
-/* ── Visual-only drag conflict wash ────────────────────────────── */
-/*
-  The real conflict engine still runs on drop. These selectors only give the
-  user early feedback while an existing event ghost is hovering in a day
-  column. We intentionally avoid create ghosts so empty-slot drafting does not
-  make the calendar look blocked before an event exists.
-*/
-.dayCol:has(.ghost:not(.ghostCreate))::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      color-mix(in srgb, var(--wc-danger, #ef4444) 7%, transparent),
-      color-mix(in srgb, var(--wc-danger, #ef4444) 7%, transparent) 8px,
-      transparent 8px,
-      transparent 16px
-    );
-  outline: 1px dashed color-mix(in srgb, var(--wc-danger, #ef4444) 34%, transparent);
-  outline-offset: -2px;
-}
-
-.dayCol:has(.ghost:not(.ghostCreate))::after {
-  content: 'Conflict check on drop';
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 30;
-  max-width: calc(100% - 16px);
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--wc-danger, #ef4444) 88%, #111827);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
-}
-
-.dayCol:has(.ghost:not(.ghostCreate)) .event:not(.dragging) {
-  outline: 2px solid color-mix(in srgb, var(--wc-danger, #ef4444) 70%, #fff);
-  outline-offset: 1px;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--wc-danger, #ef4444) 28%, transparent),
-    0 8px 18px rgba(239, 68, 68, 0.18);
-}
-
-.dayCol:has(.ghost:not(.ghostCreate)) .event:not(.dragging)::after {
-  content: 'possible conflict';
-  position: absolute;
-  right: 5px;
-  bottom: 4px;
-  z-index: 3;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.42);
-  color: #fff;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-/* ── All-day drag ghost ── */
-.allDayGhost {
-  position: absolute;
-  height: 22px;
-  border-radius: var(--wc-radius-sm);
-  background: var(--ev-color, var(--wc-accent));
-  opacity: 0.55;
-  pointer-events: none;
-  z-index: 20;
-  box-sizing: border-box;
-  border: 2px dashed rgba(255,255,255,0.7);
-}
-
-.allDaySpan.dragging { opacity: 0.3; }
-
-/* ─── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .headerRow, .grid { grid-template-columns: 44px repeat(7, minmax(80px, 1fr)); }
-  .allDayRow { grid-template-columns: 44px 1fr; }
-  .dayAbbr { font-size: 10px; }
-  .allDaySpan {
-    align-items: center;
-    padding: 0 7px;
-  }
-  .allDayMetaLine { display: none; }
-  .allDayTitleLine {
-    font-size: 11px;
-    font-weight: 500;
-  }
-  .evMeta { display: none; }
-}
-
-@media (max-width: 480px) {
-  .week { overflow-x: auto; overflow-y: auto; }
-  .headerRow { grid-template-columns: 40px repeat(7, 88px); min-width: max-content; }
-  .allDayRow { grid-template-columns: 40px 1fr; }
-  .grid { grid-template-columns: 40px repeat(7, 88px); min-width: max-content; overflow-y: visible; }
-}
-
-/* Touch devices: expand the resize handle visual + hit area.
- * 5px is unreachable with a fingertip; bump to 14px visual with a further 8px
- * upward hit area via pseudo-element so the event body still gets the rest. */
-@media (pointer: coarse) {
-  .resizeHandle {
-    height: 14px;
-  }
-  .resizeHandle::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 0;
-    right: 0;
-    height: 8px;
-  }
-  .resizeHandleTop {
-    height: 14px;
-  }
-  .resizeHandleTop::before {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 0;
-    right: 0;
-    height: 8px;
-  }
-  .allDaySpan {
-    min-height: 28px;
-    font-size: 12px;
-  }
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .pillTime    { display: none; }
+  .pillResource { display: none; }
+  .pill        { font-size: calc(11px * var(--wc-font-scale, 1)); min-height: 26px; }
+  .cell        { min-height: 120px; }
 }
