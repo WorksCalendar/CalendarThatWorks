@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.1] - 2026-05-02
+
+MapView gains a controls?: boolean prop (default true) — set to false for compact contexts
+MapView.module.css no longer enforces min-height: 320px on .mapWrap — the parent container must provide height
+
 ## [0.6.0] — 2026-05-01
 
 The "Embedder slots + walkthrough" release. Documents the public-API
