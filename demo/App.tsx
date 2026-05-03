@@ -844,6 +844,30 @@ function App() {
     log(`Saved: ${ev.title}`);
   }, []);
 
+  // When the dispatcher clicks "Assign" on an available aircraft row, create
+  // a mission-assignment event that books the aircraft for the mission window.
+  const handleDispatchAssign = useCallback((assetId, missionId, _asOf) => {
+    const m = missionId === mission.id ? mission : null;
+    if (!m) {
+      log(`Dispatch: unknown mission ${missionId}`);
+      return;
+    }
+    const asset = EMS_ASSETS.find(a => a.id === assetId);
+    const assetName = asset?.name ?? assetId;
+    const newEvent = {
+      id: `dispatch-${assetId}-${Date.now()}`,
+      title: `${m.title} — ${assetName}`,
+      start: m.start,
+      end:   m.end,
+      category: 'mission-assignment',
+      resource: assetId,
+      color: MISSION_COLOR,
+      visualPriority: 'high',
+    };
+    handleEventSave(newEvent);
+    log(`Dispatched ${assetName} to ${m.title}`);
+  }, [handleEventSave]);
+
   const handleEventDelete = useCallback((id) => {
     setEvents(prev => prev.filter(e => e.id !== id));
     log(`Deleted: ${id}`);
@@ -1078,6 +1102,7 @@ function App() {
       role={activeProfile.permissionRole}
       dispatchMissions={dispatchMissions}
       dispatchEvaluator={dispatchEvaluator}
+      onDispatchAssign={handleDispatchAssign}
       mapStyle="https://tiles.openfreemap.org/styles/liberty"
     />
   );

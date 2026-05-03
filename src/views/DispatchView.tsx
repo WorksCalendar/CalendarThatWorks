@@ -169,6 +169,13 @@ export type DispatchViewProps = {
    * Not invoked on initial mount — only on user-driven changes.
    */
   onAsOfChange?: ((asOf: Date) => void) | undefined;
+  /**
+   * Called when the user clicks "Assign" on an available asset row. Receives
+   * the asset id, the currently-selected mission id (or null when no mission
+   * is chosen in the picker), and the active as-of time. Hosts should create
+   * the corresponding booking event and call onEventSave.
+   */
+  onAssign?: ((assetId: string, missionId: string | null, asOf: Date) => void) | undefined;
 };
 
 type Status = 'available' | 'busy' | 'maintenance';
@@ -484,6 +491,7 @@ export default function DispatchView({
   missions,
   evaluateForMission,
   onAsOfChange,
+  onAssign,
 }: DispatchViewProps) {
   const labelLower = label.toLowerCase();
   const labelPluralLower = `${labelLower}s`;
@@ -724,6 +732,9 @@ export default function DispatchView({
                           row={row}
                           onView={onEventClick}
                           missionLabel={activeMission?.label}
+                          onAssign={onAssign
+                            ? () => onAssign(String(row.asset.id), forMissionId, asOf)
+                            : undefined}
                         />
                       </td>
                     </tr>
@@ -817,10 +828,12 @@ function ActionButton({
   row,
   onView,
   missionLabel,
+  onAssign,
 }: {
   row: Row;
   onView?: ((event: LooseEvent) => void) | undefined;
   missionLabel?: string | undefined;
+  onAssign?: (() => void) | undefined;
 }) {
   const blockingEvent = row.blockingEvent;
   if (row.status === 'maintenance') {
@@ -840,5 +853,14 @@ function ActionButton({
     return <span className={styles['actionMuted']}>Not eligible</span>;
   }
   const assignLabel = missionLabel ? `Assign to ${missionLabel}` : 'Assign';
-  return <button type="button" className={[styles['actionBtn'], styles['actionPrimary']].join(' ')}>{assignLabel}</button>;
+  return (
+    <button
+      type="button"
+      className={[styles['actionBtn'], styles['actionPrimary']].join(' ')}
+      onClick={onAssign}
+      disabled={!onAssign}
+    >
+      {assignLabel}
+    </button>
+  );
 }

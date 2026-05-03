@@ -115,13 +115,13 @@ export default function WeekView({
     }
   }, [onDateSelect]);
 
-  // ── Span bar drag (day-to-day only) ──────────────────────────────────────
+  // ── Span bar drag (multi-day events, day-to-day) ──────────────────────────
   type SpanDrag = { ev: WeekViewEvent; startCol: number; endCol: number; width: number; clickOffset: number; colW: number };
   const spanDragRef  = useRef<SpanDrag | null>(null);
   const [spanGhost, setSpanGhost] = useState<{ ev: WeekViewEvent; startCol: number; endCol: number } | null>(null);
   const spansRef     = useRef<HTMLDivElement | null>(null);
 
-  // ── Pill drag (single-day events, day-to-day only) ────────────────────────
+  // ── Pill drag (single-day events, day-to-day) ─────────────────────────────
   type PillDrag = { ev: WeekViewEvent; startCol: number; colW: number; moved: boolean };
   const pillDragRef    = useRef<PillDrag | null>(null);
   const [pillTargetCol, setPillTargetCol] = useState<number | null>(null);
@@ -129,7 +129,9 @@ export default function WeekView({
 
   function startPillDrag(ev: WeekViewEvent, e: ReactPointerEvent<HTMLButtonElement>, dayCol: number) {
     if (!ctx?.['permissions']?.canDrag) return;
-    e.preventDefault();
+    // No e.preventDefault() — that would suppress the synthesized click event.
+    // setPointerCapture on daysArea redirects pointerup there, so click won't
+    // fire on the pill button; handleDaysAreaPointerUp handles the tap case.
     e.stopPropagation();
     const grid = daysAreaRef.current;
     if (!grid) return;
@@ -153,7 +155,14 @@ export default function WeekView({
     const targetCol = pillTargetCol;
     pillDragRef.current = null;
     setPillTargetCol(null);
-    if (!d || !d.moved || targetCol === null) return;
+    if (!d) return;
+    if (!d.moved) {
+      // Tap/click with no movement. setPointerCapture redirected pointerup to
+      // daysArea so the pill's onClick never fires — trigger it manually here.
+      onEventClick?.(d.ev);
+      return;
+    }
+    if (targetCol === null) return;
     const diff = targetCol - d.startCol;
     if (diff === 0) return;
     onEventMove?.(d.ev, addDays(d.ev.start, diff), addDays(d.ev.end, diff));
@@ -239,24 +248,24 @@ export default function WeekView({
       aria-label={`Week of ${format(weekStart, 'MMMM d')} – ${format(weekEnd, 'MMMM d, yyyy')}`}
       ref={gridRef}
     >
-      {/* ── Header ── */}
-      <div className={styles['headerRow']} role="row" aria-rowindex={1}>
-        {days.map(day => (
-          <div key={format(day, 'yyyy-MM-dd')}
-            role="columnheader"
-            aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
-            className={[styles['dayHead'], isToday(day) && styles['todayHead']].filter(Boolean).join(' ')}
-          >
-            <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
-            <span className={[styles['dayNum'], isToday(day) && styles['todayNum']].filter(Boolean).join(' ')} aria-hidden="true">
-              {format(day, 'd')}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Body ── */}
+      {/* ── Body (single scroll container — header sticky at top, cells below) ── */}
       <div className={styles['body']}>
+        {/* Header: sticky inside the scroll container so both header and cell
+            columns share the same container width, including any scrollbar. */}
+        <div className={styles['headerRow']} role="row" aria-rowindex={1}>
+          {days.map(day => (
+            <div key={format(day, 'yyyy-MM-dd')}
+              role="columnheader"
+              aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
+              className={[styles['dayHead'], isToday(day) && styles['todayHead']].filter(Boolean).join(' ')}
+            >
+              <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
+              <span className={[styles['dayNum'], isToday(day) && styles['todayNum']].filter(Boolean).join(' ')} aria-hidden="true">
+                {format(day, 'd')}
+              </span>
+            </div>
+          ))}
+        </div>
         <div
           className={styles['daysArea']}
           ref={daysAreaRef}
@@ -264,20 +273,20 @@ export default function WeekView({
           onPointerUp={handleDaysAreaPointerUp}
           onPointerCancel={() => { pillDragRef.current = null; setPillTargetCol(null); }}
         >
-          {/* Day cells */}
+          {/* Day cells — single-day events as pills */}
           <div className={styles['weekCells']} role="row" aria-rowindex={2}>
             {days.map((day, di) => {
               const dayKey     = format(day, 'yyyy-MM-dd');
               const daySingles = singleByDay.get(dayKey) || [];
               const isFocused  = isSameDay(day, focusedDay);
 
-              const spansOnDay    = spans.filter(s => s.startCol <= di && s.endCol >= di);
-              const hiddenSpans   = spansOnDay.filter(s => s.lane >= MAX_SPANS_VISIBLE).length;
-              const overflow      = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
+              const spansOnDay  = spans.filter(s => s.startCol <= di && s.endCol >= di);
+              const hiddenSpans = spansOnDay.filter(s => s.lane >= MAX_SPANS_VISIBLE).length;
+              const overflow    = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
               const isOverflowOpen = overflowDay && isSameDay(overflowDay, day);
-              const totalEvents   = daySingles.length + spansOnDay.length;
-              const cellLabel     = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
-              const isPillTarget  = pillTargetCol === di && pillDragRef.current !== null;
+              const totalEvents = daySingles.length + spansOnDay.length;
+              const cellLabel   = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
+              const isPillTarget = pillTargetCol === di && pillDragRef.current !== null;
 
               return (
                 <div
@@ -331,7 +340,7 @@ export default function WeekView({
             <div className={styles['spansEdge']} style={{ top: spansHeight }} aria-hidden="true" />
           )}
 
-          {/* Spanning event bars */}
+          {/* Multi-day spanning bars — absolutely overlaid at the top of the cells */}
           {laneCount > 0 && (
             <div
               className={styles['spansLayer']}

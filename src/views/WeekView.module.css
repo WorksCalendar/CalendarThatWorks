@@ -12,7 +12,9 @@
   grid-template-columns: repeat(7, 1fr);
   background: var(--wc-surface);
   border-bottom: 1px solid var(--wc-border);
-  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .dayHead {
@@ -23,6 +25,8 @@
   border-right: 1px solid var(--wc-border);
   box-sizing: border-box;
   gap: 4px;
+  /* Prevent header cells from being squeezed by content in body cells */
+  min-width: 0;
 }
 .dayHead:last-child { border-right: none; }
 
@@ -57,22 +61,32 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* flex column lets .daysArea use flex:1 to get a definite height,
+     which allows .weekCells { height:100% } to resolve properly */
+  display: flex;
+  flex-direction: column;
 }
 
 .daysArea {
   position: relative;
-  min-height: 100%;
+  flex: 1;
+  min-height: 240px;
 }
 
 .weekCells {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  min-height: 100%;
+  /* height:100% fills .daysArea (definite flex height); min-height lets
+     cells grow when they contain many events */
+  height: 100%;
+  min-height: 240px;
 }
 
 .cell {
   border-right: 1px solid var(--wc-border);
-  min-height: 240px;
+  /* min-width:0 prevents grid blowout — without it, a cell's content
+     (long pill title) can widen its column beyond 1fr */
+  min-width: 0;
   cursor: pointer;
   position: relative;
   box-sizing: border-box;
@@ -96,8 +110,7 @@
   padding: 4px 6px 8px;
 }
 
-/* Horizontal rule drawn at the bottom of the spans zone so the grid reads
-   as a continuous surface rather than two disconnected sections. */
+/* Horizontal rule at the bottom of the spans zone */
 .spansEdge {
   position: absolute;
   left: 0;
@@ -167,11 +180,12 @@
 /* ── Event pills (single-day timed events) ── */
 .pill {
   display: flex;
-  align-items: center;
-  gap: 5px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   width: 100%;
-  min-height: 30px;
-  padding: 5px 8px;
+  min-height: 52px;
+  padding: 6px 8px;
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
@@ -180,13 +194,12 @@
   text-align: left;
   border: 1px solid color-mix(in srgb, var(--ev-color, var(--wc-accent)) 65%, #000);
   cursor: pointer;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   transition: opacity 0.1s;
   box-shadow: var(--wc-event-glow, none);
   box-sizing: border-box;
   flex-shrink: 0;
+  min-width: 0;
 }
 .pill:hover { opacity: 0.87; }
 .pill:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: -2px; }
@@ -198,14 +211,18 @@
   opacity: 0.82;
   flex-shrink: 0;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .pillTitle {
-  flex: 1;
+  width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Allow title to wrap up to 2 lines so more text is visible */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   font-weight: 600;
+  word-break: break-word;
 }
 
 .pillResource {
@@ -215,7 +232,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 30%;
+  max-width: 100%;
 }
 
 /* ── "+N more" button ── */
@@ -285,5 +302,4 @@
   .pillTime    { display: none; }
   .pillResource { display: none; }
   .pill        { font-size: calc(11px * var(--wc-font-scale, 1)); min-height: 26px; }
-  .cell        { min-height: 120px; }
 }

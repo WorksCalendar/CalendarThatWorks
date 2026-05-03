@@ -44,7 +44,7 @@ import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
 import { resolveCssTheme, normalizeTheme, THEME_META } from './styles/themes';
 import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
-import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
+import { SCHEDULE_WORKFLOW_CATEGORIES, isScheduleWorkflowEvent } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { resolveLabels } from './core/config/resolveLabels';
@@ -282,6 +282,12 @@ export type WorksCalendarProps = {
    * hours remaining, etc.) into the readiness shape the table expects.
    */
   dispatchEvaluator?: DispatchEvaluator;
+  /**
+   * Called when the dispatcher clicks "Assign" on an available asset row.
+   * Receives the asset id, the selected mission id (or null), and the
+   * active as-of time. Hosts should create a booking event and call onEventSave.
+   */
+  onDispatchAssign?: (assetId: string, missionId: string | null, asOf: Date) => void;
   emptyState?: ReactNode;
   filterSchema?: FilterField[];
   /**
@@ -609,6 +615,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     focusChips,
     dispatchMissions,
     dispatchEvaluator,
+    onDispatchAssign,
     emptyState,
 
     // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
@@ -2589,8 +2596,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   the first thing the operator sees in the rail. */}
               <RightPanelSection title="Region map">
                 <MapPeekWidget
-                  events={expandedEvents as never}
+                  events={(expandedEvents as any[]).filter(ev => !isScheduleWorkflowEvent(ev)) as never}
                   onEventClick={handleEventClick as never}
+                  {...(onMapWidgetOpenChange ? { onOpenChange: onMapWidgetOpenChange } : {})}
                   {...(mapStyle ? { mapStyle } : {})}
                 />
               </RightPanelSection>
@@ -2959,6 +2967,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEventClick={handleEventClick}
                   missions={dispatchMissions}
                   evaluateForMission={dispatchEvaluator}
+                  onAssign={onDispatchAssign}
                   // Sync the calendar's currentDate with the dispatcher's chosen
                   // as-of moment so recurring-event expansion + fetch ranges
                   // re-anchor around it. Without this, a far-future as-of would
