@@ -376,7 +376,7 @@ type Preset = { id: string; [key: string]: any };
 
 export function loadPresets(): Preset[] {
   try {
-    return JSON.parse(localStorage.getItem(PRESETS_KEY) ?? '[]');
+    return JSON.parse(safeGetLocalStorage(PRESETS_KEY) ?? '[]');
   } catch {
     return [];
   }
@@ -387,10 +387,10 @@ export function savePreset(preset: Preset): void {
   const existing = presets.findIndex(p => p.id === preset.id);
   if (existing >= 0) presets[existing] = preset;
   else presets.push(preset);
-  try { localStorage.setItem(PRESETS_KEY, JSON.stringify(presets)); } catch {}
+  try { safeSetLocalStorage(PRESETS_KEY, JSON.stringify(presets)); } catch {}
 }
 
 export function deletePreset(id: string): void {
   const presets = loadPresets().filter(p => p.id !== id);
-  try { localStorage.setItem(PRESETS_KEY, JSON.stringify(presets)); } catch {}
+  try { safeSetLocalStorage(PRESETS_KEY, JSON.stringify(presets)); } catch {}
 }

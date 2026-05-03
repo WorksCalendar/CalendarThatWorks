@@ -3,10 +3,11 @@
  * Stored in localStorage under `wc-options-${calendarId}`.
  */
 import { useState, useCallback } from 'react';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 
 function load(calendarId: string): string[] {
   try {
-    const raw = localStorage.getItem(`wc-options-${calendarId}`);
+    const raw = safeGetLocalStorage(`wc-options-${calendarId}`);
     if (raw === null) return [];
     return JSON.parse(raw)?.categories ?? [];
   } catch {
@@ -16,7 +17,7 @@ function load(calendarId: string): string[] {
 
 function save(calendarId: string, categories: string[]): void {
   try {
-    localStorage.setItem(`wc-options-${calendarId}`, JSON.stringify({ categories }));
+    safeSetLocalStorage(`wc-options-${calendarId}`, JSON.stringify({ categories }));
   } catch {}
 }
 
