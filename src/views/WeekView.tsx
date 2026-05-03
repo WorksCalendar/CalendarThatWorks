@@ -129,7 +129,9 @@ export default function WeekView({
 
   function startPillDrag(ev: WeekViewEvent, e: ReactPointerEvent<HTMLButtonElement>, dayCol: number) {
     if (!ctx?.['permissions']?.canDrag) return;
-    e.preventDefault();
+    // No e.preventDefault() — that would suppress the synthesized click event.
+    // setPointerCapture on daysArea redirects pointerup there, so click won't
+    // fire on the pill button; handleDaysAreaPointerUp handles the tap case.
     e.stopPropagation();
     const grid = daysAreaRef.current;
     if (!grid) return;
@@ -153,7 +155,14 @@ export default function WeekView({
     const targetCol = pillTargetCol;
     pillDragRef.current = null;
     setPillTargetCol(null);
-    if (!d || !d.moved || targetCol === null) return;
+    if (!d) return;
+    if (!d.moved) {
+      // Tap/click with no movement. setPointerCapture redirected pointerup to
+      // daysArea so the pill's onClick never fires — trigger it manually here.
+      onEventClick?.(d.ev);
+      return;
+    }
+    if (targetCol === null) return;
     const diff = targetCol - d.startCol;
     if (diff === 0) return;
     onEventMove?.(d.ev, addDays(d.ev.start, diff), addDays(d.ev.end, diff));
@@ -239,24 +248,24 @@ export default function WeekView({
       aria-label={`Week of ${format(weekStart, 'MMMM d')} – ${format(weekEnd, 'MMMM d, yyyy')}`}
       ref={gridRef}
     >
-      {/* ── Header ── */}
-      <div className={styles['headerRow']} role="row" aria-rowindex={1}>
-        {days.map(day => (
-          <div key={format(day, 'yyyy-MM-dd')}
-            role="columnheader"
-            aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
-            className={[styles['dayHead'], isToday(day) && styles['todayHead']].filter(Boolean).join(' ')}
-          >
-            <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
-            <span className={[styles['dayNum'], isToday(day) && styles['todayNum']].filter(Boolean).join(' ')} aria-hidden="true">
-              {format(day, 'd')}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Body ── */}
+      {/* ── Body (single scroll container — header sticky at top, cells below) ── */}
       <div className={styles['body']}>
+        {/* Header: sticky inside the scroll container so both header and cell
+            columns are always the same width, regardless of scrollbar presence. */}
+        <div className={styles['headerRow']} role="row" aria-rowindex={1}>
+          {days.map(day => (
+            <div key={format(day, 'yyyy-MM-dd')}
+              role="columnheader"
+              aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
+              className={[styles['dayHead'], isToday(day) && styles['todayHead']].filter(Boolean).join(' ')}
+            >
+              <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
+              <span className={[styles['dayNum'], isToday(day) && styles['todayNum']].filter(Boolean).join(' ')} aria-hidden="true">
+                {format(day, 'd')}
+              </span>
+            </div>
+          ))}
+        </div>
         <div
           className={styles['daysArea']}
           ref={daysAreaRef}

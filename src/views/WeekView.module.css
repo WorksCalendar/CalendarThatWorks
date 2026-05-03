@@ -12,7 +12,9 @@
   grid-template-columns: repeat(7, 1fr);
   background: var(--wc-surface);
   border-bottom: 1px solid var(--wc-border);
-  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .dayHead {

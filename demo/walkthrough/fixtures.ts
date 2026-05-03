@@ -28,20 +28,21 @@ export const WALKTHROUGH_DECOY_SHIFT_ID = 'wt-decoy-shift';
 /** The pilot whose shift overlaps the mission slot — Step 2 conflict target. */
 export const CONFLICT_PILOT_ID = 'emp-james';
 
-// Anchor the seed events to "this week's Thursday" — same anchor logic as
-// emsData (Monday of current week + day offset), so events render today's
-// week regardless of when the demo loads. Computed at module load; doesn't
-// shift mid-session.
-const _MONDAY = startOfWeek(new Date(), { weekStartsOn: 1 });
+// Anchor the seed events to "this week's Thursday" using Sunday as the week
+// start — matching WeekView's default weekStartDay. This ensures Mission Alpha
+// lands in the week currently visible in Week view AND in the same calendar
+// month shown by Month view, regardless of today's day-of-week.
+const _WEEK_SUN = startOfWeek(new Date(), { weekStartsOn: 0 });
 function _seedDt(dayOffset: number, time: string): string {
-  return `${format(addDays(_MONDAY, dayOffset), 'yyyy-MM-dd')}T${time}`;
+  return `${format(addDays(_WEEK_SUN, dayOffset), 'yyyy-MM-dd')}T${time}`;
 }
 
-export const ALPHA_INITIAL_START_ISO = _seedDt(3, '14:00:00');
+// Thursday = Sunday + 4 (Sun=0, Mon=1, Tue=2, Wed=3, Thu=4)
+export const ALPHA_INITIAL_START_ISO = _seedDt(4, '14:00:00');
 
-const MISSION_END_ISO = _seedDt(3, '15:00:00');
-const SHIFT_START_ISO = _seedDt(3, '13:00:00');
-const SHIFT_END_ISO   = _seedDt(3, '17:00:00');
+const MISSION_END_ISO = _seedDt(4, '15:00:00');
+const SHIFT_START_ISO = _seedDt(4, '13:00:00');
+const SHIFT_END_ISO   = _seedDt(4, '17:00:00');
 
 const MISSION_COLOR = '#a855f7';
 const PILOT_COLOR   = '#3b82f6';
