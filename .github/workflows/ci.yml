@@ -93,6 +93,9 @@ jobs:
 
       - name: Run E2E smoke tests
         run: npm run test:e2e:smoke
+        env:
+          E2E_BASE_URL: http://localhost:4173
+          E2E_WEB_SERVER_CMD: npm run preview -- --host localhost
 
       # Upload Playwright report + traces on failure so we can actually see
       # what broke without having to re-run locally. The report is emitted
