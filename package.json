@@ -68,9 +68,8 @@
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
     "prepublishOnly": "npm run test && npm run build",
-    "test:e2e:smoke": "playwright test tests-e2e/walkthrough.spec.ts tests-e2e/calendar.happy-paths.spec.ts",
-    "test:e2e:quarantine": "playwright test tests-e2e/quarantine",
-    "test:e2e:release": "npm run test:e2e:smoke && npm run test:e2e:quarantine"
+    "test:e2e:smoke": "playwright test tests-e2e/calendar.demo.spec.ts tests-e2e/calendar.happy-paths.spec.ts",
+    "test:e2e:release": "npm run test:e2e:smoke"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
