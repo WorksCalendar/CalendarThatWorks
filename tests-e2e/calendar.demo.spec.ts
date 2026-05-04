@@ -44,4 +44,23 @@ test.describe('WorksCalendar demo', () => {
     await page.getByRole('button', { name: /^Today$/i }).click();
     await expect(calendar).toBeVisible();
   });
+
+  test('all views can be selected', async ({ page }) => {
+    await page.goto('?embed=1');
+
+    for (const view of ['Month', 'Week', 'Day', 'Agenda', 'Schedule']) {
+      const viewBtn = page.getByRole('button', { name: new RegExp(`^${view}$`, 'i') });
+      await viewBtn.click();
+      await expect(viewBtn).toHaveAttribute('aria-pressed', 'true');
+    }
+  });
+
+  test('add event dialog opens', async ({ page }) => {
+    await page.goto('?embed=1');
+    await page.getByRole('button', { name: /^Month$/i }).click();
+    const addBtn = page.getByRole('button', { name: /add new event/i });
+    await expect(addBtn).toBeVisible();
+    await addBtn.click();
+    await expect(page.getByText(/save/i).first()).toBeVisible();
+  });
 });
