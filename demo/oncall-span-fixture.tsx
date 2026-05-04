@@ -1,10 +1,9 @@
-// @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { addDays, startOfMonth } from 'date-fns';
 import { WorksCalendar } from '../src/index.ts';
 
-function firstMondayInMonth(baseDate) {
+function firstMondayInMonth(baseDate: Date) {
   let day = startOfMonth(baseDate);
   while (day.getDay() !== 1) {
     day = addDays(day, 1);
@@ -57,7 +56,7 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>
