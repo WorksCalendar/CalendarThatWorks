@@ -50,10 +50,12 @@ jobs:
           E2E_WEB_SERVER_CMD: npx vite preview --config vite.demo.config.ts --host localhost --port 4173 --strictPort
 
       - name: Upload Pages artifact
+        if: success()
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist-demo
 
       - name: Deploy to GitHub Pages
+        if: success()
         id: deployment
         uses: actions/deploy-pages@v4
