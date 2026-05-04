@@ -42,7 +42,7 @@ test.describe('WorksCalendar targeted regressions', () => {
     });
 
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/regression-bugs.html');
+    await page.goto('regression-bugs.html');
 
     const pill = page.getByRole('button', { name: /Drag Crash Pill/i }).first();
     await expect(pill).toBeVisible();
@@ -67,7 +67,7 @@ test.describe('WorksCalendar targeted regressions', () => {
 
   test('hover card shows the full cross-day range for a timed multi-day event', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/regression-bugs.html');
+    await page.goto('regression-bugs.html');
 
     // Use partial match so the selector works even when the event splits
     // across week rows (aria-label gains ", continues next week" suffix).
@@ -97,7 +97,7 @@ test.describe('WorksCalendar targeted regressions', () => {
 
   test('mobile month pills keep visible title text', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/regression-bugs.html');
+    await page.goto('regression-bugs.html');
 
     const pill = page.getByRole('button', { name: /Mobile Pill Text/i }).first();
     await expect(pill).toBeVisible();
@@ -106,7 +106,7 @@ test.describe('WorksCalendar targeted regressions', () => {
 
   test('edit pen opens the editor with the matching event loaded', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/regression-bugs.html');
+    await page.goto('regression-bugs.html');
 
     // Wait for the fixture to hydrate before clicking — the bare click was
     // racing the fixture's initial render in CI. The recurring-event test
@@ -127,7 +127,7 @@ test.describe('WorksCalendar targeted regressions', () => {
 
   test('edit pen on a recurring event shows the series repeat cadence, not "Does not repeat"', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/regression-bugs.html');
+    await page.goto('regression-bugs.html');
 
     const pencil = page.getByRole('button', { name: /Repeating Pencil Test/i }).first();
     await expect(pencil).toBeVisible({ timeout: 10000 });

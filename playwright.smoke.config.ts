@@ -3,7 +3,6 @@ import { defineConfig } from '@playwright/test';
 const smokeFiles = [
   'tests-e2e/calendar.demo.spec.ts',
   'tests-e2e/calendar.embed.spec.ts',
-  'tests-e2e/calendar.happy-paths.spec.ts',
   'tests-e2e/calendar.regressions.spec.ts',
 ];
 

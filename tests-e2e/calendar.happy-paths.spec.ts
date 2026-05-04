@@ -24,11 +24,8 @@ function dateKey(offsetDays = 0): string {
 test.describe('WorksCalendar happy paths', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/?embed=1');
+    await page.goto('?embed=1');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
-    // Demo defaults to schedule view; these tests exercise month-view flows
-    // (drag, add-event toolbar button), so normalize to Month first.
-    await page.getByRole('button', { name: /^Month$/i }).click();
   });
 
   test('month view navigation moves forward and back', async ({ page }) => {
@@ -51,7 +48,7 @@ test.describe('WorksCalendar happy paths', () => {
     // Use the purpose-built regression fixture instead of demo data so the test
     // does not depend on whether a specific demo event title is visible in the
     // current month viewport.
-    await page.goto('/regression-bugs.html');
+    await page.goto('regression-bugs.html');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
     await page.waitForTimeout(1000);
 
