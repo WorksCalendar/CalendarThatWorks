@@ -63,9 +63,13 @@ test.describe('quarantine: walkthrough full happy path', () => {
     await mission.click();
     await page.getByRole('button', { name: /edit event/i }).click();
 
-    const resourceField = page.getByRole('textbox', { name: /resource|pilot|assignee/i }).first();
+    const editDialog = page.getByRole('dialog', { name: /edit event/i });
+    await expect(editDialog).toBeVisible();
+
+    const resourceField = editDialog.locator('#ef-resource');
+    await expect(resourceField).toBeVisible();
     await resourceField.fill('emp-james');
-    await page.getByRole('button', { name: /save changes/i }).click();
+    await editDialog.getByRole('button', { name: /save changes/i }).click();
 
     const conflictDialog = page.getByRole('dialog').filter({ hasText: /conflict|overlap|double-book/i }).first();
     await expect(conflictDialog).toBeVisible();
@@ -74,8 +78,14 @@ test.describe('quarantine: walkthrough full happy path', () => {
 
     await mission.click();
     await page.getByRole('button', { name: /edit event/i }).click();
-    await resourceField.fill('emp-rivera');
-    await page.getByRole('button', { name: /save changes/i }).click();
+
+    const reassignDialog = page.getByRole('dialog', { name: /edit event/i });
+    await expect(reassignDialog).toBeVisible();
+
+    const reassignResourceField = reassignDialog.locator('#ef-resource');
+    await expect(reassignResourceField).toBeVisible();
+    await reassignResourceField.fill('emp-rivera');
+    await reassignDialog.getByRole('button', { name: /save changes/i }).click();
 
     await page.getByRole('button', { name: /^schedule$/i }).first().click();
     await expect(page.locator('[data-wc-event-id="wt-mission"]').first()).toBeVisible();
