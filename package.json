@@ -53,17 +53,11 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:browser": "playwright test",
-    "test:e2e:smoke": "playwright test -c playwright.smoke.config.ts",
-    "test:e2e:release": "npm run test:e2e:smoke",
     "perf:benchmark": "node scripts/perf-benchmark.mjs",
     "perf:benchmark:update": "node scripts/perf-benchmark.mjs --write",
-    "dev": "vite --config vite.demo.config.ts",
     "examples": "vite --config vite.examples.config.ts",
     "build": "vite build && vite build --config vite.integrations.config.ts",
-    "build:demo": "vite build --config vite.demo.config.ts",
     "build:examples": "vite build --config vite.examples.config.ts",
-    "preview": "vite preview --config vite.demo.config.ts",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
     "prepublishOnly": "npm run test && npm run build"
@@ -92,7 +86,6 @@
     "lucide-react": "^0.378.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.53.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -109,7 +102,6 @@
     "typescript": "^5.9.3",
     "vite": "^6.0.0",
     "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-pwa": "^0.21.2",
     "vitest": "^4.1.4"
   },
   "keywords": [
