@@ -1,33 +1,29 @@
 # Manual Demo Release Checklist
 
-The full guided demo walkthrough is intentionally **manual-only**.
+Use this checklist before approving a demo release.
 
-Reason: this scenario has proven too brittle for reliable automation (drag + guided-tour overlays + conflict modal timing), and should not block PR CI. Automated E2E remains focused on stable smoke coverage.
+## Demo reset and guided tour
 
-## Full demo walkthrough verification
+- [ ] Open the demo with `?resetDemo=1` (for example: `/app?resetDemo=1`).
+- [ ] Start (or restart) the guided tour.
+- [ ] Confirm **Mission Alpha** is visible.
+- [ ] Move **Mission Alpha**.
+- [ ] Confirm the guided tour advances after moving the mission.
 
-1. Open the demo with a reset state: `/?resetDemo=1`.
-2. Start or restart the guided tour.
-3. Confirm **Mission Alpha** is visible.
-4. Move Mission Alpha in the calendar UI.
-5. Confirm the tour advances after the move.
-6. Open Mission Alpha details/edit.
-7. Assign `emp-james`.
-8. Save.
-9. Confirm the conflict dialog appears.
-10. Click the conflict override button.
-11. Reassign Mission Alpha to `emp-rivera` (or another non-conflicting pilot).
-12. Switch to **Schedule** view.
-13. Confirm Mission Alpha appears in Schedule view under the updated assignment.
-14. Confirm there are no obvious console/runtime errors.
+## Mission Alpha editing and conflict handling
 
-## Automated E2E policy
+- [ ] Open and edit **Mission Alpha**.
+- [ ] Assign pilot `emp-james`.
+- [ ] Save the mission.
+- [ ] Confirm a conflict dialog appears.
+- [ ] Proceed/override the conflict.
+- [ ] Reassign **Mission Alpha** to `emp-rivera` (or another non-conflicting pilot).
 
-Automated E2E should remain small and stable:
-- demo loads
-- calendar root renders
-- Month / Week / Day / Schedule navigation works
-- normal event click/edit/save only where already stable
-- WeekView multi-day span click only where already stable
+## Schedule validation
 
-Do **not** reintroduce the full guided walkthrough as an automated CI gate.
+- [ ] Switch to **Schedule** view.
+- [ ] Confirm **Mission Alpha** appears under the updated assignment.
+
+## Stability check
+
+- [ ] Check for obvious browser console/runtime errors during the flow.
