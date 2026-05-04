@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { resolve } from 'path';
 
 // Set VITE_BASE=/CalendarThatWorks/ when building for GitHub Pages.
 // Defaults to '/' for local dev and preview.
@@ -75,6 +76,14 @@ export default defineConfig({
   build: {
     outDir: '../dist-demo',
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main:           resolve(__dirname, 'demo/index.html'),
+        embedHost:      resolve(__dirname, 'demo/embed-host.html'),
+        embedFrame:     resolve(__dirname, 'demo/embed-frame.html'),
+        regressionBugs: resolve(__dirname, 'demo/regression-bugs.html'),
+      },
+    },
   },
   server: {
     port: 3000,
