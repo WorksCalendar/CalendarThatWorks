@@ -69,7 +69,9 @@
     "preview": "vite preview --config vite.demo.config.ts",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
-    "prepublishOnly": "npm run test && npm run build"
+    "prepublishOnly": "npm run test && npm run build",
+    "test:e2e:smoke": "playwright test tests-e2e/calendar.demo.spec.ts tests-e2e/calendar.happy-paths.spec.ts",
+    "test:e2e:release": "npm run test:e2e:smoke"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -79,9 +81,15 @@
     "react-map-gl": ">=7.0.0"
   },
   "peerDependenciesMeta": {
-    "@supabase/supabase-js": { "optional": true },
-    "maplibre-gl": { "optional": true },
-    "react-map-gl": { "optional": true }
+    "@supabase/supabase-js": {
+      "optional": true
+    },
+    "maplibre-gl": {
+      "optional": true
+    },
+    "react-map-gl": {
+      "optional": true
+    }
   },
   "dependencies": {
     "date-fns": "^3.6.0",

@@ -1,28 +1,33 @@
-# Manual Demo Release Checklist (Guided Tour)
+# Manual Demo Release Checklist
 
-Use this checklist before releasing the public demo.
+The full guided demo walkthrough is intentionally **manual-only**.
 
-## Setup
+Reason: this scenario has proven too brittle for reliable automation (drag + guided-tour overlays + conflict modal timing), and should not block PR CI. Automated E2E remains focused on stable smoke coverage.
 
-1. Open the deployed demo build.
-2. Reset demo state (clear local storage/service worker cache using the built-in reset path or browser storage tools).
+## Full demo walkthrough verification
 
-## Guided tour verification
+1. Open the demo with a reset state: `/?resetDemo=1`.
+2. Start or restart the guided tour.
+3. Confirm **Mission Alpha** is visible.
+4. Move Mission Alpha in the calendar UI.
+5. Confirm the tour advances after the move.
+6. Open Mission Alpha details/edit.
+7. Assign `emp-james`.
+8. Save.
+9. Confirm the conflict dialog appears.
+10. Click the conflict override button.
+11. Reassign Mission Alpha to `emp-rivera` (or another non-conflicting pilot).
+12. Switch to **Schedule** view.
+13. Confirm Mission Alpha appears in Schedule view under the updated assignment.
+14. Confirm there are no obvious console/runtime errors.
 
-1. Start or restart the guided tour.
-2. Confirm **Mission Alpha** is visible.
-3. Move **Mission Alpha** to a different slot.
-4. Confirm the tour advances after the move.
-5. Open/edit **Mission Alpha**.
-6. Assign pilot **emp-james**.
-7. Save.
-8. Confirm conflict prompt appears.
-9. Proceed/override conflict (**Apply anyway** or equivalent).
-10. Reassign Mission Alpha to **emp-rivera** or another non-conflicting pilot.
-11. Switch to **Schedule** view.
-12. Confirm Mission Alpha appears under the updated assignment.
+## Automated E2E policy
 
-## Runtime sanity check
+Automated E2E should remain small and stable:
+- demo loads
+- calendar root renders
+- Month / Week / Day / Schedule navigation works
+- normal event click/edit/save only where already stable
+- WeekView multi-day span click only where already stable
 
-1. Open browser devtools console.
-2. Verify there are no obvious uncaught runtime errors during the flow above.
+Do **not** reintroduce the full guided walkthrough as an automated CI gate.
