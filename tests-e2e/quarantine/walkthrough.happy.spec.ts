@@ -34,55 +34,24 @@ test.describe('quarantine: walkthrough full happy path', () => {
 
     const mission = page.locator('[data-wc-event-id="wt-mission"]').first();
     await expect(mission).toBeVisible();
+    await mission.scrollIntoViewIfNeeded();
 
     // Move Mission Alpha via real UI drag-and-drop, then verify visible result.
     const before = await mission.boundingBox();
     if (!before) throw new Error('Mission Alpha is not measurable before drag');
-    const dragAttempts = [
-      { sourceDx: 12, sourceDy: 12, targetDx: 250, targetDy: 70 },
-      { sourceDx: 20, sourceDy: 24, targetDx: 280, targetDy: 96 },
-      { sourceDx: 8, sourceDy: 30, targetDx: 210, targetDy: 120 }
-    ];
 
-    let dragged = false;
-    for (const attempt of dragAttempts) {
-      try {
-        const current = await mission.boundingBox();
-        if (!current) continue;
-        await page.mouse.move(current.x + attempt.sourceDx, current.y + attempt.sourceDy);
-        await page.mouse.down();
-        await page.mouse.move(current.x + attempt.targetDx, current.y + attempt.targetDy, { steps: 16 });
-        await page.mouse.up();
+    const startX = before.x + before.width / 2;
+    const startY = before.y + before.height / 2;
 
-        const moved = await page
-          .waitForFunction(
-            ([selector, x, y]) => {
-              const el = document.querySelector(selector);
-              if (!el) return false;
-              const rect = el.getBoundingClientRect();
-              return Math.abs(rect.x - x) > 10 || Math.abs(rect.y - y) > 10;
-            },
-            ['[data-wc-event-id="wt-mission"]', before.x, before.y],
-            { timeout: 3_000 }
-          )
-          .then(() => true)
-          .catch(() => false);
-
-        if (moved) {
-          dragged = true;
-          break;
-        }
-      } catch {
-        // Retry with next source/target pair to avoid transient overlay interception.
-      }
-    }
-
-    expect(dragged).toBe(true);
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 260, startY, { steps: 12 });
+    await page.mouse.up();
 
     await expect
       .poll(async () => {
         const after = await mission.boundingBox();
-        if (!after || !before) return false;
+        if (!after) return false;
         const movedX = Math.abs(after.x - before.x);
         const movedY = Math.abs(after.y - before.y);
         return movedX > 10 || movedY > 10;
