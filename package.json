@@ -1,6 +1,6 @@
 {
   "name": "works-calendar",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Drop-in embeddable React calendar with filtering, scheduling workflows, themes, and external-form support.",
   "license": "MIT",
   "type": "module",
@@ -54,6 +54,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:browser": "playwright test",
+    "test:e2e:smoke": "playwright test -c playwright.smoke.config.ts",
+    "test:e2e:release": "npm run test:e2e:smoke",
     "perf:benchmark": "node scripts/perf-benchmark.mjs",
     "perf:benchmark:update": "node scripts/perf-benchmark.mjs --write",
     "dev": "vite --config vite.demo.config.ts",
@@ -64,9 +66,7 @@
     "preview": "vite preview --config vite.demo.config.ts",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
-    "prepublishOnly": "npm run test && npm run build",
-    "test:e2e:smoke": "playwright test tests-e2e/calendar.demo.spec.ts tests-e2e/calendar.happy-paths.spec.ts",
-    "test:e2e:release": "npm run test:e2e:smoke"
+    "prepublishOnly": "npm run test && npm run build"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

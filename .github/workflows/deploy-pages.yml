@@ -40,6 +40,15 @@ jobs:
         env:
           VITE_BASE: /CalendarThatWorks/
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke test Pages artifact before deploy
+        run: npm run test:e2e:smoke
+        env:
+          E2E_BASE_URL: http://localhost:4173/CalendarThatWorks/
+          E2E_WEB_SERVER_CMD: npx vite preview --config vite.demo.config.ts --host localhost --port 4173 --strictPort
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
