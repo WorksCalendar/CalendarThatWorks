@@ -5,6 +5,45 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.2] - 2026-05-03
+
+### Fixed
+
+- Restored WeekView tap-vs-drag behavior so single-day pills and multi-day span events open correctly when tapped while still supporting drag-to-move.
+- Restored the demo walkthrough’s Mission Alpha flow to use the real move/edit/save/conflict path.
+- Fixed demo mission selection so mission details are based on the clicked event instead of a hardcoded mission.
+- Improved demo hover-card edit wiring and safer metadata/resource rendering.
+- Improved demo recovery from stale or corrupted browser state.
+
+### Added
+
+- Added a top-level demo error boundary with reload recovery.
+- Added safe localStorage helpers and defensive storage usage across demo/config paths.
+- Added demo feature flags / kill switches for walkthrough, MissionHoverCard, PWA registration, map widget, and workflow builder surfaces.
+- Added `?resetDemo=1` recovery path to clear demo state and unregister service workers.
+- Exported reusable `MissionHoverCard` UI and related helpers from the library.
+- Added a single Air EMS demo filter model that derives category, filter schema, and cascade config outputs.
+- Added focused tests for Air EMS demo filter config consistency.
+
+### Changed
+
+- Changed demo PWA behavior to support prompt/disable flows instead of relying on forced auto-update behavior.
+- Derived `UNIFIED_CATEGORIES_CONFIG`, `DEMO_FILTER_SCHEMA`, and `DEMO_CASCADE_CONFIG` from one source-of-truth model.
+- Simplified automated QA strategy around small, stable smoke tests.
+- Moved full guided demo walkthrough verification out of brittle E2E automation and into manual release QA.
+
+### Removed
+
+- Removed Nightly AI QA automation.
+- Removed brittle full guided walkthrough / demo-specific exploratory E2E automation from the active automated test path.
+- Removed duplicated in-file Air EMS filter/cascade/category config blocks from the demo app.
+
+### Testing / QA
+
+- Kept automated E2E focused on stable smoke coverage.
+- Added focused unit coverage for generated demo filter config consistency.
+- Documented the full guided demo walkthrough as a manual release checklist instead of a blocking Playwright flow.
+
 ## [0.6.1] - 2026-05-02
 
 MapView gains a controls?: boolean prop (default true) — set to false for compact contexts
