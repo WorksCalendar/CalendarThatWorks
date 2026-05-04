@@ -43,14 +43,14 @@ export const STEPS: readonly Step[] = [
     id: 'assign-busy',
     banner: {
       title: 'Assign a pilot — and watch what happens',
-      body:  'Click Mission Alpha and assign Capt. James Wright. He\'s already on shift at that time, so the calendar will flag the conflict — click "Apply anyway" on the prompt to keep going.',
+      body:  'Click Mission Alpha and assign Capt. James Wright. He\'s already on shift at that time, so the calendar will flag the conflict — click "Proceed anyway" on the prompt to keep going.',
     },
     spotlight: { eventId: WALKTHROUGH_MISSION_ID },
     matches: (event, ctx) =>
       event.kind === 'mission-assigned'
       && event.eventId === ctx.missionEventId
       && event.toResource === ctx.conflictPilotId,
-    hint: 'Click the mission, set the resource to Capt. James Wright in the form, save — when the conflict prompt appears, click "Apply anyway" to commit the assignment.',
+    hint: 'Click the mission, set the resource to Capt. James Wright in the form, save — when the conflict prompt appears, click "Proceed anyway" to commit the assignment.',
   },
 
   {

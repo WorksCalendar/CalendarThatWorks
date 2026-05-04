@@ -272,3 +272,19 @@ export type {
   GeoConflictRule, GeoTravelFeasibilityRule,
   GeoEventInput, GeoConflictViolation,
 } from './core/conflicts/geoConflictRules';
+
+export { evaluateConflicts, CONFLICT_RULE_TYPES } from './core/conflictEngine';
+export type {
+  ConflictRule,
+  ConflictEvent,
+  ConflictEvaluationResult,
+  EvaluateConflictsInput,
+  ResourceOverlapRule,
+  CategoryMutexRule,
+  MinRestRule,
+  CapacityOverflowRule,
+  OutsideBusinessHoursRule,
+  PolicyViolationRule,
+  HoldConflictRule,
+  AvailabilityViolationRule,
+} from './core/conflictEngine';
