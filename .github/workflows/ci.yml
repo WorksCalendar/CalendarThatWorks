@@ -91,8 +91,8 @@ jobs:
         env:
           VITE_BASE: /
 
-      - name: Run E2E tests
-        run: npm run test:browser
+      - name: Run E2E smoke tests
+        run: npm run test:e2e:smoke
 
       # Upload Playwright report + traces on failure so we can actually see
       # what broke without having to re-run locally. The report is emitted

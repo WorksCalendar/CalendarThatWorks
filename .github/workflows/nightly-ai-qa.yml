@@ -56,7 +56,7 @@ jobs:
       # Keep this to a focused smoke pass. The visual QA and confused-user
       # runs below collect the artifacts that feed the nightly issue.
       - name: Browser smoke tests
-        run: npm run test:browser
+        run: npm run test:e2e:smoke
         timeout-minutes: 12
 
       - name: Confused user exploratory QA

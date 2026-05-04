@@ -54,6 +54,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:browser": "playwright test",
+    "test:e2e:smoke": "playwright test -c playwright.smoke.config.ts",
+    "test:e2e:release": "npm run test:e2e:smoke",
     "qa:visual": "playwright test visual-qa --config playwright.config.ts && node scripts/ai-qa-review.mjs",
     "qa:review": "node scripts/ai-qa-review.mjs",
     "ai:qa": "playwright test && node scripts/ai-qa-review.mjs",
