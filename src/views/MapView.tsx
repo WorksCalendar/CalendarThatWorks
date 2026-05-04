@@ -107,6 +107,7 @@ function useMapModule(): LoadState {
         // vite.config rollupOptions so they stay out of the published bundle;
         // the runtime catch below handles the genuinely-missing case for hosts
         // that haven't opted in.
+        // @ts-ignore — react-map-gl is an optional runtime peer; types not required at build time
         const reactMap = (await import('react-map-gl/maplibre')) as any;
         await import('maplibre-gl/dist/maplibre-gl.css');
         if (cancelled) return;

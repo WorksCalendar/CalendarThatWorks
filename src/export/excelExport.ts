@@ -38,6 +38,8 @@ export async function exportToExcel(events: NormalizedEvent[], filename = 'calen
   const rows = eventsToRows(events);
 
   try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore — exceljs is an optional runtime peer; types not required at build time
     const ExcelJS = await import('exceljs');
     const workbook  = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Events');
