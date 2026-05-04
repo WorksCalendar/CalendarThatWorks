@@ -127,7 +127,7 @@ const BASE_COORDS: Record<string, { lat: number; lon: number }> = {
 //     ['day','agenda','schedule','base','assets'] — Dispatch was wired up with
 //     dispatchMissions/dispatchEvaluator props but the tab never rendered
 //     because it wasn't in enabledViews.
-const DEMO_SEED_VERSION = 9;
+const DEMO_SEED_VERSION = 10;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = safeGetLocalStorage(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(safeGetLocalStorage(SEED_VER_KEY) ?? 0);
@@ -143,6 +143,14 @@ const DEMO_ENABLED_VIEWS = [
   'requests',
 ];
 
+// Conflict rule seeded into the demo so the walkthrough's Step 2 ("assign
+// Capt. Wright and see the conflict") actually fires the ConflictModal.
+// Soft severity keeps the "Apply anyway" override path live — hard would
+// block the save entirely and break the tour narrative.
+const DEMO_CONFLICT_RULES = [
+  { id: 'cr-resource-overlap', type: 'resource-overlap', severity: 'soft' },
+];
+
 if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
     ...DEFAULT_CONFIG,
@@ -151,6 +159,7 @@ if (!storedCfg) {
     display: { ...DEFAULT_CONFIG.display, enabledViews: DEMO_ENABLED_VIEWS },
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
+    conflicts: { enabled: true, rules: DEMO_CONFLICT_RULES },
   });
   safeSetLocalStorage(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 } else if (storedSeedVer < DEMO_SEED_VERSION) {
@@ -172,6 +181,7 @@ if (!storedCfg) {
     display:   { ...existing.display, defaultView: nextDefaultView ?? 'month', enabledViews: nextEnabledViews },
     team:      { ...existing.team, bases: DEMO_BASES, regions: DEMO_REGIONS },
     approvals: { ...existing.approvals, enabled: true },
+    conflicts: { ...(existing.conflicts ?? {}), enabled: true, rules: DEMO_CONFLICT_RULES },
   });
   safeSetLocalStorage(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 }
