@@ -2,7 +2,7 @@
  * WorksCalendar — main component.
  */
 import {
-  useState, useCallback, useEffect, useRef, useReducer,
+  useState, useCallback, useEffect, useRef,
   useImperativeHandle, forwardRef, useMemo,
 } from 'react';
 import type { ForwardedRef, ReactNode } from 'react';
@@ -28,17 +28,16 @@ import { useEventOptions }    from './hooks/useEventOptions';
 import { useTouchSwipe }     from './hooks/useTouchSwipe';
 import { CalendarContext }    from './core/CalendarContext';
 import { normalizeEvents }    from './core/eventModel';
-import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
-import { UndoRedoManager }   from './core/engine/UndoRedoManager.ts';
 import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
-import type { LegacyEvent } from './core/engine/adapters/fromLegacyEvents.ts';
+import type { LegacyEvent }  from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import { evaluateConflicts } from './core/conflictEngine.ts';
 import type { ConflictEvent, ConflictRule } from './core/conflictEngine.ts';
 import type { OperationContext } from './core/engine/validation/validationTypes';
 import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
+import { useCalendarEngine } from './hooks/useCalendarEngine';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
 import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
@@ -1184,101 +1183,30 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
 
   // ── CalendarEngine — single source of truth for mutations & expansions ───
-  const engineRef      = useRef<CalendarEngine | null>(null);
-  const undoManagerRef = useRef<UndoRedoManager | null>(null);
-  const announcerRef   = useRef<AnnouncerRef | null>(null);
-  // Tracks the pools map we last emitted so subsequent engine _notify calls
-  // only fire onPoolsChange on real pool mutations (e.g. round-robin cursor
-  // advance), not on every state tick.
-  const lastPoolsRef = useRef<ReadonlyMap<string, ResourcePool> | null>(null);
-  // Monotonic counter passed to onPoolsChange so async persistence can
-  // dedupe out-of-order writes (#386 item #14).
-  const poolsSequenceRef = useRef(0);
-  if (engineRef.current === null) {
-    engineRef.current = new CalendarEngine(
-      rawPools && rawPools.length > 0 ? { pools: rawPools } : undefined,
-    );
-    undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
-    lastPoolsRef.current = engineRef.current.state.pools;
-  }
-  // Narrow refs into non-null locals for the rest of render. The init block
-  // above runs synchronously and makes both refs singletons across renders.
-  const engine = engineRef.current;
-  const undoManager = undoManagerRef.current;
-  if (engine === null || undoManager === null) {
-    throw new Error('CalendarEngine/UndoRedoManager failed to initialize');
-  }
-
-  // Counts how many onEventSave-triggered prop updates to suppress clear() for.
-  // Scope ops (single/following) emit multiple onEventSave calls; each one
-  // causes a separate allNormalized update that must not wipe the undo stack.
-  const engineMutationPendingRef = useRef(0);
-
-  // Version counter: increments whenever the engine emits a state change.
-  const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
-  useEffect(() => engine.subscribe(() => tickEngine()), [engine]);
-
-  // Keep engine pools in sync when the host rewrites the prop (controlled
-  // pattern: demo persists to localStorage in onPoolsChange, then re-renders
-  // with the new array). Only the engine advances rrCursor, so replacing
-  // via setPools after a mutation is safe as long as the host echoed the
-  // latest onPoolsChange payload back in.
-  useEffect(() => {
-    if (!rawPools) return;
-    engine.setPools(rawPools);
-    lastPoolsRef.current = engine.state.pools;
-  }, [engine, rawPools]);
-
-  // Emit onPoolsChange whenever the engine commits a new pools map (typically
-  // a round-robin cursor advance during applyMutation). Suppress emissions
-  // driven by the host's own setPools round-trip above.
-  useEffect(() => {
-    if (!onPoolsChange) return;
-    const current = engine.state.pools;
-    if (current === lastPoolsRef.current) return;
-    lastPoolsRef.current = current;
-    poolsSequenceRef.current += 1;
-    onPoolsChange(Array.from(current.values()), { sequence: poolsSequenceRef.current });
-  }, [engine, engineVer, onPoolsChange]);
-
-  // Keep engine in sync with the merged+normalized event list from all sources.
-  // Skip clear() when the change was triggered by our own onEventSave so the
-  // undo stack survives the controlled-events prop round-trip.
-  useEffect(() => {
-    engine.setEvents(fromLegacyEvents(allNormalized as any));
-    if (engineMutationPendingRef.current > 0) {
-      engineMutationPendingRef.current -= 1;
-    } else {
-      undoManager.clear();
-    }
-  }, [engine, undoManager, allNormalized]);
-
-  // ── Expand recurring events within the visible range (via engine) ────────
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // Cast preserves the file's existing loose typing pattern — expandedEvents
-  // was previously inferred as `any` via a nullable ref, and many consumers
-  // still rely on that looseness. Tightening is out of scope for this PR.
-  const expandedEvents: LooseValue[] = useMemo(
-    () => engine.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
-    [engine, engineVer, range],
-  );
-
-  // Unwindowed event source for the Requests view (#424 wk3 — codex
-  // followup). The queue must surface every pending approval regardless
-  // of the calendar's currentDate, so we walk the engine's master
-  // records directly instead of `getOccurrencesInRange(range)`. Approval
-  // stage lives on the master record (one stage per series, not per
-  // occurrence), so master-level iteration is exactly the right grain
-  // here. Filter early to keep the array small even for hosts with
-  // thousands of historical events.
-  const approvalRequestEvents: LooseValue[] = useMemo(() => {
-    const out: LooseValue[] = [];
-    for (const ev of engine.state.events.values()) {
-      const stage = (ev.meta as { approvalStage?: { stage?: string } } | undefined)?.approvalStage?.stage;
-      if (typeof stage === 'string') out.push(toLegacyEvent(ev));
-    }
-    return out;
-  }, [engine, engineVer]); // eslint-disable-line react-hooks/exhaustive-deps -- engineVer cues the engine's mutation count
+  // announcerRef stays here: it attaches to <ScreenReaderAnnouncer> in JSX
+  // and is also used by the keyboard-shortcut undo/redo announcements below.
+  const announcerRef = useRef<AnnouncerRef | null>(null);
+  const {
+    engine,
+    undoManager,
+    engineVer,
+    expandedEvents,
+    approvalRequestEvents,
+    applyEngineOp,
+    applyWithRecurringCheck,
+    getSavedEventPayload,
+    pendingAlert,
+    setPendingAlert,
+    recurringPrompt,
+  } = useCalendarEngine({
+    allNormalized,
+    rawPools,
+    businessHours: ownerCfg.config?.['businessHours'] ?? businessHours,
+    blockedWindows,
+    announcerRef,
+    range,
+    onPoolsChange,
+  });
 
   // ── Base/Region view config ───────────────────────────────────────────────
   const configuredBases   = ownerCfg.config?.['team']?.bases ?? [];
@@ -1383,62 +1311,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // a re-render to pick it up is acceptable; see useShiftOverlap.ts).
   const onShiftIds = useMemo(() => shiftEmployeeIdsAt(visibleEvents), [visibleEvents]);
 
-  // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
-  // Stable ref so applyEngineOp closure never goes stale.
-  // Cast preserves the prior loose-typed assignment — the prop shapes for
-  // businessHours/blockedWindows don't yet match OperationContext's structured
-  // type. Narrowing those prop types is out of scope for this PR.
-  const opCtxRef = useRef<OperationContext | null>(null);
-  opCtxRef.current = {
-    businessHours:  ownerCfg.config?.['businessHours'] ?? businessHours ?? null,
-    blockedWindows: blockedWindows ?? [],
-  } as unknown as OperationContext;
-
-  const [pendingAlert,      setPendingAlert]      = useState<LooseValue | null>(null); // { violations, isHard, onConfirm }
-  // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
-  const [recurringPrompt, setRecurringPrompt] = useState<LooseValue | null>(null);
-
-  const applyEngineOp = useCallback((op: LooseValue, onAccepted: LooseValue) => {
-    const ctx = opCtxRef.current;
-    if (ctx === null) return;
-
-    // Pre-capture the state BEFORE mutation. We only record this to the undo
-    // stack on acceptance to keep the history free of rejected operations.
-    const preSnap = undoManager.captureSnapshot();
-
-    const result = engine.applyMutation(op, ctx);
-
-    if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
-      // State has changed — record the pre-mutation snapshot.
-      undoManager.record(preSnap, op.type);
-      announcerRef.current?.announce(opAnnouncement(op));
-      // Each emitted onEventSave call will trigger an allNormalized update; count
-      // them so the effect can skip clear() for all of them.
-      engineMutationPendingRef.current = Math.max(1, result.changes.length);
-      onAccepted(result);
-
-    } else if (result.status === 'pending-confirmation') {
-      // Engine state is UNCHANGED at this point (pending means no commit yet).
-      // preSnap is still accurate as the pre-mutation snapshot.
-      setPendingAlert({
-        violations: result.validation.violations,
-        isHard: false,
-        onConfirm: () => {
-          const confirmed = engine.applyMutation(op, ctx, { overrideSoftViolations: true });
-          if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
-            undoManager.record(preSnap, op.type);
-            announcerRef.current?.announce(opAnnouncement(op));
-            engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
-            onAccepted(confirmed);
-          }
-        },
-      });
-
-    } else {
-      // Rejected — state unchanged, nothing to record.
-      setPendingAlert({ violations: result.validation.violations, isHard: true, onConfirm: null });
-    }
-  }, [engine, undoManager]); // engine/undoManager are singleton refs — stable
+  // ── Mutation pipeline ────────────────────────────────────────────────────
+  // applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, pendingAlert,
+  // and recurringPrompt are all owned by useCalendarEngine above.
 
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState<LooseValue | null>(null);
@@ -1597,16 +1472,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setSelectedEvent(ev);
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
-
-  const getSavedEventPayload = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
-    const normalizedId = eventId == null ? '' : String(eventId);
-    if (normalizedId) {
-      const saved = engine.state.events.get(normalizedId);
-      if (saved) return toLegacyEvent(saved);
-    }
-    if (!fallbackEvent) return null;
-    return fallbackPatch ? { ...fallbackEvent, ...fallbackPatch } : fallbackEvent;
-  }, [engine]);
 
   const emitEventSave = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const savedPayload = getSavedEventPayload(eventId, fallbackEvent, fallbackPatch);
@@ -1920,31 +1785,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [applyEngineOp, getSavedEventPayload, onScheduleSave]);
 
   // All handlers run through applyEngineOp before touching host state.
-
-  /**
-   * For a recurring event, show the scope picker and apply the op after the
-   * user chooses 'single' | 'following' | 'series'.
-   * For non-recurring events, apply the op immediately.
-   *
-   * Defined BEFORE any handler that references it to avoid stale closures.
-   */
-  const applyWithRecurringCheck = useCallback((ev: LooseValue, makeOp: LooseValue, onAccepted: LooseValue, actionLabel: LooseValue) => {
-    if (!ev._recurring) {
-      applyEngineOp(makeOp('series'), onAccepted);
-      return;
-    }
-    setRecurringPrompt({
-      actionLabel,
-      onConfirm: (scope: LooseValue) => {
-        setRecurringPrompt(null);
-        applyEngineOp(
-          { ...makeOp(scope), scope, occurrenceDate: ev.start instanceof Date ? ev.start : new Date(ev.start) },
-          onAccepted,
-        );
-      },
-      onCancel: () => setRecurringPrompt(null),
-    });
-  }, [applyEngineOp]);
+  // applyWithRecurringCheck is provided by useCalendarEngine.
 
   // Pre-save conflict check for EventForm. Builds an `evaluateConflicts`
   // input from the live event set and the owner-configured rule set.
@@ -2285,7 +2126,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       };
     }
 
-    const ctx = opCtxRef.current;
+    const ctx = {
+      businessHours:  ownerCfg.config?.['businessHours'] ?? businessHours ?? null,
+      blockedWindows: blockedWindows ?? [],
+    } as unknown as OperationContext;
     const seededEvents = [...engine.state.events.values()];
     const conflicts: SchedulePreviewConflict[] = [];
 

@@ -18,13 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   to `types/ui.ts` so both `usePermissions` and `CalendarContext` share the definition.
   All eight view files updated from unsafe string-bracket access to typed dot-notation.
 
-### Sprint 2 — WorksCalendar orchestration extraction (issue #6)
+### Sprint 2 — Engine layer extraction (issue #6)
 
-- **#6 Orchestration hook**: Extracted `useCalendarOrchestration` hook from
-  `WorksCalendar.tsx`, consolidating the engine setup, undo/redo manager, mutation
-  handlers (save, delete, drag, resize, approval transitions), conflict detection,
-  and source aggregation into a single hook. `WorksCalendar.tsx` import count reduced
-  from 80+ to the UI-only surface.
+- **#6 Engine hook**: Extracted `useCalendarEngine` from `WorksCalendar.tsx`.
+  The hook owns the `CalendarEngine` singleton, `UndoRedoManager`, engineVer subscription,
+  pool sync, allNormalized→engine event sync, `expandedEvents`, `approvalRequestEvents`,
+  `applyEngineOp`, `applyWithRecurringCheck`, and `getSavedEventPayload`.
+  `pendingAlert` (soft/hard violation dialog) and `recurringPrompt` state are now
+  managed inside the hook and surfaced to `WorksCalendar` as return values.
+  `WorksCalendar.tsx` retains UI state, navigation/filter via `useCalendar`, and
+  domain-specific mutation handlers (shift status, coverage, availability, schedule,
+  inline edit) which depend on UI state setters.
 
 ### Sprint 3 — Engine as single state source (issues #1, #3, #4)
 
