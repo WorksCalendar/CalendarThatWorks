@@ -333,57 +333,82 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
 ### 2d — Workflow & Approval System (Subsystem 6)
 
 ```
-  User action         Workflow DSL        ApprovalStage
-  (approve / deny /   (Workflow JSON)     (from event.meta)
-   cancel / timeout)
-        │                   │                   │
-        └───────────────────┼───────────────────┘
-                            ▼
+  User action                  Workflow DSL        ApprovalStage
+  Approval: submit / approve   (Workflow JSON)     (from event.meta)
+            deny / downgrade /
+            finalize / revoke
+  Workflow: approve / deny /
+            cancel / timeout
+        │                            │                   │
+        └────────────────────────────┼───────────────────┘
+                                     ▼
   ┌─────────────────────────────────────────────────────────────┐
   │                  transitionApproval()                       │
   │                                                             │
-  │  1. legalActionsFrom(currentStage) — guard illegal jumps    │
-  │     (e.g. finalized → requested is blocked)                 │
+  │  1. VALID_STAGES check — reject unknown stage               │
+  │     DENY_REQUIRES_REASON — deny without reason → error      │
+  │     findTransition(from, action) on LEGAL_TRANSITIONS table │
+  │       → ILLEGAL_TRANSITION error if no match                │
+  │       (legalActionsFrom() is UI-only, not called here)      │
   │                                                             │
-  │  2. If workflow supplied:                                   │
-  │     advance(workflowInstance, action) →                     │
+  │  2. resolveApproveTarget()                                  │
+  │     single-tier shortcut: approve from 'requested'          │
+  │     when counts.requiredApprovals === 1 → lands 'finalized' │
+  │     revoke resets approval/denial counts to 0               │
+  │                                                             │
+  │  3. appendAuditEntry(current.history, entrySeed)            │
+  │     entrySeed = { action · at · actor? · tier? · reason? }  │
+  │     → SHA-256 hash chain (tamper-evident audit trail)       │
+  │     → new ApprovalStage object built here                   │
+  │                                                             │
+  │  4. If workflow supplied:                                   │
+  │     mapToWorkflowAction(input) → WorkflowAction | null      │
+  │       (submit→start · approve→approve · deny→deny           │
+  │        revoke/downgrade/finalize → null, skip workflow)     │
+  │     advance({ workflow, instance, action, at, variables }) → │
   │       • auto-walk condition + notify nodes                  │
   │       • stop at approval node (→ awaiting)                  │
   │         or terminal node (→ completed / denied)             │
   │       • parallel branches: per-branch approval tracking     │
   │         join releases on quorum (requireAll / requireAny /  │
-  │         requireCount)                                       │
-  │       → WorkflowInstance (updated)                          │
-  │       → WorkflowEmitEvent[] (node_entered, action_taken,   │
-  │                               outcome_set, timer_scheduled) │
+  │         requireN)                                           │
+  │       → AdvanceResult { ok, instance, emit }                │
   │                                                             │
-  │  3. appendAuditEntry(stage, action, actor, reason)          │
-  │     → SHA-256 hash chain (tamper-evident audit trail)       │
-  │                                                             │
-  │  4. Return TransitionResult { ok, stage, workflowInstance } │
+  │  5. Return TransitionResult                                 │
+  │     { ok: true, stage, workflowInstance?, emit? }           │
+  │     { ok: false, error: { code, message, from, action } }   │
   └────────────────────┬────────────────────────────────────────┘
                        │
          ┌─────────────┼──────────────────┐
          ▼             ▼                  ▼
   Updated          WorkflowInstance    WorkflowEmitEvent[]
-  ApprovalStage    (host persists       → EventBus channels
-  (host writes     to event.meta)         booking.approved
-   back to event)                         booking.denied
-                                          booking.cancelled
+  ApprovalStage    (host persists       { node_entered · node_exited
+  (host writes     to event.meta)         notify · workflow_completed
+   back to event)                         workflow_failed }
+                                          → EventBus channels
+                                            booking.approved
+                                            booking.denied
+                                            booking.cancelled
                                           → channel adapters
-                                            (Slack, email,
-                                             webhooks)
+                                            (Slack, email, webhooks)
 
   useWorkflowTicker (React hook):
-    setInterval → tick(instance, workflow, now)
-    → auto-fires 'timeout' actions when node deadline passed
-    → calls onTimeout callback for host to persist result
+    setInterval (default 30s) → tick(workflow, instance, nowIso, variables?)
+    → fires immediately on mount (catches already-elapsed SLAs)
+    → deduped per (currentNodeId, enteredAt) — won't fire twice per boundary
+    → calls onTimeout(result, emit) for host to persist and re-render
+    → paused when enabled=false or instance not in 'awaiting' status
 
-  HoldRegistry (booking holds):
-    acquireHold(resourceId, window, holderId, ttl)
-      → blocks overlapping booking attempts with soft violation
-    releaseHold(holdId) → on form close / submit
-    findBlockingHold() → used by conflictEngine
+  HoldRegistry (booking holds) — created via createHoldRegistry():
+    registry.acquire({ resourceId, window, holderId, ttlMs? })
+      → AcquireHoldResult { ok: true, hold } | { ok: false, error }
+      → CONFLICTING_HOLD if another holder overlaps (soft violation in conflictEngine)
+      → same holder re-acquires: TTL refresh (window replaced wholesale)
+      default TTL: 5 minutes (300_000 ms)
+    registry.release(holdId) → on form close / submit
+    registry.active(now?) → live holds snapshot (lazy expiry)
+    registry.prune(now?) → GC expired holds
+    findBlockingHold(proposed, holds, nowMs) → used by conflictEngine hold-conflict rule
 ```
 
 ---
