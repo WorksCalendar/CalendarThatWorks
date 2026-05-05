@@ -4,7 +4,7 @@ Three levels of DFD covering the full library. Context (Level 0) → subsystems
 (Level 1) → internals of the four most complex subsystems (Level 2).
 
 > **Architecture status**: Diagrams below reflect the **target architecture**
-> after the three-sprint refactor (see CHANGELOG `[Unreleased]`). The key
+> after the three-sprint refactor (see CHANGELOG `[0.7.0]`). The key
 > structural changes from the audit:
 > - `CalendarEngine` is now the **sole** source of truth for view, cursor, and
 >   base filter state. The legacy `useCalendar` hook and its parallel state are gone.
@@ -1174,7 +1174,7 @@ Detailed decomposition of the highest-complexity processes within Level 2 subsys
 
 ## Sprint Implementation Status
 
-All six audit issues resolved across three sprints. See `CHANGELOG [Unreleased]` for details.
+All six audit issues resolved across three sprints. See `CHANGELOG [0.7.0]` for details.
 
 | # | Issue | Sprint | Status |
 |---|-------|--------|--------|
