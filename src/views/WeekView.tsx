@@ -137,7 +137,7 @@ export default function WeekView({
   const daysAreaRef    = useRef<HTMLDivElement | null>(null);
 
   function startPillDrag(ev: WeekViewEvent, e: ReactPointerEvent<HTMLButtonElement>, dayCol: number) {
-    if (!ctx?.['permissions']?.canDrag) return;
+    if (!ctx?.permissions?.canDrag) return;
     // No e.preventDefault() — that would suppress the synthesized click event.
     // setPointerCapture on daysArea redirects pointerup there, so click won't
     // fire on the pill button; handleDaysAreaPointerUp handles the tap case.
@@ -225,10 +225,10 @@ export default function WeekView({
 
   // ── Renderers ─────────────────────────────────────────────────────────────
   function renderPill(ev: WeekViewEvent, dayCol?: number, onAfterClick?: () => void) {
-    const color    = resolveColor(ev as never, ctx?.['colorRules']);
+    const color    = resolveColor(ev as never, ctx?.colorRules);
     const isDragging = pillDragRef.current?.ev.id === ev.id;
     const onClick  = () => { if (isDragging) return; onEventClick?.(ev); onAfterClick?.(); };
-    const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+    const isConflicting = !!ctx?.conflictingEventIds?.has(ev.id);
     const statusClass   = ev.status === 'cancelled' ? styles['cancelled']
       : ev.status === 'tentative' ? styles['tentative'] : '';
     const timeLabel = ev.allDay ? 'All day' : format(ev.start, 'h:mm a');
@@ -375,8 +375,8 @@ export default function WeekView({
               {spans
                 .filter(s => s.lane < MAX_SPANS_VISIBLE)
                 .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                  const color = resolveColor(ev as never, ctx?.['colorRules']);
-                  const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+                  const color = resolveColor(ev as never, ctx?.colorRules);
+                  const isConflicting = !!ctx?.conflictingEventIds?.has(ev.id);
                   const statusClass = ev.status === 'cancelled' ? styles['cancelled']
                     : ev.status === 'tentative' ? styles['tentative'] : '';
                   const isDimmed = spanGhost?.ev?.id === ev.id;
@@ -418,7 +418,7 @@ export default function WeekView({
                   className={[styles['spanBar'], styles['spanGhost']].join(' ')}
                   aria-hidden="true"
                   style={{
-                    '--ev-color': resolveColor(spanGhost.ev as never, ctx?.['colorRules']),
+                    '--ev-color': resolveColor(spanGhost.ev as never, ctx?.colorRules),
                     left:   `${(spanGhost.startCol / 7) * 100}%`,
                     width:  `${((spanGhost.endCol - spanGhost.startCol + 1) / 7) * 100}%`,
                     top:    0,

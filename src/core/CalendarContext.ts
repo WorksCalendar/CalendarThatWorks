@@ -4,11 +4,10 @@
  */
 import { createContext, useContext } from 'react';
 import type { NormalizedEvent } from '../types/events';
+import type { CalendarContextValue, ColorRule } from '../types/ui';
 
-export type CalendarContextValue = {
-  renderEvent?: ((...args: any[]) => any) | undefined;
-  [key: string]: any;
-};
+export type { CalendarContextValue, ColorRule };
+export type { RenderEventOptions } from '../types/ui';
 
 const DEFAULT_CALENDAR_CONTEXT: CalendarContextValue = {};
 
@@ -25,25 +24,27 @@ export function useCalendarContext(): CalendarContextValue {
  */
 export function resolveColor(
   ev: NormalizedEvent,
-  colorRules: Array<Record<string, unknown>> | undefined,
+  colorRules: ReadonlyArray<ColorRule | Record<string, unknown>> | undefined,
 ): string | undefined {
   if (colorRules?.length) {
     for (const rule of colorRules) {
       try {
         // Function rule shape: { when: (event) => boolean, color }
-        const when = rule?.['when'];
+        const when = (rule as Record<string, unknown>)['when'];
         if (typeof when === 'function') {
           if (when(ev)) {
-            return typeof rule['color'] === 'string' ? rule['color'] : undefined;
+            const color = (rule as Record<string, unknown>)['color'];
+            return typeof color === 'string' ? color : undefined;
           }
           continue;
         }
         // Declarative rule shape: { field: 'category', value: 'Incident', color }
-        const field = rule?.['field'];
+        const field = (rule as Record<string, unknown>)['field'];
         if (typeof field === 'string' && 'value' in rule) {
           const evRecord = ev as unknown as Record<string, unknown>;
-          if (evRecord[field] === rule['value']) {
-            return typeof rule['color'] === 'string' ? rule['color'] : undefined;
+          if (evRecord[field] === (rule as Record<string, unknown>)['value']) {
+            const color = (rule as Record<string, unknown>)['color'];
+            return typeof color === 'string' ? color : undefined;
           }
         }
       } catch (_) { /* ignore rule errors */ }

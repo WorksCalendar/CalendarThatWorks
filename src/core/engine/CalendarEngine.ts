@@ -127,6 +127,14 @@ export class CalendarEngine {
   private _assignmentsByResource: Map<string, Set<string>> = new Map();
   private _assignmentsByEvent:    Map<string, Set<string>> = new Map();
 
+  // ── Dependency indexes ────────────────────────────────────────────────────
+  //
+  // Parallel to the assignment indexes. Keyed on event id; values are sets of
+  // dependency ids. Allows getSuccessorsOf / getPredecessorsOf to run in O(k)
+  // (k = fan-out / fan-in of that event) instead of O(n) over all dependencies.
+  private _dependenciesByFromEvent: Map<string, Set<string>> = new Map();
+  private _dependenciesByToEvent:   Map<string, Set<string>> = new Map();
+
   /** Optional lifecycle bus (issue #216). null when host did not wire one. */
   private _bus: EventBus | null;
 
@@ -134,6 +142,7 @@ export class CalendarEngine {
     this._state = createInitialState(init);
     this._bus = init.bus ?? null;
     this._rebuildAssignmentIndex();
+    this._rebuildDependencyIndex();
   }
 
   /** Lifecycle bus accessor (issue #216). Returns null when not configured. */
@@ -274,6 +283,7 @@ export class CalendarEngine {
       ...init,
     });
     this._rebuildAssignmentIndex();
+    this._rebuildDependencyIndex();
     this._notify();
   }
 
@@ -376,42 +386,54 @@ export class CalendarEngine {
   setDependencies(dependencies: ReadonlyArray<Dependency>): void {
     const map = new Map<string, Dependency>(dependencies.map(d => [d.id, d]));
     this._state = { ...this._state, dependencies: map };
+    this._rebuildDependencyIndex();
     this._notify();
   }
 
   /** Add or replace a single dependency. */
   upsertDependency(dep: Dependency): void {
+    const existing = this._state.dependencies.get(dep.id);
     const map = new Map(this._state.dependencies);
     map.set(dep.id, dep);
     this._state = { ...this._state, dependencies: map };
+    if (existing) this._removeFromDependencyIndex(existing);
+    this._addToDependencyIndex(dep);
     this._notify();
   }
 
   /** Remove a dependency by id. No-op when not found. */
   removeDependency(id: string): void {
-    if (!this._state.dependencies.has(id)) return;
+    const existing = this._state.dependencies.get(id);
+    if (!existing) return;
     const map = new Map(this._state.dependencies);
     map.delete(id);
     this._state = { ...this._state, dependencies: map };
+    this._removeFromDependencyIndex(existing);
     this._notify();
   }
 
-  /** Return all dependencies where eventId is the predecessor. */
+  /** Return all dependencies where eventId is the predecessor. O(k). */
   getSuccessorsOf(eventId: string): Dependency[] {
-    const result: Dependency[] = [];
-    for (const d of this._state.dependencies.values()) {
-      if (d.fromEventId === eventId) result.push(d);
+    const ids = this._dependenciesByFromEvent.get(eventId);
+    if (!ids) return [];
+    const out: Dependency[] = [];
+    for (const id of ids) {
+      const d = this._state.dependencies.get(id);
+      if (d) out.push(d);
     }
-    return result;
+    return out;
   }
 
-  /** Return all dependencies where eventId is the successor. */
+  /** Return all dependencies where eventId is the successor. O(k). */
   getPredecessorsOf(eventId: string): Dependency[] {
-    const result: Dependency[] = [];
-    for (const d of this._state.dependencies.values()) {
-      if (d.toEventId === eventId) result.push(d);
+    const ids = this._dependenciesByToEvent.get(eventId);
+    if (!ids) return [];
+    const out: Dependency[] = [];
+    for (const id of ids) {
+      const d = this._state.dependencies.get(id);
+      if (d) out.push(d);
     }
-    return result;
+    return out;
   }
 
   // ── Resource calendar CRUD ────────────────────────────────────────────────────
@@ -525,7 +547,8 @@ export class CalendarEngine {
       ...(snapshot.resourceCalendars != null && { resourceCalendars: snapshot.resourceCalendars }),
       ...(snapshot.pools             != null && { pools:             snapshot.pools }),
     };
-    if (snapshot.assignments != null) this._rebuildAssignmentIndex();
+    if (snapshot.assignments  != null) this._rebuildAssignmentIndex();
+    if (snapshot.dependencies != null) this._rebuildDependencyIndex();
     this._notify();
   }
 
@@ -571,6 +594,39 @@ export class CalendarEngine {
     if (byE) {
       byE.delete(a.id);
       if (byE.size === 0) this._assignmentsByEvent.delete(a.eventId);
+    }
+  }
+
+  // ── Dependency index maintenance ─────────────────────────────────────────
+
+  private _rebuildDependencyIndex(): void {
+    this._dependenciesByFromEvent = new Map();
+    this._dependenciesByToEvent   = new Map();
+    for (const d of this._state.dependencies.values()) {
+      this._addToDependencyIndex(d);
+    }
+  }
+
+  private _addToDependencyIndex(d: Dependency): void {
+    let byFrom = this._dependenciesByFromEvent.get(d.fromEventId);
+    if (!byFrom) { byFrom = new Set(); this._dependenciesByFromEvent.set(d.fromEventId, byFrom); }
+    byFrom.add(d.id);
+
+    let byTo = this._dependenciesByToEvent.get(d.toEventId);
+    if (!byTo) { byTo = new Set(); this._dependenciesByToEvent.set(d.toEventId, byTo); }
+    byTo.add(d.id);
+  }
+
+  private _removeFromDependencyIndex(d: Dependency): void {
+    const byFrom = this._dependenciesByFromEvent.get(d.fromEventId);
+    if (byFrom) {
+      byFrom.delete(d.id);
+      if (byFrom.size === 0) this._dependenciesByFromEvent.delete(d.fromEventId);
+    }
+    const byTo = this._dependenciesByToEvent.get(d.toEventId);
+    if (byTo) {
+      byTo.delete(d.id);
+      if (byTo.size === 0) this._dependenciesByToEvent.delete(d.toEventId);
     }
   }
 

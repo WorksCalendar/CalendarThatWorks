@@ -399,7 +399,7 @@ export default function BaseGanttView({
       const left   = ev._dayStart * pxPerDay;
       const width  = Math.max((ev._dayEnd - ev._dayStart + 1) * pxPerDay - 4, 8);
       const top    = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
-      const bg     = resolveColor(ev as never, ctx['colorRules']) || ev.color || 'var(--wc-accent)';
+      const bg     = resolveColor(ev as never, ctx.colorRules) || ev.color || 'var(--wc-accent)';
       return (
         <button
           key={ev.id ?? `${ev.title}-${idx}`}

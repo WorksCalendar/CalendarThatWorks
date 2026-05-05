@@ -3,6 +3,17 @@
 Three levels of DFD covering the full library. Context (Level 0) → subsystems
 (Level 1) → internals of the four most complex subsystems (Level 2).
 
+> **Architecture status**: Diagrams below reflect the **target architecture**
+> after the three-sprint refactor (see CHANGELOG `[Unreleased]`). The key
+> structural changes from the audit:
+> - `CalendarEngine` is now the **sole** source of truth for view, cursor, and
+>   base filter state. The legacy `useCalendar` hook and its parallel state are gone.
+> - A single `useCalendarOrchestration` hook owns engine setup, undo/redo, and
+>   all mutation handlers — `WorksCalendar.tsx` is now a pure UI shell.
+> - `useOccurrences` deleted; all views use the engine's `getOccurrencesInRange`
+>   read path exclusively.
+> - `CalendarContextValue` is fully typed — no more `[key: string]: any` escape hatch.
+
 ---
 
 ## Level 0 — Context Diagram
@@ -137,7 +148,7 @@ Detailed flows for the four highest-complexity subsystems.
 
 ---
 
-### 2a — Calendar Engine (Subsystem 2)
+### 2a — Calendar Engine + Orchestration Hook (Subsystems 1 + 2, post-Sprint-2/3)
 
 ```
   EngineOperation
@@ -372,6 +383,21 @@ Detailed flows for the four highest-complexity subsystems.
     releaseHold(holdId) → on form close / submit
     findBlockingHold() → used by conflictEngine
 ```
+
+---
+
+---
+
+## Sprint Implementation Status
+
+| # | Issue | Sprint | Status |
+|---|---|---|---|
+| 1 | Duplicate recurrence expansion (`useOccurrences` vs `expandOccurrences`) | 3 | In progress |
+| 2 | `CalendarContext` typed as `any` | 1 | In progress |
+| 3 | Dual state systems (`useCalendar` + `CalendarEngine`) | 3 | In progress |
+| 4 | Thin export lazy wrapper (`exportToExcelLazy.ts`) | 3 | In progress |
+| 5 | O(n) dependency lookups in engine | 1 | In progress |
+| 6 | `WorksCalendar.tsx` 80+ import orchestration burden | 2 | In progress |
 
 ---
 

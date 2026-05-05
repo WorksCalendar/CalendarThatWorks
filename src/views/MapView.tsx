@@ -167,7 +167,7 @@ export default function MapView({
     for (const ev of events) {
       const pos = readCoords(ev);
       if (!pos) continue;
-      const color = resolveColor(ev as any, ctx?.['colorRules']);
+      const color = resolveColor(ev as any, ctx?.colorRules);
       out.push({ ev, pos, color });
     }
     return out;
