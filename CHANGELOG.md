@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-05
+
 ### Sprint 1 — Engine internals & strict typing (issues #2, #5)
 
 - **#5 Dependency index**: Added `_dependenciesByFromEvent` / `_dependenciesByToEvent`
