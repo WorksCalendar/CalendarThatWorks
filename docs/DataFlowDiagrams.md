@@ -8,8 +8,8 @@ Three levels of DFD covering the full library. Context (Level 0) → subsystems
 > structural changes from the audit:
 > - `CalendarEngine` is now the **sole** source of truth for view, cursor, and
 >   base filter state. The legacy `useCalendar` hook and its parallel state are gone.
-> - A single `useCalendarOrchestration` hook owns engine setup, undo/redo, and
->   all mutation handlers — `WorksCalendar.tsx` is now a pure UI shell.
+> - `useCalendarEngine` owns engine setup, undo/redo, and all mutation handlers —
+>   `WorksCalendar.tsx` is now a pure UI shell.
 > - `useOccurrences` deleted; all views use the engine's `getOccurrencesInRange`
 >   read path exclusively.
 > - `CalendarContextValue` is fully typed — no more `[key: string]: any` escape hatch.
@@ -85,8 +85,8 @@ Seven major subsystems inside the library and the data flows between them.
                          │  └──────┬───────┘                     │     EXPANSION    │  │
                          │         │                             │                  │  │
                          │         │ booking.*/assignment.*      │  expandOccurrences│ │
-                         │         ▼                             │  useOccurrences  │  │
-                         │  ┌──────────────┐                     │  (rrule → dates) │  │
+                         │         ▼                             │  (rrule → dates) │  │
+                         │  ┌──────────────┐                     │                  │  │
                          │  │  External    │                     └────────┬─────────┘  │
                          │  │  Channels    │                              │             │
                          │  │  Slack/email │                              │ occurrences[]│
@@ -120,8 +120,8 @@ Seven major subsystems inside the library and the data flows between them.
                          │  │  parseConfig │                     ┌──────────────────┐  │
                          │  │  profileStore│                     │  UI / FORMS      │  │
                          │  │  poolStore   │                     │  EventForm       │  │
-                         │  │  savedViews  │                     │  FilterBar       │  │
-                         │  │  themeSystem │                     │  WorkflowBuilder │  │
+                         │  │  savedViews  │ ─ config/theme ────►│  FilterBar       │  │
+                         │  │  themeSystem │◄─ settings writes ──│  WorkflowBuilder │  │
                          │  └──────────────┘                     │  ConfigPanel     │  │
                          │                                        │  ExportButtons   │  │
                          │                                        └──────────────────┘  │
@@ -390,55 +390,13 @@ Detailed flows for the four highest-complexity subsystems.
 
 ## Sprint Implementation Status
 
+All six audit issues resolved across three sprints. See `CHANGELOG [Unreleased]` for details.
+
 | # | Issue | Sprint | Status |
-|---|---|---|---|
-| 1 | Duplicate recurrence expansion (`useOccurrences` vs `expandOccurrences`) | 3 | In progress |
-| 2 | `CalendarContext` typed as `any` | 1 | In progress |
-| 3 | Dual state systems (`useCalendar` + `CalendarEngine`) | 3 | In progress |
-| 4 | Thin export lazy wrapper (`exportToExcelLazy.ts`) | 3 | In progress |
-| 5 | O(n) dependency lookups in engine | 1 | In progress |
-| 6 | `WorksCalendar.tsx` 80+ import orchestration burden | 2 | In progress |
-
----
-
-## Issues Found During Survey
-
-The following are worth reviewing before the next release:
-
-### 1. Duplicate recurrence expansion paths
-
-There are **two separate recurrence expanders** in the codebase:
-
-- `src/hooks/useOccurrences.ts` — React hook, works directly on `NormalizedEvent[]`
-- `src/core/engine/recurrence/expandOccurrences.ts` — pure function, works on `EngineEvent[]`
-
-Both call `expandRRule` from `icalParser.ts` and both pad the range by 7 days with the same constant. The hook predates the engine; once `WorksCalendar.tsx` fully migrates to the engine's read path (`getOccurrencesInRange`), `useOccurrences` becomes dead weight. Right now both exist, which means two code paths to keep in sync.
-
-### 2. `CalendarContext` is typed as `[key: string]: any`
-
-`src/core/CalendarContext.ts:9` — `CalendarContextValue` is essentially an open bag:
-
-```ts
-export type CalendarContextValue = {
-  renderEvent?: ((...args: any[]) => any) | undefined;
-  [key: string]: any;
-};
-```
-
-`resolveColor` casts through `colorRules: Array<Record<string, unknown>>` and `ev as unknown as Record<string, unknown>`. This is the one place in the library that's genuinely untyped and relies on runtime duck-checking. It won't cause bugs but it's a gap in the strict-TypeScript story.
-
-### 3. `useCalendar` and the engine are parallel state systems
-
-`useCalendar` (`src/hooks/useCalendar.ts`) maintains its own `useState` for view, cursor, filters, and calls `applyFilters` directly. `CalendarEngine` maintains the same data in `CalendarState`. `WorksCalendar.tsx` uses both simultaneously — the hook drives the toolbar/filter UI while the engine drives the mutation pipeline. The two are kept in sync manually. This is fragile and is the most likely source of subtle state drift bugs.
-
-### 4. `exportToExcelLazy.ts` re-exports `excelExport.ts` through a wrapper
-
-The lazy wrapper (`export async function exportToExcel`) calls the real implementation via a dynamic import. The public `index.ts` re-exports from the lazy wrapper. This is correct, but the file is trivially thin (9 lines). If the pattern grows it's fine, but currently it's an extra indirection for minimal gain since `excelExport` is already in the split-chunk build.
-
-### 5. `getSuccessorsOf` / `getPredecessorsOf` are O(n) full scans
-
-`CalendarEngine` has `_assignmentsByResource` and `_assignmentsByEvent` indexes (O(k) lookups), but `getSuccessorsOf` and `getPredecessorsOf` do a full linear scan over `this._state.dependencies.values()`. For large event sets with many dependencies this will degrade. A `_dependenciesByFromEvent` / `_dependenciesByToEvent` index parallel to the assignment index would fix it.
-
-### 6. `WorksCalendar.tsx` imports list
-
-`WorksCalendar.tsx` has ~80+ imports at the top level. The file is the integration point for everything so this is partly structural, but it suggests the component is doing too much orchestration itself. Some of that could move into a dedicated `useCalendarOrchestration` hook to reduce the component's surface area.
+|---|-------|--------|--------|
+| 1 | Duplicate recurrence expansion (`useOccurrences` deleted; engine read path only) | 3 | ✅ Done |
+| 2 | `CalendarContext` typed as `any` → fully typed `CalendarContextValue` | 1 | ✅ Done |
+| 3 | Dual state systems (`useCalendar` removed; engine is sole source of truth) | 3 | ✅ Done |
+| 4 | Thin export wrapper (`exportToExcelLazy.ts` deleted; `excelExport.ts` exported directly) | 3 | ✅ Done |
+| 5 | O(n) dependency lookups → `_dependenciesByFromEvent` / `_dependenciesByToEvent` indexes added | 1 | ✅ Done |
+| 6 | `WorksCalendar.tsx` orchestration burden → extracted into `useCalendarEngine` hook | 2 | ✅ Done |
