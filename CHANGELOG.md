@@ -5,6 +5,39 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Sprint 1 — Engine internals & strict typing (issues #2, #5)
+
+- **#5 Dependency index**: Added `_dependenciesByFromEvent` / `_dependenciesByToEvent`
+  lookup indexes to `CalendarEngine`, matching the existing assignment index pattern.
+  `getSuccessorsOf` and `getPredecessorsOf` are now O(k) instead of O(n).
+- **#2 CalendarContext typing**: Replaced `[key: string]: any` in `CalendarContextValue`
+  with named, typed fields (`renderEvent`, `renderHoverCard`, `colorRules`, `businessHours`,
+  `emptyState`, `permissions`, `editMode`, `conflictingEventIds`). Moved `PermissionCaps`
+  to `types/ui.ts` so both `usePermissions` and `CalendarContext` share the definition.
+  All eight view files updated from unsafe string-bracket access to typed dot-notation.
+
+### Sprint 2 — WorksCalendar orchestration extraction (issue #6)
+
+- **#6 Orchestration hook**: Extracted `useCalendarOrchestration` hook from
+  `WorksCalendar.tsx`, consolidating the engine setup, undo/redo manager, mutation
+  handlers (save, delete, drag, resize, approval transitions), conflict detection,
+  and source aggregation into a single hook. `WorksCalendar.tsx` import count reduced
+  from 80+ to the UI-only surface.
+
+### Sprint 3 — Engine as single state source (issues #1, #3, #4)
+
+- **#3 Engine migration**: `CalendarEngine` is now the sole source of truth for
+  `view`, `cursor`, and base filter state (`search`, `categories`, `resources`).
+  Extended filter state (`dayWindow`, schema-driven fields, source toggles) remains
+  in React state but no longer duplicates engine state. `useCalendar` hook removed.
+- **#1 Duplicate recurrence removal**: `useOccurrences` hook deleted. All views use
+  the engine's `getOccurrencesInRange` read path via the orchestration hook.
+- **#4 Export wrapper consolidated**: `exportToExcelLazy.ts` and `excelExport.ts`
+  merged into a single file. The two-file lazy pattern was correct but added
+  unnecessary indirection for a single consumer.
+
 ## [0.6.2] - 2026-05-03
 
 ### Fixed

@@ -1003,8 +1003,8 @@ export default function AssetsView({
     return (
       <div className={styles['wrap']} ref={wrapRef} data-zoom={activeZoom}>
         {toolbarNode}
-        {ctx?.['emptyState']
-          ? ctx['emptyState']
+        {ctx?.emptyState
+          ? ctx.emptyState
           : (
             <div className={styles['empty']}>
               <p>No {labelPluralLower} to display in {rangeLabel}.</p>
@@ -1283,7 +1283,7 @@ export default function AssetsView({
 
                   {/* Event pills */}
                   {rowEvents.map(ev => {
-                    const evColor = resolveAssetColor(ev, categoryColorMap, ctx?.['colorRules']);
+                    const evColor = resolveAssetColor(ev, categoryColorMap, ctx?.colorRules);
                     const left    = ev._dayStart * dayColW + 2;
                     const width   = Math.max(dayColW - 4, (ev._dayEnd - ev._dayStart + 1) * dayColW - 4);
                     const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);

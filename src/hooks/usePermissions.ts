@@ -6,19 +6,11 @@
  *   'user'     — can add/edit/delete events and apply saved views; cannot manage people or options
  *   'readonly' — view only; all writes disabled
  */
+import type { PermissionCaps } from '../types/ui';
+export type { PermissionCaps };
 
 export const ROLES = /** @type {const} */ (['admin', 'user', 'readonly']);
 type Role = 'admin' | 'user' | 'readonly';
-
-export type PermissionCaps = {
-  canAddEvent: boolean;
-  canEditEvent: boolean;
-  canDeleteEvent: boolean;
-  canDrag: boolean;
-  canManagePeople: boolean;
-  canManageOptions: boolean;
-  canManageSavedViews: boolean;
-};
 
 const CAPS: Record<Role, PermissionCaps> = {
   admin: {

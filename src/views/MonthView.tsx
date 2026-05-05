@@ -149,7 +149,7 @@ export default function MonthView({
   const [dragTarget, setDragTarget] = useState<Date | null>(null); // Date | null
 
   function startPillDrag(ev: NormalizedEvent, e: ReactPointerEvent<HTMLElement>) {
-    if (e.button !== 0 || !ctx?.['permissions']?.canDrag) return;
+    if (e.button !== 0 || !ctx?.permissions?.canDrag) return;
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = { ev, moved: false, targetDay: null };
@@ -313,10 +313,10 @@ export default function MonthView({
 
   // ── Renderers ─────────────────────────────────────────────────────────────
   function renderPill(ev: NormalizedEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null) {
-    const color       = resolveColor(ev, ctx?.['colorRules']);
+    const color       = resolveColor(ev, ctx?.colorRules);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
-    const isConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+    const isConflicting = !!ctx?.conflictingEventIds?.has(ev.id);
     const statusClass = ev.status === 'cancelled' ? styles['cancelled']
       : ev.status === 'tentative' ? styles['tentative'] : '';
     const display = (ev.meta?.['_display'] as { bold?: boolean; large?: boolean } | undefined) ?? {};
@@ -367,7 +367,7 @@ export default function MonthView({
           styles['eventPill'],
           statusClass,
           isDimmed && styles['dragging'],
-          ctx?.['editMode'] && styles['editModePill'],
+          ctx?.editMode && styles['editModePill'],
         ].filter(Boolean).join(' ')}
         data-wc-event-id={ev.id}
         data-wc-priority={ev.visualPriority ?? undefined}
@@ -395,7 +395,7 @@ export default function MonthView({
   function renderGhostPill() {
     const d = dragRef.current;
     if (!d || !dragTarget) return null;
-    const color = resolveColor(d.ev, ctx?.['colorRules']);
+    const color = resolveColor(d.ev, ctx?.colorRules);
     return (
       <div
         className={[styles['eventPill'], styles['ghost']].filter(Boolean).join(' ')}
@@ -536,13 +536,13 @@ export default function MonthView({
                     {spans
                       .filter(s => s.lane < MAX_SPANS_VISIBLE)
                       .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                        const color = resolveColor(ev, ctx?.['colorRules']);
+                        const color = resolveColor(ev, ctx?.colorRules);
                         const pctLeft  = (startCol / 7) * 100;
                         const pctWidth = ((endCol - startCol + 1) / 7) * 100;
                         const statusClass = ev.status === 'cancelled' ? styles['cancelled']
                           : ev.status === 'tentative' ? styles['tentative'] : '';
                         const isDimmed = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
-                        const spanConflicting = !!(ctx?.['conflictingEventIds'] as ReadonlySet<string> | undefined)?.has(ev.id);
+                        const spanConflicting = !!ctx?.conflictingEventIds?.has(ev.id);
                         return (
                           <button
                             key={`${ev.id}-w${wi}`}

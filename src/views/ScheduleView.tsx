@@ -96,7 +96,7 @@ interface ScheduleViewProps {
 
 type TimelineContextValue = {
   emptyState?: ReactNode;
-  colorRules?: Array<Record<string, unknown>>;
+  colorRules?: ReadonlyArray<Record<string, unknown>>;
   renderEvent?: (
     ev: LooseEvent,
     options: { view: 'timeline'; isCompact: boolean; onClick: () => void; color: string | undefined },

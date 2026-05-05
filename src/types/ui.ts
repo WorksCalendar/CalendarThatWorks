@@ -1,8 +1,45 @@
 import type { ReactNode } from 'react';
+import type { NormalizedEvent } from './events';
 import type { EventStatus, EventLifecycleState } from './events';
 import type { EventVisualPriority } from './view';
 
 export type AnyRecord = Record<string, any>;
+
+// ─── Permissions ──────────────────────────────────────────────────────────────
+
+export type PermissionCaps = {
+  canAddEvent: boolean;
+  canEditEvent: boolean;
+  canDeleteEvent: boolean;
+  canDrag: boolean;
+  canManagePeople: boolean;
+  canManageOptions: boolean;
+  canManageSavedViews: boolean;
+};
+
+// ─── CalendarContext ──────────────────────────────────────────────────────────
+
+export type ColorRule =
+  | { readonly when: (event: NormalizedEvent) => boolean; readonly color: string }
+  | { readonly field: string; readonly value: unknown; readonly color: string };
+
+export type RenderEventOptions = {
+  readonly view: string;
+  readonly isCompact: boolean;
+  readonly onClick: () => void;
+  readonly color: string | undefined;
+};
+
+export type CalendarContextValue = {
+  renderEvent?: ((event: NormalizedEvent, opts: RenderEventOptions) => ReactNode) | undefined;
+  renderHoverCard?: ((event: NormalizedEvent) => ReactNode) | undefined;
+  colorRules?: ReadonlyArray<ColorRule | Record<string, unknown>> | undefined;
+  businessHours?: Record<string, unknown> | undefined;
+  emptyState?: ReactNode;
+  permissions?: PermissionCaps | undefined;
+  editMode?: boolean | undefined;
+  conflictingEventIds?: ReadonlySet<string> | undefined;
+};
 
 export type UpdateConfig = (updater: (current: AnyRecord) => AnyRecord) => void;
 
