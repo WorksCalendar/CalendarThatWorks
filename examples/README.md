@@ -9,29 +9,28 @@ npm run examples
 
 ## Core examples
 
-- `00-DemoLanding.jsx` — guided demo entry page
-- `01-GettingStarted.jsx` — minimum integration setup
-- `02-BasicCalendar.jsx` — baseline calendar configuration
-- `03-WithFilters.jsx` — schema-driven filter bar
-- `04-TimelineScheduler.jsx` — timeline scheduler layout
-- `05-CustomFilters.jsx` — custom filter schema fields
-- `06-TeamCalendar.jsx` — multi-resource team scheduling
-- `07-MultiSource.jsx` — merged multi-source data views
-- `08-ShiftCoverageTracking.jsx` — PTO + coverage workflow
-- `09-Grouping.jsx` — 1-, 2-, 3-level grouping presets
-- `10-DragAndDrop.jsx` — drag events across groups / rows
-- `11-Map.jsx` — geographic plot via the optional MapView plugin (see [docs/MapView.md](../docs/MapView.md))
-- `11-MaintenanceAndInvoicing.jsx` — asset-health badges, in-form maintenance completion, CSV export for invoicing + maintenance log
-- `12-AssetMapWidget.jsx` — peek/panel/fullscreen live-asset overlay via the optional `integrations/asset-map-widget` subpath (see [docs/AssetMapWidget.md](../docs/AssetMapWidget.md))
+- `00-DemoLanding.tsx` — guided demo entry page
+- `01-GettingStarted.tsx` — minimum integration setup
+- `02-BasicCalendar.tsx` — baseline calendar configuration
+- `03-WithFilters.tsx` — schema-driven filter bar
+- `04-TimelineScheduler.tsx` — timeline scheduler layout
+- `05-CustomFilters.tsx` — custom filter schema fields
+- `06-TeamCalendar.tsx` — multi-resource team scheduling
+- `07-MultiSource.tsx` — merged multi-source data views
+- `08-ShiftCoverageTracking.tsx` — PTO + coverage workflow
+- `09-Grouping.tsx` — 1-, 2-, 3-level grouping presets
+- `10-DragAndDrop.tsx` — drag events across groups / rows
+- `11-Map.tsx` — geographic plot via the optional MapView plugin (see [docs/MapView.md](../docs/MapView.md))
+- `12-MaintenanceAndInvoicing.tsx` — asset-health badges, in-form maintenance completion, CSV export for invoicing + maintenance log
+- `13-AssetMapWidget.tsx` — peek/panel/fullscreen live-asset overlay via the optional `integrations/asset-map-widget` subpath (see [docs/AssetMapWidget.md](../docs/AssetMapWidget.md))
 
 ## Focused examples
 
-- `setup-wizard.jsx` — owner onboarding wizard
-- `advanced-filters.jsx` — nested smart-view filtering
-- `data-adapter-local.jsx` — local-storage adapter
-- `data-adapter-microsoft365.jsx` — Microsoft 365 adapter wiring
-- `external-form.jsx` — standalone `CalendarExternalForm`
-- `basic-usage.jsx` — compact docs/tutorial starter
+- `setup-wizard.tsx` — owner onboarding wizard
+- `advanced-filters.tsx` — nested smart-view filtering
+- `data-adapter-local.tsx` — local-storage adapter
+- `external-form.tsx` — standalone `CalendarExternalForm`
+- `basic-usage.tsx` — compact docs/tutorial starter
 
 ## Feature demos
 

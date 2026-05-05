@@ -1,8 +1,5 @@
-// @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
 /**
- * AssetsDemoExample — Phase 1 Sprint 4 PR D performance + visual fixture.
- *
- * 20 aircraft × 200 events distributed across the current month. Exercises:
+ * AssetsDemoExample — 20 aircraft × 200 events across the current month. Exercises:
  *   - All 5 approval stages (requested / approved / finalized / pending_higher / denied)
  *   - Category hue via categoriesConfig (5 shipped categories)
  *   - Manual LocationProvider (host-free default reading meta.location)

@@ -21,8 +21,8 @@ import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking';
 import { GroupingExample }         from './09-Grouping';
 import { DragAndDropExample }      from './10-DragAndDrop';
 import { MapExample }              from './11-Map';
-import { MaintenanceAndInvoicingExample } from './11-MaintenanceAndInvoicing';
-import { AssetMapWidgetExample }     from './12-AssetMapWidget';
+import { MaintenanceAndInvoicingExample } from './12-MaintenanceAndInvoicing';
+import { AssetMapWidgetExample }     from './13-AssetMapWidget';
 import { BasicUsageExample }       from './basic-usage';
 import { SetupWizardExample }      from './setup-wizard';
 import { AdvancedFiltersExample }  from './advanced-filters';
@@ -242,25 +242,25 @@ function Sidebar({ active, onSelect }) {
 // ── Source hint ───────────────────────────────────────────────────────────────
 function SourceHint({ id }) {
   const file = {
-    'getting-started': '01-GettingStarted.jsx',
-    'demo-landing':    '00-DemoLanding.jsx',
-    'basic-calendar':  '02-BasicCalendar.jsx',
-    'with-filters':    '03-WithFilters.jsx',
-    'timeline':        '04-TimelineScheduler.jsx',
-    'custom-filters':  '05-CustomFilters.jsx',
-    'team-calendar':   '06-TeamCalendar.jsx',
-    'multi-source':         '07-MultiSource.jsx',
-    'shift-coverage':       '08-ShiftCoverageTracking.jsx',
-    'grouping':             '09-Grouping.jsx',
-    'drag-and-drop':        '10-DragAndDrop.jsx',
-    'map':                  '11-Map.jsx',
-    'maintenance-invoicing': '11-MaintenanceAndInvoicing.jsx',
-    'asset-map-widget':     '12-AssetMapWidget.jsx',
-    'basic-usage-modern':   'basic-usage.jsx',
-    'setup-wizard':         'setup-wizard.jsx',
-    'advanced-filters-new': 'advanced-filters.jsx',
-    'data-adapter-local':   'data-adapter-local.jsx',
-    'external-form':        'external-form.jsx',
+    'getting-started': '01-GettingStarted.tsx',
+    'demo-landing':    '00-DemoLanding.tsx',
+    'basic-calendar':  '02-BasicCalendar.tsx',
+    'with-filters':    '03-WithFilters.tsx',
+    'timeline':        '04-TimelineScheduler.tsx',
+    'custom-filters':  '05-CustomFilters.tsx',
+    'team-calendar':   '06-TeamCalendar.tsx',
+    'multi-source':         '07-MultiSource.tsx',
+    'shift-coverage':       '08-ShiftCoverageTracking.tsx',
+    'grouping':             '09-Grouping.tsx',
+    'drag-and-drop':        '10-DragAndDrop.tsx',
+    'map':                  '11-Map.tsx',
+    'maintenance-invoicing': '12-MaintenanceAndInvoicing.tsx',
+    'asset-map-widget':     '13-AssetMapWidget.tsx',
+    'basic-usage-modern':   'basic-usage.tsx',
+    'setup-wizard':         'setup-wizard.tsx',
+    'advanced-filters-new': 'advanced-filters.tsx',
+    'data-adapter-local':   'data-adapter-local.tsx',
+    'external-form':        'external-form.tsx',
   }[id];
 
   return (
