@@ -359,8 +359,11 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
   │                                                              │
   └──────────────────────────┬───────────────────────────────────┘
                              │ SyncState
-                             │ { events: Map, syncStatuses: Map,
-                             │   isSyncing, conflicts }
+                             │ { events: ReadonlyMap,
+                             │   status: ReadonlyMap<id, SyncStatus>,
+                             │   errors: ReadonlyMap<id, Error>,
+                             │   isSyncing: boolean,
+                             │   pendingCount: number }
                              ▼
                      useSyncedCalendar hook
                      (React wrapper around SyncManager)
@@ -471,15 +474,18 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
   ┌─────────────────────────────────────────────────────────────────────┐
   │                    SHARED LAYOUT PIPELINE                           │
   │                                                                     │
-  │  computeRange(cursor, view)                                         │
-  │    → rangeStart / rangeEnd for the visible window                   │
+  │  layoutOverlaps(events)                                             │
+  │    → Array<T & { _col: number; _numCols: number }>                  │
+  │    → column-packs timed events sharing the same time slot           │
   │                                                                     │
-  │  layoutOverlaps(events) / layoutSpans(events)                       │
-  │    → _col, _numCols per event (pill column assignment)              │
-  │    → displayEndDay (all-day span clamping to view boundary)         │
+  │  layoutSpans(events, weekStart, weekEnd)                            │
+  │    → LayoutSpanItem[]  (startCol, endCol, lane, continuesBefore/After)
+  │    → lane-packs multi-day events for month/all-day row rendering    │
+  │    → displayEndDay() handles all-day exclusive-DTEND edge cases     │
   │                                                                     │
-  │  groupRows(events, groupByConfig)  [if groupBy configured]          │
-  │    → GroupRow[] with header labels + children                       │
+  │  groupRows(rows, { groupBy, fieldAccessor, … }) [if groupBy set]   │
+  │    → { flatRows: Row[], groupOrder: string[] }                      │
+  │    → flat interleaved list; header rows: _type='groupHeader'        │
   └──────────────────────────┬──────────────────────────────────────────┘
                              │ positioned event pills
                              ▼
@@ -509,14 +515,19 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
   ┌─────────────────────────────────────────────────────────────────────┐
   │                       DRAG & DROP                                   │
   │                                                                     │
-  │  useDrag(event)                                                     │
-  │    onDragStart → snapshot original position                         │
-  │    onDragOver  → highlight target cell / row                        │
-  │    onDrop      → compute newStart / newEnd from drop target         │
+  │  useDrag({ pxPerHour, dayStart, dayEnd })  ← hook factory           │
+  │    .startMove(ev, e, gridEl, days, gutterWidth) → pointer capture   │
+  │    .startResize(ev, e, gridEl, days, gutterWidth) → resize end      │
+  │    .startResizeTop(ev, e, gridEl, days, gutterWidth) → resize start │
+  │    .startCreate(e, gridEl, days, gutterWidth) → draw new event      │
+  │    .onPointerMove(e) → update ghost position (15-min snap)          │
+  │    .onPointerUp() → DragResult { type, ev, newStart, newEnd } | null│
+  │    .cancel() → discard drag state                                   │
+  │    .ghost — { ev, start, end } | null  (live ghost for UI render)   │
   │                                                                     │
-  │  applyEngineOp({ type: 'MOVE', eventId, newStart, newEnd })         │
+  │  applyEngineOp(op, onAccepted)                                      │
   │    → applyWithRecurringCheck (prompt: this / future / all)          │
-  │    → engine dispatch → validation → commit                          │
+  │    → engine.applyMutation → validation → commit or soft-warn        │
   └─────────────────────────────────────────────────────────────────────┘
 
   View-specific layout notes:
@@ -541,24 +552,33 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
   ┌─────────────────────────────────────────────────────────────────────┐
   │                     CONFIG LOAD PIPELINE                            │
   │                                                                     │
-  │  loadConfig(storage?)                                               │
+  │  loadConfig(calendarId: string)                                     │
   │    → read raw JSON from localStorage  (key: 'wc_config')           │
   │    → merge missing keys from DEFAULT_CONFIG                         │
   │                                                                     │
   │  parseConfig(raw)                                                   │
-  │    → CalendarConfig typed object                                    │
-  │    → ParseConfigResult { config, warnings[] }                       │
+  │    → ParseConfigResult { config: CalendarConfig,                    │
+  │                          errors: string[], dropped: number }        │
+  │    → defensive: never throws; malformed entries dropped with trail  │
   │                                                                     │
   │  validateConfig(config)                                             │
-  │    → ValidateConfigResult { issues: ConfigIssue[] }                 │
-  │    → severity: 'error' | 'warning' | 'info'                        │
+  │    → ValidateConfigResult { ok: boolean, issues: ConfigIssue[] }   │
+  │    → severity: 'error' | 'warning'                                  │
+  │    → cross-checks refs: resource.type, pool.memberIds,              │
+  │      requirement roles/pools, seed event resourceId/resourcePoolId, │
+  │      duplicate ids within each section                              │
   │                                                                     │
   │  resolveLabels(config)                                              │
-  │    → ResolvedLabels  (human-readable strings for all resource ids)  │
+  │    → ResolvedLabels { resource, resources, event, events,           │
+  │                       location, locations, …extras }                │
+  │    → profile-aware UI label names (not resource ids)                │
+  │    → resolution order: config.labels override → profile preset      │
+  │      → built-in fallback ("Resource", "Event", "Location")          │
   │                                                                     │
-  │  applyProfilePreset(config, profileId)                              │
-  │    → PROFILE_PRESETS[profileId] merged onto config                  │
-  │    → ProfileId: 'ems' | 'aviation' | 'construction' | …            │
+  │  applyProfilePreset(profileId, base?)                               │
+  │    → preset config merged onto base (base wins; preset fills gaps)  │
+  │    → ProfileId: 'trucking' | 'aviation' | 'air_medical' |           │
+  │                 'equipment_rental' | 'scheduling' | 'custom'        │
   └──────────────────────────┬──────────────────────────────────────────┘
                              │ CalendarConfig
             ┌────────────────┼───────────────────┐
@@ -586,7 +606,7 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
                         │      sync effs │
                         └────────────────┘
   Config writes back:
-    saveConfig(config) → localStorage
+    saveConfig(calendarId, config) → localStorage
     ConfigPanel (UI) → onUpdate callback → host persists
 ```
 
