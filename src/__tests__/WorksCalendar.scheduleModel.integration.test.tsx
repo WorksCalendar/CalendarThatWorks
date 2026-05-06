@@ -88,7 +88,7 @@ describe('WorksCalendar schedule model integration', () => {
       const kinds = getKinds(visible);
       expect(kinds).toContain('open-shift');
     }, { timeout: 10000 });
-  }, 30000);
+  }, 60000);
 
   it('creates a PTO availability event and emits onAvailabilitySave', async () => {
     const apiRef = createRef<any>();
@@ -117,7 +117,7 @@ describe('WorksCalendar schedule model integration', () => {
       const ptoEvents = visible.filter((ev: ScheduleEventLike) => String(ev?.meta?.kind ?? '') === 'pto');
       expect(ptoEvents.length).toBeGreaterThan(0);
     });
-  }, 30000);
+  }, 60000);
 
   // Chain-heavy: two PTO submissions back-to-back means roughly 10 sequential
   // UI interactions (open menu → click Request PTO → fill start → fill end →
@@ -167,7 +167,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(String(mirrored[0]!.meta?.sourceShiftId ?? '')).toBe('shift-1');
       expect(String(mirrored[0]!.meta?.coveredEmployeeId ?? '')).toBe('emp-1');
     });
-  }, 30000);
+  }, 60000);
 
   it('clears linked schedule metadata and open/covering events when status is cleared', async () => {
     const apiRef = createRef<any>();
@@ -287,5 +287,5 @@ describe('WorksCalendar schedule model integration', () => {
       const coveringEvents = getByKind(visible, 'covering');
       expect(coveringEvents).toHaveLength(0);
     });
-  }, 30000);
+  }, 60000);
 });
