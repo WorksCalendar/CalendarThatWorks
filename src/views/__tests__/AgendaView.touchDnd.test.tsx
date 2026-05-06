@@ -65,8 +65,8 @@ describe('AgendaView touch DnD', () => {
     expect(workLeaf).toBeTruthy();
     pointTarget = workLeaf;
 
-    fireTouch('touchmove', window, [{ x: 200, y: 200 }]);
-    fireTouch('touchend',  window, [{ x: 200, y: 200 }]);
+    act(() => { fireTouch('touchmove', window, [{ x: 200, y: 200 }]); });
+    act(() => { fireTouch('touchend',  window, [{ x: 200, y: 200 }]); });
 
     expect(onEventGroupChange).toHaveBeenCalledTimes(1);
     const [ev, patch] = onEventGroupChange.mock.calls[0];
@@ -85,8 +85,8 @@ describe('AgendaView touch DnD', () => {
     const exerciseLeaf = document.querySelector('[data-wc-drop$="/Exercise"]');
     pointTarget = exerciseLeaf;
 
-    fireTouch('touchmove', window, [{ x: 40, y: 40 }]);
-    fireTouch('touchend',  window, [{ x: 40, y: 40 }]);
+    act(() => { fireTouch('touchmove', window, [{ x: 40, y: 40 }]); });
+    act(() => { fireTouch('touchend',  window, [{ x: 40, y: 40 }]); });
 
     expect(onEventGroupChange).not.toHaveBeenCalled();
   });
@@ -103,7 +103,7 @@ describe('AgendaView touch DnD', () => {
 
     const workLeaf = document.querySelector('[data-wc-drop$="/Work"]');
     pointTarget = workLeaf;
-    fireTouch('touchend', window, [{ x: 10, y: 120 }]);
+    act(() => { fireTouch('touchend', window, [{ x: 10, y: 120 }]); });
 
     expect(onEventGroupChange).not.toHaveBeenCalled();
   });
