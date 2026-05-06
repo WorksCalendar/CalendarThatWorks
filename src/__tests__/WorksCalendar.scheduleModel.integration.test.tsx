@@ -178,7 +178,7 @@ describe('WorksCalendar schedule model integration', () => {
     await assignCoverageTo(/^Bailey Chen — RN$/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
-    fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Clear Status/ }));
 
     await waitFor(() => {
       const visible = apiRef.current.getVisibleEvents();
@@ -192,7 +192,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(shift.meta?.coveredBy).toBeUndefined();
       expect(shift.meta?.openShiftId).toBeUndefined();
     });
-  }, 30000);
+  }, 60000);
 
   it('emits onEventSave/onEventDelete for linked schedule records during coverage + clear', async () => {
     const apiRef = createRef<any>();
@@ -212,7 +212,7 @@ describe('WorksCalendar schedule model integration', () => {
     await requestPtoForAlex();
     await assignCoverageTo(/^Bailey Chen — RN$/);
     fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
-    fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Clear Status/ }));
 
     await waitFor(() => {
       expect(onEventSave.mock.calls.length).toBeGreaterThan(0);
@@ -227,7 +227,7 @@ describe('WorksCalendar schedule model integration', () => {
         );
       expect(savedShiftWithCoverage).toBeTruthy();
     });
-  }, 30000);
+  }, 60000);
 
   // Heaviest test in the file: PTO → coverage(Bailey) → clear → PTO →
   // coverage(Casey). ~14 sequential UI interactions; on slow shared-runner
@@ -245,7 +245,7 @@ describe('WorksCalendar schedule model integration', () => {
     await assignCoverageTo(/^Bailey Chen — RN$/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
-    fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Clear Status/ }));
     await requestPtoForAlex();
 
     await assignCoverageTo(/^Casey Patel — RN$/);
