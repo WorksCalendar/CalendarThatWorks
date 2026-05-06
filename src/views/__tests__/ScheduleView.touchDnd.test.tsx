@@ -71,8 +71,8 @@ describe('ScheduleView touch DnD', () => {
     expect(bobRow).toBeTruthy();
     pointTarget = bobRow;
 
-    fireTouch('touchmove', window, [{ x: 100, y: 200 }]);
-    fireTouch('touchend',  window, [{ x: 100, y: 200 }]);
+    act(() => { fireTouch('touchmove', window, [{ x: 100, y: 200 }]); });
+    act(() => { fireTouch('touchend',  window, [{ x: 100, y: 200 }]); });
 
     expect(onEventGroupChange).toHaveBeenCalledTimes(1);
     const [ev, patch] = onEventGroupChange.mock.calls[0];
@@ -91,8 +91,8 @@ describe('ScheduleView touch DnD', () => {
     const aliceRow = screen.getByRole('rowheader', { name: 'Alice Chen' }).closest('[data-wc-drop]');
     pointTarget = aliceRow;
 
-    fireTouch('touchmove', window, [{ x: 20, y: 30 }]);
-    fireTouch('touchend',  window, [{ x: 20, y: 30 }]);
+    act(() => { fireTouch('touchmove', window, [{ x: 20, y: 30 }]); });
+    act(() => { fireTouch('touchend',  window, [{ x: 20, y: 30 }]); });
 
     expect(onEventGroupChange).not.toHaveBeenCalled();
   });

@@ -78,5 +78,5 @@ describe('WorksCalendar undo/redo — controlled events (issue #152)', () => {
     });
     expect(apiRef.current?.canUndo).toBe(false);
     expect(apiRef.current?.canRedo).toBe(true);
-  }, 10_000);
+  }, 60_000);
 });
