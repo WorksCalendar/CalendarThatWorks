@@ -7,7 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.7.0] - 2026-05-05
+### Added
+
+- **Fluid pill drag-and-drop** (`MonthView`): replaced the static ghost-pill
+  hover interaction with [fluid-dnd](https://github.com/carlosjorger/fluid-dnd)
+  for animated lift-follow-cursor-drop behaviour. Each day cell is now a
+  `DayCellPillList` component that runs an independent `useDragAndDrop` instance
+  inside the shared `wc-month-pills` droppable group, enabling smooth cross-day
+  moves. Multi-day span bars keep the existing pointer-event drag system.
+  New CSS classes `wc-pill-is-dragging` and `wc-pill-drop-target` control the
+  in-flight and drop-zone visual states.
+
+- **`FirebaseAdapter`** (`api/v1/adapters`): Firestore real-time backend adapter.
+  Supports both the Firebase JS SDK v8 namespaced API and the v9 modular API
+  (pass `adapterFns`). Field mapping via `fromDoc`/`toDoc`, extra `where`
+  constraints via `extraWhere`, and live updates via `onSnapshot`.
+
+- **`PocketBaseAdapter`** (`api/v1/adapters`): PocketBase SSE real-time adapter.
+  Accepts any PocketBase JS client instance. Supports custom field mapping via
+  `fromRecord`/`toRecord`, composite filter strings via `extraFilter`, and live
+  updates via PocketBase's `subscribe` API.
+
+- **`createNextHandler`** (`api/v1/server`): Next.js App Router route handler
+  factory. Wire up four async functions (`loadRange`, `createEvent`,
+  `updateEvent`, `deleteEvent`) and receive `{ GET, POST, PATCH, DELETE }`
+  exports ready for `route.ts`. Compatible with Prisma, Drizzle ORM, raw `pg`,
+  or any server-side data layer. Pairs directly with `RestAdapter` on the
+  client. Optional `auth` hook for request-level authentication.
+
+- **Demo dev server**: `npm run dev` (root) starts a Vite dev server at
+  `localhost:5173` rendering `WorksCalendar` with `canDrag: true` and seeded
+  May 2026 events so fluid pill drag can be tested interactively.
+
+- **GitHub Pages demo**: pushing to `claude/fluid-pill-drag-drop-bcoUE` triggers
+  a GitHub Actions workflow that builds the demo and deploys to GitHub Pages.
+
+### Changed
+
+- `package.json` exports: added `./api/v1/server` entry point for
+  `createNextHandler` and server-side utilities.
+
+
 
 ### Sprint 1 — Engine internals & strict typing (issues #2, #5)
 

@@ -14,7 +14,8 @@ This index is the canonical docs entrypoint for the package.
 - [Filtering system](./Filtering.md)
 - [Advanced filters](./AdvancedFilters.md)
 - [Setup wizard](./SetupWizard.md)
-- [Data adapter](./DataAdapter.md)
+- [Backend adapters](./Backends.md) — REST, Supabase, Firebase, PocketBase, Next.js (Prisma/Drizzle)
+- [Data adapter](./DataAdapter.md) — form submission adapters
 - [Resource scheduling and asset management](./ResourceScheduling.md)
 - [Resource pools](./ResourcePools.md)
 - [Location provider](./LocationProvider.md)
