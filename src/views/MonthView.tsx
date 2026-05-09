@@ -11,7 +11,10 @@ import { displayEndDay, layoutSpans } from '../core/layout';
 import type { NormalizedEvent } from '../types/events';
 import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
+import { DayCellPillList } from '../ui/DayCellPillList';
 import styles from './MonthView.module.css';
+
+const EMPTY_EVENTS: NormalizedEvent[] = [];
 
 const SPAN_H   = 22;
 const SPAN_GAP = 3;
@@ -312,7 +315,7 @@ export default function MonthView({
   }, [popoverState]);
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-  function renderPill(ev: NormalizedEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null) {
+  function renderPill(ev: NormalizedEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null, dataIndex?: number) {
     const color       = resolveColor(ev, ctx?.colorRules);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
@@ -338,6 +341,7 @@ export default function MonthView({
       if (custom != null) {
         return (
           <div key={ev.id}
+            data-index={dataIndex}
             className={[styles['eventPill'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
             role="button"
             tabIndex={0}
@@ -346,7 +350,6 @@ export default function MonthView({
             data-wc-conflicting={isConflicting ? 'true' : undefined}
             onClick={e => { e.stopPropagation(); onClick(); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
-            onPointerDown={e => startPillDrag(ev, e)}
             onMouseEnter={handlePillMouseEnter}
             onMouseLeave={handlePillMouseLeave}
           >
@@ -363,6 +366,7 @@ export default function MonthView({
 
     return (
       <button key={ev.id}
+        data-index={dataIndex}
         className={[
           styles['eventPill'],
           statusClass,
@@ -380,7 +384,6 @@ export default function MonthView({
           height:     display.large ? '26px' : undefined,
         }}
         onClick={e => { e.stopPropagation(); onClick(); }}
-        onPointerDown={e => startPillDrag(ev, e)}
         onMouseEnter={handlePillMouseEnter}
         onMouseLeave={handlePillMouseLeave}
         aria-label={ev.lifecycle ? `${ariaLabel}, lifecycle ${ev.lifecycle}` : ariaLabel}
@@ -461,7 +464,7 @@ export default function MonthView({
                 <div className={styles['weekCells']} role="row" aria-rowindex={wi + 2}>
                   {week.map((day, di) => {
                     const dayKey     = format(day, 'yyyy-MM-dd');
-                    const daySingles = singleByDay.get(dayKey) || [];
+                    const daySingles = singleByDay.get(dayKey) ?? EMPTY_EVENTS;
                     const isDropTarget = dragTarget && isSameDay(dragTarget, day);
                     const isFocused  = isSameDay(day, focusedDay);
 
@@ -520,10 +523,17 @@ export default function MonthView({
                         </div>
 
                         {/* paddingTop reserves space for the absolutely-positioned spansLayer */}
-                        <div className={styles['events']} style={{ paddingTop: spansHeight }}>
-                          {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
-                          {isDropTarget && renderGhostPill()}
-                        </div>
+                        <DayCellPillList
+                          day={day}
+                          events={daySingles}
+                          maxPills={MAX_PILLS}
+                          spansHeight={spansHeight}
+                          canDrag={Boolean(ctx?.permissions?.canDrag)}
+                          onEventMove={onEventMove}
+                          renderPill={(ev, idx) => renderPill(ev, {}, wi, idx)}
+                          containerClass={styles['events']}
+                          ghostNode={isDropTarget ? renderGhostPill() : null}
+                        />
 
                       </div>
                     );

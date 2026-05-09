@@ -347,3 +347,23 @@
     font-size: 18px;
   }
 }
+
+/* ── fluid-dnd pill drag states ─────────────────────────────────────────────
+ * These are global class names injected by DayCellPillList via fluid-dnd's
+ * draggingClass / droppableClass config. CSS Modules :global() lets them
+ * escape the hash so fluid-dnd (which uses document.querySelectorAll) can
+ * still find the droppable containers by the group class it adds itself.  */
+:global(.wc-pill-is-dragging) {
+  cursor: grabbing !important;
+  opacity: 0.92 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 4px;
+}
+
+:global(.wc-pill-drop-target) {
+  outline: 1.5px dashed var(--wc-accent, #6366f1);
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--wc-accent, #6366f1) 10%, transparent) !important;
+  border-radius: 4px;
+  transition: background 100ms ease, outline 100ms ease;
+}
