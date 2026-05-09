@@ -52,10 +52,20 @@ export function DayCellPillList({
   );
 
   useEffect(() => {
-    if (!isDraggingRef.current) {
-      setLocalItems(events);
+    if (isDraggingRef.current) {
+      // When an item is dragged cross-container, onDragEnd only fires on the
+      // destination. The source container's ref stays true until we detect that
+      // fluid-dnd's localItems and the parent's events have re-aligned (same IDs),
+      // meaning the drag is fully resolved from this container's perspective.
+      const localSet = new Set(localItems.map(e => e.id));
+      const eventsSet = new Set(events.map(e => e.id));
+      const aligned = localSet.size === eventsSet.size &&
+        [...localSet].every(id => eventsSet.has(id));
+      if (!aligned) return;
+      isDraggingRef.current = false;
     }
-  }, [events, setLocalItems]);
+    setLocalItems(events);
+  }, [events, localItems, setLocalItems]);
 
   return (
     <div ref={containerRef} className={containerClass} style={{ paddingTop: spansHeight }}>

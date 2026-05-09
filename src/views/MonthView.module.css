@@ -367,3 +367,13 @@
   border-radius: 4px;
   transition: background 100ms ease, outline 100ms ease;
 }
+
+/* fluid-dnd inserts a bare .temp-child element as a placeholder while a pill
+ * is being dragged (both in source and destination containers). Without
+ * styling it appears as an unstyled white box — give it a ghost-pill look. */
+.events :global(.temp-child) {
+  background: color-mix(in srgb, var(--wc-accent, #6366f1) 18%, transparent) !important;
+  border: 1.5px dashed color-mix(in srgb, var(--wc-accent, #6366f1) 55%, transparent) !important;
+  border-radius: var(--wc-radius-sm, 4px) !important;
+  opacity: 0.75 !important;
+}
