@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { WorksCalendar } from '../src/index';
-import '../src/index.css';
+import '../src/styles/soft.css';
 
 const events = [
   { id: '1', title: 'Team Sync', start: new Date(2026, 4, 11, 9), end: new Date(2026, 4, 11, 10) },
