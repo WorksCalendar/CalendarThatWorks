@@ -2,7 +2,7 @@
  * WorksCalendar — main component.
  */
 import {
-  useImperativeHandle, forwardRef, useMemo, useRef,
+  useImperativeHandle, forwardRef, useMemo, useRef, useState, useEffect,
 } from 'react';
 import type { ForwardedRef } from 'react';
 
@@ -38,7 +38,7 @@ type LooseValue = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 
 
-export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendar(
+const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendarImpl(
   {
     // ── Data ──
     events:     rawEvents   = [],
@@ -166,8 +166,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
-  if (typeof window === 'undefined') return null;
-
   const {
     ownerCfg, weekStartDay, rootStyle, rawTheme,
     effectiveTheme, themeFamily, themeMode, calendarTitle,
@@ -500,4 +498,27 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       </CalendarContext.Provider>
     </CalendarErrorBoundary>
   );
+});
+
+/**
+ * SSR-safe wrapper. During server rendering and the first client render
+ * (before hydration completes), returns a static placeholder so consumer
+ * frameworks (Next.js, Remix) don't get a hydration mismatch between the
+ * empty SSR output and the localStorage-backed client state. After mount,
+ * delegates to the real implementation.
+ */
+export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendar(props, ref) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) {
+    return (
+      <div
+        className="works-calendar works-calendar--ssr-placeholder"
+        role="presentation"
+        aria-hidden="true"
+        style={{ minHeight: 480 }}
+      />
+    );
+  }
+  return <WorksCalendarImpl {...props} ref={ref} />;
 });
