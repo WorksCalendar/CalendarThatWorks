@@ -22,17 +22,12 @@ import type { SortConfig } from './types/grouping.ts';
 import { sortEvents } from './core/sortEngine.ts';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents';
 import { usePermissions }     from './hooks/usePermissions';
-import { useSavedFlash }      from './hooks/useSavedFlash';
 import { useEventOptions }    from './hooks/useEventOptions';
 import { useTouchSwipe }     from './hooks/useTouchSwipe';
 import { CalendarContext }    from './core/CalendarContext';
 import type { CalendarContextValue } from './types/ui';
 import { normalizeEvents }    from './core/eventModel';
 import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
-import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
-import type { LegacyEvent }  from './core/engine/adapters/fromLegacyEvents.ts';
-import type { OperationContext } from './core/engine/validation/validationTypes';
-import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import { useCalendarEngine } from './hooks/useCalendarEngine';
 import { useEventMutations } from './hooks/useEventMutations';
@@ -41,7 +36,9 @@ import { useGroupingSort } from './hooks/useGroupingSort';
 import { useCascadeFilters } from './hooks/useCascadeFilters';
 import { useSetupLanding } from './hooks/useSetupLanding';
 import { useSavedViewsManager } from './hooks/useSavedViewsManager';
-import RecurringScopeDialog   from './ui/RecurringScopeDialog';
+import { useScheduleTemplates } from './hooks/useScheduleTemplates';
+import { useModalState } from './hooks/useModalState';
+import CalendarModals from './ui/CalendarModals';
 import SetupLanding, { type SetupLandingResult } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
 import { resolveCssTheme, normalizeTheme, THEME_META } from './styles/themes';
@@ -66,23 +63,10 @@ import FocusChips, { DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
 import type { FocusChipDef } from './ui/FocusChips';
 import type { SidebarTab } from './ui/FilterGroupSidebar';
 import type { GroupLevel } from './ui/GroupsPanel';
-import HoverCard              from './ui/HoverCard';
 import OwnerLock              from './ui/OwnerLock';
-import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import ConfigPanel            from './ui/ConfigPanel';
 import SavedFlash             from './ui/SavedFlash';
 import ActiveFilterStrip      from './ui/ActiveFilterStrip';
-import EventForm              from './ui/EventForm';
-import AssetRequestForm       from './ui/AssetRequestForm';
-import ImportZone             from './ui/ImportZone';
-import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog';
-import AvailabilityForm        from './ui/AvailabilityForm';
-import ScheduleEditorForm      from './ui/ScheduleEditorForm';
-import { createId } from './core/createId';
-import ValidationAlert          from './ui/ValidationAlert';
-import InlineEventEditor        from './ui/InlineEventEditor';
-import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer';
 import CalendarErrorBoundary   from './ui/CalendarErrorBoundary';
 import MonthView              from './views/MonthView';
 import WeekView               from './views/WeekView';
@@ -104,8 +88,6 @@ type DispatchEvaluator = (
 export type { DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator };
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/assets';
-import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
-import type { CalendarEventV1 } from './api/v1/types.ts';
 
 import styles from './WorksCalendar.module.css';
 import './styles/family/index.css';
@@ -137,37 +119,6 @@ type AvailabilitySavePayload = {
   status?: string;
   coveredBy?: string | null;
   [key: string]: unknown;
-};
-type ScheduleDialogRequest = {
-  templateId?: string | undefined;
-  anchor: Date;
-  resource?: string | undefined;
-  category?: string | undefined;
-};
-type SchedulePreviewConflict = {
-  index: number;
-  title: string;
-  severity: string;
-  violations: Array<{ rule?: string | undefined; message?: string | undefined }>;
-};
-type SchedulePreviewResult = {
-  generated: Array<{
-    id?: string | undefined;
-    title?: string | undefined;
-    start?: string | number | Date | undefined;
-    end?: string | Date | undefined;
-    startOffsetMinutes?: number | undefined;
-    durationMinutes?: number | undefined;
-    category?: string | null | undefined;
-    resource?: string | null | undefined;
-    status?: EventStatus | undefined;
-    color?: string | null | undefined;
-    rrule?: string | undefined;
-    exdates?: Array<string | Date> | undefined;
-    meta?: Record<string, unknown> | undefined;
-  }>;
-  conflicts: SchedulePreviewConflict[];
-  error: string;
 };
 
 export type CalendarApi = {
@@ -1050,101 +1001,50 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // and recurringPrompt are all owned by useCalendarEngine above.
 
   // ── Local UI state ───────────────────────────────────────────────────────
-  const [selectedEvent,  setSelectedEvent]  = useState<LooseValue | null>(null);
-  const [formEvent,        setFormEvent]        = useState<LooseValue | null>(null);
-  // Conflict highlights (#424 week 2). Populated by EventForm's live
-  // conflict check via `onLiveConflictsChange`; passed through
-  // CalendarContext so each view can paint a red outline on the
-  // events the proposed draft overlaps. Empty set = no highlights.
-  const [conflictingEventIds, setConflictingEventIds] = useState<ReadonlySet<string>>(() => new Set());
-  // Stable callback so EventForm's `useEffect([onLiveConflictsChange])`
-  // doesn't refire every parent render (which would feed an infinite
-  // setState loop through the EVENT_FORM ⇄ WORKS_CALENDAR boundary).
-  // The functional setter also short-circuits identical id sets so the
-  // calendar stays still when only unrelated state changes.
-  const handleLiveConflicts = useCallback((ids: readonly string[] | null) => {
-    setConflictingEventIds(prev => {
-      if (!ids || ids.length === 0) {
-        return prev.size === 0 ? prev : new Set();
-      }
-      if (prev.size === ids.length) {
-        let same = true;
-        for (const id of ids) if (!prev.has(id)) { same = false; break; }
-        if (same) return prev;
-      }
-      return new Set(ids);
-    });
-  }, []);
-  const [assetRequestOpen, setAssetRequestOpen] = useState(false);
-  const [importOpen,       setImportOpen]       = useState(false);
-  // Transient confirmation that the host's import landed; the dialog
-  // itself closes immediately so without this users can't tell whether
-  // anything happened beyond "the modal disappeared".
-  const [importMsg,        setImportMsg]        = useState('');
-  const importFlash                              = useSavedFlash(2500);
-  const [scheduleOpen,     setScheduleOpen]     = useState(false);
-  // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
-  const [availabilityState, setAvailabilityState] = useState<LooseValue | null>(null);
-  // { emp: { id, name, role? }, start?: Date, end?: Date }
-  const [scheduleEditorState, setScheduleEditorState] = useState<LooseValue | null>(null);
-  const [pillHoverTitle, setPillHoverTitle] = useState(false);
-  const [editMode,         setEditMode]         = useState(false);
-  const [helpOpen,         setHelpOpen]         = useState(false);
-  // { event, x, y } — set when an event is clicked in edit mode
-  const [inlineEditTarget, setInlineEditTarget] = useState<LooseValue | null>(null);
-  // Capture last click coords so InlineEventEditor can position near the pill
-  const lastClickCoordsRef = useRef({ x: 0, y: 0 });
-  const editModeRef = useRef(false);
-  editModeRef.current = editMode;
-  const [remoteTemplates, setRemoteTemplates] = useState<LooseValue[]>([]);
-  const [templateError, setTemplateError] = useState('');
+  const {
+    selectedEvent, setSelectedEvent,
+    formEvent, setFormEvent,
+    conflictingEventIds, handleLiveConflicts,
+    assetRequestOpen, setAssetRequestOpen,
+    importOpen, setImportOpen,
+    importMsg, setImportMsg,
+    importFlash,
+    scheduleOpen, setScheduleOpen,
+    availabilityState, setAvailabilityState,
+    scheduleEditorState, setScheduleEditorState,
+    pillHoverTitle, setPillHoverTitle,
+    editMode, setEditMode,
+    helpOpen, setHelpOpen,
+    inlineEditTarget, setInlineEditTarget,
+    lastClickCoordsRef,
+    editModeRef,
+  } = useModalState();
 
-  const resolvedScheduleLimits = useMemo(() => {
-    const previewMax = Number.isFinite(scheduleInstantiationLimits?.previewMax)
-      ? Math.max(1, Number(scheduleInstantiationLimits.previewMax))
-      : DEFAULT_SCHEDULE_INSTANTIATION_LIMITS.previewMax;
-    const createMax = Number.isFinite(scheduleInstantiationLimits?.createMax)
-      ? Math.max(1, Number(scheduleInstantiationLimits.createMax))
-      : DEFAULT_SCHEDULE_INSTANTIATION_LIMITS.createMax;
-    return { previewMax, createMax };
-  }, [scheduleInstantiationLimits]);
-
-  const trackScheduleTemplateAnalytics = useCallback((event: LooseValue, payload: LooseValue = {}) => {
-    onScheduleTemplateAnalytics?.({
-      event,
-      at: new Date().toISOString(),
-      ...payload,
-    });
-  }, [onScheduleTemplateAnalytics]);
-
-  const reloadRemoteTemplates = useCallback(async () => {
-    if (!scheduleTemplateAdapter?.listScheduleTemplates) return;
-    try {
-      const templates = await scheduleTemplateAdapter.listScheduleTemplates();
-      setRemoteTemplates(Array.isArray(templates) ? templates : []);
-      setTemplateError('');
-    } catch {
-      setTemplateError('Unable to load schedule templates from adapter.');
-    }
-  }, [scheduleTemplateAdapter]);
-
-  useEffect(() => {
-    reloadRemoteTemplates();
-  }, [reloadRemoteTemplates]);
-
-  const mergedScheduleTemplates = useMemo(() => {
-    const combined = [...scheduleTemplates, ...remoteTemplates];
-    const byId = new Map();
-    combined.forEach((template) => {
-      if (template?.id) byId.set(template.id, template);
-    });
-    return Array.from(byId.values());
-  }, [remoteTemplates, scheduleTemplates]);
-
-  const visibleScheduleTemplates = useMemo(
-    () => mergedScheduleTemplates.filter((template) => canViewScheduleTemplate(template, { role, isOwner: ownerCfg.isOwner })),
-    [mergedScheduleTemplates, ownerCfg.isOwner, role],
-  );
+  // ── Schedule templates ───────────────────────────────────────────────────
+  const {
+    templateError,
+    visibleScheduleTemplates,
+    mergedScheduleTemplates,
+    buildSchedulePreview,
+    handleScheduleInstantiate,
+    handleCreateScheduleTemplate,
+    handleDeleteScheduleTemplate,
+  } = useScheduleTemplates({
+    scheduleTemplates,
+    scheduleInstantiationLimits,
+    scheduleTemplateAdapter,
+    onScheduleTemplateAnalytics,
+    role,
+    isOwner: ownerCfg.isOwner,
+    engine: engine as unknown as { state: { events: Map<string, LooseValue> } },
+    ownerBusinessHours: ownerCfg.config?.['businessHours'],
+    businessHours,
+    blockedWindows,
+    applyEngineOp,
+    getSavedEventPayload,
+    onEventSave,
+    onInstantiateSuccess: () => setScheduleOpen(false),
+  });
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
@@ -1275,200 +1175,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setImportMsg(`Imported ${count} event${count === 1 ? '' : 's'}`);
     importFlash.trigger();
   }, [onImport, sourceStore, importFlash]);
-
-  const handleScheduleInstantiate = useCallback((request: ScheduleDialogRequest) => {
-    const startedAt = Date.now();
-    const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
-    if (!template || !Array.isArray(template.entries) || template.entries.length === 0) {
-      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
-        reason: 'template-missing-or-invalid',
-        templateId: request?.templateId ?? null,
-      });
-      return;
-    }
-    const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
-    if (Number.isNaN(anchor.getTime())) {
-      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
-        reason: 'invalid-anchor',
-        templateId: template.id,
-      });
-      return;
-    }
-    let result;
-    try {
-      result = instantiateScheduleTemplate(template, request);
-    } catch {
-      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
-        reason: 'instantiate-throw',
-        templateId: template.id,
-      });
-      return;
-    }
-    if (result.generated.length > resolvedScheduleLimits.createMax) {
-      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
-        reason: 'create-limit-exceeded',
-        templateId: template.id,
-        generatedCount: result.generated.length,
-        createMax: resolvedScheduleLimits.createMax,
-      });
-      return;
-    }
-
-    result.generated.forEach((ev, index) => {
-      if (ev.start == null || ev.end == null) return;
-      const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
-      const end = ev.end instanceof Date ? ev.end : new Date(ev.end);
-      const templateEventId = String(ev.id ?? createId(`template-${template.id}-${index}`));
-      applyEngineOp({
-        type: 'create',
-        event: {
-          id: templateEventId,
-          title: ev.title ?? '(untitled)',
-          start,
-          end,
-          allDay: ev.allDay ?? false,
-          resourceId: ev.resource ?? null,
-          category: ev.category ?? null,
-          color: ev.color ?? null,
-          status: ev.status ?? 'confirmed',
-          rrule: ev.rrule ?? null,
-          exdates: ev.exdates ?? [],
-          meta: ev.meta ?? {},
-        },
-        source: 'template',
-      }, () => {
-        const savedPayload = getSavedEventPayload(templateEventId, ev, { id: templateEventId });
-        if (savedPayload) onEventSave?.(savedPayload);
-      });
-    });
-    trackScheduleTemplateAnalytics('schedule_instantiate_succeeded', {
-      templateId: template.id,
-      generatedCount: result.generated.length,
-      elapsedMs: Date.now() - startedAt,
-    });
-    setScheduleOpen(false);
-  }, [applyEngineOp, getSavedEventPayload, onEventSave, resolvedScheduleLimits.createMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
-
-  const buildSchedulePreview = useCallback((request: ScheduleDialogRequest): SchedulePreviewResult => {
-    const startedAt = Date.now();
-    const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
-    if (!template) return { generated: [], conflicts: [], error: 'Selected template was not found.' };
-    if (!Array.isArray(template.entries) || template.entries.length === 0) {
-      return { generated: [], conflicts: [], error: 'Selected template does not have valid entries.' };
-    }
-
-    const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
-    if (Number.isNaN(anchor.getTime())) {
-      return { generated: [], conflicts: [], error: 'Enter a valid anchor date/time.' };
-    }
-
-    let generated: CalendarEventV1[];
-    try {
-      generated = [...instantiateScheduleTemplate(template, { ...request, anchor }).generated];
-    } catch {
-      trackScheduleTemplateAnalytics('schedule_preview_failed', {
-        reason: 'instantiate-throw',
-        templateId: template.id,
-      });
-      return { generated: [], conflicts: [], error: 'Unable to build schedule preview.' };
-    }
-
-    if (generated.length > resolvedScheduleLimits.previewMax) {
-      trackScheduleTemplateAnalytics('schedule_preview_failed', {
-        reason: 'preview-limit-exceeded',
-        templateId: template.id,
-        generatedCount: generated.length,
-        previewMax: resolvedScheduleLimits.previewMax,
-      });
-      return {
-        generated: [],
-        conflicts: [],
-        error: `This template would generate ${generated.length} events, which exceeds the preview limit of ${resolvedScheduleLimits.previewMax}.`,
-      };
-    }
-
-    const ctx = {
-      businessHours:  ownerCfg.config?.['businessHours'] ?? businessHours ?? null,
-      blockedWindows: blockedWindows ?? [],
-    } as unknown as OperationContext;
-    const seededEvents = [...engine.state.events.values()];
-    const conflicts: SchedulePreviewConflict[] = [];
-
-    generated.forEach((ev, index) => {
-      const start = ev.start instanceof Date || typeof ev.start === 'string'
-        ? ev.start
-        : new Date(ev.start as number);
-      const end = ev.end instanceof Date || typeof ev.end === 'string'
-        ? ev.end
-        : new Date(ev.end as number);
-      const legacy: LegacyEvent[] = [{
-        id: `preview:${template.id}:${index}`,
-        title: typeof ev.title === 'string' ? ev.title : '(untitled)',
-        start,
-        end,
-        allDay: ev.allDay ?? false,
-        resource: typeof ev.resource === 'string' ? ev.resource : null,
-        category: typeof ev.category === 'string' ? ev.category : null,
-        color: typeof ev.color === 'string' ? ev.color : null,
-        status: typeof ev.status === 'string' ? ev.status : 'confirmed',
-        rrule: typeof ev.rrule === 'string' ? ev.rrule : null,
-        exdates: Array.isArray(ev.exdates) ? ev.exdates : [],
-        meta: typeof ev.meta === 'object' && ev.meta ? ev.meta as Record<string, unknown> : {},
-      }];
-      const previewEvent = fromLegacyEvents(legacy)[0];
-      if (previewEvent === undefined) return;
-      const op = { type: 'create' as const, event: previewEvent };
-      const validation = validateOperation(op, { ...ctx, events: seededEvents }, seededEvents);
-      if (validation.violations.length > 0) {
-        conflicts.push({
-          index,
-          title: ev.title ?? '(untitled)',
-          severity: validation.severity,
-          violations: validation.violations.map((violation) => ({
-            rule: typeof violation.rule === 'string' ? violation.rule : undefined,
-            message: typeof violation.message === 'string' ? violation.message : undefined,
-          })),
-        });
-      }
-      seededEvents.push(previewEvent);
-    });
-
-    trackScheduleTemplateAnalytics('schedule_preview_built', {
-      templateId: template.id,
-      generatedCount: generated.length,
-      conflictCount: conflicts.length,
-      elapsedMs: Date.now() - startedAt,
-    });
-    const normalizedPreview = generated.map((ev) => ({
-      ...ev,
-      end: ev.end instanceof Date || typeof ev.end === 'string'
-        ? ev.end
-        : new Date(ev.end ?? 0),
-    }));
-    return { generated: normalizedPreview, conflicts, error: '' };
-  }, [resolvedScheduleLimits.previewMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
-
-  const handleCreateScheduleTemplate = useCallback(async (template: LooseValue) => {
-    if (!scheduleTemplateAdapter?.createScheduleTemplate) return;
-    try {
-      await scheduleTemplateAdapter.createScheduleTemplate(template);
-      await reloadRemoteTemplates();
-      setTemplateError('');
-    } catch {
-      setTemplateError('Unable to create schedule template.');
-    }
-  }, [reloadRemoteTemplates, scheduleTemplateAdapter]);
-
-  const handleDeleteScheduleTemplate = useCallback(async (templateId: LooseValue) => {
-    if (!scheduleTemplateAdapter?.deleteScheduleTemplate) return;
-    try {
-      await scheduleTemplateAdapter.deleteScheduleTemplate(templateId);
-      await reloadRemoteTemplates();
-      setTemplateError('');
-    } catch {
-      setTemplateError('Unable to delete schedule template.');
-    }
-  }, [reloadRemoteTemplates, scheduleTemplateAdapter]);
 
   const handleEditFromHoverCard = useCallback((ev: LooseValue) => {
     setSelectedEvent(null);
@@ -1917,7 +1623,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                     className={styles['addBtn']}
                     onClick={() => {
                       setScheduleOpen(true);
-                      trackScheduleTemplateAnalytics('schedule_dialog_opened', {
+                      onScheduleTemplateAnalytics?.({
+                        event: 'schedule_dialog_opened',
+                        at: new Date().toISOString(),
                         templateCount: visibleScheduleTemplates.length,
                       });
                     }}
@@ -2113,179 +1821,95 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           assetsLabel={assetsLabel}
         />
 
-        {/* ── Hover card ── */}
-        {selectedEvent && (
-          (renderHoverCard && renderHoverCard(selectedEvent, () => setSelectedEvent(null))) ?? (
-            <HoverCard
-              event={selectedEvent}
-              config={ownerCfg.config}
-              note={notes[selectedEvent.id]}
-              onClose={() => setSelectedEvent(null)}
-              onNoteSave={onNoteSave}
-              onNoteDelete={onNoteDelete}
-              onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
-              anchor={null}
-              resolveResourceLabel={resolveResourceLabel}
-            />
-          )
-        )}
-
-        {/* ── Event form ── */}
-        {formEvent !== null && perms.canAddEvent && (
-          <EventForm
-            // Pass formEvent through (not null) for pool-seeded drafts so
-            // resourcePoolId survives the form round-trip and the engine
-            // resolves it at submit. New drafts without pool context keep
-            // the legacy behavior: start from a blank form.
-            event={formEvent.id || formEvent.resourcePoolId ? formEvent : null}
-            config={ownerCfg.config}
-            categories={[...eventFormCats, ...eventOptions.categories]}
-            onSave={handleEventSave}
-            onDelete={(onEventDelete && perms.canDeleteEvent) ? handleEventDelete : null}
-            onClose={() => { setFormEvent(null); handleLiveConflicts(null); }}
-            permissions={perms}
-            onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
-            maintenanceRules={maintenanceRules}
-            onCheckConflicts={checkEventConflicts}
-            onLiveConflictsChange={handleLiveConflicts}
-            approvalCategories={Array.isArray(assetRequestCategories) ? assetRequestCategories : []}
-            pools={rawPools ?? []}
-            hideTemplates={hideEventTemplates}
-            resourceSuggestions={eventResourceSuggestions}
-          />
-        )}
-
-        {/* ── Asset request form ── */}
-        {assetRequestOpen && canRequestAsset && perms.canAddEvent && (
-          <AssetRequestForm
-            assets={effectiveAssets}
-            categories={resolvedAssetRequestCategories}
-            initialStart={cal.currentDate}
-            initialAssetId={undefined}
-            requirementTemplates={ownerCfg.config?.['requirementTemplates'] as Record<string, { roles: { id: string; label: string }[]; requiresApproval: boolean }> | undefined}
-            onSubmit={(payload: LooseValue) => {
-              handleEventSave(payload);
-              setAssetRequestOpen(false);
-            }}
-            onClose={() => setAssetRequestOpen(false)}
-          />
-        )}
-
-        {/* ── Availability / PTO form ── */}
-        {availabilityState && (
-          <AvailabilityForm
-            emp={availabilityState.emp}
-            kind={availabilityState.kind}
-            initialStart={availabilityState.start}
-            initialEvent={availabilityState.initialEvent}
-            onSave={handleAvailabilitySave}
-            onClose={() => setAvailabilityState(null)}
-          />
-        )}
-
-        {/* ── Schedule editor form ── */}
-        {scheduleEditorState && (
-          <ScheduleEditorForm
-            emp={scheduleEditorState.emp}
-            initialStart={scheduleEditorState.start}
-            initialEnd={scheduleEditorState.end}
-            onCallCategory={ownerCfg.config?.['onCallCategory'] ?? 'on-call'}
-            onSave={handleScheduleEditorSave}
-            onClose={() => setScheduleEditorState(null)}
-          />
-        )}
-
-        {/* ── Import zone ── */}
-        {importOpen && (
-          <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
-        )}
-
-        {/* ── Schedule templates ── */}
-        {scheduleOpen && (
-          <ScheduleTemplateDialog
-            templates={visibleScheduleTemplates}
-            onPreview={buildSchedulePreview}
-            onInstantiate={handleScheduleInstantiate}
-            onClose={() => setScheduleOpen(false)}
-          />
-        )}
-
-        {/* ── Recurring scope picker ── */}
-        {recurringPrompt && (
-          <RecurringScopeDialog
-            actionLabel={recurringPrompt.actionLabel}
-            onConfirm={recurringPrompt.onConfirm}
-            onCancel={recurringPrompt.onCancel}
-          />
-        )}
-
-        {/* ── Validation alert ── */}
-        {pendingAlert && (
-          <ValidationAlert
-            violations={pendingAlert.violations}
-            isHard={pendingAlert.isHard}
-            onConfirm={pendingAlert.onConfirm ? () => {
-              const commit = pendingAlert.onConfirm;
-              setPendingAlert(null);
-              if (commit) commit();
-            } : null}
-            onCancel={() => setPendingAlert(null)}
-          />
-        )}
-
-        {/* ── Owner config panel ── */}
-        {ownerCfg.configOpen && (
-          <ConfigPanel
-            config={ownerCfg.config}
-            calendarId={calendarId}
-            categories={categories}
-            resources={resources}
-            schema={schema}
-            items={expandedEvents}
-            initialTab={ownerCfg.configInitialTab ?? undefined}
-            initialSmartViewEditId={ownerCfg.smartViewEditId}
-            onUpdate={ownerCfg.updateConfig}
-            onClose={ownerCfg.closeConfig}
-            onReopenSetup={showSetupLanding ? handleReopenSetup : undefined}
-            onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
-            savedViews={savedViews.views}
-            onUpdateView={savedViews.updateView}
-            onDeleteView={handleDeleteView}
-            onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
-            onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
-            sources={sourceStore.sources}
-            feedErrors={feedErrors}
-            isFetchingFeeds={isFetchingFeeds}
-            onAddSource={sourceStore.addSource}
-            onRemoveSource={sourceStore.removeSource}
-            onToggleSource={sourceStore.toggleSource}
-            onUpdateSource={sourceStore.updateSource}
-            scheduleTemplates={mergedScheduleTemplates}
-            onCreateScheduleTemplate={ownerCfg.isOwner && !!scheduleTemplateAdapter?.createScheduleTemplate ? handleCreateScheduleTemplate : undefined}
-            onDeleteScheduleTemplate={ownerCfg.isOwner && !!scheduleTemplateAdapter?.deleteScheduleTemplate ? handleDeleteScheduleTemplate : undefined}
-            scheduleTemplateError={templateError}
-          />
-        )}
-
-        {/* ── Keyboard shortcuts cheat sheet ── */}
-        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} assetsLabel={assetsLabel} />}
-
-        {/* ── Screen reader live region ── */}
-        <ScreenReaderAnnouncer ref={announcerRef} />
+        <CalendarModals
+          selectedEvent={selectedEvent}
+          setSelectedEvent={setSelectedEvent}
+          renderHoverCard={renderHoverCard}
+          ownerConfig={ownerCfg.config}
+          notes={notes}
+          onNoteSave={onNoteSave}
+          onNoteDelete={onNoteDelete}
+          canEditEvent={perms.canEditEvent}
+          handleEditFromHoverCard={handleEditFromHoverCard}
+          resolveResourceLabel={resolveResourceLabel}
+          formEvent={formEvent}
+          setFormEvent={setFormEvent}
+          canAddEvent={perms.canAddEvent}
+          eventFormCats={eventFormCats}
+          eventOptions={eventOptions}
+          handleEventSave={handleEventSave}
+          handleEventDelete={handleEventDelete}
+          onEventDelete={onEventDelete}
+          canDeleteEvent={perms.canDeleteEvent}
+          permissions={perms}
+          canManageOptions={perms.canManageOptions}
+          maintenanceRules={maintenanceRules}
+          checkEventConflicts={checkEventConflicts}
+          handleLiveConflicts={handleLiveConflicts}
+          resolvedAssetRequestCategories={resolvedAssetRequestCategories}
+          rawPools={rawPools ?? []}
+          hideEventTemplates={hideEventTemplates}
+          eventResourceSuggestions={eventResourceSuggestions}
+          assetRequestOpen={assetRequestOpen}
+          setAssetRequestOpen={setAssetRequestOpen}
+          canRequestAsset={canRequestAsset}
+          effectiveAssets={effectiveAssets}
+          currentDate={cal.currentDate}
+          requirementTemplates={ownerCfg.config?.['requirementTemplates'] as LooseValue}
+          availabilityState={availabilityState}
+          setAvailabilityState={setAvailabilityState}
+          handleAvailabilitySave={handleAvailabilitySave}
+          scheduleEditorState={scheduleEditorState}
+          setScheduleEditorState={setScheduleEditorState}
+          onCallCategory={ownerCfg.config?.['onCallCategory'] ?? 'on-call'}
+          handleScheduleEditorSave={handleScheduleEditorSave}
+          importOpen={importOpen}
+          setImportOpen={setImportOpen}
+          handleImport={handleImport}
+          scheduleOpen={scheduleOpen}
+          setScheduleOpen={setScheduleOpen}
+          visibleScheduleTemplates={visibleScheduleTemplates}
+          buildSchedulePreview={buildSchedulePreview}
+          handleScheduleInstantiate={handleScheduleInstantiate}
+          recurringPrompt={recurringPrompt}
+          pendingAlert={pendingAlert}
+          setPendingAlert={setPendingAlert}
+          configOpen={ownerCfg.configOpen}
+          calendarId={calendarId}
+          categories={categories}
+          resources={resources}
+          schema={schema}
+          expandedEvents={expandedEvents}
+          configInitialTab={ownerCfg.configInitialTab ?? undefined}
+          smartViewEditId={ownerCfg.smartViewEditId ?? undefined}
+          updateConfig={ownerCfg.updateConfig}
+          closeConfig={ownerCfg.closeConfig}
+          showSetupLanding={!!showSetupLanding}
+          handleReopenSetup={handleReopenSetup}
+          savedViews={savedViews}
+          handleDeleteView={handleDeleteView}
+          isOwner={ownerCfg.isOwner}
+          openConfigToTab={ownerCfg.openConfigToTab}
+          sourceStore={sourceStore}
+          feedErrors={feedErrors}
+          isFetchingFeeds={isFetchingFeeds}
+          mergedScheduleTemplates={mergedScheduleTemplates}
+          handleCreateScheduleTemplate={handleCreateScheduleTemplate}
+          handleDeleteScheduleTemplate={handleDeleteScheduleTemplate}
+          templateError={templateError}
+          onEmployeeAdd={handleEmployeeAddInternal}
+          onEmployeeDelete={handleEmployeeDeleteInternal}
+          canManagePeople={perms.canManagePeople}
+          helpOpen={helpOpen}
+          setHelpOpen={setHelpOpen}
+          assetsLabel={assetsLabel}
+          announcerRef={announcerRef}
+          inlineEditTarget={inlineEditTarget}
+          setInlineEditTarget={setInlineEditTarget}
+          handleInlineSave={handleInlineSave}
+          handleInlineDelete={handleInlineDelete}
+        />
         </div>
-
-        {/* ── Inline event editor (edit mode) ── */}
-        {inlineEditTarget && (
-          <InlineEventEditor
-            key={`${inlineEditTarget.event?._eventId ?? inlineEditTarget.event?.id ?? 'inline'}-${inlineEditTarget.event?.id ?? 'event'}`}
-            event={inlineEditTarget.event}
-            x={inlineEditTarget.x}
-            y={inlineEditTarget.y}
-            onSave={handleInlineSave}
-            onDelete={onEventDelete ? handleInlineDelete : undefined}
-            onClose={() => setInlineEditTarget(null)}
-          />
-        )}
       </CalendarContext.Provider>
     </CalendarErrorBoundary>
   );
