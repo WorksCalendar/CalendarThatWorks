@@ -38,14 +38,14 @@ describe('AssetRequestForm', () => {
   it('renders the restricted category list (no other categories leak in)', () => {
     renderForm();
     const select = screen.getByLabelText(/Category/);
-    const optionLabels = Array.from(select.querySelectorAll('option')).map(o => o.textContent);
+    const optionLabels = Array.from(select.querySelectorAll<HTMLOptionElement>('option')).map(o => o.textContent);
     expect(optionLabels).toEqual(['Maintenance', 'PR', 'Training', 'Aircraft Movement']);
   });
 
   it('renders the asset registry as dropdown options', () => {
     renderForm();
     const select = screen.getByLabelText(/Asset/);
-    const optionLabels = Array.from(select.querySelectorAll('option')).map(o => o.textContent);
+    const optionLabels = Array.from(select.querySelectorAll<HTMLOptionElement>('option')).map(o => o.textContent);
     expect(optionLabels).toEqual(['N100AA', 'N200BB']);
   });
 

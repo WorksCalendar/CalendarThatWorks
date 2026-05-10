@@ -79,7 +79,7 @@ export function AssetMaintenanceBadges({
       aria-label="Maintenance status"
       style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4, ...style }}
     >
-      {visible.map(({ rule, due }) => (
+      {visible.map(({ rule, due }: { rule: MaintenanceRule; due: DueResult }) => (
         <MaintenanceBadge key={rule.id} rule={rule} due={due} />
       ))}
       {overflow > 0 && (

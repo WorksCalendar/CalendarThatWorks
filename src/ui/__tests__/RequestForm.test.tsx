@@ -80,7 +80,7 @@ describe('RequestForm — rendering', () => {
       },
     });
     const select = screen.getByLabelText('Pick');
-    const options = Array.from(select.querySelectorAll('option')).map(o => o.value);
+    const options = Array.from(select.querySelectorAll<HTMLOptionElement>('option')).map(o => o.value);
     // First option is the empty "Select…" placeholder.
     expect(options).toEqual(['', 'one', 'two', 'three']);
   });

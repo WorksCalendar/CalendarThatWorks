@@ -669,7 +669,7 @@ export default function AssetsView({
       return;
     }
     setCollapsedLocal(prev => {
-      const next = new Set(prev);
+      const next = new Set<string>(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
       if (onCollapsedGroupsChange) onCollapsedGroupsChange(next);

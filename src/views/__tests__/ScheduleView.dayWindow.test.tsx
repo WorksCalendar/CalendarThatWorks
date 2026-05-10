@@ -58,7 +58,7 @@ describe('ScheduleView dayWindow', () => {
     expect(rangeLabel(container)).toBe('Timeline for Apr 10 – Apr 16, 2026');
     expect(dayCellCount(container)).toBe(7);
     // First and last visible day labels.
-    const dayHeaders = Array.from(container.querySelectorAll('[role="columnheader"]')).slice(1);
+    const dayHeaders = Array.from(container.querySelectorAll<HTMLElement>('[role="columnheader"]')).slice(1);
     expect(dayHeaders[0]?.getAttribute('aria-label')).toContain('April 10');
     expect(dayHeaders[6]?.getAttribute('aria-label')).toContain('April 16');
   });

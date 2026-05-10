@@ -264,7 +264,7 @@ describe('useSourceStore — calendarId switching', () => {
     persistSources('cal-b', [{ id: 'b1', type: 'csv', label: 'B', enabled: true, events: [] }]);
 
     const { result, rerender } = renderHook(
-      ({ calendarId }) => useSourceStore(calendarId),
+      ({ calendarId }: { calendarId: string }) => useSourceStore(calendarId),
       { initialProps: { calendarId: 'cal-a' } },
     );
 

@@ -102,7 +102,7 @@ export default function AgendaView({
   // no collapse state baked in; that lives in local React state below.
   const dayTrees = useMemo(() => {
     if (!groupBy) return null;
-    return grouped.map(({ day, events: dayEvents }) => ({
+    return grouped.map(({ day, events: dayEvents }: { day: Date; events: CalendarViewEvent[] }) => ({
       day,
       tree: buildGroupTree(dayEvents as never, groupBy) as GroupTreeNode[],
     }));
@@ -394,7 +394,7 @@ export default function AgendaView({
 
   return (
     <div className={styles['agenda']}>
-      {grouped.map(({ day, events: dayEvents }, idx) => {
+      {grouped.map(({ day, events: dayEvents }: { day: Date; events: CalendarViewEvent[] }, idx) => {
         const dayKey = format(day, 'yyyy-MM-dd');
         const tree = dayTrees?.[idx]?.tree ?? null;
         const allLeafEvents = tree ? collectLeafEvents(tree, dayKey) : [];

@@ -105,7 +105,7 @@ export default function SetupWizardModal({
         completed: true,
       },
       team: {
-        members: teamMembers.map(({ id, name, color, avatar }) => ({ id, name: name.trim() || 'Teammate', color, avatar })),
+        members: teamMembers.map(({ id, name, color, avatar }: TeamMember) => ({ id, name: name.trim() || 'Teammate', color, avatar })),
       },
     });
     onClose?.();

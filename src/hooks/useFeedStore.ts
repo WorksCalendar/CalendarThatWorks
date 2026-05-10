@@ -113,7 +113,7 @@ export function useFeedStore(calendarId: string): {
   // that hook cares about.
   const activeFeeds = feeds
     .filter((f: StoredFeed) => f.enabled && f.url)
-    .map(({ url, label, refreshInterval }) => ({ url, label, refreshInterval }));
+    .map(({ url, label, refreshInterval }: StoredFeed) => ({ url, label, refreshInterval }));
 
   return { feeds, activeFeeds, addFeed, removeFeed, updateFeed, toggleFeed };
 }

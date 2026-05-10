@@ -1,0 +1,214 @@
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useFetchEvents } from './useFetchEvents';
+import { useSourceStore } from './useSourceStore';
+import { useSourceAggregator } from './useSourceAggregator';
+import { useRealtimeEvents } from './useRealtimeEvents';
+import { normalizeEvents } from '../core/eventModel';
+import { useCalendarEngine } from './useCalendarEngine';
+import { useTabScopedEvents } from './useTabScopedEvents';
+import { shiftEmployeeIdsAt } from './useShiftOverlap';
+import { viewRange, ALL_VIEWS } from '../core/calendarViewConfig';
+import { applyFilters, getCategories, getResources } from '../filters/filterEngine';
+import { sortEvents } from '../core/sortEngine';
+import { viewScopedSchema } from '../filters/filterSchema';
+import { resolveLabels } from '../core/config/resolveLabels';
+import { SCHEDULE_WORKFLOW_CATEGORIES } from '../core/scheduleModel';
+import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
+import type { CalendarView } from '../WorksCalendar.types';
+import type { ViewId } from '../core/viewScope';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LooseValue = any;
+
+export interface UseCalendarDataPipelineInput {
+  cal: LooseValue;
+  ownerCfg: LooseValue;
+  weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  rawEvents: LooseValue[];
+  fetchEvents: LooseValue;
+  icalFeeds: LooseValue;
+  calendarId: string;
+  supabaseUrl: LooseValue;
+  supabaseKey: LooseValue;
+  supabaseTable: LooseValue;
+  supabaseFilter: LooseValue;
+  rawPools: LooseValue;
+  businessHours: LooseValue;
+  blockedWindows: LooseValue;
+  onPoolsChange: LooseValue;
+  configuredEmployees: LooseValue[];
+  effectiveAssets: LooseValue;
+  selectedBaseIds: string[];
+  assetRequestCategories: LooseValue;
+  categoriesConfig: LooseValue;
+  schema: LooseValue;
+  activeSort: LooseValue;
+}
+
+export function useCalendarDataPipeline({
+  cal, ownerCfg, weekStartDay,
+  rawEvents, fetchEvents, icalFeeds, calendarId,
+  supabaseUrl, supabaseKey, supabaseTable, supabaseFilter,
+  rawPools, businessHours, blockedWindows, onPoolsChange,
+  configuredEmployees, effectiveAssets, selectedBaseIds,
+  assetRequestCategories, categoriesConfig, schema, activeSort,
+}: UseCalendarDataPipelineInput) {
+  const range = useMemo(
+    () => viewRange(cal.view, cal.currentDate, weekStartDay),
+    [cal.view, cal.currentDate, weekStartDay],
+  );
+
+  const { fetchedEvents, loading: fetchLoading } = useFetchEvents(
+    fetchEvents, cal.view, cal.currentDate, weekStartDay,
+  );
+
+  const sourceStore = useSourceStore(calendarId);
+
+  const { events: sourceEvents, feedErrors, isFetchingFeeds } = useSourceAggregator({
+    icalFeedsProp: icalFeeds,
+    sourceStore,
+  });
+
+  const [supabaseClient, setSupabaseClient] = useState<LooseValue | null>(null);
+  useEffect(() => {
+    if (!supabaseUrl || !supabaseKey) return;
+    import('@supabase/supabase-js')
+      .then(({ createClient }) => setSupabaseClient(createClient(supabaseUrl, supabaseKey)))
+      .catch(() => console.warn('[WorksCalendar] @supabase/supabase-js not installed.'));
+  }, [supabaseUrl, supabaseKey]);
+
+  const { events: realtimeEvents } = useRealtimeEvents({
+    supabaseClient,
+    table:  supabaseTable,
+    filter: supabaseFilter,
+  });
+
+  const allNormalized = useMemo(() => {
+    const map = new Map();
+    const noId: LooseValue[] = [];
+    [...rawEvents, ...fetchedEvents, ...sourceEvents, ...realtimeEvents].forEach(ev => {
+      if (ev.id != null) map.set(String(ev.id), ev);
+      else noId.push(ev);
+    });
+    return normalizeEvents([...map.values(), ...noId]);
+  }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
+
+  const announcerRef = useRef<AnnouncerRef | null>(null);
+  const engineResult = useCalendarEngine({
+    allNormalized,
+    rawPools: rawPools ?? null,
+    businessHours: ownerCfg.config?.['businessHours'] ?? businessHours,
+    blockedWindows,
+    announcerRef,
+    range,
+    onPoolsChange,
+  });
+
+  useEffect(() => {
+    engineResult.engine.dispatch({ type: 'SET_VIEW', view: cal.view as CalendarView });
+  }, [engineResult.engine, cal.view]);
+
+  useEffect(() => {
+    engineResult.engine.dispatch({ type: 'NAVIGATE_TO', date: cal.currentDate });
+  }, [engineResult.engine, cal.currentDate]);
+
+  const configuredBases   = ownerCfg.config?.['team']?.bases   ?? [];
+  const configuredRegions = ownerCfg.config?.['team']?.regions ?? [];
+
+  const profileLabels = useMemo(
+    () => resolveLabels({
+      profile: ownerCfg.config?.['profile'] as string | undefined,
+      labels:  ownerCfg.config?.['labels']  as Record<string, string> | undefined,
+    }),
+    [ownerCfg.config?.['profile'], ownerCfg.config?.['labels']],
+  );
+  const locationLabel = ownerCfg.config?.['team']?.locationLabel ?? profileLabels.location;
+  const assetsLabel   = ownerCfg.config?.['team']?.assetsLabel   ?? profileLabels.resource;
+
+  const VIEWS = useMemo(() => {
+    const enabled = new Set<string>(ownerCfg.config?.['display']?.enabledViews ?? []);
+    return ALL_VIEWS
+      .filter(v => v.alwaysOn || enabled.has(v.id))
+      .map(v => {
+        if (v.id === 'base')   return { ...v, label: locationLabel };
+        if (v.id === 'assets') return { ...v, label: `${assetsLabel}s` };
+        return v;
+      });
+  }, [ownerCfg.config?.['display']?.enabledViews, locationLabel, assetsLabel]);
+
+  useEffect(() => {
+    if (VIEWS.some(v => v.id === cal.view)) return;
+    const fallback = (ownerCfg.config?.['display']?.defaultView as ViewId) ?? 'month';
+    const target = VIEWS.some(v => v.id === fallback) ? fallback : 'month';
+    if (cal.view !== target) cal.setView(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [VIEWS, cal.view, ownerCfg.config?.['display']?.defaultView]);
+
+  const scopedEvents = useTabScopedEvents(cal.view, engineResult.expandedEvents, {
+    employees: configuredEmployees ?? [],
+    assets:    effectiveAssets ?? [],
+    bases:     configuredBases ?? [],
+    selectedBaseIds,
+  });
+
+  const categories = useMemo(() => getCategories(scopedEvents), [scopedEvents]);
+  const eventFormCats = useMemo(
+    () => categories.filter(c => !SCHEDULE_WORKFLOW_CATEGORIES.has(c) && !SCHEDULE_WORKFLOW_CATEGORIES.has(String(c).toLowerCase())),
+    [categories],
+  );
+
+  const resolvedAssetRequestCategories = useMemo(() => {
+    if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
+    const cfg = categoriesConfig ?? ownerCfg.config?.['categoriesConfig'];
+    const defs = (Array.isArray(cfg?.categories) ? cfg.categories : []) as Array<{ id: string; label?: string; color?: string }>;
+    const byId = new Map(defs.map(d => [d.id, d]));
+    return assetRequestCategories.map((id: string) => {
+      const def = byId.get(id);
+      return { id, label: def?.label ?? id, color: def?.color };
+    });
+  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.['categoriesConfig']]);
+
+  const canRequestAsset =
+    resolvedAssetRequestCategories.length > 0 &&
+    Array.isArray(effectiveAssets) &&
+    effectiveAssets.length > 0;
+
+  const resources      = useMemo(() => getResources(scopedEvents), [scopedEvents]);
+  const filteredEvents = useMemo(
+    () => applyFilters(scopedEvents, cal.filters, schema),
+    [scopedEvents, cal.filters, schema],
+  );
+  const filterBarSchema = useMemo(
+    () => viewScopedSchema(schema, cal.view),
+    [schema, cal.view],
+  );
+  const visibleEvents = useMemo(
+    () => (activeSort && activeSort.length > 0 ? sortEvents(filteredEvents, activeSort) : filteredEvents),
+    [filteredEvents, activeSort],
+  );
+  const onShiftIds = useMemo(() => shiftEmployeeIdsAt(visibleEvents), [visibleEvents]);
+
+  return {
+    ...engineResult,
+    announcerRef,
+    fetchLoading,
+    sourceStore,
+    feedErrors,
+    isFetchingFeeds,
+    configuredBases,
+    configuredRegions,
+    profileLabels,
+    locationLabel,
+    assetsLabel,
+    VIEWS,
+    scopedEvents,
+    categories,
+    eventFormCats,
+    resolvedAssetRequestCategories,
+    canRequestAsset,
+    resources,
+    filterBarSchema,
+    visibleEvents,
+    onShiftIds,
+  };
+}
