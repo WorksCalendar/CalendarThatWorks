@@ -207,7 +207,7 @@ describe('AssetsView — resource pools (issue #212)', () => {
   });
 
   it('renders a pool location banner only when renderPoolLocation is provided (#386 item #9)', () => {
-    const renderPoolLocation = vi.fn(({ memberIds }) => `${memberIds.length} aircraft`);
+    const renderPoolLocation = vi.fn(({ memberIds }: { memberIds: string[] }) => `${memberIds.length} aircraft`);
     renderView({
       assets: basicAssets,
       pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],

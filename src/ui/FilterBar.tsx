@@ -177,7 +177,7 @@ export default function FilterBar({
 
   return (
     <div className={styles['bar']}>
-      {Object.entries(groupedFields).map(([groupKey, fields]) => {
+      {(Object.entries(groupedFields) as [GroupKey, FilterField[]][]).map(([groupKey, fields]) => {
         if (!fields.length) return null;
 
         const typedGroupKey = groupKey as GroupKey;

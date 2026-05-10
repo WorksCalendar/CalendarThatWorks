@@ -8,6 +8,7 @@ import {
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay, layoutSpans } from '../core/layout';
+import type { LayoutSpanItem } from '../core/layout';
 import type { NormalizedEvent } from '../types/events';
 import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
@@ -545,7 +546,7 @@ export default function MonthView({
                   <div className={styles['spansLayer']} style={{ top: layoutMetrics.dayNumTrackH, height: spansHeight }}>
                     {spans
                       .filter(s => s.lane < MAX_SPANS_VISIBLE)
-                      .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
+                      .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }: LayoutSpanItem<NormalizedEvent>) => {
                         const color = resolveColor(ev, ctx?.colorRules);
                         const pctLeft  = (startCol / 7) * 100;
                         const pctWidth = ((endCol - startCol + 1) / 7) * 100;

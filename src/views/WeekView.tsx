@@ -7,6 +7,7 @@ import {
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { layoutSpans } from '../core/layout';
+import type { LayoutSpanItem } from '../core/layout';
 import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './WeekView.module.css';
@@ -375,7 +376,7 @@ export default function WeekView({
             >
               {spans
                 .filter(s => s.lane < MAX_SPANS_VISIBLE)
-                .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
+                .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }: LayoutSpanItem<WeekViewEvent>) => {
                   const color = resolveColor(ev as never, ctx?.colorRules);
                   const isConflicting = !!ctx?.conflictingEventIds?.has(ev.id);
                   const statusClass = ev.status === 'cancelled' ? styles['cancelled']

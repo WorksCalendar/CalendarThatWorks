@@ -299,7 +299,7 @@ export function WorkflowSimulator(
           ? <p className={styles['empty']}>No events yet.</p>
           : (
             <ul className={styles['emitList']} data-testid="sim-emit-log">
-              {emitLog.map(({ seq, event }) => (
+              {emitLog.map(({ seq, event }: TimedEmit) => (
                 <li
                   key={seq}
                   className={styles['emitItem']}

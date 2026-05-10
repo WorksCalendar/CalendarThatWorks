@@ -209,7 +209,7 @@ export default function RequestQueueView({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ ev, stage }) => {
+              {rows.map(({ ev, stage }: { ev: LooseEvent; stage: ApprovalStage }) => {
                 const evId = String(ev.id ?? '');
                 const startDate = toDate(ev.start);
                 const endDate   = toDate(ev.end);

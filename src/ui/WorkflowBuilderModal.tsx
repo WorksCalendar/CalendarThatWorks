@@ -165,7 +165,7 @@ export function WorkflowBuilderModal(
       setDraftLayout(prev => {
         if (!(id in prev.positions)) return prev
         const nextPositions: Record<string, { x: number; y: number }> = {}
-        for (const [k, v] of Object.entries(prev.positions)) {
+        for (const [k, v] of Object.entries(prev.positions) as [string, { x: number; y: number }][]) {
           if (k !== id) nextPositions[k] = v
         }
         return { ...prev, positions: nextPositions }
@@ -188,7 +188,7 @@ export function WorkflowBuilderModal(
       const node = seedNode(id, type)
       // Drop the new node just below the lowest existing row so it's
       // visible without overlapping. If the layout is empty, use (0, 0).
-      const existing = Object.values(draftLayout.positions)
+      const existing = Object.values(draftLayout.positions) as { x: number; y: number }[]
       const maxY = existing.reduce((m, p) => Math.max(m, p.y), -NODE_HEIGHT)
       const pos = { x: 0, y: maxY + NODE_HEIGHT + 24 }
       setDraftWorkflow(prev => ({ ...prev, nodes: [...prev.nodes, node] }))

@@ -221,7 +221,7 @@ export default function MapView({
         style={{ width: '100%', height: '100%' } as CSSProperties}
       >
         {controls && <NavigationControl position="top-right" />}
-        {plotted.map(({ ev, pos, color }) => (
+        {plotted.map(({ ev, pos, color }: Plotted) => (
           <Marker
             key={ev.id}
             longitude={pos.lng}

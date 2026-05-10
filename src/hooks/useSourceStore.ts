@@ -162,7 +162,7 @@ export function useSourceStore(calendarId: string): {
             && typeof s.url === 'string'
             && s.url.length > 0,
         )
-        .map(({ url, label, refreshInterval }) => ({ url, label, refreshInterval })),
+        .map(({ url, label, refreshInterval }: CalendarSource & { type: 'ics'; url: string }) => ({ url, label, refreshInterval })),
     [sources],
   );
 
