@@ -23,7 +23,7 @@ type LooseValue = any;
 export interface UseCalendarDataPipelineInput {
   cal: LooseValue;
   ownerCfg: LooseValue;
-  weekStartDay: number;
+  weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   rawEvents: LooseValue[];
   fetchEvents: LooseValue;
   icalFeeds: LooseValue;
