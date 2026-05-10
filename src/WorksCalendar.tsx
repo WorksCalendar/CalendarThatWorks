@@ -11,23 +11,16 @@ import { Bookmark, Filter, Settings } from 'lucide-react';
 
 import type { WorksCalendarProps, CalendarApi, CalendarView } from './WorksCalendar.types';
 export type { WorksCalendarEvent, CalendarView, CalendarRole, ScheduleInstantiationLimits, CalendarApi, WorksCalendarProps, DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator } from './WorksCalendar.types';
-import { ALL_VIEWS, DEFAULT_SCHEDULE_INSTANTIATION_LIMITS, viewRange } from './core/calendarViewConfig';
+import { DEFAULT_SCHEDULE_INSTANTIATION_LIMITS } from './core/calendarViewConfig';
 
 import { useOwnerConfig }     from './hooks/useOwnerConfig';
-import { useFetchEvents }     from './hooks/useFetchEvents';
-import { useSourceStore }      from './hooks/useSourceStore';
-import { useSourceAggregator } from './hooks/useSourceAggregator';
 import { useSavedViews } from './hooks/useSavedViews';
-import { sortEvents } from './core/sortEngine.ts';
-import { useRealtimeEvents }  from './hooks/useRealtimeEvents';
 import { usePermissions }     from './hooks/usePermissions';
 import { useEventOptions }    from './hooks/useEventOptions';
 import { useTouchSwipe }     from './hooks/useTouchSwipe';
 import { CalendarContext }    from './core/CalendarContext';
 import type { CalendarContextValue } from './types/ui';
 import { normalizeEvents }    from './core/eventModel';
-import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
-import { useCalendarEngine } from './hooks/useCalendarEngine';
 import { useEventMutations } from './hooks/useEventMutations';
 import { useScheduleMutations } from './hooks/useScheduleMutations';
 import { useGroupingSort } from './hooks/useGroupingSort';
@@ -36,22 +29,19 @@ import { useSetupLanding } from './hooks/useSetupLanding';
 import { useSavedViewsManager } from './hooks/useSavedViewsManager';
 import { useScheduleTemplates } from './hooks/useScheduleTemplates';
 import { useModalState } from './hooks/useModalState';
+import { useCalendarDataPipeline } from './hooks/useCalendarDataPipeline';
 import CalendarModals from './ui/CalendarModals';
 import CalendarToolbar from './ui/CalendarToolbar';
 import CalendarViewGrid from './ui/CalendarViewGrid';
 import SetupLanding, { type SetupLandingResult } from './ui/SetupLanding';
-import { applyFilters, getCategories, getResources } from './filters/filterEngine';
 import { resolveCssTheme, normalizeTheme, THEME_META } from './styles/themes';
-import { buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
+import { buildDefaultFilterSchema, makeResourceResolver, type FilterField } from './filters/filterSchema';
 import { SCHEDULE_WORKFLOW_CATEGORIES, isScheduleWorkflowEvent } from './core/scheduleModel';
-import { useTabScopedEvents } from './hooks/useTabScopedEvents';
-import { captureSavedViewFields, type ViewId } from './core/viewScope';
-import { resolveLabels } from './core/config/resolveLabels';
+import { captureSavedViewFields } from './core/viewScope';
 import { createInitialFilters, clearFilterValue } from './filters/filterState';
 import { AppShell }           from './ui/AppShell';
 import { LeftRail }           from './ui/LeftRail';
 import { RightPanel, RightPanelSection, CrewOnShiftList } from './ui/RightPanel';
-import { shiftEmployeeIdsAt } from './hooks/useShiftOverlap';
 import FilterGroupSidebar from './ui/FilterGroupSidebar';
 import type { SidebarTab } from './ui/FilterGroupSidebar';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -464,196 +454,24 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setSelectedBaseIds,
   });
 
-  // ── Visible date range (drives fetch + occurrence expansion) ─────────────
-  const range = useMemo(
-    () => viewRange(cal.view, cal.currentDate, weekStartDay),
-    [cal.view, cal.currentDate, weekStartDay],
-  );
-
-  // ── Async fetch ──────────────────────────────────────────────────────────
-  const { fetchedEvents, loading: fetchLoading } = useFetchEvents(
-    fetchEvents, cal.view, cal.currentDate, weekStartDay,
-  );
-
-  // ── Source store (ICS feeds + CSV datasets, persisted per calendarId) ───
-  const sourceStore = useSourceStore(calendarId);
-
-  // ── Aggregator: merges prop feeds + stored ICS + stored CSV ─────────────
-  const { events: sourceEvents, feedErrors, isFetchingFeeds } = useSourceAggregator({
-    icalFeedsProp: icalFeeds,
-    sourceStore,
-  });
-
-  // ── Supabase Realtime ────────────────────────────────────────────────────
-  const [supabaseClient, setSupabaseClient] = useState<LooseValue | null>(null);
-  useEffect(() => {
-    if (!supabaseUrl || !supabaseKey) return;
-    import('@supabase/supabase-js')
-      .then(({ createClient }) => setSupabaseClient(createClient(supabaseUrl, supabaseKey)))
-      .catch(() => console.warn('[WorksCalendar] @supabase/supabase-js not installed.'));
-  }, [supabaseUrl, supabaseKey]);
-
-  const { events: realtimeEvents } = useRealtimeEvents({
-    supabaseClient,
-    table:  supabaseTable,
-    filter: supabaseFilter,
-  });
-
-  // ── Merge all sources → normalize ────────────────────────────────────────
-  const allNormalized = useMemo(() => {
-    // Deduplicate by id across sources (static + fetch + feed + realtime).
-    // Events without an id cannot be reliably deduplicated so they are
-    // included as-is — using title+start as a fallback key would silently
-    // drop events that happen to share the same title and start time.
-    const map = new Map();
-    const noId: LooseValue[] = [];
-    [...rawEvents, ...fetchedEvents, ...sourceEvents, ...realtimeEvents].forEach(ev => {
-      if (ev.id != null) map.set(String(ev.id), ev);
-      else noId.push(ev);
-    });
-    return normalizeEvents([...map.values(), ...noId]);
-  }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
-
-  // ── CalendarEngine — single source of truth for mutations & expansions ───
-  // announcerRef stays here: it attaches to <ScreenReaderAnnouncer> in JSX
-  // and is also used by the keyboard-shortcut undo/redo announcements below.
-  const announcerRef = useRef<AnnouncerRef | null>(null);
   const {
-    engine,
-    undoManager,
-    engineVer,
-    expandedEvents,
-    approvalRequestEvents,
-    applyEngineOp,
-    applyWithRecurringCheck,
-    getSavedEventPayload,
-    pendingAlert,
-    setPendingAlert,
-    recurringPrompt,
-  } = useCalendarEngine({
-    allNormalized,
-    rawPools: rawPools ?? null,
-    businessHours: ownerCfg.config?.['businessHours'] ?? businessHours,
-    blockedWindows,
-    announcerRef,
-    range,
-    onPoolsChange,
+    engine, undoManager, engineVer,
+    expandedEvents, approvalRequestEvents,
+    applyEngineOp, applyWithRecurringCheck, getSavedEventPayload,
+    pendingAlert, setPendingAlert, recurringPrompt,
+    announcerRef, fetchLoading, sourceStore, feedErrors, isFetchingFeeds,
+    configuredBases, configuredRegions, profileLabels, locationLabel, assetsLabel,
+    VIEWS, scopedEvents, categories, eventFormCats,
+    resolvedAssetRequestCategories, canRequestAsset,
+    resources, filterBarSchema, visibleEvents, onShiftIds,
+  } = useCalendarDataPipeline({
+    cal, ownerCfg, weekStartDay,
+    rawEvents, fetchEvents, icalFeeds, calendarId,
+    supabaseUrl, supabaseKey, supabaseTable, supabaseFilter,
+    rawPools, businessHours, blockedWindows, onPoolsChange,
+    configuredEmployees, effectiveAssets, selectedBaseIds,
+    assetRequestCategories, categoriesConfig, schema, activeSort,
   });
-
-  // ── Sync UI view/cursor into engine ──────────────────────────────────────────
-  // Engine is the authoritative source for view and cursor (#3). These effects
-  // keep engine.state.view and .cursor in sync with the local navigation state
-  // so any engine query or pool operation sees the correct values.
-  useEffect(() => {
-    engine.dispatch({ type: 'SET_VIEW', view: view as CalendarView });
-  }, [engine, view]);
-
-  useEffect(() => {
-    engine.dispatch({ type: 'NAVIGATE_TO', date: currentDate });
-  }, [engine, currentDate]);
-
-  // ── Base/Region view config ───────────────────────────────────────────────
-  const configuredBases   = ownerCfg.config?.['team']?.bases ?? [];
-  const configuredRegions = ownerCfg.config?.['team']?.regions ?? [];
-  // Profile-aware labels (#424 wk5). Hosts can keep using the legacy
-  // `team.locationLabel` / `team.assetsLabel` overrides, but when neither
-  // exists we fall back to the profile preset's defaults via
-  // `resolveLabels` — so an air-medical config picks "Aircraft" / "Base"
-  // automatically without per-key wiring.
-  const profileLabels = useMemo(
-    () => resolveLabels({
-      profile: ownerCfg.config?.['profile'] as string | undefined,
-      labels:  ownerCfg.config?.['labels']  as Record<string, string> | undefined,
-    }),
-    [ownerCfg.config?.['profile'], ownerCfg.config?.['labels']],
-  );
-  const locationLabel     = ownerCfg.config?.['team']?.locationLabel ?? profileLabels.location;
-  const assetsLabel       = ownerCfg.config?.['team']?.assetsLabel   ?? profileLabels.resource;
-
-  // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
-  const VIEWS = useMemo(() => {
-    const enabled = new Set<string>(ownerCfg.config?.['display']?.enabledViews ?? []);
-    return ALL_VIEWS
-      .filter(v => v.alwaysOn || enabled.has(v.id))
-      .map(v => {
-        if (v.id === 'base')   return { ...v, label: locationLabel };
-        if (v.id === 'assets') return { ...v, label: `${assetsLabel}s` };
-        return v;
-      });
-  }, [ownerCfg.config?.['display']?.enabledViews, locationLabel, assetsLabel]);
-
-  // Self-heal: if the active tab is no longer enabled, fall back to default/month.
-  useEffect(() => {
-    if (VIEWS.some(v => v.id === cal.view)) return;
-    const fallback = (ownerCfg.config?.['display']?.defaultView as ViewId) ?? 'month';
-    const target = VIEWS.some(v => v.id === fallback) ? fallback : 'month';
-    if (cal.view !== target) cal.setView(target);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [VIEWS, cal.view, ownerCfg.config?.['display']?.defaultView]);
-
-  // ── Derive categories / resources / filtered events ──────────────────────
-  // Events scoped to the active tab — drives BOTH FilterBar option lists and
-  // applyFilters, so they can never drift. See src/core/viewScope.ts.
-  const scopedEvents = useTabScopedEvents(cal.view, expandedEvents, {
-    employees: configuredEmployees ?? [],
-    assets:    effectiveAssets ?? [],
-    bases:     configuredBases ?? [],
-    selectedBaseIds,
-  });
-
-  const categories    = useMemo(() => getCategories(scopedEvents), [scopedEvents]);
-  // Categories offered in the generic EventForm — hide schedule-workflow
-  // categories (shift/PTO/etc) which are managed through EmployeeActionCard.
-  const eventFormCats = useMemo(
-    () => categories.filter(c => !SCHEDULE_WORKFLOW_CATEGORIES.has(c) && !SCHEDULE_WORKFLOW_CATEGORIES.has(String(c).toLowerCase())),
-    [categories],
-  );
-
-  // Resolve asset-request category ids → {id, label} pairs by looking up the
-  // host's configured categories. Falls back to using the id as the label so
-  // the modal never renders a blank dropdown.
-  const resolvedAssetRequestCategories = useMemo(() => {
-    if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
-    const cfg = categoriesConfig ?? ownerCfg.config?.['categoriesConfig'];
-    const defs = (Array.isArray(cfg?.categories) ? cfg.categories : []) as Array<{
-      id: string
-      label?: string
-      color?: string
-    }>;
-    const byId = new Map(defs.map(d => [d.id, d]));
-    return assetRequestCategories.map(id => {
-      const def = byId.get(id);
-      return { id, label: def?.label ?? id, color: def?.color };
-    });
-  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.['categoriesConfig']]);
-
-  const canRequestAsset =
-    resolvedAssetRequestCategories.length > 0 &&
-    Array.isArray(effectiveAssets) &&
-    effectiveAssets.length > 0;
-  const resources     = useMemo(() => getResources(scopedEvents),  [scopedEvents]);
-  const filteredEvents = useMemo(
-    () => applyFilters(scopedEvents, cal.filters, schema),
-    [scopedEvents, cal.filters, schema],
-  );
-  const filterBarSchema = useMemo(
-    () => viewScopedSchema(schema, cal.view),
-    [schema, cal.view],
-  );
-  const visibleEvents = useMemo(
-    () => (activeSort && activeSort.length > 0
-      ? sortEvents(filteredEvents, activeSort)
-      : filteredEvents),
-    [filteredEvents, activeSort],
-  );
-
-  // Set of employee ids whose shift / on-call event covers "right now".
-  // Drives the AppShell RightPanel's CrewOnShiftList narrowing — only people
-  // currently scheduled to work appear there, not the entire roster.
-  // Recomputed when visibleEvents change; intentionally not refreshed on a
-  // wall-clock interval (a shift transition is rare enough that requiring
-  // a re-render to pick it up is acceptable; see useShiftOverlap.ts).
-  const onShiftIds = useMemo(() => shiftEmployeeIdsAt(visibleEvents), [visibleEvents]);
 
   // ── Mutation pipeline ────────────────────────────────────────────────────
   // applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, pendingAlert,
