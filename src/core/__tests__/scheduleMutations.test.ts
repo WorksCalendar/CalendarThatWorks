@@ -7,6 +7,26 @@ import {
   findLinkedOpenShifts,
 } from '../scheduleMutations';
 
+import { resolveEventId } from '../scheduleMutations';
+
+describe('resolveEventId', () => {
+  it('returns empty string for null ev', () => {
+    expect(resolveEventId(null)).toBe('');
+  });
+
+  it('returns empty string for undefined ev', () => {
+    expect(resolveEventId(undefined)).toBe('');
+  });
+
+  it('prefers _eventId over id', () => {
+    expect(resolveEventId({ _eventId: 'occ-1', id: 'master-1' })).toBe('occ-1');
+  });
+
+  it('falls back to id when _eventId is absent', () => {
+    expect(resolveEventId({ id: 'ev-42' })).toBe('ev-42');
+  });
+});
+
 describe('scheduleMutations helpers', () => {
   const shift = {
     id: 'shift-1',
@@ -62,5 +82,49 @@ describe('scheduleMutations helpers', () => {
     expect(patch.meta['kind']).toBe('open-shift');
     expect(patch.meta['sourceShiftId']).toBe('shift-1');
     expect(patch.meta['reason']).toBe('pto');
+  });
+
+  it('findLinkedOpenShifts returns empty when shiftEvent has no id', () => {
+    const found = findLinkedOpenShifts([openShift], { id: undefined, _eventId: undefined });
+    expect(found).toHaveLength(0);
+  });
+
+  it('findLinkedOpenShifts matches by linkedById when meta.openShiftId is set', () => {
+    const shiftWithOpenLink = { ...shift, meta: { openShiftId: 'open-1' } };
+    const found = findLinkedOpenShifts([openShift], shiftWithOpenLink);
+    expect(found).toHaveLength(1);
+  });
+
+  it('buildCoverageMeta falls back to shiftEvent.meta.openShiftId when openShiftId arg is falsy', () => {
+    const shiftWithExistingOpenId = { ...shift, meta: { openShiftId: 'fallback-open' } };
+    const coverage = buildCoverageMeta(shiftWithExistingOpenId, 'emp-3', null);
+    expect(coverage['openShiftId']).toBe('fallback-open');
+  });
+
+  it('buildCoverageMeta uses ev.meta from null shiftEvent gracefully', () => {
+    const coverage = buildCoverageMeta(null, 'emp-3', 'open-99');
+    expect(coverage['coveredBy']).toBe('emp-3');
+    expect(coverage['openShiftId']).toBe('open-99');
+  });
+
+  it('buildOpenShiftPatch uses employeeId field as fallback for originalEmployeeId', () => {
+    const shiftWithEmployeeId = { ...shift, resource: undefined, employeeId: 'emp-fallback' };
+    const patch = buildOpenShiftPatch(openShift, shiftWithEmployeeId, 'pto');
+    expect(patch.meta['originalEmployeeId']).toBe('emp-fallback');
+  });
+
+  it('buildOpenShiftPatch parses string start/end dates', () => {
+    const strShift = { ...shift, start: '2026-04-01T00:00:00.000Z' as any, end: '2026-04-01T08:00:00.000Z' as any };
+    const patch = buildOpenShiftPatch(openShift, strShift, 'pto');
+    expect(patch.start).toBeInstanceOf(Date);
+    expect(patch.end).toBeInstanceOf(Date);
+  });
+
+  it('buildShiftStatusMeta does not overwrite inherited openShiftId when openShiftId arg is absent', () => {
+    // shift.meta already has openShiftId='open-1'; it should survive the merge
+    const meta = buildShiftStatusMeta(shift, { status: 'pto', openShiftId: undefined });
+    expect(meta['shiftStatus']).toBe('pto');
+    // inherited from shiftEvent.meta spread — only overwritten if openShiftId arg is truthy
+    expect(meta['openShiftId']).toBe('open-1');
   });
 });
