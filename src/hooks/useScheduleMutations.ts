@@ -10,14 +10,15 @@ import {
 import { detectShiftConflicts, buildOpenShiftEvent } from '../core/scheduleOverlap';
 import { normalizeScheduleKind, SCHEDULE_KINDS } from '../core/scheduleModel';
 import { createId } from '../core/createId';
+import type { EngineOpInput, EngineOpRunner, EmitEventSave, GetSavedEventPayload } from '../types/engineOps';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseValue = any;
 
 type UseScheduleMutationsParams = {
-  applyEngineOp: (op: LooseValue, callback?: (result: LooseValue) => void) => void;
-  emitEventSave: (eventId: LooseValue, fallbackEvent?: LooseValue, fallbackPatch?: LooseValue) => void;
-  getSavedEventPayload: (id: LooseValue, fallback?: LooseValue, patch?: LooseValue) => LooseValue;
+  applyEngineOp: EngineOpRunner;
+  emitEventSave: EmitEventSave;
+  getSavedEventPayload: GetSavedEventPayload;
   expandedEvents: LooseValue[];
   configuredEmployees: LooseValue[];
   onEventDelete?: ((eventId: string) => void) | undefined;
@@ -238,7 +239,7 @@ export function useScheduleMutations({
     const availabilityId = existingAvailability
       ? String(existingAvailability._eventId ?? existingAvailability.id)
       : String(availEv.id ?? createId('avail'));
-    const saveOp = existingAvailability
+    const saveOp: EngineOpInput = existingAvailability
       ? {
         type: 'update',
         id: availabilityId,

@@ -7,6 +7,7 @@ import type { LegacyEvent } from '../core/engine/adapters/fromLegacyEvents';
 import { validateOperation } from '../core/engine/validation/validateOperation';
 import type { OperationContext } from '../core/engine/validation/validationTypes';
 import { createId } from '../core/createId';
+import type { EngineOpRunner, GetSavedEventPayload } from '../types/engineOps';
 
 type LooseValue = any;
 
@@ -28,8 +29,8 @@ export interface UseScheduleTemplatesParams {
   ownerBusinessHours: unknown;
   businessHours?: unknown;
   blockedWindows?: LooseValue[] | undefined;
-  applyEngineOp: (op: LooseValue, callback?: () => void) => void;
-  getSavedEventPayload: (id: string, ev: LooseValue, context: LooseValue) => LooseValue;
+  applyEngineOp: EngineOpRunner;
+  getSavedEventPayload: GetSavedEventPayload;
   onEventSave?: ((event: LooseValue) => void) | undefined;
   onInstantiateSuccess: () => void;
 }

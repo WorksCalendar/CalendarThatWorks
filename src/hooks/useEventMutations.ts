@@ -3,19 +3,16 @@ import { evaluateConflicts } from '../core/conflictEngine';
 import type { ConflictEvent, ConflictRule } from '../core/conflictEngine';
 import { occurrenceToLegacy, toLegacyEvent } from '../core/engine/adapters/toLegacyEvents';
 import { createId } from '../core/createId';
+import { isCreatedChange } from '../types/engineOps';
+import type { EngineOpInput, EngineOpRunner, RecurringOpRunner, GetSavedEventPayload } from '../types/engineOps';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseValue = any;
 
 type UseEventMutationsParams = {
-  applyEngineOp: (op: LooseValue, callback?: (result: LooseValue) => void) => void;
-  applyWithRecurringCheck: (
-    ev: LooseValue,
-    opFactory: (scope: LooseValue) => LooseValue,
-    callback: (result: LooseValue) => void,
-    actionLabel: string,
-  ) => void;
-  getSavedEventPayload: (id: LooseValue, fallback?: LooseValue, patch?: LooseValue) => LooseValue;
+  applyEngineOp: EngineOpRunner;
+  applyWithRecurringCheck: RecurringOpRunner;
+  getSavedEventPayload: GetSavedEventPayload;
   engine: LooseValue;
   engineVer: number;
   expandedEvents: LooseValue[];
@@ -47,7 +44,7 @@ export function useEventMutations({
   setFormEvent,
   setInlineEditTarget,
 }: UseEventMutationsParams) {
-  const emitEventSave = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
+  const emitEventSave = useCallback((eventId: unknown, fallbackEvent: unknown = null, fallbackPatch: unknown = null) => {
     const savedPayload = getSavedEventPayload(eventId, fallbackEvent, fallbackPatch);
     if (savedPayload) onEventSave?.(savedPayload);
   }, [getSavedEventPayload, onEventSave]);
@@ -106,7 +103,7 @@ export function useEventMutations({
 
     if (!eventId) {
       const createdId = String(rawEv.id ?? createId('event'));
-      const op = {
+      const op: EngineOpInput = {
         type:  'create',
         event: {
           id:             createdId,
@@ -125,9 +122,9 @@ export function useEventMutations({
         },
         source: 'form',
       };
-      applyEngineOp(op, (result: LooseValue) => {
-        const createdChange = result?.changes?.find((c: LooseValue) => c.type === 'created');
-        const engineId = createdChange?.event?.id ?? createdId;
+      applyEngineOp(op, (result) => {
+        const createdChange = result.changes.find(isCreatedChange);
+        const engineId = createdChange?.event.id ?? createdId;
         const savedPayload = getSavedEventPayload(engineId, rawEv, { id: engineId });
         if (savedPayload) onEventSave?.(savedPayload);
         setFormEvent(null);
@@ -137,7 +134,7 @@ export function useEventMutations({
 
     applyWithRecurringCheck(
       rawEv,
-      (_scope: LooseValue) => ({
+      (_scope) => ({
         type:  'update',
         id:    eventId,
         patch: {
@@ -153,9 +150,9 @@ export function useEventMutations({
         },
         source: 'form',
       }),
-      (result: LooseValue) => {
-        if (result?.changes?.length > 1) {
-          result.changes.forEach((change: LooseValue) => {
+      (result) => {
+        if (result.changes.length > 1) {
+          result.changes.forEach((change) => {
             if (change.type === 'created') {
               onEventSave?.(toLegacyEvent(change.event) as LooseValue);
             } else if (change.type === 'updated') {
@@ -177,12 +174,12 @@ export function useEventMutations({
     const id  = ev._eventId ?? String(ev.id);
     applyWithRecurringCheck(
       ev,
-      (_scope: LooseValue) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
-      (result: LooseValue) => {
+      (_scope) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
+      (result) => {
         if (onEventMove) {
           onEventMove(ev, newStart, newEnd);
-        } else if (result?.changes?.length > 1) {
-          result.changes.forEach((change: LooseValue) => {
+        } else if (result.changes.length > 1) {
+          result.changes.forEach((change) => {
             if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as LooseValue);
             else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as LooseValue);
           });
@@ -200,12 +197,12 @@ export function useEventMutations({
     const id  = ev._eventId ?? String(ev.id);
     applyWithRecurringCheck(
       ev,
-      (_scope: LooseValue) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
-      (result: LooseValue) => {
+      (_scope) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
+      (result) => {
         if (onEventResize) {
           onEventResize(ev, newStart, newEnd);
-        } else if (result?.changes?.length > 1) {
-          result.changes.forEach((change: LooseValue) => {
+        } else if (result.changes.length > 1) {
+          result.changes.forEach((change) => {
             if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as LooseValue);
             else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as LooseValue);
           });
@@ -236,7 +233,7 @@ export function useEventMutations({
     const eventId = ev._eventId ?? String(id);
     applyWithRecurringCheck(
       ev,
-      (_scope: LooseValue) => ({ type: 'delete', id: eventId, source: 'form' }),
+      (_scope) => ({ type: 'delete', id: eventId, source: 'form' }),
       () => { onEventDelete?.(id); setFormEvent(null); },
       'Delete',
     );
