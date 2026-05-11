@@ -314,11 +314,10 @@ function mockSupabase(overrides: Record<string, unknown> = {}) {
     insert: vi.fn().mockResolvedValue({ data: [ev()], error: null }),
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
+    // Make the query builder awaitable; overrides can replace this
+    then:   (resolve: (v: unknown) => void) => resolve({ data: [ev()], error: null }),
     ...overrides,
   };
-  // Make the query builder awaitable (for .lt() final call → { data, error })
-  (qb as Record<string, unknown>)['then'] = (resolve: (v: unknown) => void) =>
-    resolve({ data: [ev()], error: null });
 
   const channel = {
     on:          vi.fn().mockReturnThis(),
@@ -424,6 +423,98 @@ describe('SupabaseAdapter.subscribe', () => {
     expect(changes[0]).toEqual({ type: 'insert', event: expect.objectContaining({ id: 'new-1' }) });
     expect(changes[1]).toEqual({ type: 'update', event: expect.objectContaining({ title: 'Updated' }) });
     expect(changes[2]).toEqual({ type: 'delete', id: 'del-1' });
+  });
+});
+
+// ─── SupabaseAdapter — additional branch coverage ────────────────────────────
+
+describe('SupabaseAdapter — error branches', () => {
+  it('loadRange throws when error is returned', async () => {
+    const sb = mockSupabase({
+      then: (resolve: (v: unknown) => void) => resolve({ data: null, error: { code: '42P01' } }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await expect(a.loadRange(S, E)).rejects.toThrow('SupabaseAdapter.loadRange');
+  });
+
+  it('loadRange returns empty array when data is null', async () => {
+    const sb = mockSupabase({
+      then: (resolve: (v: unknown) => void) => resolve({ data: null, error: null }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    const result = await a.loadRange(S, E);
+    expect(result).toEqual([]);
+  });
+
+  it('createEvent throws when error is returned', async () => {
+    const sb = mockSupabase({
+      insert: vi.fn().mockResolvedValue({ data: null, error: { message: 'db error' } }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await expect(a.createEvent(ev())).rejects.toThrow('SupabaseAdapter.createEvent');
+  });
+
+  it('createEvent throws when inserted row is missing from data', async () => {
+    const sb = mockSupabase({
+      insert: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await expect(a.createEvent(ev())).rejects.toThrow('missing inserted row');
+  });
+
+  it('createEvent accepts data as a direct object (not array)', async () => {
+    const inserted = ev({ id: 'new-direct' });
+    const sb = mockSupabase({
+      insert: vi.fn().mockResolvedValue({ data: inserted, error: null }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    const result = await a.createEvent(ev());
+    expect(result.id).toBe('new-direct');
+  });
+
+  it('updateEvent throws when error is returned', async () => {
+    const sb = mockSupabase({
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: 'not found' } }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await expect(a.updateEvent('ev-1', { title: 'X' })).rejects.toThrow('SupabaseAdapter.updateEvent');
+  });
+
+  it('deleteEvent throws when error is returned', async () => {
+    const sb = mockSupabase({
+      then: (resolve: (v: unknown) => void) => resolve({ data: null, error: { message: 'forbidden' } }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await expect(a.deleteEvent('ev-1')).rejects.toThrow('SupabaseAdapter.deleteEvent');
+  });
+});
+
+describe('SupabaseAdapter — filter and subscribe branches', () => {
+  it('_baseQuery does not call eq when filter has no =eq. format', async () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({ client: sb, table: 'events', filter: 'malformed-filter' });
+    await a.loadRange(S, E);
+    // eq should NOT be called since the filter string has no '=eq.' segment
+    expect(sb._qb['eq']).not.toHaveBeenCalled();
+  });
+
+  it('subscribe adds pgFilter.filter when this._filter is set', () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({ client: sb, table: 'events', filter: 'org_id=eq.acme' });
+    const unsub = a.subscribe(() => {});
+    // The channel name and pgFilter both include the filter value
+    expect(sb.channel).toHaveBeenCalledWith(expect.stringContaining('org_id=eq.acme'));
+    unsub();
+  });
+
+  it('DELETE event with no old.id falls back to empty string id', () => {
+    const sb = mockSupabase();
+    const changes: AdapterChange[] = [];
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    a.subscribe(c => changes.push(c));
+    const [, , handler] = (sb._channel.on as ReturnType<typeof vi.fn>).mock.calls[0] as [unknown, unknown, (p: unknown) => void];
+    handler({ eventType: 'DELETE', new: {}, old: {} });
+    expect(changes[0]).toEqual({ type: 'delete', id: '' });
   });
 });
 
@@ -1250,5 +1341,56 @@ describe('FirebaseAdapter — v8 namespaced API fallback', () => {
     });
     expect(typeof unsub).toBe('function');
     unsub();
+  });
+});
+
+// ─── ICSAdapter — remaining branch coverage ───────────────────────────────────
+
+describe('ICSAdapter — loadRange with AbortSignal', () => {
+  it('passes signal to fetch when signal is provided to loadRange', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({ url: 'https://example.com/feed.ics', fetchImpl: fetchMock });
+    const controller = new AbortController();
+    await a.loadRange(new Date('2026-04-01Z'), new Date('2026-04-30Z'), controller.signal);
+    const fetchOpts = (fetchMock.mock.calls[0] as [string, RequestInit])[1];
+    expect(fetchOpts?.signal).toBe(controller.signal);
+  });
+});
+
+describe('ICSAdapter.subscribe — with non-zero refreshInterval', () => {
+  it('sets up polling and calls callback on timer fire', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({
+      url: 'https://example.com/feed.ics',
+      fetchImpl: fetchMock,
+      refreshInterval: 1000,
+    });
+    const callback = vi.fn();
+    const unsub = a.subscribe(callback);
+
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(fetchMock).toHaveBeenCalled();
+
+    unsub();
+    vi.useRealTimers();
+  });
+
+  it('does not call callback after unsubscribe (active=false guard)', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({
+      url: 'https://example.com/feed.ics',
+      fetchImpl: fetchMock,
+      refreshInterval: 1000,
+    });
+    const callback = vi.fn();
+    const unsub = a.subscribe(callback);
+    unsub();  // unsubscribe before timer fires → active=false
+
+    await vi.advanceTimersByTimeAsync(1001);
+    // active=false → poll returns early → callback not called
+    expect(callback).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });
