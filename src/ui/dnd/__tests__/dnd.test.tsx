@@ -161,6 +161,61 @@ describe('drag controller — pointer flow', () => {
     expect(cellB.classList.contains('is-over')).toBe(false);
   });
 
+  it('preserves duplicate values in source and destination on a cross-container drop', async () => {
+    // Regression: previously the controller removed the dragged item with
+    // `filter(v => v !== value)` in both startDrag and finishDrag, which
+    // deleted *every* equal item before reinserting one — silent data loss
+    // whenever a list legitimately contained duplicates. A local harness with
+    // compound keys is used so duplicate `value`s don't collide on `key`.
+    function DupCell({ testid, initial, spies }: { testid: string; initial: string[]; spies: CellSpies }) {
+      const [ref, items] = useDragAndDrop<string, HTMLDivElement>(initial, {
+        droppableGroup: 'dup',
+        animationDuration: 0,
+        isDraggable: () => true,
+        onDragStart: spies.onDragStart as (d: DragStartEventData<string>) => void,
+        onDragEnd:   spies.onDragEnd   as (d: DragEndEventData<string>)   => void,
+      });
+      return (
+        <div ref={ref} data-testid={testid}>
+          {items.map((v, i) => (
+            <span key={`${v}-${i}`} data-index={i}>{v}</span>
+          ))}
+        </div>
+      );
+    }
+
+    const a = makeSpies();
+    const b = makeSpies();
+    render(
+      <>
+        <DupCell testid="cellA" initial={['x', 'y', 'x']} spies={a} />
+        <DupCell testid="cellB" initial={['x']}           spies={b} />
+      </>,
+    );
+    const cellA = screen.getByTestId('cellA');
+    const cellB = screen.getByTestId('cellB');
+    stubRect(cellA, 0, 50);
+    stubRect(cellB, 100, 150);
+
+    // Drag the first 'x' (index 0) out of cellA into cellB.
+    pointer('pointerDown', cellA.querySelectorAll('[data-index]')[0]!, 10, 10);
+    pointer('pointerMove', document, 30, 30);  // start drag
+    pointer('pointerMove', document, 30, 120); // hover over cellB
+    pointer('pointerUp', document, 30, 120);
+
+    // Source: the other 'x' must survive (was index 2 → now last).
+    expect(texts(cellA)).toEqual(['y', 'x']);
+    // Destination: the pre-existing 'x' must survive; dragged 'x' appended.
+    expect(texts(cellB)).toEqual(['x', 'x']);
+
+    // Callbacks report the exact origin index, not just the first occurrence.
+    expect(a.onDragStart).toHaveBeenCalledWith(expect.objectContaining({ index: 0, value: 'x' }));
+    expect(a.onDragEnd).toHaveBeenCalledWith({ index: 0, value: 'x' });
+    expect(b.onDragEnd).toHaveBeenCalledWith({ index: 1, value: 'x' });
+
+    await waitFor(() => expect(ghost()).toBeNull());
+  });
+
   it('a press without crossing the threshold does not start a drag', () => {
     const a = makeSpies();
     render(<Cell testid="cellA" group="g" initial={['a1', 'a2']} spies={a} />);

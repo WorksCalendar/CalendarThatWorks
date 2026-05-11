@@ -54,6 +54,10 @@ interface ActiveDrag {
   readonly ghostOffsetY: number;
   readonly sourceEl: HTMLElement;
   readonly sourceEntry: Entry;
+  /** Index of the dragged item in the source model at drag start. Used so
+   *  source-side `onDragEnd` and cancel paths report the exact origin slot
+   *  even when the model contains duplicates equal to `value`. */
+  readonly sourceIndex: number;
   /** Snapshot of the source model (still containing `value`) for cancel/restore. */
   readonly sourceModel: unknown[];
   /** Container the placeholder currently lives in. */
@@ -252,6 +256,7 @@ function startDrag(): boolean {
     ghostOffsetY: startY - rect.top,
     sourceEl: containerEl,
     sourceEntry: entry,
+    sourceIndex: index,
     sourceModel,
     currentEl: containerEl,
     currentEntry: entry,
@@ -262,7 +267,13 @@ function startDrag(): boolean {
   };
   pending = null;
 
-  entry.handle.setItems(sourceModel.filter((v) => v !== value));
+  // Remove the dragged item by index, NOT by value-equality. The source model
+  // can legitimately contain values that `===` the dragged value (duplicate
+  // ids/primitives, or the same object reference twice); a value-filter would
+  // silently delete the extras.
+  const sourceNext = sourceModel.slice();
+  sourceNext.splice(index, 1);
+  entry.handle.setItems(sourceNext);
   entry.handle.onDragStart({ index, element: itemEl, value });
   return true;
 }
@@ -450,7 +461,12 @@ function finishDrag(): void {
   const destConnected = drag.currentEntry.el.isConnected;
 
   if (destConnected) {
-    const model = drag.currentEntry.handle.getItems().filter((v) => v !== drag.value);
+    // No value-filter here: at drag start the item was already spliced out of
+    // the source model (and a different destination container was never touched
+    // during the drag), so `value` is not present in either case. A filter
+    // would silently delete any legitimate duplicates that share `===` with
+    // the dragged value.
+    const model = drag.currentEntry.handle.getItems().slice();
     model.splice(Math.min(dropIndex, model.length), 0, drag.value);
     drag.currentEntry.handle.setItems(model);
   }
@@ -461,7 +477,7 @@ function finishDrag(): void {
   // Tell the source the drag is over (so it stops suppressing prop re-syncs).
   // For a same-cell drop this *is* the destination callback.
   if (!droppedInSource && drag.sourceEntry.el.isConnected) {
-    drag.sourceEntry.handle.onDragEnd({ index: drag.sourceModel.indexOf(drag.value), value: drag.value });
+    drag.sourceEntry.handle.onDragEnd({ index: drag.sourceIndex, value: drag.value });
   }
   if (destConnected) drag.currentEntry.handle.onDragEnd({ index: dropIndex, value: drag.value });
 }
@@ -487,7 +503,7 @@ function cancelDrag(immediate: boolean): void {
   const restore = () => {
     if (!drag.sourceEntry.el.isConnected) return;
     drag.sourceEntry.handle.setItems(drag.sourceModel.slice());
-    drag.sourceEntry.handle.onDragEnd({ index: drag.sourceModel.indexOf(drag.value), value: drag.value });
+    drag.sourceEntry.handle.onDragEnd({ index: drag.sourceIndex, value: drag.value });
   };
   if (immediate) restore();
   else window.setTimeout(restore, 0);
