@@ -702,6 +702,228 @@ describe('FirebaseAdapter', () => {
   });
 });
 
+// ─── RestAdapter — additional branch coverage ─────────────────────────────────
+
+describe('RestAdapter — constructor option branches', () => {
+  it('strips trailing slash from baseUrl', () => {
+    const a = new RestAdapter({ baseUrl: 'http://api/events/' });
+    // The adapter should not double-slash on endpoint URLs
+    // Verify by checking that the schedule templates URL is correct
+    // (We can't inspect private fields directly, so proxy via fetch mock)
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      a.listScheduleTemplates();
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+    const url = stub.mock.calls[0]?.[0] as string | undefined;
+    expect(url).not.toContain('events//');
+  });
+
+  it('uses custom scheduleTemplatesUrl when provided', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({
+        baseUrl: 'http://api/events',
+        scheduleTemplatesUrl: 'http://api/custom-templates',
+      });
+      await a.listScheduleTemplates();
+      expect(stub.mock.calls[0][0]).toBe('http://api/custom-templates');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('uses custom scheduleInstantiateUrl when provided', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ templateId: 't1', generated: [] }) });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({
+        baseUrl: 'http://api/events',
+        scheduleInstantiateUrl: 'http://api/custom-instantiate',
+      });
+      await a.instantiateScheduleTemplate({ templateId: 't1', anchor: S.toISOString() });
+      expect(stub.mock.calls[0][0]).toBe('http://api/custom-instantiate');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('uses pollInterval: 0 as falsy (returns noop subscribe)', () => {
+    const a = new RestAdapter({ baseUrl: 'http://api/events', pollInterval: 0 });
+    const cb = vi.fn();
+    const unsub = a.subscribe(cb);
+    expect(typeof unsub).toBe('function');
+    unsub();
+    expect(cb).not.toHaveBeenCalled();
+  });
+
+  it('applies custom toRequest on createEvent body', async () => {
+    const raw = ev();
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => raw });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({
+        baseUrl: 'http://api/events',
+        toRequest: (e) => ({ customTitle: (e as CalendarEventV1).title }),
+      });
+      await a.createEvent(raw);
+      const body = JSON.parse((stub.mock.calls[0] as [string, RequestInit])[1].body as string) as Record<string, unknown>;
+      expect(body).toHaveProperty('customTitle', 'Meeting');
+      expect(body).not.toHaveProperty('id');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('RestAdapter — error branches', () => {
+  it('loadRange with AbortSignal passes signal to fetch', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    const controller = new AbortController();
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await a.loadRange(S, E, controller.signal);
+      const opts = (stub.mock.calls[0] as [string, RequestInit])[1];
+      expect(opts).toHaveProperty('signal', controller.signal);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('createEvent throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 422, statusText: 'Unprocessable Entity' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.createEvent(ev())).rejects.toThrow('422');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('updateEvent throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.updateEvent('ev-1', { title: 'x' })).rejects.toThrow('404');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('deleteEvent throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 403, statusText: 'Forbidden' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.deleteEvent('ev-1')).rejects.toThrow('403');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('listScheduleTemplates throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: 'Internal Server Error' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.listScheduleTemplates()).rejects.toThrow('500');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('createScheduleTemplate posts and returns result', async () => {
+    const tpl = { id: 'sched-new', name: 'New', entries: [] as unknown[] };
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => tpl });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      const result = await a.createScheduleTemplate({ name: 'New', entries: [] });
+      const [url, opts] = stub.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain('/templates/schedules');
+      expect(opts.method).toBe('POST');
+      expect(result.id).toBe('sched-new');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('createScheduleTemplate throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 400, statusText: 'Bad Request' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.createScheduleTemplate({ name: 'Bad', entries: [] })).rejects.toThrow('400');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('updateScheduleTemplate throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 409, statusText: 'Conflict' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.updateScheduleTemplate('t1', { name: 'x' })).rejects.toThrow('409');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('deleteScheduleTemplate throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 403, statusText: 'Forbidden' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.deleteScheduleTemplate('t1')).rejects.toThrow('403');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('instantiateScheduleTemplate throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 422, statusText: 'Unprocessable Entity' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.instantiateScheduleTemplate({ templateId: 't1', anchor: S.toISOString() })).rejects.toThrow('422');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('RestAdapter.subscribe — with range opts', () => {
+  it('accepts custom rangeStart/rangeEnd opts', () => {
+    const a = new RestAdapter({ baseUrl: 'http://api/events', pollInterval: null });
+    const customStart = new Date('2026-01-01T00:00:00Z');
+    const customEnd   = new Date('2026-12-31T00:00:00Z');
+    const unsub = a.subscribe(() => {}, { rangeStart: customStart, rangeEnd: customEnd });
+    expect(typeof unsub).toBe('function');
+    unsub();
+  });
+});
+
 // ─── PocketBaseAdapter ────────────────────────────────────────────────────────
 
 describe('PocketBaseAdapter', () => {
