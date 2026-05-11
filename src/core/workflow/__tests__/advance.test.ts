@@ -784,3 +784,340 @@ describe('tick', () => {
     expect(tick(slaWf, inst, 'not-a-date')).toBeNull()
   })
 })
+
+// ─── walkBranchForward — unsupported node inside branch ──────────────────────
+
+describe('advance — walkBranchForward: unsupported node type inside branch', () => {
+  it('fails the workflow when a branch steps into a join node', () => {
+    // After approval, branch routes to a stray join → walkBranchForward fails loudly
+    const wf: Workflow = {
+      id: 'stray-join', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',       type: 'parallel', mode: 'requireAll', branches: ['b1'] },
+        { id: 'b1',        type: 'approval', assignTo: 'role:x' },
+        { id: 'stray_join', type: 'join', pairedWith: 'other-par' }, // different pairedWith so it's not the frame's join
+        { id: 'join',      type: 'join', pairedWith: 'par' },
+        { id: 'done',      type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1',        to: 'stray_join', when: 'approved' }, // b1 → stray join
+        { from: 'stray_join', to: 'join', when: 'branch-completed' },
+        { from: 'join',      to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'approve', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+    const failed = r.emit.find(e => e.type === 'workflow_failed')
+    expect(failed && 'reason' in failed && failed.reason).toMatch(/Unsupported join/)
+  })
+})
+
+// ─── walkBranchForward — condition node paths in branches ────────────────────
+
+describe('advance — walkBranchForward condition node paths', () => {
+  it('completes a branch when a condition node routes directly to the join', () => {
+    // condition → join: covers line 609 (state.currentNodeId === null → return)
+    const wf: Workflow = {
+      id: 'cond-to-join', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',    type: 'parallel', mode: 'requireAll', branches: ['b1_cond'] },
+        { id: 'b1_cond', type: 'condition', expr: 'true' },
+        { id: 'join',   type: 'join', pairedWith: 'par' },
+        { id: 'done',   type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1_cond', to: 'join', when: 'true' }, // condition → join directly
+        { from: 'join',    to: 'done' },
+      ],
+    }
+    const r = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // Branch completed via condition → join, quorum met → workflow completes immediately
+    expect(r.instance.status).toBe('completed')
+  })
+
+  it('continues walking after a condition that does not route to the join', () => {
+    // condition → approval → join: covers line 610 (continue in walkBranchForward)
+    const wf: Workflow = {
+      id: 'cond-then-approval', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',    type: 'parallel', mode: 'requireAll', branches: ['b1_cond'] },
+        { id: 'b1_cond', type: 'condition', expr: 'true' },
+        { id: 'b1_apv', type: 'approval', assignTo: 'role:x' },
+        { id: 'join',   type: 'join', pairedWith: 'par' },
+        { id: 'done',   type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1_cond', to: 'b1_apv', when: 'true' },    // condition → approval
+        { from: 'b1_apv',  to: 'join', when: 'branch-completed' },
+        { from: 'join',    to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(s1.ok).toBe(true)
+    if (!s1.ok) return
+    // Condition walked, branch paused at b1_apv
+    expect(s1.instance.status).toBe('awaiting')
+    const frames = s1.instance.parallelFrames ?? []
+    expect(frames[0]?.branches[0]?.activeNodeId).toBe('b1_apv')
+  })
+})
+
+// ─── walkBranchForward — notify node paths ────────────────────────────────────
+
+describe('advance — walkBranchForward notify node paths', () => {
+  it('completes a branch that walks a notify node directly to the join', () => {
+    // notify → join: covers the `state.currentNodeId === null` early-return in walkBranchForward
+    const wf: Workflow = {
+      id: 'notify-to-join', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',     type: 'parallel', mode: 'requireAll', branches: ['b1_ntf'] },
+        { id: 'b1_ntf',  type: 'notify', message: 'branch alert', channel: 'slack' },
+        { id: 'join',    type: 'join', pairedWith: 'par' },
+        { id: 'done',    type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1_ntf', to: 'join' }, // default edge → join
+        { from: 'join',   to: 'done' },
+      ],
+    }
+    const r = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // Branch completed immediately via notify → join; quorum met → workflow completes
+    expect(r.instance.status).toBe('completed')
+    expect(r.instance.outcome).toBe('finalized')
+  })
+
+  it('continues walking after a notify that does not go to the join', () => {
+    // notify → approval → join: covers the `continue` in walkBranchForward's notify path
+    const wf: Workflow = {
+      id: 'notify-then-approval', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',    type: 'parallel', mode: 'requireAll', branches: ['b1_ntf'] },
+        { id: 'b1_ntf', type: 'notify', message: 'heads-up', channel: 'slack' },
+        { id: 'b1_apv', type: 'approval', assignTo: 'role:x' },
+        { id: 'join',   type: 'join', pairedWith: 'par' },
+        { id: 'done',   type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1_ntf', to: 'b1_apv' },             // notify → approval (not join)
+        { from: 'b1_apv', to: 'join', when: 'branch-completed' },
+        { from: 'join',   to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(s1.ok).toBe(true)
+    if (!s1.ok) return
+    // After walking: notify emitted, branch paused at b1_apv
+    expect(s1.instance.status).toBe('awaiting')
+    const frames = s1.instance.parallelFrames ?? []
+    expect(frames[0]?.branches[0]?.activeNodeId).toBe('b1_apv')
+    // Emit includes the notify event
+    expect(s1.emit.some(e => e.type === 'notify')).toBe(true)
+  })
+})
+
+// ─── linear timeout — onTimeout ?? 'escalate' fallback ───────────────────────
+
+describe('advance — linear timeout with no onTimeout set', () => {
+  it('defaults to escalate behavior when onTimeout is not set on the approval', () => {
+    const wf: Workflow = {
+      id: 'no-on-timeout', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a',        type: 'approval', assignTo: 'role:x' }, // no onTimeout
+        { id: 'escalated', type: 'approval', assignTo: 'role:director' },
+        { id: 'done',     type: 'terminal', outcome: 'finalized' },
+        { id: 'denied',   type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a',        to: 'done',     when: 'approved' },
+        { from: 'a',        to: 'denied',   when: 'denied' },
+        { from: 'a',        to: 'escalated', when: 'timeout' },
+        { from: 'escalated', to: 'done',    when: 'approved' },
+        { from: 'escalated', to: 'denied',  when: 'denied' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'timeout' }, at: AT })
+    // onTimeout defaulted to 'escalate' → followed the timeout edge → now at 'escalated'
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.currentNodeId).toBe('escalated')
+  })
+})
+
+// ─── applyBranchAction — stepBranchOutOf fails ────────────────────────────────
+
+describe('advance — applyBranchAction: no routing edge from approval', () => {
+  it('fails the workflow when the branch approval has no edge for the approved signal', () => {
+    const wf: Workflow = {
+      id: 'no-approve-route', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',  type: 'parallel', mode: 'requireAll', branches: ['b1'] },
+        { id: 'b1',   type: 'approval', assignTo: 'role:x' },
+        { id: 'join', type: 'join', pairedWith: 'par' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        // NO edge from b1 at all
+        { from: 'join', to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'approve', targetNodeId: 'b1' }, at: AT })
+    // stepBranchOutOf returned false → applyBranchAction returns null → ok: true but status: 'failed'
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+  })
+})
+
+// ─── applyBranchAction — walkBranchForward called after stepBranchOutOf ───────
+
+describe('advance — applyBranchAction: intermediate node after branch approval', () => {
+  it('walks forward through an intermediate approval before settling', () => {
+    const wf: Workflow = {
+      id: 'multi-step-branch', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',  type: 'parallel', mode: 'requireAll', branches: ['b1'] },
+        { id: 'b1',   type: 'approval', assignTo: 'role:x' },
+        { id: 'b1b',  type: 'approval', assignTo: 'role:y' }, // second approval in branch
+        { id: 'join', type: 'join', pairedWith: 'par' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1',  to: 'b1b',  when: 'approved' },
+        { from: 'b1b', to: 'join',  when: 'branch-completed' },
+        { from: 'join', to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    // Approve b1 → walks forward to b1b, which is an approval
+    const s2 = advance({ workflow: wf, instance: s1.instance, action: { type: 'approve', targetNodeId: 'b1' }, at: AT })
+    expect(s2.ok).toBe(true)
+    if (!s2.ok) return
+    expect(s2.instance.status).toBe('awaiting')
+    const frames = s2.instance.parallelFrames ?? []
+    expect(frames[0]?.branches[0]?.activeNodeId).toBe('b1b')
+  })
+
+  it('fails the workflow when walkBranchForward hits a routing error after step', () => {
+    const wf: Workflow = {
+      id: 'walk-fail-action', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',   type: 'parallel', mode: 'requireAll', branches: ['b1'] },
+        { id: 'b1',    type: 'approval', assignTo: 'role:x' },
+        { id: 'b1_ntf', type: 'notify', message: 'step', channel: 'slack' },
+        { id: 'join',  type: 'join', pairedWith: 'par' },
+        { id: 'done',  type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1', to: 'b1_ntf', when: 'approved' }, // b1 → notify
+        // NO edge from b1_ntf → walkBranchForward fails
+        { from: 'join', to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'approve', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+  })
+})
+
+// ─── applyBranchTimeout — branch target is not an approval node ───────────────
+
+describe('advance — applyBranchTimeout: non-approval active node', () => {
+  it('returns an error when the branch active node is not an approval node', () => {
+    // Manufacture a state where the branch's activeNodeId points to a terminal node.
+    const wf: Workflow = {
+      id: 'bad-active', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',  type: 'parallel', mode: 'requireAll', branches: ['b1'] },
+        { id: 'b1',   type: 'approval', assignTo: 'role:x' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'join', type: 'join', pairedWith: 'par' },
+      ],
+      edges: [
+        { from: 'b1', to: 'join', when: 'branch-completed' },
+        { from: 'join', to: 'done' },
+      ],
+    }
+    // Craft an instance where the branch's activeNodeId is 'done' (not an approval).
+    const badInst: WorkflowInstance = {
+      workflowId: wf.id, workflowVersion: 1,
+      status: 'awaiting', currentNodeId: null,
+      history: [],
+      parallelFrames: [{
+        parallelId: 'par', joinId: 'join', mode: 'requireAll',
+        branches: [{ branchEntryId: 'b1', activeNodeId: 'done' }],
+      }],
+    }
+    const r = advance({ workflow: wf, instance: badInst, action: { type: 'timeout', targetNodeId: 'done' }, at: AT })
+    expect(r.ok).toBe(false)
+    expect('error' in r && r.error).toMatch(/is not an approval node/)
+  })
+})
+
+// ─── applyBranchTimeout — stepBranchOutOf returns false (no routing edge) ─────
+
+describe('advance — applyBranchTimeout: no timeout routing edge', () => {
+  it('fails the workflow and returns null when there is no outgoing edge for the timeout signal', () => {
+    const wf: Workflow = {
+      id: 'no-timeout-edge', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',  type: 'parallel', mode: 'requireAll', branches: ['b1'] },
+        { id: 'b1',   type: 'approval', assignTo: 'role:x', onTimeout: 'escalate' },
+        { id: 'join', type: 'join', pairedWith: 'par' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        // No edge from b1 at all — no timeout, no branch-completed, no default.
+        { from: 'join', to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'timeout', targetNodeId: 'b1' }, at: AT })
+    // applyBranchTimeout → stepBranchOutOf fails (no edge) → returns null (not an error string)
+    // The workflow is in 'failed' state but advance() itself returns ok: true
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+  })
+})
+
+// ─── releaseJoin — join with no default outgoing edge ────────────────────────
+
+describe('advance — releaseJoin: no edge from join', () => {
+  it('fails the workflow when the join node has no default outgoing edge', () => {
+    // Remove the join→done edge so releaseJoin can't route past the join.
+    const wf: Workflow = {
+      ...parAll,
+      id: 'no-join-edge',
+      edges: parAll.edges.filter(e => e.from !== 'join'),
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    // Approve b1
+    const s2 = advance({ workflow: wf, instance: s1.instance, action: { type: 'approve', targetNodeId: 'b1' }, at: AT })
+    if (!s2.ok) throw new Error('precondition')
+    // Approve b2 — quorum satisfied, releaseJoin called, but no edge from join
+    const r = advance({ workflow: wf, instance: s2.instance, action: { type: 'approve', targetNodeId: 'b2' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+    const failed = r.emit.find(e => e.type === 'workflow_failed')
+    expect(failed && 'reason' in failed && failed.reason).toMatch(/No edge from join/)
+  })
+})
