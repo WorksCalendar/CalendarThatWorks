@@ -98,7 +98,6 @@
   },
   "dependencies": {
     "date-fns": "^3.6.0",
-    "fluid-dnd": "^2.6.3",
     "lucide-react": "^0.378.0"
   },
   "devDependencies": {

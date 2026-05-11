@@ -1,8 +1,7 @@
 import { useRef, useEffect, type ReactNode } from 'react';
-import { useDragAndDrop } from 'fluid-dnd/react';
+import { useDragAndDrop, type DragEndEventData } from './dnd';
 import { isSameDay, startOfDay } from 'date-fns';
 import type { NormalizedEvent } from '../types/events';
-import type { DragEndEventData } from 'fluid-dnd';
 
 type Props = {
   day: Date;
@@ -11,17 +10,18 @@ type Props = {
   spansHeight: number;
   canDrag: boolean;
   onEventMove?: ((ev: NormalizedEvent, newStart: Date, newEnd: Date) => void) | undefined;
-  /** Called with the event and its fluid-dnd slot index; must include data-index={dataIndex} on root. */
+  /** Called with the event and its slot index; must include data-index={dataIndex} on the root. */
   renderPill: (ev: NormalizedEvent, dataIndex: number) => ReactNode;
   containerClass: string;
-  /** Optional ghost pill node for span-bar drag preview (non-fluid-dnd drag). */
+  /** Optional ghost pill node for the span-bar drag preview (a separate drag path). */
   ghostNode?: ReactNode | undefined;
 };
 
 /**
- * Renders a single day cell's event pills as a fluid-dnd droppable list.
- * All DayCellPillList instances share droppableGroup "wc-month-pills" so
- * events can be dragged across day cells with fluid animations.
+ * Renders a single day cell's event pills as a droppable list. All
+ * DayCellPillList instances share droppableGroup "wc-month-pills" (via the
+ * in-repo drag controller) so events can be dragged across day cells with
+ * fluid reorder animations.
  */
 export function DayCellPillList({
   day, events, maxPills, spansHeight, canDrag,
