@@ -389,6 +389,19 @@ describe('validateDependencies', () => {
   });
 });
 
-// Note: validateNoCycle uses require('../schema/dependencySchema.js') which
-// does not resolve in the vitest ESM environment — skipping those tests.
+// ─── validateNoCycle ──────────────────────────────────────────────────────────
+// Note: lines 100-108 use require('../schema/dependencySchema.js') which does
+// not resolve in the vitest ESM environment. Only the early-exit guards are
+// tested here.
+
+describe('validateNoCycle', () => {
+  it('returns null immediately when existingDeps is undefined', () => {
+    // Covers the if (!existingDeps) return null guard (line 98)
+    expect(validateNoCycle('a', 'b', undefined)).toBeNull();
+  });
+
+  it('returns null immediately when existingDeps is null', () => {
+    expect(validateNoCycle('a', 'b', null as any)).toBeNull();
+  });
+});
 
