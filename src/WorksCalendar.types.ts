@@ -29,6 +29,51 @@ export type ScheduleInstantiationLimits = {
 };
 
 type UnknownRecord = Record<string, unknown>;
+
+/**
+ * Persisted owner-configurable settings — the blob behind ConfigPanel, stored
+ * per `calendarId` (localStorage by default). A handful of well-known top-level
+ * keys are typed; everything else is surfaced as `unknown` through the index
+ * signature, so values read off ad-hoc keys should be narrowed with a cast or
+ * guard at the call site. Treat it as a loosely-validated bag, not a strict
+ * schema — the host app owns the source of truth.
+ */
+export type OwnerConfig = {
+  /** Calendar display name shown in the toolbar. */
+  title?: string;
+  /** Category name treated as "on-call" by the scheduling views. */
+  onCallCategory?: string;
+  /** First-run / setup wizard state (preferred theme, completion flag, …). */
+  setup?: { preferredTheme?: string; completed?: boolean; [key: string]: unknown };
+  /** Display preferences (start-of-week, default view, enabled views, …). */
+  display?: { weekStartDay?: number; defaultView?: string; enabledViews?: string[]; [key: string]: unknown };
+  /** Team registry — roles, bases, regions, member records and label overrides. */
+  team?: {
+    roles?: UnknownRecord[];
+    bases?: UnknownRecord[];
+    regions?: UnknownRecord[];
+    members?: EmployeeRecord[];
+    locationLabel?: string;
+    assetsLabel?: string;
+    [key: string]: unknown;
+  };
+  /** Owner-configured conflict rules consumed by `evaluateConflicts`. */
+  conflicts?: { enabled?: boolean; rules?: UnknownRecord[]; [key: string]: unknown };
+  /** Asset registry. */
+  assets?: unknown;
+  /** Asset-type definitions. */
+  assetTypes?: unknown;
+  /** Per-event-type requirement templates. */
+  requirementTemplates?: unknown;
+  /** Category definitions (colours, policies, …). */
+  categoriesConfig?: unknown;
+  /** Tiered approval workflow configuration. */
+  approvals?: UnknownRecord;
+  /** Custom theme token overrides. */
+  customTheme?: UnknownRecord;
+  [key: string]: unknown;
+};
+
 export type ScheduleTemplateAdapter = {
   listScheduleTemplates?: () => Promise<unknown>;
   createScheduleTemplate?: (template: UnknownRecord) => Promise<unknown>;
@@ -70,7 +115,14 @@ export type WorksCalendarProps = {
   scheduleInstantiationLimits?: ScheduleInstantiationLimits;
   onScheduleTemplateAnalytics?: (payload: UnknownRecord) => void;
   calendarId?: string;
-  onConfigSave?: (config: UnknownRecord) => void;
+  onConfigSave?: (config: OwnerConfig) => void;
+  /**
+   * Local development escape hatch. When `true`, the calendar treats the
+   * current user as an owner regardless of `role` — every role/permission
+   * check is bypassed. Intended only for local dev and demos; **never pass
+   * `true` in production**, where access must be gated by `role` (driven by
+   * the host app's auth).
+   */
   devMode?: boolean;
   notes?: UnknownRecord;
   onNoteSave?: (note: UnknownRecord) => void;

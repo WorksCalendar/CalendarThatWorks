@@ -25,7 +25,7 @@ import FilterGroupSidebar        from './ui/FilterGroupSidebar';
 import CalendarModals            from './ui/CalendarModals';
 import CalendarToolbar           from './ui/CalendarToolbar';
 import CalendarViewGrid          from './ui/CalendarViewGrid';
-import SetupLanding              from './ui/SetupLanding';
+import SetupLanding, { type AssetTypeDef, type RequirementTemplate } from './ui/SetupLanding';
 import { CalendarLeftRail, CalendarRightPanel } from './ui/CalendarSideRails';
 import SavedFlash                from './ui/SavedFlash';
 import CalendarErrorBoundary     from './ui/CalendarErrorBoundary';
@@ -310,10 +310,10 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
           <SetupLanding
             onSkip={handleSetupSkip}
             onFinish={handleSetupFinish}
-            initialName={ownerCfg.config?.['title']}
+            initialName={ownerCfg.config?.['title'] ?? ''}
             initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
-            initialAssetTypes={ownerCfg.config?.['assetTypes']}
-            initialRequirementTemplates={ownerCfg.config?.['requirementTemplates']}
+            initialAssetTypes={ownerCfg.config?.['assetTypes'] as AssetTypeDef[]}
+            initialRequirementTemplates={ownerCfg.config?.['requirementTemplates'] as Record<string, RequirementTemplate>}
           />
         </div>
       </CalendarErrorBoundary>
