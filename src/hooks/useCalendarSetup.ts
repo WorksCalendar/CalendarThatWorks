@@ -74,13 +74,13 @@ export function useCalendarSetup({
     return [...configMembers, ...parentOnly];
   }, [employees, ownerCfg.config?.['team']?.members]);
 
-  const effectiveAssets = assets ?? ownerCfg.config?.['assets'];
+  const effectiveAssets = assets ?? (ownerCfg.config?.['assets'] as typeof assets);
   const resolveResourceLabel = useMemo(
-    () => makeResourceResolver({ employees: configuredEmployees, assets: effectiveAssets }),
+    () => makeResourceResolver({ employees: configuredEmployees, assets: effectiveAssets ?? [] }),
     [configuredEmployees, effectiveAssets],
   );
   const schema = useMemo(
-    () => filterSchema ?? buildDefaultFilterSchema({ employees: configuredEmployees, assets: effectiveAssets }),
+    () => filterSchema ?? buildDefaultFilterSchema({ employees: configuredEmployees, assets: effectiveAssets ?? [] }),
     [filterSchema, configuredEmployees, effectiveAssets],
   );
 

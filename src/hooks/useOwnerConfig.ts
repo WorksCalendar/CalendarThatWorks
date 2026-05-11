@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useOwnerConfig — owner config state + role-derived edit access.
  *
@@ -6,12 +5,14 @@
  * `isOwner` is derived from the `role` prop (and `devMode`) — there is no
  * client-side password check, which on a browser-only library would be
  * obfuscation, not security.
+ *
+ * NOTE on `devMode`: it forces `isOwner` to `true` regardless of `role`. It is
+ * a local-development convenience only — host apps must never pass it `true` in
+ * production, where access has to be gated by `role`.
  */
 import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { loadConfig, saveConfig } from '../core/configSchema';
-import type { CalendarRole } from '../WorksCalendar.types';
-
-type OwnerConfig = Record<string, any>;
+import type { CalendarRole, OwnerConfig } from '../WorksCalendar.types';
 
 export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMode = false }: {
   calendarId: string;

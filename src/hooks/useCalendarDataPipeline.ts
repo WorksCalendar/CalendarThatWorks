@@ -155,7 +155,7 @@ export function useCalendarDataPipeline({
   const scopedEvents = useTabScopedEvents(cal.view, engineResult.expandedEvents, {
     employees: (configuredEmployees ?? []) as { id: string; base?: string | null }[],
     assets:    effectiveAssets ?? [],
-    bases:     configuredBases ?? [],
+    bases:     (configuredBases ?? []) as { id: string; name: string }[],
     selectedBaseIds,
   });
 
@@ -167,7 +167,7 @@ export function useCalendarDataPipeline({
 
   const resolvedAssetRequestCategories = useMemo(() => {
     if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
-    const cfg = categoriesConfig ?? ownerCfg.config?.['categoriesConfig'];
+    const cfg = (categoriesConfig ?? ownerCfg.config?.['categoriesConfig']) as { categories?: unknown[] };
     const defs = (Array.isArray(cfg?.categories) ? cfg.categories : []) as Array<{ id: string; label?: string; color?: string }>;
     const byId = new Map(defs.map(d => [d.id, d]));
     return assetRequestCategories.map((id: string) => {
