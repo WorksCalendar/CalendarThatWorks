@@ -69,7 +69,7 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
-        'react', 'react-dom', 'xlsx', '@supabase/supabase-js',
+        'react', 'react-dom', '@supabase/supabase-js',
         'maplibre-gl', 'maplibre-gl/dist/maplibre-gl.css',
         'react-map-gl', 'react-map-gl/maplibre',
         // Don't inline anything from the main library — consumers

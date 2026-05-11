@@ -73,7 +73,14 @@ export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseC
 
     return () => {
       cancelled = true;
-      channel.unsubscribe();
+      // removeChannel both unsubscribes the WebSocket and drops the channel
+      // from supabaseClient.channels, which channel.unsubscribe() alone does
+      // not — required to avoid registry buildup across mount/unmount cycles.
+      if (typeof supabaseClient?.removeChannel === 'function') {
+        supabaseClient.removeChannel(channel);
+      } else {
+        channel.unsubscribe();
+      }
       channelRef.current = null;
     };
   }, [supabaseClient, table, filter]);
