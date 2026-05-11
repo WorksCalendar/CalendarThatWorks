@@ -179,4 +179,37 @@ describe('customThemeToCssVars', () => {
     const vars = customThemeToCssVars({ typography: { monoFontFamily: 'Courier' } });
     expect(vars!['--wc-font-mono']).toBe('Courier');
   });
+
+  it('falls back to 0 via || when elevation is exactly 0', () => {
+    // Number(0) || 0 hits the right-hand side of || (elevation is falsy)
+    const vars = customThemeToCssVars({ shadows: { elevation: 0 } });
+    expect(vars!['--wc-shadow']).toContain('rgba(0,0,0,0.08)');
+  });
+
+  it('falls back to 1 via || when density is exactly 0', () => {
+    // Number(0) || 1 hits the right-hand side; density defaults to 1 → clamps to 1.0
+    const vars = customThemeToCssVars({ spacing: { density: 0 } });
+    expect(vars!['--wc-density']).toBe(1);
+  });
+
+  it('outputs empty string via ?? when color values are null', () => {
+    // Passing null colors through normalizeCustomTheme preserves them
+    // (mergeTheme skips undefined, not null), so ?? '' fires
+    const vars = customThemeToCssVars({
+      colors: {
+        accent: null as unknown as string,
+        accentDim: null as unknown as string,
+        bg: null as unknown as string,
+        surface: null as unknown as string,
+        surface2: null as unknown as string,
+        border: null as unknown as string,
+        borderDark: null as unknown as string,
+        text: null as unknown as string,
+        textMuted: null as unknown as string,
+      },
+    });
+    expect(vars!['--wc-accent']).toBe('');
+    expect(vars!['--wc-bg']).toBe('');
+    expect(vars!['--wc-text']).toBe('');
+  });
 });

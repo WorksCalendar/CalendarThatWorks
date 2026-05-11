@@ -127,4 +127,74 @@ describe('scheduleMutations helpers', () => {
     // inherited from shiftEvent.meta spread — only overwritten if openShiftId arg is truthy
     expect(meta['openShiftId']).toBe('open-1');
   });
+
+  // ── additional branch coverage ────────────────────────────────────────────
+
+  it('findLinkedOpenShifts ignores null candidates in the events array', () => {
+    // Covers the if (!candidate) return false branch
+    const found = findLinkedOpenShifts([null, openShift], shift);
+    expect(found).toHaveLength(1);
+  });
+
+  it('findLinkedOpenShifts skips candidates that are not open-shift events', () => {
+    // Covers the if (!isOpenShiftEvent(candidate)) return false branch
+    const regular = { id: 'regular-1', title: 'Regular', meta: { sourceShiftId: 'shift-1' } };
+    const found = findLinkedOpenShifts([regular, openShift], shift);
+    expect(found).toHaveLength(1);
+  });
+
+  it('findLinkedOpenShifts links via sourceShiftId when openShiftId is absent from shiftEvent meta', () => {
+    // Covers the false side of Boolean(shiftEvent?.meta?.['openShiftId']) &&
+    const shiftNoOpenId = { ...shift, meta: {} };
+    const found = findLinkedOpenShifts([openShift], shiftNoOpenId);
+    expect(found).toHaveLength(1);
+  });
+
+  it('findLinkedOpenShifts returns no match when candidate has no sourceShiftId', () => {
+    // Covers the ?? '' fallback for candidate meta.sourceShiftId
+    const noSourceCandidate = { id: 'open-2', category: 'open-shift', meta: {} };
+    const shiftNoOpenId = { ...shift, meta: {} };
+    const found = findLinkedOpenShifts([noSourceCandidate], shiftNoOpenId);
+    expect(found).toHaveLength(0);
+  });
+
+  it('findLinkedMirroredCoverage returns empty when shiftEvent has no id', () => {
+    // Covers the if (!shiftId) return [] branch in findLinkedMirroredCoverage
+    const found = findLinkedMirroredCoverage([mirror], { id: undefined, _eventId: undefined });
+    expect(found).toHaveLength(0);
+  });
+
+  it('findLinkedMirroredCoverage ignores candidate with no sourceShiftId', () => {
+    // Covers ?? '' fallback for candidate.meta.sourceShiftId in findLinkedMirroredCoverage
+    const noSource = { id: 'cover-2', meta: { kind: 'covering' } };
+    const found = findLinkedMirroredCoverage([noSource], shift);
+    expect(found).toHaveLength(0);
+  });
+
+  it('buildShiftStatusMeta handles null meta on shiftEvent (spreads {} fallback)', () => {
+    // Covers shiftEvent?.meta ?? {} when meta is absent
+    const meta = buildShiftStatusMeta({ id: 'ev-x' }, { status: 'pto' });
+    expect(meta['shiftStatus']).toBe('pto');
+  });
+
+  it('buildOpenShiftPatch uses "Shift" fallback when title is absent', () => {
+    // Covers shiftEvent?.title ?? 'Shift' fallback
+    const noTitle = { ...shift, title: undefined };
+    const patch = buildOpenShiftPatch(openShift, noTitle, 'pto');
+    expect(patch.title).toBe('Open: Shift');
+  });
+
+  it('buildOpenShiftPatch handles existingOpenShift with null meta (spreads {} fallback)', () => {
+    // Covers existingOpenShift?.meta ?? {} when meta is absent
+    const noMeta = { id: 'open-null-meta' };
+    const patch = buildOpenShiftPatch(noMeta, shift, 'pto');
+    expect(patch.meta['kind']).toBe('open-shift');
+  });
+
+  it('buildOpenShiftPatch uses empty string when both resource and employeeId are absent', () => {
+    // Covers shiftEvent?.resource ?? shiftEvent?.employeeId ?? '' (third fallback)
+    const noResource = { ...shift, resource: undefined, employeeId: undefined };
+    const patch = buildOpenShiftPatch(openShift, noResource, 'pto');
+    expect(patch.meta['originalEmployeeId']).toBe('');
+  });
 });
