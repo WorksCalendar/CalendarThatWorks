@@ -820,3 +820,42 @@ describe('parseICS – property parsing edge cases', () => {
     expect(parseICS('', opts)).toEqual([])
   })
 })
+
+// ─── getCandidatesForPeriod — branch coverage ──────────────────────────────────
+
+describe('expandRRule — getCandidatesForPeriod branch coverage', () => {
+  it('YEARLY with BYMONTHDAY (no BYDAY) hits line-193 return path', () => {
+    // BYMONTHDAY makes byMonthDays non-null, bypassing the early `!byDays && !byMonthDays`
+    // return.  Inside the YEARLY block, byDays is null so the `if (byDays)` FALSE path
+    // is taken and line 193 constructs the date from month/day components.
+    const dtstart = new Date(2024, 2, 15)  // Mar 15 2024
+    const results = expandRRule(dtstart, 'FREQ=YEARLY;BYMONTHDAY=15;COUNT=2', null, rangeStart, rangeEnd)
+    expect(results).toHaveLength(2)
+    expect(results[0]!.getDate()).toBe(15)
+    expect(results[1]!.getDate()).toBe(15)
+    expect(results[0]!.getMonth()).toBe(2) // March
+  })
+
+  it('DAILY with BYMONTHDAY hits line-197 fallback return', () => {
+    // DAILY frequency does not have a special handler in getCandidatesForPeriod —
+    // the BYMONTHDAY modifier is present (making byMonthDays non-null, bypassing the
+    // early return), but none of the WEEKLY/MONTHLY/YEARLY branches match, so the
+    // final `return [new Date(period)]` fallback on line 197 is taken.
+    const dtstart = new Date(2024, 0, 1)  // Jan 1 2024
+    const results = expandRRule(dtstart, 'FREQ=DAILY;BYMONTHDAY=1;COUNT=3', null, rangeStart, rangeEnd)
+    // Returns 3 occurrences (BYMONTHDAY is ignored for DAILY in this implementation)
+    expect(results).toHaveLength(3)
+  })
+
+  it('MONTHLY with BYMONTHDAY overflow skips invalid dates (line-179 cond-expr FALSE)', () => {
+    // BYMONTHDAY=31 for February 2024 (29 days): new Date(2024, 1, 31) overflows to
+    // March, making c.getMonth() !== period.getMonth() → returns [] for that month.
+    const dtstart = new Date(2024, 1, 1)  // Feb 1 2024
+    const results = expandRRule(dtstart, 'FREQ=MONTHLY;BYMONTHDAY=31;COUNT=3', null,
+      new Date(2024, 1, 1), new Date(2024, 6, 31))
+    // Feb and Apr don't have day 31; Jan, Mar, May, Jul do.
+    // Starting from Feb 2024: Feb (skip), Mar 31, Apr (skip), May 31, Jun (skip), Jul 31
+    // Since dtstart is Feb 2024 and rangeStart is also Feb 2024, we get 3 valid ones.
+    expect(results.every(d => d.getDate() === 31)).toBe(true)
+  })
+})
