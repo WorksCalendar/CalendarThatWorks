@@ -152,6 +152,100 @@ describe('MonthView — multi-day / allDay event span bars', () => {
   });
 });
 
+// ─── Pill drag-to-reschedule (native pointer drag) ────────────────────────────
+
+describe('MonthView — pill drag-to-reschedule', () => {
+  function withDrag(props: Record<string, any> = {}) {
+    return render(
+      <CalendarContext.Provider value={{ permissions: { canDrag: true } } as any}>
+        <MonthView currentDate={currentDate} events={[]} {...props} />
+      </CalendarContext.Provider>,
+    );
+  }
+
+  it('moves a single-day event to the day cell where the drag is released', () => {
+    const onEventMove = vi.fn();
+    const events = [
+      { id: 'e1', title: 'Standup', start: new Date(2026, 3, 15, 9, 30), end: new Date(2026, 3, 15, 10, 0) },
+    ];
+    withDrag({ events, onEventMove });
+
+    const pill = screen.getByRole('button', { name: /Standup/i });
+    const target = screen.getByRole('gridcell', { name: /April 20/i });
+
+    fireEvent.pointerDown(pill, { button: 0, pointerId: 1, clientX: 5, clientY: 5 });
+    // A cursor-following clone is spawned on <body> while dragging.
+    expect(document.querySelector('[data-wc-drag-ghost]')).not.toBeNull();
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 40, clientY: 40 });
+    fireEvent.pointerEnter(target);
+    fireEvent.pointerUp(target);
+
+    expect(onEventMove).toHaveBeenCalledOnce();
+    const [movedEv, newStart, newEnd] = onEventMove.mock.calls[0] as [unknown, Date, Date];
+    expect(movedEv).toBe(events[0]);
+    expect(newStart.getFullYear()).toBe(2026);
+    expect(newStart.getMonth()).toBe(3);
+    expect(newStart.getDate()).toBe(20);
+    expect(newStart.getHours()).toBe(9); // time-of-day preserved for timed events
+    expect(newStart.getMinutes()).toBe(30);
+    expect(newEnd.getTime() - newStart.getTime()).toBe(30 * 60_000);
+    // The clone is torn down once the drag ends.
+    expect(document.querySelector('[data-wc-drag-ghost]')).toBeNull();
+    expect(document.body.style.cursor).toBe('');
+  });
+
+  it('does not move (or fire onEventClick) when released on the source day', () => {
+    const onEventMove = vi.fn();
+    const onEventClick = vi.fn();
+    const events = [
+      { id: 'e1', title: 'Standup', start: d(2026, 4, 15), end: d(2026, 4, 15) },
+    ];
+    withDrag({ events, onEventMove, onEventClick });
+
+    const pill = screen.getByRole('button', { name: /Standup/i });
+    const sameDay = screen.getByRole('gridcell', { name: /April 15/i });
+
+    fireEvent.pointerDown(pill, { button: 0, pointerId: 1, clientX: 5, clientY: 5 });
+    fireEvent.pointerEnter(sameDay);
+    fireEvent.pointerUp(sameDay);
+    fireEvent.click(pill); // the synthetic click that follows a press-release
+
+    expect(onEventMove).not.toHaveBeenCalled();
+    expect(onEventClick).not.toHaveBeenCalled(); // suppressed because a drag just happened
+    expect(document.querySelector('[data-wc-drag-ghost]')).toBeNull();
+  });
+
+  it('still fires onEventClick for a plain click on a pill', () => {
+    const onEventClick = vi.fn();
+    const events = [
+      { id: 'e1', title: 'Standup', start: d(2026, 4, 15), end: d(2026, 4, 15) },
+    ];
+    withDrag({ events, onEventClick });
+    fireEvent.click(screen.getByRole('button', { name: /Standup/i }));
+    expect(onEventClick).toHaveBeenCalledOnce();
+    expect(onEventClick).toHaveBeenCalledWith(events[0]);
+  });
+
+  it('does not start a drag when canDrag is false', () => {
+    const onEventMove = vi.fn();
+    const events = [
+      { id: 'e1', title: 'Standup', start: d(2026, 4, 15), end: d(2026, 4, 15) },
+    ];
+    render(
+      <CalendarContext.Provider value={{ permissions: { canDrag: false } } as any}>
+        <MonthView currentDate={currentDate} events={events as any} onEventMove={onEventMove} />
+      </CalendarContext.Provider>,
+    );
+    const pill = screen.getByRole('button', { name: /Standup/i });
+    const target = screen.getByRole('gridcell', { name: /April 20/i });
+    fireEvent.pointerDown(pill, { button: 0, pointerId: 1, clientX: 5, clientY: 5 });
+    expect(document.querySelector('[data-wc-drag-ghost]')).toBeNull();
+    fireEvent.pointerEnter(target);
+    fireEvent.pointerUp(target);
+    expect(onEventMove).not.toHaveBeenCalled();
+  });
+});
+
 // ─── Date selection ───────────────────────────────────────────────────────────
 
 describe('MonthView — date selection', () => {

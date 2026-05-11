@@ -4,12 +4,18 @@ import { AppHeader } from './AppHeader';
 import ProfileBar from './ProfileBar';
 import FocusChips, { DEFAULT_FOCUS_CHIPS } from './FocusChips';
 import type { FocusChipDef } from './FocusChips';
-import OwnerLock from './OwnerLock';
 import { ALL_VIEWS } from '../core/calendarViewConfig';
 import type { ViewDef } from '../core/calendarViewConfig';
 import { captureSavedViewFields } from '../core/viewScope';
 import { hasActiveFilters, buildActiveFilterPills, buildFilterSummary } from '../filters/filterState';
+import { VIEW_SHORTCUT_KEYS } from '../hooks/useKeyboardShortcuts';
 import styles from '../WorksCalendar.module.css';
+
+// view id → keyboard shortcut digit (inverse of VIEW_SHORTCUT_KEYS), used to
+// advertise the binding on each view button via aria-keyshortcuts.
+const VIEW_SHORTCUT_BY_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(VIEW_SHORTCUT_KEYS).map(([key, id]) => [id, key]),
+);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseValue = any;
@@ -30,7 +36,6 @@ export interface CalendarToolbarProps {
   editMode: boolean;
   setEditMode: LooseValue;
   setInlineEditTarget: LooseValue;
-  ownerPassword?: string | undefined;
   setHelpOpen: (v: boolean) => void;
   savedViews: LooseValue;
   savedViewActiveId: string | null;
@@ -74,7 +79,7 @@ export default function CalendarToolbar({
   cal, ownerCfg, api,
   renderToolbar, renderSavedViewsBar, renderFilterBar, focusChips,
   logoSrc, logoAlt, devMode, calendarTitle, fetchLoading,
-  editMode, setEditMode, setInlineEditTarget, ownerPassword, setHelpOpen,
+  editMode, setEditMode, setInlineEditTarget, setHelpOpen,
   savedViews, savedViewActiveId, savedViewDirty,
   handleApplyView, handleDeleteView, handleClearFilters,
   savedViewCaptureCtx, activeGroupBy,
@@ -102,15 +107,17 @@ export default function CalendarToolbar({
                 className={styles['navBtn']}
                 onClick={() => cal.navigate(-1)}
                 aria-label="Previous"
+                aria-keyshortcuts="k ArrowLeft"
                 title={`Previous ${cal.view}`}
               >
                 <ChevronLeft size={18} aria-hidden="true" />
               </button>
-              <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
+              <button className={styles['todayBtn']} onClick={cal.goToToday} aria-keyshortcuts="t">Today</button>
               <button
                 className={styles['navBtn']}
                 onClick={() => cal.navigate(1)}
                 aria-label="Next"
+                aria-keyshortcuts="j ArrowRight"
                 title={`Next ${cal.view}`}
               >
                 <ChevronRight size={18} aria-hidden="true" />
@@ -131,6 +138,7 @@ export default function CalendarToolbar({
                 className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
                 onClick={() => cal.setView(v.id)}
                 aria-pressed={cal.view === v.id}
+                aria-keyshortcuts={VIEW_SHORTCUT_BY_ID[v.id]}
                 title={v.hint}
                 data-wc-view-button={v.id}
               >
@@ -160,15 +168,6 @@ export default function CalendarToolbar({
                   <Sparkles size={15} aria-hidden="true" />
                   {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
                 </button>
-              )}
-              {ownerPassword && (
-                <OwnerLock
-                  isOwner={ownerCfg.isOwner}
-                  authError={ownerCfg.authError}
-                  isAuthLoading={ownerCfg.isAuthLoading}
-                  onAuthenticate={ownerCfg.authenticate}
-                  onOpen={() => ownerCfg.setConfigOpen(true)}
-                />
               )}
             </div>
           }
