@@ -1022,3 +1022,233 @@ describe('PocketBaseAdapter', () => {
     expect((changes[2] as { type: 'delete'; id: string }).id).toBe('r3');
   });
 });
+
+// ─── ICSAdapter — additional branch coverage ──────────────────────────────────
+
+describe('ICSAdapter — constructor branches', () => {
+  it('converts webcal:// URL prefix to https://', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({ url: 'webcal://cal.example.com/feed.ics', fetchImpl: fetchMock });
+    await a.loadRange(new Date('2026-04-01Z'), new Date('2026-04-30Z'));
+    const calledUrl = (fetchMock.mock.calls[0] as [string])[0];
+    expect(calledUrl).toMatch(/^https:\/\//);
+    expect(calledUrl).not.toContain('webcal://');
+  });
+
+  it('uses url as label when label option is absent', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({ url: 'https://cal.example.com/feed.ics', fetchImpl: fetchMock });
+    const events = await a.loadRange(new Date('2026-04-01Z'), new Date('2026-04-30Z'));
+    if (events.length > 0) {
+      expect(events[0]!.meta?.['_feedLabel']).toBe('https://cal.example.com/feed.ics');
+    }
+  });
+});
+
+describe('ICSAdapter.importFeed — with range opts', () => {
+  it('passes rangeStart/rangeEnd when opts provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({ url: 'https://example.com/feed.ics', fetchImpl: fetchMock });
+    const events = await a.importFeed({
+      rangeStart: new Date('2026-04-01Z'),
+      rangeEnd:   new Date('2026-04-30Z'),
+    });
+    expect(Array.isArray(events)).toBe(true);
+  });
+});
+
+describe('ICSAdapter.subscribe — with range opts', () => {
+  it('accepts custom rangeStart/rangeEnd opts', () => {
+    const a = new ICSAdapter({ url: 'https://example.com/feed.ics', refreshInterval: null });
+    const unsub = a.subscribe(() => {}, {
+      rangeStart: new Date('2026-01-01Z'),
+      rangeEnd:   new Date('2026-12-31Z'),
+    });
+    expect(typeof unsub).toBe('function');
+    unsub();
+  });
+});
+
+describe('serializeToICS — additional branch coverage', () => {
+  it('generates a random UID when event.id is absent', () => {
+    const ics = serializeToICS([ev({ id: undefined as unknown as string })]);
+    // Should have a UID line but not "UID:undefined"
+    expect(ics).toContain('UID:');
+    expect(ics).not.toContain('UID:undefined');
+  });
+
+  it('defaults end to start + 1h when end is null', () => {
+    const ics = serializeToICS([ev({ end: null as unknown as Date })]);
+    expect(ics).toContain('DTEND:');
+    // The DTEND should be 1 hour after DTSTART (10:00)
+    expect(ics).toContain('DTEND:20260410T100000Z');
+  });
+
+  it('accepts string start/end', () => {
+    const ics = serializeToICS([ev({
+      start: '2026-04-10T09:00:00Z' as unknown as Date,
+      end:   '2026-04-10T10:00:00Z' as unknown as Date,
+    })]);
+    expect(ics).toContain('DTSTART:20260410T090000Z');
+  });
+
+  it('includes LOCATION when meta.location is present', () => {
+    const ics = serializeToICS([ev({ meta: { location: 'Conference Room B' } })]);
+    expect(ics).toContain('LOCATION:Conference Room B');
+  });
+
+  it('serializes EXDATE list from Date instances', () => {
+    const ics = serializeToICS([ev({
+      exdates: [new Date('2026-04-17T09:00:00Z'), new Date('2026-04-24T09:00:00Z')],
+    })]);
+    expect(ics).toContain('EXDATE:');
+    expect(ics).toContain('20260417T090000Z');
+  });
+
+  it('serializes EXDATE list from string values', () => {
+    const ics = serializeToICS([ev({
+      exdates: ['2026-04-17T09:00:00Z' as unknown as Date],
+    })]);
+    expect(ics).toContain('EXDATE:');
+    expect(ics).toContain('20260417T090000Z');
+  });
+
+  it('folds long lines (> 75 chars) with RFC 5545 continuation', () => {
+    const longTitle = 'A'.repeat(100);
+    const ics = serializeToICS([ev({ title: longTitle })]);
+    // Folded lines contain \r\n followed by a space
+    expect(ics).toContain('\r\n ');
+  });
+
+  it('escapes backslash, semicolons, commas, and newlines in title', () => {
+    const ics = serializeToICS([ev({ title: 'A\\B;C,D\nE' })]);
+    expect(ics).toContain('A\\\\B\\;C\\,D\\nE');
+  });
+});
+
+// ─── FirebaseAdapter — v8 fallback (no adapterFns) ───────────────────────────
+
+describe('FirebaseAdapter — v8 namespaced API fallback', () => {
+  function makeV8Db(snap: ReturnType<typeof makeSnapshot>) {
+    const qb: Record<string, unknown> = {
+      where:   vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      get:     vi.fn().mockResolvedValue(snap),
+      onSnapshot: vi.fn().mockImplementation((_cb: unknown) => vi.fn()),
+    };
+    const docRef = {
+      update: vi.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
+      get:    vi.fn().mockResolvedValue({ ...snap.docs[0], exists: true }),
+    };
+    return {
+      collection: vi.fn().mockReturnValue(qb),
+      doc:        vi.fn().mockReturnValue(docRef),
+      _qb: qb,
+      _docRef: docRef,
+    };
+  }
+
+  function docSnap(id: string, data: Record<string, unknown>) {
+    return { id, data: () => data, exists: true };
+  }
+
+  function makeSnapshot(docs: ReturnType<typeof docSnap>[]) {
+    return {
+      docs,
+      forEach: (cb: (d: ReturnType<typeof docSnap>) => void) => docs.forEach(cb),
+      docChanges: () => [] as never[],
+    };
+  }
+
+  it('loadRange uses v8 collection().where().get()', async () => {
+    const row = { ...ev(), start: S, end: E };
+    const snap = makeSnapshot([docSnap('doc-1', row)]);
+    const db = makeV8Db(snap);
+    const adapter = new FirebaseAdapter({ db, collection: 'events' });
+    const events = await adapter.loadRange(S, E);
+    expect(db.collection).toHaveBeenCalledWith('events');
+    expect(db._qb['where']).toHaveBeenCalled();
+    expect(events).toHaveLength(1);
+    expect(events[0]!.id).toBe('doc-1');
+  });
+
+  it('loadRange returns [] when signal is aborted', async () => {
+    const snap = makeSnapshot([docSnap('doc-1', { ...ev() })]);
+    const db = makeV8Db(snap);
+    const adapter = new FirebaseAdapter({ db, collection: 'events' });
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const events = await adapter.loadRange(S, E, ctrl.signal);
+    expect(events).toEqual([]);
+  });
+
+  it('createEvent uses v8 collection().add()', async () => {
+    const snap = makeSnapshot([]);
+    const db = makeV8Db(snap);
+    const addMock = vi.fn().mockResolvedValue({ id: 'v8-new' });
+    (db._qb as Record<string, unknown>)['add'] = addMock;
+    const adapter = new FirebaseAdapter({ db, collection: 'events' });
+    const created = await adapter.createEvent!(ev());
+    expect(addMock).toHaveBeenCalledOnce();
+    expect(created.id).toBe('v8-new');
+  });
+
+  it('updateEvent uses v8 doc().update()', async () => {
+    const snap = makeSnapshot([]);
+    const db = makeV8Db(snap);
+    const adapter = new FirebaseAdapter({ db, collection: 'events' });
+    await adapter.updateEvent!('ev-1', { title: 'Updated' });
+    expect(db._docRef.update).toHaveBeenCalledOnce();
+  });
+
+  it('deleteEvent uses v8 doc().delete()', async () => {
+    const snap = makeSnapshot([]);
+    const db = makeV8Db(snap);
+    const adapter = new FirebaseAdapter({ db, collection: 'events' });
+    await adapter.deleteEvent!('ev-1');
+    expect(db._docRef.delete).toHaveBeenCalledOnce();
+  });
+
+  it('subscribe uses v8 onSnapshot and maps changes', () => {
+    const snap = makeSnapshot([]);
+    const db = makeV8Db(snap);
+
+    const addedDoc = docSnap('d1', { ...ev() });
+    const modDoc   = docSnap('d2', { ...ev({ id: 'd2' }) });
+    const remDoc   = docSnap('d3', {});
+
+    (db._qb['onSnapshot'] as ReturnType<typeof vi.fn>).mockImplementation(
+      (cb: (s: { docChanges(): unknown[] }) => void) => {
+        cb({
+          docChanges: () => [
+            { type: 'added',    doc: addedDoc },
+            { type: 'modified', doc: modDoc   },
+            { type: 'removed',  doc: remDoc   },
+          ],
+        });
+        return vi.fn();
+      },
+    );
+
+    const adapter = new FirebaseAdapter({ db, collection: 'events' });
+    const changes: import('../adapters/CalendarAdapter.js').AdapterChange[] = [];
+    const stop = adapter.subscribe!(c => changes.push(c));
+    expect(changes[0]!.type).toBe('insert');
+    expect(changes[1]!.type).toBe('update');
+    expect(changes[2]!.type).toBe('delete');
+    stop();
+  });
+
+  it('subscribe accepts custom rangeStart/rangeEnd opts', () => {
+    const snap = makeSnapshot([]);
+    const db = makeV8Db(snap);
+    const adapter = new FirebaseAdapter({ db, collection: 'events' });
+    const unsub = adapter.subscribe!(() => {}, {
+      rangeStart: new Date('2026-01-01Z'),
+      rangeEnd:   new Date('2026-12-31Z'),
+    });
+    expect(typeof unsub).toBe('function');
+    unsub();
+  });
+});
