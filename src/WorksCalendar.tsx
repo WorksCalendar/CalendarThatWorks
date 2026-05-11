@@ -310,7 +310,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
           <SetupLanding
             onSkip={handleSetupSkip}
             onFinish={handleSetupFinish}
-            initialName={ownerCfg.config?.['title'] ?? ''}
+            initialName={ownerCfg.config?.['title']}
             initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
             initialAssetTypes={ownerCfg.config?.['assetTypes'] as AssetTypeDef[]}
             initialRequirementTemplates={ownerCfg.config?.['requirementTemplates'] as Record<string, RequirementTemplate>}

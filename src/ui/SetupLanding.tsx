@@ -71,9 +71,9 @@ export type SetupLandingProps = {
   /** Called when owner skips the guide. Host marks setup.completed=true. */
   onSkip: () => void;
   /** Initial calendar name (from config.title). */
-  initialName?: string;
+  initialName?: string | undefined;
   /** Initial theme (from config.setup.preferredTheme). */
-  initialTheme?: string;
+  initialTheme?: string | undefined;
   /**
    * Initial asset types. When omitted, the wizard seeds a sensible default
    * list. Pass `config.assetTypes` so re-running setup on an already-
