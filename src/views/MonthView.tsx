@@ -151,12 +151,62 @@ export default function MonthView({
   // ── Drag state ───────────────────────────────────────────────────────────
   const dragRef    = useRef<{ ev: NormalizedEvent; moved: boolean; targetDay: Date | null } | null>(null); // { ev, moved, targetDay }
   const [dragTarget, setDragTarget] = useState<Date | null>(null); // Date | null
+  // Tears down the cursor-following ghost + its pointermove listener. Null when no drag is in flight.
+  const ghostCleanupRef = useRef<(() => void) | null>(null);
+  // Set briefly after a drag that moved an event so the trailing synthetic `click` doesn't also fire onEventClick.
+  const justDraggedRef = useRef(false);
 
   function startPillDrag(ev: NormalizedEvent, e: ReactPointerEvent<HTMLElement>) {
     if (e.button !== 0 || !ctx?.permissions?.canDrag) return;
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = { ev, moved: false, targetDay: null };
+    spawnDragGhost(e.currentTarget, e.clientX, e.clientY);
+  }
+
+  /**
+   * Clones the pressed pill into a fixed-position node that tracks the cursor
+   * until the drag ends. Plain DOM, not React: each pointer move is a single
+   * transform write rather than a re-render, and React never has to reconcile
+   * a node it doesn't own. Drop detection + commit stay with the existing cell
+   * `onPointerEnter` / grid `onPointerUp` handlers.
+   */
+  function spawnDragGhost(sourceEl: HTMLElement, clientX: number, clientY: number) {
+    ghostCleanupRef.current?.();
+    if (typeof document === 'undefined') return;
+    const rect  = sourceEl.getBoundingClientRect();
+    const ghost = sourceEl.cloneNode(true) as HTMLElement;
+    ghost.removeAttribute('data-index');
+    ghost.removeAttribute('id');
+    ghost.removeAttribute('data-wc-event-id');
+    ghost.setAttribute('data-wc-drag-ghost', '');
+    ghost.setAttribute('aria-hidden', 'true');
+    Object.assign(ghost.style, {
+      position: 'fixed', left: '0', top: '0', margin: '0', boxSizing: 'border-box',
+      width: `${rect.width}px`, height: `${rect.height}px`,
+      pointerEvents: 'none', zIndex: '2147483646', willChange: 'transform',
+      transition: 'none', transform: `translate(${rect.left}px, ${rect.top}px)`,
+      opacity: '0.92', boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)', borderRadius: '4px',
+    });
+    document.body.appendChild(ghost);
+    document.body.style.cursor = 'grabbing';
+    const offsetX = clientX - rect.left;
+    const offsetY = clientY - rect.top;
+    const onMove = (me: PointerEvent) => {
+      ghost.style.transform = `translate(${me.clientX - offsetX}px, ${me.clientY - offsetY}px)`;
+    };
+    window.addEventListener('pointermove', onMove);
+    ghostCleanupRef.current = () => {
+      window.removeEventListener('pointermove', onMove);
+      ghost.remove();
+      document.body.style.cursor = '';
+      ghostCleanupRef.current = null;
+    };
+  }
+
+  function flagJustDragged() {
+    justDraggedRef.current = true;
+    window.setTimeout(() => { justDraggedRef.current = false; }, 0);
   }
 
   function handleCellPointerEnter(day: Date) {
@@ -168,10 +218,12 @@ export default function MonthView({
   }
 
   function commitDrag() {
+    ghostCleanupRef.current?.();
     const d = dragRef.current;
     dragRef.current = null;
     setDragTarget(null);
     if (!d || !d.moved || !d.targetDay) return;
+    flagJustDragged(); // any drag that left the source pill should swallow the trailing click
     if (isSameDay(d.targetDay, d.ev.start)) return;
 
     // Bail before invoking onEventMove if the source event is missing a
@@ -195,9 +247,13 @@ export default function MonthView({
   }
 
   function cancelDrag() {
+    ghostCleanupRef.current?.();
     dragRef.current = null;
     setDragTarget(null);
   }
+
+  // Drop the cursor ghost + its listener if MonthView unmounts mid-drag.
+  useEffect(() => () => { ghostCleanupRef.current?.(); }, []);
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { weeks, dayNames } = useMemo(() => {
@@ -316,7 +372,17 @@ export default function MonthView({
   }, [popoverState]);
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-  function renderPill(ev: NormalizedEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null, dataIndex?: number) {
+  function renderPill(ev: NormalizedEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null) {
+    // Pills inside a day cell (weekIdx set) are drag-to-reschedule handles;
+    // pills in the overflow popover are not.
+    const dragProps = weekIdx != null
+      ? { onPointerDown: (e: ReactPointerEvent<HTMLElement>) => startPillDrag(ev, e) }
+      : {};
+    const handleClick = (e: ReactMouseEvent<HTMLElement>) => {
+      e.stopPropagation();
+      if (justDraggedRef.current) return; // a drag just ended — don't also "click" the pill
+      onClick();
+    };
     const color       = resolveColor(ev, ctx?.colorRules);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
@@ -342,14 +408,14 @@ export default function MonthView({
       if (custom != null) {
         return (
           <div key={ev.id}
-            data-index={dataIndex}
+            {...dragProps}
             className={[styles['eventPill'], statusClass, isDimmed && styles['dragging']].filter(Boolean).join(' ')}
             role="button"
             tabIndex={0}
             data-wc-event-id={ev.id}
             data-wc-priority={ev.visualPriority ?? undefined}
             data-wc-conflicting={isConflicting ? 'true' : undefined}
-            onClick={e => { e.stopPropagation(); onClick(); }}
+            onClick={handleClick}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
             onMouseEnter={handlePillMouseEnter}
             onMouseLeave={handlePillMouseLeave}
@@ -367,7 +433,7 @@ export default function MonthView({
 
     return (
       <button key={ev.id}
-        data-index={dataIndex}
+        {...dragProps}
         className={[
           styles['eventPill'],
           statusClass,
@@ -384,7 +450,7 @@ export default function MonthView({
           minHeight:  display.large ? '26px' : undefined,
           height:     display.large ? '26px' : undefined,
         }}
-        onClick={e => { e.stopPropagation(); onClick(); }}
+        onClick={handleClick}
         onMouseEnter={handlePillMouseEnter}
         onMouseLeave={handlePillMouseLeave}
         aria-label={ev.lifecycle ? `${ariaLabel}, lifecycle ${ev.lifecycle}` : ariaLabel}
@@ -525,13 +591,10 @@ export default function MonthView({
 
                         {/* paddingTop reserves space for the absolutely-positioned spansLayer */}
                         <DayCellPillList
-                          day={day}
                           events={daySingles}
                           maxPills={MAX_PILLS}
                           spansHeight={spansHeight}
-                          canDrag={Boolean(ctx?.permissions?.canDrag)}
-                          onEventMove={onEventMove}
-                          renderPill={(ev, idx) => renderPill(ev, {}, wi, idx)}
+                          renderPill={(ev) => renderPill(ev, {}, wi)}
                           containerClass={styles['events']}
                           ghostNode={isDropTarget ? renderGhostPill() : null}
                         />
@@ -572,7 +635,7 @@ export default function MonthView({
                               top:    lane * (SPAN_H + SPAN_GAP),
                               height: SPAN_H,
                             }}
-                            onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
+                            onClick={e => { e.stopPropagation(); if (justDraggedRef.current) return; onEventClick?.(ev); }}
                             onPointerDown={e => startPillDrag(ev, e)}
                             onMouseEnter={(e) => {
                               if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
