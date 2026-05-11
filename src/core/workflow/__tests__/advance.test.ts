@@ -266,6 +266,22 @@ describe('advance — notify emission', () => {
     expect(notifyEvt).not.toHaveProperty('template')
   })
 
+  it('marks workflow failed when notify node has no outgoing edge', () => {
+    // Covers the `if (!followEdge(...)) return` on the linear notify path.
+    const wf: Workflow = {
+      id: 'notify-dead-end', version: 1, trigger: 'on_submit', startNodeId: 'n',
+      nodes: [{ id: 'n', type: 'notify', channel: 'slack', template: 'hi' }],
+      edges: [],
+    }
+    const r = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+    const failed = r.emit.find(e => e.type === 'workflow_failed')
+    expect(failed).toBeDefined()
+    expect('reason' in failed! && failed.reason).toMatch(/No edge from/)
+  })
+
   it('fails the workflow when a template references an undefined variable', () => {
     const wf: Workflow = {
       id: 'notify-bad', version: 1, trigger: 'on_submit', startNodeId: 'n',

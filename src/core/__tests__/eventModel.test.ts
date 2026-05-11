@@ -123,6 +123,12 @@ describe('normalizeEvent', () => {
     expect(normalizeEvent(raw()).meta).toEqual({});
   });
 
+  it('uses epoch fallback when start is an unrecognized type (object)', () => {
+    // toDate returns null for non-null non-Date non-number non-string values
+    const ev = normalizeEvent(raw({ start: {} as any }));
+    expect(ev.start).toBeInstanceOf(Date);
+  });
+
   it('sets _raw to the original event', () => {
     const orig = raw({ id: 'orig' });
     expect(normalizeEvent(orig)._raw).toBe(orig);

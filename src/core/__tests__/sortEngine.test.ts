@@ -137,13 +137,24 @@ describe('sortEvents', () => {
     expect(sorted.map(e => e.id)).toEqual(['1', '2', '10'])
   })
 
-  it('handles boolean fields', () => {
+  it('handles boolean fields — desc true-first', () => {
     const events = [
       makeEvent({ id: 'yes', allDay: true }),
       makeEvent({ id: 'no', allDay: false }),
     ]
     const sorted = sortEvents(events, [{ field: 'allDay', direction: 'desc' }])
     expect(sorted[0]!.id).toBe('yes')
+  })
+
+  it('handles boolean fields — asc false-first', () => {
+    // Compares (false, true, 'asc') hitting the a=false and b=true branches of
+    // the ternary expressions on the boolean path.
+    const events = [
+      makeEvent({ id: 'no', allDay: false }),
+      makeEvent({ id: 'yes', allDay: true }),
+    ]
+    const sorted = sortEvents(events, [{ field: 'allDay', direction: 'asc' }])
+    expect(sorted[0]!.id).toBe('no')
   })
 
   it('treats two null values as equal and preserves relative order', () => {
