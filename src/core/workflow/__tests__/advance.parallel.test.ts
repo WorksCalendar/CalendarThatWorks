@@ -258,6 +258,37 @@ describe('advance — parallel with notify inside a branch', () => {
   })
 })
 
+describe('advance — parallel branch cycle guard', () => {
+  it('fails the workflow when a branch loops past its step limit', () => {
+    // `a-loop` is a notify node whose only outgoing edge points back to
+    // itself — the validator forbids this, but the interpreter must bail
+    // out with a "step limit" failure rather than spin forever.
+    const wf: Workflow = {
+      id: 'par-cycle',
+      version: 1,
+      trigger: 'on_submit',
+      startNodeId: 'fan',
+      nodes: [
+        { id: 'fan', type: 'parallel', branches: ['a-loop', 'b-approval'], mode: 'requireAll' },
+        { id: 'a-loop', type: 'notify', channel: 'slack' },
+        { id: 'b-approval', type: 'approval', assignTo: 'role:b' },
+        { id: 'join', type: 'join', pairedWith: 'fan' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'a-loop', to: 'a-loop', when: 'default' },
+        { from: 'b-approval', to: 'join', when: 'branch-completed' },
+        { from: 'join', to: 'done' },
+      ],
+    }
+    const r = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+    expect(r.emit.some(e => e.type === 'workflow_failed' && /step limit/.test(e.reason))).toBe(true)
+  })
+})
+
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function startParallel(wf: Workflow): WorkflowInstance {

@@ -419,4 +419,9 @@ describe('presets', () => {
   it('returns empty array when no presets stored', () => {
     expect(loadPresets()).toEqual([]);
   });
+
+  it('returns empty array when stored presets are corrupt JSON', () => {
+    localStorage.setItem('wc-csv-presets', '{not valid json');
+    expect(loadPresets()).toEqual([]);
+  });
 });
