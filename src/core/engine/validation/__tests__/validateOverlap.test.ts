@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { validateOverlap } from '../validateOverlap';
 import type { ChangeShape, OperationContext } from '../validationTypes';
 import type { EngineEvent } from '../../schema/eventSchema';
+import type { Assignment } from '../../schema/assignmentSchema';
 
 const t = (h: number) => new Date(2026, 0, 5, h, 0, 0);
 
@@ -109,5 +110,71 @@ describe('validateOverlap', () => {
   it('returns null when events is undefined', () => {
     const ctx: OperationContext = {};
     expect(validateOverlap(baseChange, ctx)).toBeNull();
+  });
+})
+
+// ─── ctx.assignments — multi-assignment aware paths ───────────────────────────
+
+function makeAssignment(id: string, eventId: string, resourceId: string): Assignment {
+  return { id, eventId, resourceId, units: 100 };
+}
+
+function assignmentsMap(...as: Assignment[]): ReadonlyMap<string, Assignment> {
+  return new Map(as.map(a => [a.id, a]));
+}
+
+describe('validateOverlap — assignments-based resource detection', () => {
+  it('collects resourceIds via ctx.assignments for the proposed event (line-32 TRUE)', () => {
+    // The proposed event ("new") has no resourceId field; it is linked to r1 via assignments.
+    const self = makeEv('new', t(9), t(10), null);
+    const existing = makeEv('existing', t(8), t(10), 'r1');
+    const change: ChangeShape = { newStart: t(9), newEnd: t(10), event: self };
+    const ctx: OperationContext = {
+      events: [existing],
+      assignments: assignmentsMap(makeAssignment('a1', 'new', 'r1')),
+    };
+    const result = validateOverlap(change, ctx);
+    expect(result).not.toBeNull();
+    expect(result!.rule).toBe('overlap');
+  });
+
+  it('collects resourceIds via ctx.assignments for existing events (line-50 TRUE)', () => {
+    // Existing event "existing" has no resourceId field; linked to r1 via assignments.
+    const existing = makeEv('existing', t(8), t(10), null);
+    const ctx: OperationContext = {
+      events: [existing],
+      assignments: assignmentsMap(makeAssignment('a2', 'existing', 'r1')),
+    };
+    // baseChange has resourceId: 'r1' and event.id='new' (not in assignments)
+    const result = validateOverlap(baseChange, ctx);
+    expect(result).not.toBeNull();
+    expect(result!.conflictingEventId).toBe('existing');
+  });
+
+  it('evResources from assignments skips legacy resourceId field (line-53 FALSE)', () => {
+    // When evResources is populated via assignments (non-empty), the legacy
+    // `ev.resourceId` push at line 53 is skipped (the condition is FALSE).
+    const existing = makeEv('existing', t(8), t(10), 'r2'); // legacy field r2, but assigned r1
+    const ctx: OperationContext = {
+      events: [existing],
+      assignments: assignmentsMap(makeAssignment('a3', 'existing', 'r1')),
+    };
+    const result = validateOverlap(baseChange, ctx);
+    // Overlap via assignment r1 should be detected
+    expect(result).not.toBeNull();
+    expect(result!.conflictingEventId).toBe('existing');
+  });
+
+  it('returns null when assignments exist but proposed event has no assignment (unscoped)', () => {
+    // No assignment for "new" → resourceIds stays empty → fallback to change.resourceId/event.resourceId
+    const change: ChangeShape = {
+      newStart: t(9), newEnd: t(10),
+      event: makeEv('new', t(9), t(10), null), // null resourceId, no assignment
+    };
+    const ctx: OperationContext = {
+      events: [makeEv('existing', t(8), t(10), 'r1')],
+      assignments: assignmentsMap(), // empty — no assignments for 'new'
+    };
+    expect(validateOverlap(change, ctx)).toBeNull();
   });
 });

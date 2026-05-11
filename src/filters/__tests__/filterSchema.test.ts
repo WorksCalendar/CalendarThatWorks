@@ -156,6 +156,24 @@ describe('buildDefaultFilterSchema', () => {
     expect(opts[0]!.value).toBe('emp-1');
   });
 
+  it('resources getOptions sorts multiple options by label (line-339 sort comparator)', () => {
+    // Two resources with labels in reverse order — sort must invoke the comparator.
+    const schema = buildDefaultFilterSchema({
+      employees: [
+        { id: 'emp-z', label: 'Zara' },
+        { id: 'emp-a', label: 'Alice' },
+      ],
+    });
+    const resField = schema.find(f => f.key === 'resources')!;
+    const opts = resField.getOptions!([
+      ev({ resource: 'emp-z' }),
+      ev({ resource: 'emp-a' }),
+    ]);
+    // After sort: Alice before Zara
+    expect(opts[0]!.label).toBe('Alice');
+    expect(opts[1]!.label).toBe('Zara');
+  });
+
   it('resources predicate works with Set', () => {
     const schema = buildDefaultFilterSchema();
     const resField = schema.find(f => f.key === 'resources')!;
