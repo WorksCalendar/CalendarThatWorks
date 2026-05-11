@@ -145,6 +145,53 @@ describe('sortEvents', () => {
     const sorted = sortEvents(events, [{ field: 'allDay', direction: 'desc' }])
     expect(sorted[0]!.id).toBe('yes')
   })
+
+  it('treats two null values as equal and preserves relative order', () => {
+    const events = [
+      makeEvent({ id: 'x', category: null }),
+      makeEvent({ id: 'y', category: null }),
+    ]
+    const sorted = sortEvents(events, [{ field: 'category', direction: 'asc' }])
+    expect(sorted.map(e => e.id)).toEqual(['x', 'y'])
+  })
+
+  it('returns null for meta-field when meta is undefined and sorts last', () => {
+    const events = [
+      makeEvent({ id: 'b', meta: undefined as any }),
+      makeEvent({ id: 'a', title: 'Z' }),
+    ]
+    // 'score' not on event and meta is undefined — both get null → order preserved
+    const sorted = sortEvents(events, [{ field: 'score', direction: 'asc' }])
+    expect(sorted.map(e => e.id)).toEqual(['b', 'a'])
+  })
+
+  it('treats undefined returned from getValue as null (sorts last)', () => {
+    const events = [
+      makeEvent({ id: 'a', title: 'real' }),
+      makeEvent({ id: 'b', title: 'has-val' }),
+    ]
+    const config: SortConfig = {
+      field: 'score',
+      direction: 'asc',
+      getValue: (e) => e.id === 'b' ? (undefined as any) : 'value',
+    }
+    const sorted = sortEvents(events, [config])
+    expect(sorted[sorted.length - 1]!.id).toBe('b')
+  })
+
+  it('treats both-undefined getValue results as equal (stable order)', () => {
+    const events = [
+      makeEvent({ id: 'x' }),
+      makeEvent({ id: 'y' }),
+    ]
+    const config: SortConfig = {
+      field: 'score',
+      direction: 'asc',
+      getValue: () => undefined as any,
+    }
+    const sorted = sortEvents(events, [config])
+    expect(sorted.map(e => e.id)).toEqual(['x', 'y'])
+  })
 })
 
 // ── sortGroupKeys ──────────────────────────────────────────────────────────────

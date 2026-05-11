@@ -532,3 +532,53 @@ describe('getResources — edge cases', () => {
     expect(getResources([ev({})])).toEqual([]);
   });
 });
+
+// ── _matchSearch title-undefined branch ───────────────────────────────────────
+
+describe('applyFilters — search with no title field', () => {
+  it('skips title?.toLowerCase() when title is absent and matches via resource', () => {
+    const noTitle = { id: 'nt', start: new Date(), end: new Date(), resource: 'Bob' };
+    const result = applyFilters([noTitle as any], { search: 'bob' });
+    expect(result).toHaveLength(1);
+  });
+
+  it('returns false when item has no matching fields and title is absent', () => {
+    const noTitle = { id: 'nt', start: new Date(), end: new Date() };
+    const result = applyFilters([noTitle as any], { search: 'anything' });
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ── _matchDateRange evEnd fallback ────────────────────────────────────────────
+
+describe('applyFilters — dateRange evEnd fallback', () => {
+  it('uses event start as end when end property is absent', () => {
+    const schema = [{ key: 'dateRange', type: 'date-range' }];
+    const pointEv = { id: 'pt', start: new Date('2026-04-10T10:00Z') }; // no end
+    const range = { start: new Date('2026-04-10T09:00Z'), end: new Date('2026-04-10T11:00Z') };
+    const result = applyFilters([pointEv as any], { dateRange: range }, schema);
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ── applyFilters — || short-circuit second branch ─────────────────────────────
+
+describe('applyFilters — type dispatch second branch of ||', () => {
+  it('dispatches to text search when key=search but type is not text', () => {
+    const schema = [{ key: 'search', type: 'custom' }];
+    const result = applyFilters(
+      [ev({ id: '1', title: 'Hello world' })],
+      { search: 'hello' },
+      schema,
+    );
+    expect(result).toHaveLength(1);
+  });
+
+  it('dispatches to dateRange when key=dateRange but type is not date-range', () => {
+    const schema = [{ key: 'dateRange', type: 'custom' }];
+    const inside = ev({ id: 'in', start: new Date('2026-04-10T10:00Z'), end: new Date('2026-04-10T11:00Z') });
+    const range = { start: new Date('2026-04-10T09:00Z'), end: new Date('2026-04-10T11:30Z') };
+    const result = applyFilters([inside], { dateRange: range }, schema);
+    expect(result).toHaveLength(1);
+  });
+});

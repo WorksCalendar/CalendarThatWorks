@@ -190,4 +190,54 @@ describe('evaluateGeoConflicts — travel feasibility', () => {
     expect(v.length).toBe(1)
     expect(v[0]!.details.actualGapMinutes).toBe(60)
   })
+
+  it('returns empty when proposed has no meta property at all', () => {
+    const noMeta: GeoEventInput = {
+      id: 'p', start: '2026-04-20T12:00', end: '2026-04-20T13:00', resource: 'ac-1',
+      // no meta
+    }
+    const other = evt('o', '2026-04-20T13:30', '2026-04-20T14:30', 'ac-1', DEN)
+    expect(evaluateGeoConflicts([RULE], noMeta, [other])).toEqual([])
+  })
+
+  it('returns no violation when coords contain non-finite values', () => {
+    const nanCoords: GeoEventInput = {
+      id: 'p', start: '2026-04-20T12:00', end: '2026-04-20T13:00', resource: 'ac-1',
+      meta: { coords: { lat: NaN, lon: -122.31 } },
+    }
+    const other = evt('o', '2026-04-20T13:30', '2026-04-20T14:30', 'ac-1', DEN)
+    expect(evaluateGeoConflicts([RULE], nanCoords, [other])).toEqual([])
+  })
+
+  it('resolves direct meta.lat/lng (lng fallback for flat coords)', () => {
+    const proposed: GeoEventInput = {
+      id: 'p', start: '2026-04-20T12:00', end: '2026-04-20T13:00', resource: 'ac-1',
+      meta: { lat: SEA.lat, lng: SEA.lon },
+    }
+    const other: GeoEventInput = {
+      id: 'o', start: '2026-04-20T13:30', end: '2026-04-20T14:30', resource: 'ac-1',
+      meta: { lat: DEN.lat, lng: DEN.lon },
+    }
+    const v = evaluateGeoConflicts([RULE], proposed, [other])
+    expect(v.length).toBe(1)
+  })
+
+  it('skips ignoreCategories check when proposed.category is absent', () => {
+    const rule: GeoTravelFeasibilityRule = { ...RULE, ignoreCategories: ['ferry'] }
+    const proposed = evt('p', '2026-04-20T12:00', '2026-04-20T13:00', 'ac-1', SEA)
+    // proposed has no category — the ignoreCategories predicate should be false
+    const other = evt('o', '2026-04-20T13:30', '2026-04-20T14:30', 'ac-1', DEN)
+    const v = evaluateGeoConflicts([rule], proposed, [other])
+    // category is not in ignoreCategories → violation should still be raised
+    expect(v.length).toBe(1)
+  })
+
+  it('handles an NaN/Infinity numeric timestamp', () => {
+    const proposed: GeoEventInput = {
+      id: 'p', start: Infinity, end: new Date('2026-04-20T13:00Z').getTime(),
+      resource: 'ac-1', meta: { coords: { lat: SEA.lat, lon: SEA.lon } },
+    }
+    const other = evt('o', '2026-04-20T13:30', '2026-04-20T14:30', 'ac-1', DEN)
+    expect(evaluateGeoConflicts([RULE], proposed, [other])).toEqual([])
+  })
 })
