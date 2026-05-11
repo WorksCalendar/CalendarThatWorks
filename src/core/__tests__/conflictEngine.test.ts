@@ -619,6 +619,41 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
     expect(result.violations).toEqual([]);
   });
 
+  it('flags blackout-dates on a middle day of a multi-day event', () => {
+    // Apr 10 → Apr 12; only Apr 11 (a day the event straddles but neither
+    // starts nor ends on) is blacked out.
+    const categories = categoryMap({ blackoutDates: ['2026-04-11'] });
+    const proposed: ConflictEvent = {
+      ...base,
+      start: new Date(Date.UTC(2026, 3, 10, 9, 0)),
+      end:   new Date(Date.UTC(2026, 3, 12, 9, 0)),
+    };
+    const result = evaluateConflicts({
+      proposed, events: [], rules: [rule], categories,
+      now: day(9, 0),
+    });
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details!).toMatchObject({
+      type: 'policy-violation',
+      check: 'blackout-dates',
+      blackoutDate: '2026-04-11',
+    });
+  });
+
+  it('passes a multi-day event that straddles no blackout day', () => {
+    const categories = categoryMap({ blackoutDates: ['2026-04-20'] });
+    const proposed: ConflictEvent = {
+      ...base,
+      start: new Date(Date.UTC(2026, 3, 10, 9, 0)),
+      end:   new Date(Date.UTC(2026, 3, 12, 9, 0)),
+    };
+    const result = evaluateConflicts({
+      proposed, events: [], rules: [rule], categories,
+      now: day(9, 0),
+    });
+    expect(result.violations).toEqual([]);
+  });
+
   it('uses the resource timezone when deriving the blackout key', () => {
     // 2026-04-10 23:30 UTC is 2026-04-11 in Tokyo — only the Tokyo-side
     // blackout should fire.
