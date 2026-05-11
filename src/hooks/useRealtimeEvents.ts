@@ -57,7 +57,7 @@ export interface SupabaseRealtimeClientLike {
 }
 
 export function useRealtimeEvents({ supabaseClient, table, filter }: {
-  supabaseClient: SupabaseRealtimeClientLike | null | undefined;
+  supabaseClient: SupabaseRealtimeClientLike | null;
   table?: string | undefined;
   filter?: string | undefined;
 }): { events: RealtimeRow[]; status: RealtimeStatus } {
