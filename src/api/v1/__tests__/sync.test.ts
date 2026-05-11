@@ -167,6 +167,19 @@ describe('SyncQueue', () => {
   it('statusFor returns idle when no operations exist', () => {
     expect(q.statusFor('nonexistent')).toBe('idle');
   });
+
+  it('retry is a no-op when the operation is not in error state', () => {
+    const opId = q.enqueue('create', 'ev-1', ev(), null);
+    q.markSyncing(opId);
+    q.retry(opId);
+    expect(q.statusFor('ev-1')).toBe('syncing');
+  });
+
+  it('mutations with unknown opId are safe no-ops', () => {
+    expect(() => q.markSyncing('does-not-exist')).not.toThrow();
+    expect(() => q.markSynced('does-not-exist')).not.toThrow();
+    expect(() => q.retry('does-not-exist')).not.toThrow();
+  });
 });
 
 // ─── conflictStrategies ───────────────────────────────────────────────────────

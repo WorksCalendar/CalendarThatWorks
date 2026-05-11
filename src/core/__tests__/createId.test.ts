@@ -57,4 +57,19 @@ describe('createId', () => {
     const id = createId('');
     expect(id).not.toMatch(/^-/);
   });
+
+  it('throws when neither randomUUID nor getRandomValues is available', () => {
+    const origUUID = globalThis.crypto.randomUUID;
+    const origGetRandom = globalThis.crypto.getRandomValues;
+    // @ts-expect-error intentional test override
+    globalThis.crypto.randomUUID = undefined;
+    // @ts-expect-error intentional test override
+    globalThis.crypto.getRandomValues = undefined;
+    try {
+      expect(() => createId()).toThrow('Secure ID generation requires Web Crypto support.');
+    } finally {
+      globalThis.crypto.randomUUID = origUUID;
+      globalThis.crypto.getRandomValues = origGetRandom;
+    }
+  });
 });
