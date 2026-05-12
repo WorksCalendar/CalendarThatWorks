@@ -85,17 +85,32 @@ the engine-op/result/event types and adds:
   blobs, shape-validated downstream) and one in the adapter-reload path. **`LooseValue`
   + the `eslint-disable` removed from `useScheduleTemplates.ts`.**
 
-### Sprint 3b — `useEventMutations.ts` + `useScheduleMutations.ts` + tighten `EngineOpInput`
+### Sprint 3b — `useEventMutations.ts` ✅
 
-- Replace the remaining `LooseValue` in `useEventMutations.ts` /
-  `useScheduleMutations.ts` with `MutationEventInput`, `NormalizedEvent`,
-  `EmployeeRecord`, `OwnerConfig`, etc.
-- Tighten `EngineOpInput` toward `EngineOperation` (reconcile `resource` vs
-  `resourceId` in patches, the extra op sources, `Date | string` starts) — either
-  widen the target types or fix the literal. No new `any`.
+- `MutationEventInput` (the grab-bag "event-ish" interface — public fields +
+  normalisation markers + a few form-only fields + an index signature) replaces
+  the placeholder in `engineOps.ts`. `useEventMutations` types its event params
+  with it (`rawEv`, `proposed`, `inlineEditTarget.event`, `setFormEvent`,
+  `setInlineEditTarget`), drag handlers with `NormalizedEvent`, `engine` with
+  `CalendarEngine`, `ownerConfig` with `OwnerConfig`, callbacks with the public
+  `WorksCalendarEvent` shapes; new exported `InlineEventPatch`; a small
+  `asSavedEvent(EngineEvent): WorksCalendarEvent` helper (the engine-adapter
+  output is what host `onEventSave` consumes, and a `NormalizedEvent` isn't a
+  `WorksCalendarEvent` — it uses `null` where the public type uses `undefined`).
+  **`LooseValue` removed from `useEventMutations.ts`.**
+
+### Sprint 3c — `useScheduleMutations.ts`
+
+- Replace the remaining `LooseValue` in `useScheduleMutations.ts` with
+  `MutationEventInput`, `NormalizedEvent`, `EmployeeRecord`, `EmployeeId`,
+  `EmployeeActionInput`, `OwnerConfig`, etc.
 - Where the public/engine types are genuinely too strict for what callers pass,
   loosen them (`?: T | undefined`) rather than scattering `as`.
-- **Remove `type LooseValue = any` + the `eslint-disable` from these two files.**
+- **Remove `type LooseValue = any` + the `eslint-disable` from this file.**
+
+> `EngineOpInput` keeps `event` / `patch` as `unknown` (not tightened toward
+> `EngineOperation`) — that's not required by the "done when" and the loose op
+> shape is `unknown`, not `any`. A later polish could tighten it.
 
 ### Sprint 4 — `CalendarViewGrid.tsx`
 

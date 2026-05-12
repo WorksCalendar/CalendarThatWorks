@@ -2,29 +2,50 @@ import { useCallback } from 'react';
 import { evaluateConflicts } from '../core/conflictEngine';
 import type { ConflictEvent, ConflictRule } from '../core/conflictEngine';
 import { occurrenceToLegacy, toLegacyEvent } from '../core/engine/adapters/toLegacyEvents';
+import type { EngineEvent } from '../core/engine/schema/eventSchema';
+import type { CalendarEngine } from '../core/engine/CalendarEngine';
 import { createId } from '../core/createId';
+import type { WorksCalendarEvent, NormalizedEvent } from '../types/events';
+import type { OwnerConfig } from '../WorksCalendar.types';
 import { isCreatedChange } from '../types/engineOps';
-import type { EngineOpInput, EngineOpRunner, RecurringOpRunner, GetSavedEventPayload } from '../types/engineOps';
+import type {
+  EngineOpInput,
+  EngineOpRunner,
+  RecurringOpRunner,
+  GetSavedEventPayload,
+  MutationEventInput,
+} from '../types/engineOps';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+/** A NormalizedEvent isn't assignable to WorksCalendarEvent (it uses `null`
+ *  where the public type uses `undefined`); the engine-adapter output is what
+ *  host `onEventSave` handlers actually consume. */
+function asSavedEvent(ev: EngineEvent): WorksCalendarEvent {
+  return toLegacyEvent(ev) as unknown as WorksCalendarEvent;
+}
+
+/** Patch applied by the inline event editor. */
+export interface InlineEventPatch {
+  title?: string | undefined;
+  color?: string | undefined;
+  meta?: Record<string, unknown> | undefined;
+}
 
 type UseEventMutationsParams = {
   applyEngineOp: EngineOpRunner;
   applyWithRecurringCheck: RecurringOpRunner;
   getSavedEventPayload: GetSavedEventPayload;
-  engine: LooseValue;
+  engine: CalendarEngine;
   engineVer: number;
-  expandedEvents: LooseValue[];
-  onEventSave?: ((event: LooseValue) => void) | undefined;
-  onEventMove?: ((event: LooseValue, newStart: Date, newEnd: Date) => void) | undefined;
-  onEventResize?: ((event: LooseValue, newStart: Date, newEnd: Date) => void) | undefined;
+  expandedEvents: NormalizedEvent[];
+  onEventSave?: ((event: WorksCalendarEvent) => void) | undefined;
+  onEventMove?: ((event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void) | undefined;
+  onEventResize?: ((event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void) | undefined;
   onEventDelete?: ((eventId: string) => void) | undefined;
-  onEventGroupChange?: ((event: LooseValue, patch: LooseValue) => void) | undefined;
-  ownerConfig: LooseValue;
-  inlineEditTarget: { event: LooseValue; x: number; y: number } | null;
-  setFormEvent: (ev: LooseValue) => void;
-  setInlineEditTarget: (target: LooseValue) => void;
+  onEventGroupChange?: ((event: WorksCalendarEvent, patch: Record<string, unknown>) => void) | undefined;
+  ownerConfig: OwnerConfig;
+  inlineEditTarget: { event: MutationEventInput; x: number; y: number } | null;
+  setFormEvent: (ev: MutationEventInput | null) => void;
+  setInlineEditTarget: (target: { event: MutationEventInput; x: number; y: number } | null) => void;
 };
 
 export function useEventMutations({
@@ -32,7 +53,7 @@ export function useEventMutations({
   applyWithRecurringCheck,
   getSavedEventPayload,
   engine,
-  engineVer,  
+  engineVer,
   expandedEvents,
   onEventSave,
   onEventMove,
@@ -58,14 +79,15 @@ export function useEventMutations({
   // into another month would miss every conflict outside the visible window.
   // Instead, re-expand over a window that hugs the proposed event's interval,
   // padded by the largest min-rest rule.
-  const checkEventConflicts = useCallback((proposed: LooseValue) => {
-    const conflictsCfg = ownerConfig?.['conflicts'] ?? {};
-    const rules = (conflictsCfg.rules ?? []) as ConflictRule[];
-    const enabled = conflictsCfg.enabled !== false;
+  const checkEventConflicts = useCallback((proposed: MutationEventInput) => {
+    const conflictsCfg = ownerConfig.conflicts;
+    // Host-supplied rule blobs from OwnerConfig; shape-validated by evaluateConflicts.
+    const rules = (conflictsCfg?.rules ?? []) as unknown as ConflictRule[];
+    const enabled = conflictsCfg?.enabled !== false;
     if (!enabled || rules.length === 0) return null;
 
-    const proposedStart = proposed.start instanceof Date ? proposed.start : new Date(proposed.start);
-    const proposedEnd   = proposed.end   instanceof Date ? proposed.end   : new Date(proposed.end);
+    const proposedStart = proposed.start instanceof Date ? proposed.start : new Date(proposed.start ?? '');
+    const proposedEnd   = proposed.end   instanceof Date ? proposed.end   : new Date(proposed.end ?? '');
     if (Number.isNaN(proposedStart.getTime()) || Number.isNaN(proposedEnd.getTime())) {
       return null;
     }
@@ -83,16 +105,17 @@ export function useEventMutations({
     const events = engine.getOccurrencesInRange(windowStart, windowEnd).map(occurrenceToLegacy);
 
     return evaluateConflicts({
-      proposed: proposed as ConflictEvent,
+      // Pre-save check: the form draft / live occurrences are treated as ConflictEvents.
+      proposed: proposed as unknown as ConflictEvent,
       events:   events as unknown as ConflictEvent[],
       rules,
       enabled,
     });
   }, [ownerConfig, engine, engineVer]);
 
-  const handleEventSave = useCallback((rawEv: LooseValue) => {
-    const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
-    const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
+  const handleEventSave = useCallback((rawEv: MutationEventInput) => {
+    const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start ?? '');
+    const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end ?? '');
     const recurringMasterId = rawEv._eventId ?? rawEv._seriesId ?? null;
     const eventId  = recurringMasterId ?? (rawEv.id ? String(rawEv.id) : null);
 
@@ -154,9 +177,9 @@ export function useEventMutations({
         if (result.changes.length > 1) {
           result.changes.forEach((change) => {
             if (change.type === 'created') {
-              onEventSave?.(toLegacyEvent(change.event) as LooseValue);
+              onEventSave?.(asSavedEvent(change.event));
             } else if (change.type === 'updated') {
-              onEventSave?.(toLegacyEvent(change.after) as LooseValue);
+              onEventSave?.(asSavedEvent(change.after));
             }
           });
         } else {
@@ -169,7 +192,7 @@ export function useEventMutations({
     );
   }, [applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, onEventSave, engine, setFormEvent]);
 
-  const handleEventMove = useCallback((ev: LooseValue, newStart: LooseValue, newEnd: LooseValue) => {
+  const handleEventMove = useCallback((ev: NormalizedEvent, newStart: Date, newEnd: Date) => {
     const raw = ev._raw ?? ev;
     const id  = ev._eventId ?? String(ev.id);
     applyWithRecurringCheck(
@@ -177,11 +200,11 @@ export function useEventMutations({
       (_scope) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
       (result) => {
         if (onEventMove) {
-          onEventMove(ev, newStart, newEnd);
+          onEventMove(ev as unknown as WorksCalendarEvent, newStart, newEnd);
         } else if (result.changes.length > 1) {
           result.changes.forEach((change) => {
-            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as LooseValue);
-            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as LooseValue);
+            if (change.type === 'created') onEventSave?.(asSavedEvent(change.event));
+            else if (change.type === 'updated') onEventSave?.(asSavedEvent(change.after));
           });
         } else {
           const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
@@ -192,7 +215,7 @@ export function useEventMutations({
     );
   }, [applyWithRecurringCheck, getSavedEventPayload, onEventMove, onEventSave]);
 
-  const handleEventResize = useCallback((ev: LooseValue, newStart: LooseValue, newEnd: LooseValue) => {
+  const handleEventResize = useCallback((ev: NormalizedEvent, newStart: Date, newEnd: Date) => {
     const raw = ev._raw ?? ev;
     const id  = ev._eventId ?? String(ev.id);
     applyWithRecurringCheck(
@@ -200,11 +223,11 @@ export function useEventMutations({
       (_scope) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
       (result) => {
         if (onEventResize) {
-          onEventResize(ev, newStart, newEnd);
+          onEventResize(ev as unknown as WorksCalendarEvent, newStart, newEnd);
         } else if (result.changes.length > 1) {
           result.changes.forEach((change) => {
-            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as LooseValue);
-            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as LooseValue);
+            if (change.type === 'created') onEventSave?.(asSavedEvent(change.event));
+            else if (change.type === 'updated') onEventSave?.(asSavedEvent(change.after));
           });
         } else {
           const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
@@ -215,31 +238,31 @@ export function useEventMutations({
     );
   }, [applyWithRecurringCheck, getSavedEventPayload, onEventResize, onEventSave]);
 
-  const handleEventGroupChange = useCallback((ev: LooseValue, patch: LooseValue) => {
+  const handleEventGroupChange = useCallback((ev: NormalizedEvent, patch: Record<string, unknown>) => {
     if (!patch || typeof patch !== 'object') return;
     const raw = ev._raw ?? ev;
     const id  = ev._eventId ?? String(ev.id);
     applyEngineOp(
       { type: 'group-change', id, patch, source: 'drag' },
       () => {
-        if (onEventGroupChange) onEventGroupChange(ev, patch);
+        if (onEventGroupChange) onEventGroupChange(ev as unknown as WorksCalendarEvent, patch);
         else emitEventSave(id, raw, patch);
       },
     );
   }, [applyEngineOp, emitEventSave, onEventGroupChange]);
 
-  const handleEventDelete = useCallback((id: LooseValue) => {
-    const ev      = expandedEvents.find((e: LooseValue) => String(e.id) === String(id)) ?? { id };
-    const eventId = ev._eventId ?? String(id);
+  const handleEventDelete = useCallback((id: string) => {
+    const found   = expandedEvents.find(e => String(e.id) === String(id));
+    const eventId = found?._eventId ?? String(id);
     applyWithRecurringCheck(
-      ev,
+      found ?? { id },
       (_scope) => ({ type: 'delete', id: eventId, source: 'form' }),
       () => { onEventDelete?.(id); setFormEvent(null); },
       'Delete',
     );
   }, [applyWithRecurringCheck, expandedEvents, onEventDelete, setFormEvent]);
 
-  const handleInlineSave = useCallback((patch: LooseValue) => {
+  const handleInlineSave = useCallback((patch: InlineEventPatch) => {
     const ev = inlineEditTarget?.event;
     if (!ev) return;
     const eventId = ev._eventId ?? String(ev.id);

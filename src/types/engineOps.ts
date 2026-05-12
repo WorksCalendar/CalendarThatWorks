@@ -128,9 +128,40 @@ export type EmitEventSave = (
   fallbackPatch?: unknown,
 ) => void;
 
-/** The "event-ish input" the mutation hooks accept: a normalized internal
- *  event, a public-API event, or a partial form draft. Adopted from Sprint 3. */
-export type MutationEventInput = NormalizedEvent | WorksCalendarEvent | Partial<WorksCalendarEvent>;
+/**
+ * The grab-bag "event-ish" value the mutation hooks accept: a public
+ * {@link WorksCalendarEvent}, an internal {@link NormalizedEvent}, a partial
+ * form draft, or an engine occurrence — carrying a mix of public fields,
+ * normalisation markers (`_raw`, `_eventId`, `_seriesId`, `_recurring`), and a
+ * few form-only fields (`resourcePoolId`, `kind`, `employeeId`). Every field is
+ * optional and the index signature accepts the rest; call sites narrow / coerce
+ * before use. `NormalizedEvent` is assignable to this.
+ */
+export interface MutationEventInput {
+  id?: string | number | undefined;
+  title?: string | undefined;
+  start?: Date | string | number | undefined;
+  end?: Date | string | number | undefined;
+  allDay?: boolean | undefined;
+  category?: string | null | undefined;
+  color?: string | null | undefined;
+  resource?: string | null | undefined;
+  resourceId?: string | null | undefined;
+  resourcePoolId?: string | null | undefined;
+  status?: string | undefined;
+  rrule?: string | null | undefined;
+  exdates?: ReadonlyArray<Date | string> | undefined;
+  meta?: Record<string, unknown> | undefined;
+  kind?: string | undefined;
+  employeeId?: string | number | undefined;
+  /** Original event the host supplied, attached by the normaliser. */
+  _raw?: WorksCalendarEvent | undefined;
+  /** Series-master id for occurrences — use this for mutations. */
+  _eventId?: string | undefined;
+  _seriesId?: string | undefined;
+  _recurring?: boolean | undefined;
+  [key: string]: unknown;
+}
 
 /** `Array.prototype.find` doesn't narrow a discriminated union, so the hooks
  *  use these guards when pulling a specific change out of `OperationResult.changes`. */
