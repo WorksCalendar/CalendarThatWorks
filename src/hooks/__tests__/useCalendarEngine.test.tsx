@@ -50,8 +50,9 @@ describe('useCalendarEngine — undo history race (issue #599 P1-8)', () => {
     expect(result.current.undoManager.canUndo).toBe(true);
   });
 
-  it('clears undo history when an external update arrives after the grace window expires', () => {
-    vi.useFakeTimers();
+  it('grace is single-shot: a second external update after grace is consumed clears undo', () => {
+    // Verifies the one-shot flag does not protect unlimited external updates.
+    // Sequence: mutation → counter update → grace update (flag consumed) → next update clears.
     const { result, rerender } = renderHook(
       ({ events }: { events: typeof SEED }) =>
         useCalendarEngine({ allNormalized: events, announcerRef: ANNOUNCER_REF, range: RANGE }),
@@ -67,15 +68,12 @@ describe('useCalendarEngine — undo history race (issue #599 P1-8)', () => {
 
     // First update consumes the counter (simulates the onEventSave-triggered re-render).
     act(() => { rerender({ events: [...SEED] }); });
-
-    // Advance past the 3 s grace window.
-    vi.advanceTimersByTime(4_000);
-
-    // External update after grace — undo history should be cleared.
+    // Second update consumes the one-shot grace flag (a poll that slipped through).
+    act(() => { rerender({ events: [...SEED] }); });
+    // Third update — grace is gone; undo must be cleared now.
     act(() => { rerender({ events: [...SEED] }); });
 
     expect(result.current.undoManager.canUndo).toBe(false);
-    vi.useRealTimers();
   });
 });
 
