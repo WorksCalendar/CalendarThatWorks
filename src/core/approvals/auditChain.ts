@@ -10,6 +10,13 @@
  * Undefined fields are dropped (JSON semantics); empty string is
  * preserved. This keeps the hash stable across engines that serialize
  * with different key orders.
+ *
+ * SECURITY NOTE — client-only limitation:
+ * The chain runs entirely in the browser. A user with DevTools access can
+ * modify or delete localStorage entries. `verifyAuditChain` detects
+ * tampering after the fact but cannot prevent it in a client-only
+ * environment. For true tamper-evidence, persist chain hashes server-side
+ * and cross-check them on load.
  */
 import type { ApprovalHistoryEntry } from '../../types/assets'
 import { sha256Hex } from './sha256'

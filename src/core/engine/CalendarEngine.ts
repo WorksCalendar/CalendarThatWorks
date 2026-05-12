@@ -58,6 +58,7 @@ import type {
   Unsubscribe,
 } from './types';
 import type { EngineEvent } from './schema/eventSchema';
+import { makeEvent } from './schema/eventSchema';
 import {
   channelForApprovalTransition,
   type EventBus,
@@ -717,8 +718,18 @@ export class CalendarEngine {
   ): void {
     if (!this._bus) return;
     const payload: BookingLifecyclePayload = {
-      eventId: event.id,
-      eventSnapshot: event,
+      eventId:       event.id,
+      // Emit only non-sensitive fields so internal metadata (billing rates,
+      // customer names, maintenance records) is not broadcast to all listeners.
+      eventSnapshot: makeEvent(event.id, {
+        title:      event.title,
+        start:      event.start,
+        end:        event.end,
+        allDay:     event.allDay,
+        category:   event.category,
+        status:     event.status,
+        resourceId: event.resourceId,
+      }),
       ...extras,
     };
     this._bus.emit(channel, payload);

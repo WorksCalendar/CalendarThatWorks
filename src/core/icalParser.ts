@@ -16,6 +16,10 @@
 const DAY_MS = 86_400_000;
 const DAYS: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 
+function stripHtml(s: string): string {
+  return s.replace(/<[^>]*>/g, '');
+}
+
 // ─── Low-level helpers ─────────────────────────────────────────────────────
 
 type ByDay = { n: number | null; day: number };
@@ -333,11 +337,11 @@ function parseVEvent(
   const props = parseBlock(lines);
 
   const uid        = val(props, 'UID') || `ical-${Math.random().toString(36).slice(2)}`;
-  const summary    = val(props, 'SUMMARY') || '(untitled)';
-  const desc       = val(props, 'DESCRIPTION');
-  const location   = val(props, 'LOCATION');
+  const summary    = stripHtml(val(props, 'SUMMARY') || '(untitled)');
+  const desc       = val(props, 'DESCRIPTION') ? stripHtml(val(props, 'DESCRIPTION')!) : null;
+  const location   = val(props, 'LOCATION') ? stripHtml(val(props, 'LOCATION')!) : null;
   const statusRaw  = val(props, 'STATUS');
-  const categories = val(props, 'CATEGORIES');
+  const categories = val(props, 'CATEGORIES') ? stripHtml(val(props, 'CATEGORIES')!) : null;
   const rruleStr   = val(props, 'RRULE');
   const dtStartStr = val(props, 'DTSTART');
   const dtEndStr   = val(props, 'DTEND');
@@ -404,10 +408,20 @@ function parseVEvent(
  * @param {object} [options]
  * @returns {Promise<import('../index.d.ts').WorksCalendarEvent[]>}
  */
+function isValidIcsUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'http:' || u.protocol === 'webcal:';
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchAndParseICS(
   url: string,
   options: { rangeStart?: Date; rangeEnd?: Date } = {},
 ): Promise<Record<string, unknown>[]> {
+  if (!isValidIcsUrl(url)) throw new Error(`ICS fetch blocked: invalid or disallowed URL`);
   const res = await fetch(url.replace(/^webcal:\/\//i, 'https://'));
   if (!res.ok) throw new Error(`ICS fetch failed: ${res.status} ${res.statusText}`);
   const text = await res.text();

@@ -326,6 +326,11 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
         <div ref={rootRef} className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
+          {devMode && (
+            <div role="alert" style={{ background: '#fef08a', color: '#713f12', fontWeight: 600, fontSize: 12, padding: '4px 12px', textAlign: 'center', zIndex: 9999 }}>
+              ⚠ DEV MODE — all users have admin access. Do not use in production.
+            </div>
+          )}
           <div className={styles['transientToast']} aria-hidden={!importFlash.flash}>
             <SavedFlash visible={importFlash.flash} label={importMsg} />
           </div>

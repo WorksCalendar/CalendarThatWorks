@@ -16,6 +16,10 @@
 
 import { safeGetLocalStorage, safeSetLocalStorage } from './safeLocalStorage';
 
+function stripHtml(s: string): string {
+  return s.replace(/<[^>]*>/g, '');
+}
+
 // ── Event fields ──────────────────────────────────────────────────────────────
 
 export const EVENT_FIELDS = [
@@ -194,7 +198,7 @@ export function mapToEvents(
 
   rows.forEach((row, index) => {
     try {
-      const title = _field(row, mapping['title']);
+      const title = stripHtml(_field(row, mapping['title']));
       const startRaw = _field(row, mapping['start']);
 
       if (!title)    throw new Error('Title is empty');
@@ -220,9 +224,9 @@ export function mapToEvents(
         start,
         ...(end && !isNaN(end.getTime()) && { end }),
         ...(allDay && { allDay: true }),
-        ...(_field(row, mapping['category']) && { category: _field(row, mapping['category']) }),
-        ...(_field(row, mapping['resource']) && { resource:  _field(row, mapping['resource']) }),
-        ...(_field(row, mapping['status'])   && { status:    _field(row, mapping['status']) }),
+        ...(_field(row, mapping['category']) && { category: stripHtml(_field(row, mapping['category'])) }),
+        ...(_field(row, mapping['resource']) && { resource:  stripHtml(_field(row, mapping['resource'])) }),
+        ...(_field(row, mapping['status'])   && { status:    stripHtml(_field(row, mapping['status'])) }),
         ...(_field(row, mapping['color'])    && { color:     _field(row, mapping['color']) }),
         id: _field(row, mapping['id']) || `csv-${Date.now()}-${autoId++}`,
         ...(meta && { meta }),
