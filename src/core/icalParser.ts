@@ -30,12 +30,13 @@ function unfold(text: string): string {
   return text.replace(/\r?\n[ \t]/g, '');
 }
 
-/** Parse an ICS date/datetime string → Date (local). */
+/** Parse an ICS date/datetime string → Date (UTC midnight for date-only, UTC or local for datetime). */
 function parseICSDate(str: string | null | undefined): Date | null {
   if (!str) return null;
   const s = str.trim();
   if (s.length === 8) {
-    // DATE: YYYYMMDD — treat as local midnight
+    // DATE: YYYYMMDD — local midnight so the calendar date renders correctly
+    // in all timezones (a "2024-12-01" event should always show on Dec 1).
     return new Date(
       parseInt(s.slice(0, 4), 10),
       parseInt(s.slice(4, 6), 10) - 1,
@@ -77,9 +78,15 @@ function parseRRule(str: string): Record<string, string> {
   return rule;
 }
 
-/** Convert a Date to a simple day-key for deduplication. */
+/**
+ * Local-calendar-day key for EXDATE deduplication.
+ *
+ * Uses local getters so DATE-only values (parsed as local midnight) produce
+ * the same key as EXDATE dates that have been normalized to local midnight
+ * before being passed to expandRRule. See normalizeExdate() in parseVEvent.
+ */
 function dayKey(dt: Date): string {
-  return `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+  return `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
 }
 
 // ─── RRULE expansion ───────────────────────────────────────────────────────
@@ -367,7 +374,19 @@ function parseVEvent(
 
   const exdateEntry = props['EXDATE'];
   const exdateStrs: string[] = Array.isArray(exdateEntry) ? exdateEntry : [];
-  const exdates = exdateStrs.flatMap(s => s.split(',')).map(s => parseICSDate(s.trim())).filter((d): d is Date => d !== null);
+  const exdates = exdateStrs.flatMap(s => s.split(',')).map(s => {
+    const str = s.trim();
+    const d = parseICSDate(str);
+    if (!d) return null;
+    // For all-day events, many generators incorrectly write EXDATE as a
+    // UTC-midnight datetime (e.g. 20241201T000000Z) instead of a plain DATE.
+    // Normalise these to local midnight so dayKey() comparisons with the
+    // local-midnight DTSTART produce the correct result.
+    if (allDay && str.length > 8 && str.endsWith('Z')) {
+      return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+    return d;
+  }).filter((d): d is Date => d !== null);
 
   let status = 'confirmed';
   if (statusRaw === 'TENTATIVE') status = 'tentative';

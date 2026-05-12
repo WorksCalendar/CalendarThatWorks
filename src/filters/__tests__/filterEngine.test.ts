@@ -351,6 +351,109 @@ describe('tagsField', () => {
   });
 });
 
+// ── P2 hardening: _matchSearch non-object meta guard (Fix 15) ─────────────────
+
+describe('applyFilters — _matchSearch: non-object meta guard (Fix 15)', () => {
+  it('does not crash when meta is a string, and returns false for that field', () => {
+    const events = [
+      ev({ id: '1', title: 'Widget', meta: 'not-an-object' }),
+      ev({ id: '2', title: 'Gadget' }),
+    ];
+    // Should not throw; only title match
+    expect(() => applyFilters(events, { search: 'not-an-object' })).not.toThrow();
+    const result = applyFilters(events, { search: 'not-an-object' });
+    // meta is a string — not a plain object — so it must NOT be searched via Object.values
+    expect(result).toHaveLength(0);
+  });
+
+  it('does not crash when meta is a number', () => {
+    const events = [ev({ id: '1', title: 'X', meta: 42 })];
+    expect(() => applyFilters(events, { search: '42' })).not.toThrow();
+    expect(applyFilters(events, { search: '42' })).toHaveLength(0);
+  });
+
+  it('does not crash when meta is an array (non-plain-object)', () => {
+    const events = [ev({ id: '1', title: 'X', meta: ['react', 'frontend'] })];
+    // Arrays are typeof 'object', so Object.values iterates them — this should
+    // not crash and the string coercion should be safe
+    expect(() => applyFilters(events, { search: 'react' })).not.toThrow();
+  });
+
+  it('does not crash when meta is null', () => {
+    const events = [ev({ id: '1', title: 'Null meta', meta: null })];
+    expect(() => applyFilters(events, { search: 'anything' })).not.toThrow();
+    expect(applyFilters(events, { search: 'null meta' })).toHaveLength(1);
+  });
+
+  it('does not crash when meta is undefined', () => {
+    const events = [ev({ id: '1', title: 'No meta' })];
+    expect(() => applyFilters(events, { search: 'anything' })).not.toThrow();
+  });
+
+  it('still searches plain-object meta correctly', () => {
+    const events = [
+      ev({ id: '1', title: 'A', meta: { department: 'Engineering' } }),
+      ev({ id: '2', title: 'B', meta: { department: 'Design' } }),
+    ];
+    const result = applyFilters(events, { search: 'engineering' });
+    expect(result.map(e => e.id)).toEqual(['1']);
+  });
+});
+
+// ── P2 hardening: _matchDateRange unvalidated Date coercion (Fix 17) ──────────
+
+describe('applyFilters — _matchDateRange: invalid date inputs (Fix 17)', () => {
+  const range = { start: new Date('2026-04-01'), end: new Date('2026-04-30') };
+
+  it('does not throw when item.start is undefined', () => {
+    const events = [ev({ id: '1', start: undefined, end: new Date('2026-04-10') })];
+    expect(() => applyFilters(events, { dateRange: range })).not.toThrow();
+    // invalid start → excluded
+    expect(applyFilters(events, { dateRange: range })).toHaveLength(0);
+  });
+
+  it('does not throw when item.start is an invalid-date string', () => {
+    const events = [ev({ id: '1', start: 'not-a-date', end: new Date('2026-04-10') })];
+    expect(() => applyFilters(events, { dateRange: range })).not.toThrow();
+    expect(applyFilters(events, { dateRange: range })).toHaveLength(0);
+  });
+
+  it('does not throw when both start and end are null', () => {
+    const events = [ev({ id: '1', start: null, end: null })];
+    expect(() => applyFilters(events, { dateRange: range })).not.toThrow();
+    expect(applyFilters(events, { dateRange: range })).toHaveLength(0);
+  });
+
+  it('null-dated events are excluded even when filter end is far in the future (null != epoch)', () => {
+    // new Date(null) === epoch (Jan 1 1970), which is a real date. Before Fix 17
+    // a null start would coerce to epoch and match any date filter ending after 1970.
+    const wideRange = { end: new Date('2099-12-31') };
+    const events = [ev({ id: '1', start: null, end: null })];
+    expect(applyFilters(events, { dateRange: wideRange })).toHaveLength(0);
+  });
+
+  it('accepts ISO string dates (common before normalization)', () => {
+    const events = [ev({ id: '1', start: '2026-04-15T09:00:00', end: '2026-04-15T10:00:00' })];
+    expect(() => applyFilters(events, { dateRange: range })).not.toThrow();
+    expect(applyFilters(events, { dateRange: range })).toHaveLength(1);
+  });
+
+  it('accepts proper Date objects as before', () => {
+    const events = [
+      ev({ id: '1', start: new Date('2026-04-15'), end: new Date('2026-04-15') }),
+      ev({ id: '2', start: new Date('2026-05-15'), end: new Date('2026-05-15') }),
+    ];
+    expect(applyFilters(events, { dateRange: range })).toHaveLength(1);
+    expect(applyFilters(events, { dateRange: range })[0]!.id).toBe('1');
+  });
+
+  it('returns true when dateRange has no start or end', () => {
+    const events = [ev({ id: '1' })];
+    expect(applyFilters(events, { dateRange: { start: undefined, end: undefined } })).toHaveLength(1);
+    expect(applyFilters(events, { dateRange: null })).toHaveLength(1);
+  });
+});
+
 describe('metaSelectField', () => {
   const field  = metaSelectField('department');
   const events = [

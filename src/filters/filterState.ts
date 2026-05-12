@@ -94,7 +94,7 @@ export function buildActiveFilterPills(filters: Record<string, any>, schema: any
           key:          field.key,
           fieldLabel:   field.label,
           value:        v,
-          displayValue: field.pillLabel ? field.pillLabel(v) : String(v),
+          displayValue: resolveDisplayValue(field, v),
         });
       }
     } else {
@@ -102,7 +102,7 @@ export function buildActiveFilterPills(filters: Record<string, any>, schema: any
         key:          field.key,
         fieldLabel:   field.label,
         value,
-        displayValue: field.pillLabel ? field.pillLabel(value) : String(value),
+        displayValue: resolveDisplayValue(field, value),
       });
     }
   }
@@ -203,7 +203,15 @@ function lookupOptionLabel(field: { options?: Array<{ value: unknown; label: str
  * pillLabel > options lookup > String fallback.
  */
 function resolveDisplayValue(field: any, rawValue: unknown): string {
-  if (field.pillLabel) return field.pillLabel(rawValue);
+  if (field.pillLabel) {
+    try {
+      return field.pillLabel(rawValue);
+    } catch (err) {
+      // Consumer-provided callback threw; fall through to built-in resolution.
+      console.warn('[works-calendar] filterState: pillLabel callback threw; falling back to raw value.', err);
+      return String(rawValue);
+    }
+  }
   const optLabel = lookupOptionLabel(field, rawValue);
   if (optLabel) return optLabel;
   return String(rawValue);
