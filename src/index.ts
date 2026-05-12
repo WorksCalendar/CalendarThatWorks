@@ -11,6 +11,7 @@ export type {
   EventStatus,
   EventLifecycleState,
   EventVisualPriority,
+  ReminderDef,
 } from './types/events';
 export { isVisualPriority, isLifecycleState, EVENT_LIFECYCLE_STATES } from './types/events';
 export { default as EventStatusBadge } from './ui/EventStatusBadge';
@@ -130,6 +131,13 @@ export {
 export { default as FocusChips, DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
 export type { FocusChipDef, FocusChipsProps } from './ui/FocusChips';
 export { default as CalendarErrorBoundary } from './ui/CalendarErrorBoundary';
+export { default as CalendarLegend } from './ui/CalendarLegend';
+export type { CalendarLegendProps, LegendSource } from './ui/CalendarLegend';
+export { default as OfflineIndicator } from './ui/OfflineIndicator';
+export { useNetworkStatus } from './hooks/useNetworkStatus';
+export { useReminders } from './hooks/useReminders';
+export { openIdbQueueStore } from './api/v1/sync/idbQueueStore';
+export type { IdbQueueStore } from './api/v1/sync/idbQueueStore';
 export { createLocalStorageDataAdapter } from './external/localStorageDataAdapter';
 export { parseICS, fetchAndParseICS }     from './core/icalParser';
 export { useDrag }                        from './hooks/useDrag';

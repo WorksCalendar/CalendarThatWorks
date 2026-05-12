@@ -148,6 +148,8 @@ export type WorksCalendarProps = {
   /** Unified change callback fired on every create, update, move, or delete. */
   onEventChange?: (event: WorksCalendarEvent, action: 'created' | 'updated' | 'deleted' | 'moved') => void;
   onCommentAdd?: (event: WorksCalendarEvent, comment: import('./types/events').EventComment) => void;
+  /** Fired when a scheduled reminder fires for the current user (method: 'callback'). */
+  onReminder?: (event: WorksCalendarEvent, reminder: import('./types/events').ReminderDef) => void;
   /** Display name shown as the author of new comments added by the current user. */
   currentUserName?: string;
   onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
@@ -227,6 +229,10 @@ export type WorksCalendarProps = {
   showSearch?: boolean;
   /** Show a mini month calendar at the top of the sidebar for date navigation. */
   showMiniCalendar?: boolean;
+  /** Show a source legend (calendar list with colour dots + toggles) at the bottom of the sidebar. */
+  showCalendarLegend?: boolean;
+  /** Show a banner when the browser reports no network connectivity. */
+  showOfflineIndicator?: boolean;
   /**
    * Host-defined quick-create event templates surfaced in the toolbar "New from template" dropdown.
    * Each template pre-fills the EventForm via api.addEvent(defaults).

@@ -95,6 +95,12 @@
   flex-shrink: 0;
 }
 
+/* Optional bottom slot (CalendarLegend, etc.) */
+.footerSlot {
+  border-top: 1px solid var(--wc-border);
+  flex-shrink: 0;
+}
+
 /* Tab strip */
 .tabs {
   display: flex;

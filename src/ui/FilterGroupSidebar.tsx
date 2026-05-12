@@ -97,6 +97,8 @@ export type FilterGroupSidebarProps = {
   assetsLabel?: string;
   /** Optional content rendered above the tab strip (e.g. MiniCalendar). */
   headerSlot?: React.ReactNode;
+  /** Optional content rendered at the bottom of the sidebar (e.g. CalendarLegend). */
+  footerSlot?: React.ReactNode;
 };
 
 export default function FilterGroupSidebar({
@@ -131,6 +133,7 @@ export default function FilterGroupSidebar({
   locationLabel,
   assetsLabel,
   headerSlot,
+  footerSlot,
 }: FilterGroupSidebarProps) {
   // Default to Focus — it's the primary surface now that View is gone.
   const [activeTab, setActiveTab] = useState<SidebarTab>(initialTab ?? 'focus');
@@ -318,6 +321,9 @@ export default function FilterGroupSidebar({
               />
             </div>
           )}
+        {footerSlot && (
+          <div className={styles['footerSlot']}>{footerSlot}</div>
+        )}
         </div>
       </div>
     </>
