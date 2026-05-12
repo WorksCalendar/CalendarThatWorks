@@ -66,8 +66,8 @@ describe('WorksCalendar schedule model integration', () => {
   async function requestPtoForAlex() {
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Request PTO' }));
-    fireEvent.change(screen.getByLabelText('Start *'), { target: { value: '2026-04-01' } });
-    fireEvent.change(screen.getByLabelText('End *'), { target: { value: '2026-04-02' } });
+    fireEvent.change(await screen.findByLabelText('Start *'), { target: { value: '2026-04-01' } });
+    fireEvent.change(await screen.findByLabelText('End *'), { target: { value: '2026-04-02' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Save PTO Request' }));
   }
 

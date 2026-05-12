@@ -57,7 +57,7 @@ describe('WorksCalendar schedule template flow', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Add schedule from template' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Create schedule' }));
 
     await waitFor(() => expect(onEventSave).toHaveBeenCalledTimes(1));
     expect(onEventSave).toHaveBeenCalledWith(
