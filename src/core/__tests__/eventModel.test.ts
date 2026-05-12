@@ -162,4 +162,16 @@ describe('normalizeEvents', () => {
   it('returns empty array for empty input', () => {
     expect(normalizeEvents([])).toEqual([]);
   });
+
+  it('drops non-object entries (null / undefined / primitives) instead of throwing', () => {
+    const evs = normalizeEvents([
+      null,
+      undefined,
+      'oops',
+      42,
+      raw({ id: 'real' }),
+    ] as unknown as WorksCalendarEvent[]);
+    expect(evs).toHaveLength(1);
+    expect(evs[0]!.id).toBe('real');
+  });
 });

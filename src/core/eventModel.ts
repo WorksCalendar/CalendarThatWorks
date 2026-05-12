@@ -86,5 +86,8 @@ export function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent {
  */
 export function normalizeEvents(rawList: WorksCalendarEvent[] | null | undefined): NormalizedEvent[] {
   if (!Array.isArray(rawList)) return [];
-  return rawList.map(normalizeEvent);
+  // Drop non-object entries (a `null`/`undefined`/primitive that slipped in
+  // from a host array or source adapter) — `normalizeEvent` reads fields off
+  // its argument and would throw on them.
+  return rawList.filter((raw): raw is WorksCalendarEvent => raw != null && typeof raw === 'object').map(normalizeEvent);
 }

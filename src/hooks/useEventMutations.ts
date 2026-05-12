@@ -117,6 +117,15 @@ export function useEventMutations({
   const handleEventSave = useCallback((rawEv: MutationEventInput) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start ?? '');
     const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end ?? '');
+    // Bail on an unparseable start/end before it reaches the engine — an
+    // Invalid Date there propagates into `date-fns` formatting of validation
+    // messages, which throws `RangeError` and crashes the next render.
+    if (Number.isNaN(newStart.getTime()) || Number.isNaN(newEnd.getTime())) {
+      if (typeof console !== 'undefined') {
+        console.error('[WorksCalendar] handleEventSave: ignoring an event with an invalid start/end date.', { start: rawEv.start, end: rawEv.end });
+      }
+      return;
+    }
     const recurringMasterId = rawEv._eventId ?? rawEv._seriesId ?? null;
     const eventId  = recurringMasterId ?? (rawEv.id ? String(rawEv.id) : null);
 

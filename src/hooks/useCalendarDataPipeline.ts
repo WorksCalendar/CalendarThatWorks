@@ -96,7 +96,11 @@ export function useCalendarDataPipeline({
     const map = new Map<string, WorksCalendarEvent>();
     const noId: WorksCalendarEvent[] = [];
     incoming.forEach(ev => {
-      if (ev.id != null) map.set(String(ev.id), ev);
+      // A null/undefined/primitive entry from any of the four sources would
+      // crash on `.id` here (and again in `normalizeEvent`) — skip it.
+      if (ev == null || typeof ev !== 'object') return;
+      const id = (ev as { id?: unknown }).id;
+      if (id != null && String(id) !== '') map.set(String(id), ev);
       else noId.push(ev);
     });
     return normalizeEvents([...map.values(), ...noId]);

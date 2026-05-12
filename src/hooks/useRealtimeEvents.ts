@@ -72,6 +72,18 @@ export function useRealtimeEvents({ supabaseClient, table, filter }: {
       return;
     }
 
+    // Guard against Supabase SDK drift — if `channel()`/`from()` aren't where
+    // we expect (a major-version bump that moved them), degrade to no realtime
+    // instead of throwing out of the effect and blanking the calendar.
+    if (typeof supabaseClient.channel !== 'function' || typeof supabaseClient.from !== 'function') {
+      if (typeof console !== 'undefined') {
+        console.warn('[WorksCalendar] Supabase client is missing channel()/from() — realtime disabled (SDK version mismatch?).');
+      }
+      setStatus('error');
+      setEvents([]);
+      return;
+    }
+
     setStatus('connecting');
 
     const chanName = `wc-rt-${table}-${filter ?? 'all'}`;
