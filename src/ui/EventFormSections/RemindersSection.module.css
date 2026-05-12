@@ -1,0 +1,91 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--wc-surface);
+  border-radius: var(--wc-radius-sm);
+  padding: 4px 8px;
+}
+
+.itemLabel {
+  flex: 1;
+  font-size: 13px;
+  color: var(--wc-text);
+}
+
+.methodBtn {
+  font-size: 11px;
+  font-family: inherit;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--wc-border);
+  background: none;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.methodBtn:hover { background: var(--wc-surface); }
+.methodBtnActive {
+  background: color-mix(in srgb, var(--wc-accent) 12%, transparent);
+  color: var(--wc-accent);
+  border-color: var(--wc-accent);
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-muted);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  transition: color 0.1s;
+}
+.removeBtn:hover { color: var(--wc-danger); }
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.presetBtn {
+  font-size: 12px;
+  font-family: inherit;
+  padding: 3px 8px;
+  border-radius: var(--wc-radius-sm);
+  border: 1px dashed var(--wc-border);
+  background: none;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+.presetBtn:hover { border-color: var(--wc-accent); color: var(--wc-accent); }

@@ -47,6 +47,17 @@ export interface EventComment {
   timestamp: string;
 }
 
+/** A single reminder attached to an event. */
+export interface ReminderDef {
+  /** Minutes before the event start to fire the reminder. */
+  minutesBefore: number;
+  /**
+   * 'browser' fires a Web Notification (requires permission).
+   * 'callback' invokes the host-supplied onReminder prop instead.
+   */
+  method: 'browser' | 'callback';
+}
+
 export interface WorksCalendarEvent {
   id?: string | undefined;
   title: string;
@@ -54,6 +65,7 @@ export interface WorksCalendarEvent {
   end?: Date | string | undefined;
   allDay?: boolean | undefined;
   comments?: EventComment[] | undefined;
+  reminders?: ReminderDef[] | undefined;
   category?: string | undefined;
   color?: string | undefined;
   resource?: string | undefined;
@@ -81,6 +93,7 @@ export interface NormalizedEvent {
   /** Present when the raw event supplies visualPriority; null otherwise. */
   visualPriority?: EventVisualPriority | null | undefined;
   meta: Record<string, unknown>;
+  reminders: ReminderDef[];
   rrule: string | null;
   exdates: Array<Date | string>;
   _raw: WorksCalendarEvent;

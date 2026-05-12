@@ -76,6 +76,7 @@ export function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent {
     lifecycle,
     rrule:          raw.rrule          ?? null,
     exdates:        raw.exdates        ?? [],
+    reminders:      raw.reminders      ?? [],
     meta:           raw.meta           ?? {},
     _raw:           raw,
   };

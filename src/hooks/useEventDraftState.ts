@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { getEventTemplateById } from '../core/engine/recurrence/templates.ts';
+import type { ReminderDef } from '../types/events';
 
 const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;
 
@@ -26,6 +27,7 @@ type DraftValues = {
   resource: string;
   color: string;
   meta: DraftMeta;
+  reminders: ReminderDef[];
 };
 
 type EventDraftInput = {
@@ -38,6 +40,7 @@ type EventDraftInput = {
   color?: string | null;
   meta?: Record<string, unknown> | null;
   rrule?: string | null;
+  reminders?: ReminderDef[] | null;
 };
 
 type EventFieldConfig = {
@@ -119,6 +122,7 @@ export function useEventDraftState(event: EventDraftInput | null | undefined, ca
   allCats: string[];
   set: (key: keyof DraftValues, val: DraftValues[keyof DraftValues]) => void;
   setMeta: (key: string, val: unknown) => void;
+  setReminders: (reminders: ReminderDef[]) => void;
   applyTemplate: (nextTemplateId: string) => void;
   setRecurrencePreset: (value: string) => void;
   setCustomRrule: (value: string) => void;
@@ -146,6 +150,7 @@ export function useEventDraftState(event: EventDraftInput | null | undefined, ca
       resource: event?.resource == null ? '' : String(event.resource),
       color: event?.color ?? '',
       meta: toDraftMeta(event?.meta),
+      reminders: event?.reminders ?? [],
     };
   });
   const [templateId, setTemplateId] = useState('none');
@@ -182,6 +187,10 @@ export function useEventDraftState(event: EventDraftInput | null | undefined, ca
 
   function setMeta(key: string, val: unknown): void {
     setValues((v) => ({ ...v, meta: { ...v.meta, [key]: val } }));
+  }
+
+  function setReminders(reminders: ReminderDef[]): void {
+    setValues((v) => ({ ...v, reminders }));
   }
 
   function applyTemplate(nextTemplateId: string): void {
@@ -252,6 +261,7 @@ export function useEventDraftState(event: EventDraftInput | null | undefined, ca
     allCats,
     set,
     setMeta,
+    setReminders,
     applyTemplate,
     setRecurrencePreset,
     setCustomRrule,

@@ -23,8 +23,11 @@ import { captureSavedViewFields } from './core/viewScope';
 import { AppShell }              from './ui/AppShell';
 import FilterGroupSidebar        from './ui/FilterGroupSidebar';
 import MiniCalendar               from './ui/MiniCalendar';
+import CalendarLegend             from './ui/CalendarLegend';
 import BulkActionBar              from './ui/BulkActionBar';
+import OfflineIndicator           from './ui/OfflineIndicator';
 import { useBulkSelect }          from './hooks/useBulkSelect';
+import { useReminders }           from './hooks/useReminders';
 import CalendarModals            from './ui/CalendarModals';
 import CalendarToolbar           from './ui/CalendarToolbar';
 import CalendarViewGrid          from './ui/CalendarViewGrid';
@@ -79,6 +82,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     onEventGroupChange,
     onEventChange,
     onCommentAdd,
+    onReminder,
     currentUserName,
     onDateSelect,
     onViewChange,
@@ -136,6 +140,8 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     showAddButton           = false,
     showSearch              = false,
     showMiniCalendar        = false,
+    showCalendarLegend      = false,
+    showOfflineIndicator    = false,
     hideEventTemplates       = false,
     eventTemplates,
     eventResourceSuggestions,
@@ -288,6 +294,10 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     setAvailabilityState, setScheduleEditorState, setScheduleOpen,
   });
 
+  // Use expandedEvents (pre-filter) so reminders fire even when the event is
+  // currently hidden by an active filter condition.
+  useReminders(expandedEvents, onReminder);
+
   const api = useMemo((): CalendarApi => ({
     navigateTo:       (date)  => cal.setCurrentDate(date),
     setView:          (v)     => cal.setView(v),
@@ -366,6 +376,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
               ⚠ DEV MODE — all users have admin access. Do not use in production.
             </div>
           )}
+          {showOfflineIndicator && <OfflineIndicator />}
           <div className={styles['transientToast']} aria-hidden={!importFlash.flash}>
             <SavedFlash visible={importFlash.flash} label={importMsg} />
           </div>
@@ -481,6 +492,26 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
                   onDateSelect={(d) => { cal.setCurrentDate(d); }}
                   weekStartDay={weekStartDay}
                   eventDates={visibleEvents.map(e => e.start instanceof Date ? e.start : new Date(e.start))}
+                />
+              ),
+            } : {})}
+            {...(showCalendarLegend ? {
+              footerSlot: (
+                <CalendarLegend
+                  sources={sourceStore.sources
+                    .filter(s => s.label && s.color)
+                    .map(s => {
+                      const count = visibleEvents.filter(e => (e as { _sourceId?: string })._sourceId === s.id).length;
+                      return {
+                        id: s.id,
+                        label: s.label ?? '',
+                        color: s.color ?? '#3b82f6',
+                        enabled: s.enabled ?? true,
+                        ...(count > 0 ? { eventCount: count } : {}),
+                      };
+                    })}
+                  onToggle={sourceStore.toggleSource}
+                  onColorChange={(id, color) => sourceStore.updateSource(id, { color })}
                 />
               ),
             } : {})}

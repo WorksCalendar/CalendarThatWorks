@@ -21,8 +21,9 @@ import { useFeedEvents } from './useFeedEvents';
 
 type FeedLike = Record<string, any> & { url?: string | undefined; label?: string | undefined; refreshInterval?: number | undefined };
 type SourceEvent = Record<string, any>;
-type CsvSource = { id: string; label?: string | undefined; enabled?: boolean | undefined; events?: SourceEvent[] | undefined };
+type CsvSource = { id: string; label?: string | undefined; color?: string | undefined; enabled?: boolean | undefined; events?: SourceEvent[] | undefined };
 type SourceStoreLike = {
+  sources: Array<{ id: string; label?: string | undefined; color?: string | undefined; type?: string | undefined; enabled?: boolean | undefined }>;
   activeIcsSources: FeedLike[];
   activeCsvSources: CsvSource[];
 };
@@ -51,18 +52,38 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
 
   const { feedEvents, feedErrors, isFetching: isFetchingFeeds } = useFeedEvents(allIcsFeeds);
 
-  // Tag ICS events with source metadata
+  // Build lookup maps from store sources so ICS events can be identified by
+  // their actual store ID rather than the mutable label string.
+  const { sourceColorById, labelToSourceId } = useMemo(() => {
+    const colorById = new Map<string, string>();
+    const labelToId = new Map<string, string>();
+    for (const s of sourceStore.sources) {
+      if (s.color) colorById.set(s.id, s.color);
+      if (s.label) labelToId.set(s.label, s.id);
+    }
+    return { sourceColorById: colorById, labelToSourceId: labelToId };
+  }, [sourceStore.sources]);
+
+  // Tag ICS events with source metadata and source color (when available).
+  // Resolve _sourceId to the actual store ID when the feed is store-managed
+  // (matched by label); prop-level feeds fall back to their label string.
   const taggedFeedEvents = useMemo(
     () =>
-      feedEvents.map((ev) => ({
-        ...ev,
-        _sourceId:    ev._feedLabel ?? 'ics',
-        _sourceLabel: ev._feedLabel,
-      })),
-    [feedEvents],
+      feedEvents.map((ev) => {
+        const label = ev._feedLabel as string | undefined;
+        const resolvedId = (label ? labelToSourceId.get(label) : undefined) ?? label ?? 'ics';
+        const sourceColor = sourceColorById.get(resolvedId);
+        return {
+          ...ev,
+          _sourceId:    resolvedId,
+          _sourceLabel: label,
+          ...(sourceColor ? { color: sourceColor } : {}),
+        };
+      }),
+    [feedEvents, sourceColorById, labelToSourceId],
   );
 
-  // CSV source events — already parsed, just merge when the source is enabled
+  // CSV source events — already parsed, apply source color when present
   const csvEvents = useMemo(
     () =>
       sourceStore.activeCsvSources.flatMap((src) =>
@@ -70,9 +91,10 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
           ...ev,
           _sourceId:    src.id,
           _sourceLabel: src.label,
+          ...(src.color ? { color: src.color } : {}),
         })),
       ),
-    [JSON.stringify(sourceStore.activeCsvSources.map((s) => ({ id: s.id, enabled: s.enabled, count: s.events?.length })))],
+    [JSON.stringify(sourceStore.activeCsvSources.map((s) => ({ id: s.id, enabled: s.enabled, count: s.events?.length, color: s.color })))],
   );
 
   const events = useMemo(

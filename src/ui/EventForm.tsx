@@ -15,6 +15,7 @@ import { RecurrenceSection } from './EventFormSections/RecurrenceSection';
 import { CategorySection } from './EventFormSections/CategorySection';
 import { CustomFieldsSection } from './EventFormSections/CustomFieldsSection';
 import { MaintenanceSection } from './EventFormSections/MaintenanceSection';
+import { RemindersSection } from './EventFormSections/RemindersSection';
 import { completeMaintenance } from '../core/maintenance';
 import type { MaintenanceMeta, MaintenanceRule, MeterType } from '../types/maintenance';
 import type { WorksCalendarEvent } from '../types/events';
@@ -270,8 +271,9 @@ export default function EventForm({
       resource,
       color:    draft.values.color || undefined,
       meta,
-      rrule:    draft.buildRRule(),
-      exdates:  event?.exdates ?? [],
+      rrule:      draft.buildRRule(),
+      exdates:    event?.exdates ?? [],
+      reminders:  draft.values.reminders.length > 0 ? draft.values.reminders : undefined,
     };
 
     // Conflict gate. `evaluateConflicts` returns {violations, severity,
@@ -441,6 +443,7 @@ export default function EventForm({
             })()}
             <CustomFieldsSection category={d.values.category} customFields={d.customFields}
               metaValues={d.values.meta} errors={d.errors} onMetaChange={d.setMeta} />
+            <RemindersSection reminders={d.values.reminders} onChange={d.setReminders} />
             {requiresApproval && (
               <div className={styles['inlineNotice']} role="status" data-variant="approval">
                 <ShieldCheck size={14} aria-hidden="true" />
