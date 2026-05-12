@@ -40,12 +40,19 @@ export type {
  * (some call sites use sources like `'inline-edit'` / `'template'` that aren't
  * in {@link OperationSource}). The engine normalises and validates; a single
  * `as unknown as EngineOperation` cast bridges the two at the
- * `engine.applyMutation` call.
+ * `engine.applyMutation` call (see `useCalendarEngine`).
  *
- * Tightening this toward {@link EngineOperation} is Sprint 2 of #596.
+ * Tightening this toward {@link EngineOperation} (reconciling `resource` vs
+ * `resourceId`, the extra op sources, `Date | string` starts) is Sprint 3 of #596.
  */
 export type EngineOpInput =
-  | { type: 'create'; event: unknown; source?: string | undefined }
+  | {
+      type: 'create';
+      event: unknown;
+      scope?: string | undefined;
+      occurrenceDate?: Date | undefined;
+      source?: string | undefined;
+    }
   | {
       type: 'update';
       id: string;

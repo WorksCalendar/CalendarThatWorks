@@ -14,13 +14,25 @@ import { occurrenceToLegacy, toLegacyEvent } from '../core/engine/adapters/toLeg
 import type { ResourcePool }    from '../core/pools/resourcePoolSchema.ts';
 import type { OperationContext } from '../core/engine/validation/validationTypes';
 import type { AnnouncerRef }    from '../ui/ScreenReaderAnnouncer';
+import type { WorksCalendarEvent } from '../types/events';
+import type {
+  EngineOpInput,
+  EngineOperation,
+  EngineOpRunner,
+  GetSavedEventPayload,
+  OperationResult,
+  RecurringOpRunner,
+} from '../types/engineOps';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyValue = any;
 
-function opAnnouncement(op: AnyValue): string {
+function opAnnouncement(op: EngineOpInput): string {
   switch (op.type) {
-    case 'create':       return `Event "${op.event?.title ?? 'Untitled'}" created.`;
+    case 'create': {
+      const title = (op.event as { title?: unknown } | null | undefined)?.title;
+      return `Event "${String(title ?? 'Untitled')}" created.`;
+    }
     case 'update':       return 'Event updated.';
     case 'delete':       return 'Event deleted.';
     case 'move':         return 'Event moved.';
@@ -70,20 +82,11 @@ export type UseCalendarEngineResult = {
   /** All master events that carry an approvalStage — unwindowed. */
   approvalRequestEvents: AnyValue[];
   /** Submit a mutation op through the engine, handling soft/hard violations. */
-  applyEngineOp: (op: AnyValue, onAccepted: AnyValue) => void;
+  applyEngineOp: EngineOpRunner;
   /** Wrap a mutation op with a recurring-scope dialog for recurring events. */
-  applyWithRecurringCheck: (
-    ev: AnyValue,
-    makeOp: (scope: string) => AnyValue,
-    onAccepted: AnyValue,
-    actionLabel: string,
-  ) => void;
+  applyWithRecurringCheck: RecurringOpRunner;
   /** Look up the post-mutation engine state for a given event id. */
-  getSavedEventPayload: (
-    eventId: AnyValue,
-    fallbackEvent?: AnyValue,
-    fallbackPatch?: AnyValue,
-  ) => AnyValue | null;
+  getSavedEventPayload: GetSavedEventPayload;
   pendingAlert: PendingAlert | null;
   setPendingAlert: (alert: PendingAlert | null) => void;
   recurringPrompt: RecurringPrompt | null;
@@ -183,45 +186,49 @@ export function useCalendarEngine({
   const [recurringPrompt, setRecurringPrompt] = useState<RecurringPrompt | null>(null);
 
   // ── getSavedEventPayload ──────────────────────────────────────────────────
-  const getSavedEventPayload = useCallback(
-    (eventId: AnyValue, fallbackEvent: AnyValue = null, fallbackPatch: AnyValue = null) => {
+  const getSavedEventPayload: GetSavedEventPayload = useCallback(
+    (eventId: unknown, fallbackEvent: unknown = null, fallbackPatch: unknown = null): WorksCalendarEvent | null => {
       const normalizedId = eventId == null ? '' : String(eventId);
       if (normalizedId) {
         const saved = engine.state.events.get(normalizedId);
-        if (saved) return toLegacyEvent(saved);
+        // Engine-adapter boundary: the legacy event shape is what host onEventSave handlers consume.
+        if (saved) return toLegacyEvent(saved) as unknown as WorksCalendarEvent;
       }
       if (!fallbackEvent) return null;
-      return fallbackPatch ? { ...fallbackEvent, ...fallbackPatch } : fallbackEvent;
+      const base = fallbackEvent as Record<string, unknown>;
+      return (fallbackPatch ? { ...base, ...(fallbackPatch as Record<string, unknown>) } : base) as unknown as WorksCalendarEvent;
     },
     [engine],
   );
 
   // ── applyEngineOp ─────────────────────────────────────────────────────────
-  const applyEngineOp = useCallback(
-    (op: AnyValue, onAccepted: AnyValue) => {
+  const applyEngineOp: EngineOpRunner = useCallback(
+    (op: EngineOpInput, onAccepted?: (result: OperationResult) => void) => {
       const ctx = opCtxRef.current;
       if (ctx === null) return;
 
       const preSnap = undoManager.captureSnapshot();
-      const result  = engine.applyMutation(op, ctx);
+      // Engine-adapter boundary: the loose hook-built op is normalised + validated by the engine.
+      const engineOp = op as unknown as EngineOperation;
+      const result  = engine.applyMutation(engineOp, ctx);
 
       if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
         undoManager.record(preSnap, op.type);
         announcerRef.current?.announce(opAnnouncement(op));
         engineMutationPendingRef.current = Math.max(1, result.changes.length);
-        onAccepted(result);
+        onAccepted?.(result);
 
       } else if (result.status === 'pending-confirmation') {
         setPendingAlert({
           violations: result.validation.violations,
           isHard: false,
           onConfirm: () => {
-            const confirmed = engine.applyMutation(op, ctx, { overrideSoftViolations: true });
+            const confirmed = engine.applyMutation(engineOp, ctx, { overrideSoftViolations: true });
             if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
               undoManager.record(preSnap, op.type);
               announcerRef.current?.announce(opAnnouncement(op));
               engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
-              onAccepted(confirmed);
+              onAccepted?.(confirmed);
             }
           },
         });
@@ -234,14 +241,15 @@ export function useCalendarEngine({
   );
 
   // ── applyWithRecurringCheck ───────────────────────────────────────────────
-  const applyWithRecurringCheck = useCallback(
+  const applyWithRecurringCheck: RecurringOpRunner = useCallback(
     (
-      ev: AnyValue,
-      makeOp: (scope: string) => AnyValue,
-      onAccepted: AnyValue,
+      ev: unknown,
+      makeOp: (scope: string) => EngineOpInput,
+      onAccepted: (result: OperationResult) => void,
       actionLabel: string,
     ) => {
-      if (!ev._recurring) {
+      const evObj = ev as { _recurring?: unknown; start?: Date | string | number | undefined };
+      if (!evObj._recurring) {
         applyEngineOp(makeOp('series'), onAccepted);
         return;
       }
@@ -253,7 +261,7 @@ export function useCalendarEngine({
             {
               ...makeOp(scope),
               scope,
-              occurrenceDate: ev.start instanceof Date ? ev.start : new Date(ev.start),
+              occurrenceDate: evObj.start instanceof Date ? evObj.start : new Date(evObj.start ?? ''),
             },
             onAccepted,
           );

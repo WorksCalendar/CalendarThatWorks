@@ -56,27 +56,32 @@ the engine-op/result/event types and adds:
   `getSavedEventPayload`, `emitEventSave`) to the shared signatures; type the
   `OperationResult` callbacks and `EventChange` handling.
 - `LooseValue` stays in those three files for the event/employee/config
-  parameters (Sprints 2–3).
-- Out of scope but noted: `useCalendarEngine.ts` still uses a private
-  `AnyValue = any` alias for the same shapes — not `LooseValue`, so not in #596's
-  literal scope, but it should adopt `EngineOpInput`/`OperationResult` in Sprint 2.
+  parameters (Sprint 3).
 
-### Sprint 2 — engine-op *literals* + `useCalendarEngine` adoption
+### Sprint 2 — `useCalendarEngine` adoption ✅
 
-- Adopt `EngineOpInput`/`OperationResult` in `useCalendarEngine.ts`
-  (`UseCalendarEngineResult`, `applyEngineOp`, `applyWithRecurringCheck`,
-  `getSavedEventPayload`, `opAnnouncement`), with the single
-  `op as unknown as EngineOperation` cast at `engine.applyMutation`.
-- Reconcile the op-literal shapes the hooks build (`resource` vs `resourceId`,
-  `Date | string` starts, `'inline-edit'` / `'template'` sources) — either
-  widen `EngineOpInput`, widen `OperationSource`, or fix the literal. No new
-  `any`.
+- Adopt the canonical types in `useCalendarEngine.ts`: `UseCalendarEngineResult`
+  exposes `applyEngineOp: EngineOpRunner`, `applyWithRecurringCheck:
+  RecurringOpRunner`, `getSavedEventPayload: GetSavedEventPayload`;
+  `opAnnouncement(op: EngineOpInput)`; the impls thread `EngineOpInput` /
+  `OperationResult`, with the single `op as unknown as EngineOperation` cast at
+  `engine.applyMutation` (the engine-adapter boundary) plus a narrowing cast for
+  the legacy event payload. The engine-op seam is now typed end-to-end:
+  `useCalendarEngine` → `useCalendarDataPipeline`/`WorksCalendar` →
+  `useCalendarMutations` → the three mutation hooks.
+- `useCalendarEngine.ts` still uses its private `AnyValue = any` for the event
+  *list* surface (`allNormalized`, `expandedEvents`, `approvalRequestEvents`,
+  `PendingAlert.violations`, …) — not `LooseValue`, not in #596's literal scope;
+  it gets cleaned up alongside the views (Sprints 4–5).
 
-### Sprint 3 — event-shape unification in the three hooks
+### Sprint 3 — event-shape unification in the three hooks + tighten `EngineOpInput`
 
 - Replace the remaining `LooseValue` in `useEventMutations.ts`,
   `useScheduleMutations.ts`, `useScheduleTemplates.ts` with `MutationEventInput`,
   `NormalizedEvent`, `EmployeeRecord`, `OwnerConfig`, etc.
+- Tighten `EngineOpInput` toward `EngineOperation` (reconcile `resource` vs
+  `resourceId` in patches, the extra op sources, `Date | string` starts) — either
+  widen the target types or fix the literal. No new `any`.
 - Where the public/engine types are genuinely too strict for what callers pass,
   loosen them (`?: T | undefined`) rather than scattering `as`.
 - **Remove `type LooseValue = any` + the `eslint-disable` from these three
