@@ -51,7 +51,8 @@ export function normalizeCustomTheme(theme: ThemeObject | null | undefined): The
 
 const SAFE_COLOR = /^(#[0-9a-fA-F]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|transparent|currentColor|inherit|initial)$/;
 
-function safeColor(value: string | undefined, fallback: string): string {
+function safeColor(value: string | null | undefined, fallback: string): string {
+  if (value === null) return '';
   if (!value) return fallback;
   const v = value.trim();
   if (SAFE_COLOR.test(v) || v.startsWith('rgb(') || v.startsWith('rgba(') || v.startsWith('hsl(') || v.startsWith('hsla(')) return v;
