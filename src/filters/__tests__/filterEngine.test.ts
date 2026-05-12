@@ -424,6 +424,14 @@ describe('applyFilters — _matchDateRange: invalid date inputs (Fix 17)', () =>
     expect(applyFilters(events, { dateRange: range })).toHaveLength(0);
   });
 
+  it('null-dated events are excluded even when filter end is far in the future (null != epoch)', () => {
+    // new Date(null) === epoch (Jan 1 1970), which is a real date. Before Fix 17
+    // a null start would coerce to epoch and match any date filter ending after 1970.
+    const wideRange = { end: new Date('2099-12-31') };
+    const events = [ev({ id: '1', start: null, end: null })];
+    expect(applyFilters(events, { dateRange: wideRange })).toHaveLength(0);
+  });
+
   it('accepts ISO string dates (common before normalization)', () => {
     const events = [ev({ id: '1', start: '2026-04-15T09:00:00', end: '2026-04-15T10:00:00' })];
     expect(() => applyFilters(events, { dateRange: range })).not.toThrow();

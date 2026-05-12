@@ -35,13 +35,13 @@ function parseICSDate(str: string | null | undefined): Date | null {
   if (!str) return null;
   const s = str.trim();
   if (s.length === 8) {
-    // DATE: YYYYMMDD — treat as UTC midnight so dayKey() comparisons are
-    // timezone-consistent whether the counterpart is a local or UTC datetime.
-    return new Date(Date.UTC(
+    // DATE: YYYYMMDD — local midnight so the calendar date renders correctly
+    // in all timezones (a "2024-12-01" event should always show on Dec 1).
+    return new Date(
       parseInt(s.slice(0, 4), 10),
       parseInt(s.slice(4, 6), 10) - 1,
       parseInt(s.slice(6, 8), 10),
-    ));
+    );
   }
   // DATETIME: YYYYMMDDTHHmmss[Z]
   const y  = parseInt(s.slice(0, 4), 10);
@@ -79,15 +79,14 @@ function parseRRule(str: string): Record<string, string> {
 }
 
 /**
- * UTC-based day-key for EXDATE deduplication.
+ * Local-calendar-day key for EXDATE deduplication.
  *
- * Using UTC methods ensures an EXDATE stored as "20241201T000000Z" and a
- * DTSTART stored as "20241201" (now parsed as UTC midnight) both produce the
- * same key. Local-time methods would produce a one-day mismatch in negative-
- * UTC-offset timezones, causing excluded occurrences to silently reappear.
+ * Uses local getters so DATE-only values (parsed as local midnight) produce
+ * the same key as EXDATE dates that have been normalized to local midnight
+ * before being passed to expandRRule. See normalizeExdate() in parseVEvent.
  */
 function dayKey(dt: Date): string {
-  return `${dt.getUTCFullYear()}-${dt.getUTCMonth() + 1}-${dt.getUTCDate()}`;
+  return `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
 }
 
 // ─── RRULE expansion ───────────────────────────────────────────────────────
@@ -375,7 +374,19 @@ function parseVEvent(
 
   const exdateEntry = props['EXDATE'];
   const exdateStrs: string[] = Array.isArray(exdateEntry) ? exdateEntry : [];
-  const exdates = exdateStrs.flatMap(s => s.split(',')).map(s => parseICSDate(s.trim())).filter((d): d is Date => d !== null);
+  const exdates = exdateStrs.flatMap(s => s.split(',')).map(s => {
+    const str = s.trim();
+    const d = parseICSDate(str);
+    if (!d) return null;
+    // For all-day events, many generators incorrectly write EXDATE as a
+    // UTC-midnight datetime (e.g. 20241201T000000Z) instead of a plain DATE.
+    // Normalise these to local midnight so dayKey() comparisons with the
+    // local-midnight DTSTART produce the correct result.
+    if (allDay && str.length > 8 && str.endsWith('Z')) {
+      return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+    return d;
+  }).filter((d): d is Date => d !== null);
 
   let status = 'confirmed';
   if (statusRaw === 'TENTATIVE') status = 'tentative';

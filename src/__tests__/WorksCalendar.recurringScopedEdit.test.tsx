@@ -145,11 +145,11 @@ describe('WorksCalendar recurring-event cluster (issues #149, #146, #150)', () =
     const detached     = savedPayloads.find((p) => p.id !== 'rec-master-1');
 
     expect(masterUpdate).toBeDefined();
-    expect(masterUpdate.rrule).toBe('FREQ=DAILY');
-    expect(Array.isArray(masterUpdate.exdates) ? masterUpdate.exdates.length : 0).toBeGreaterThan(0);
+    expect(masterUpdate!['rrule']).toBe('FREQ=DAILY');
+    expect(Array.isArray(masterUpdate!['exdates']) ? (masterUpdate!['exdates'] as unknown[]).length : 0).toBeGreaterThan(0);
 
     expect(detached).toBeDefined();
-    expect(detached.title).toBe('Daily Standup (edited only this)');
-    expect(detached.rrule ?? null).toBeNull();
+    expect(detached!['title']).toBe('Daily Standup (edited only this)');
+    expect(detached!['rrule'] ?? null).toBeNull();
   }, 60000);
 });

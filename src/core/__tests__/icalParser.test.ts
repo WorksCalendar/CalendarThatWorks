@@ -862,32 +862,33 @@ describe('expandRRule — getCandidatesForPeriod branch coverage', () => {
 
 // ── EXDATE deduplication (Fix 13) ──────────────────────────────────────────────
 
-const utcDay = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d));
+/** Build a local-midnight Date for a given calendar day. */
+const localDay = (y: number, m: number, d: number) => new Date(y, m - 1, d);
 
 // ── EXDATE deduplication ───────────────────────────────────────────────────────
 
 describe('expandRRule — EXDATE deduplication (Fix 13)', () => {
   // Range Dec 1–22 gives exactly 4 weekly occurrences starting Dec 1 (Sun):
   // Dec 1, Dec 8, Dec 15, Dec 22
-  const rangeStart = utcDay(2024, 12, 1);
-  const rangeEnd   = utcDay(2024, 12, 22);
-  const dtstart    = utcDay(2024, 12, 1);
+  const rangeStart = localDay(2024, 12, 1);
+  const rangeEnd   = localDay(2024, 12, 22);
+  const dtstart    = localDay(2024, 12, 1);
 
-  it('excludes the first occurrence when EXDATE matches its UTC day', () => {
-    const exdate = utcDay(2024, 12, 1);
+  it('excludes the first occurrence when EXDATE matches its local calendar day', () => {
+    const exdate = localDay(2024, 12, 1);
     const result = expandRRule(dtstart, 'FREQ=WEEKLY', [exdate], rangeStart, rangeEnd);
     // Dec 1 excluded → [Dec 8, Dec 15, Dec 22]
-    expect(result.some(d => d.getUTCDate() === 1)).toBe(false);
-    expect(result.some(d => d.getUTCDate() === 8)).toBe(true);
+    expect(result.some(d => d.getDate() === 1)).toBe(false);
+    expect(result.some(d => d.getDate() === 8)).toBe(true);
     expect(result).toHaveLength(3);
   });
 
-  it('excludes a mid-series occurrence by UTC day', () => {
-    const exdate = utcDay(2024, 12, 8); // exclude 2nd occurrence
+  it('excludes a mid-series occurrence by local calendar day', () => {
+    const exdate = localDay(2024, 12, 8);
     const result = expandRRule(dtstart, 'FREQ=WEEKLY', [exdate], rangeStart, rangeEnd);
     // Dec 8 excluded → [Dec 1, Dec 15, Dec 22]
-    expect(result.some(d => d.getUTCDate() === 8)).toBe(false);
-    expect(result.some(d => d.getUTCDate() === 1)).toBe(true);
+    expect(result.some(d => d.getDate() === 8)).toBe(false);
+    expect(result.some(d => d.getDate() === 1)).toBe(true);
     expect(result).toHaveLength(3);
   });
 
@@ -902,13 +903,13 @@ describe('expandRRule — EXDATE deduplication (Fix 13)', () => {
   });
 
   it('handles multiple EXDATE entries correctly', () => {
-    const exdates = [utcDay(2024, 12, 1), utcDay(2024, 12, 15)];
+    const exdates = [localDay(2024, 12, 1), localDay(2024, 12, 15)];
     const result = expandRRule(dtstart, 'FREQ=WEEKLY', exdates, rangeStart, rangeEnd);
     // Dec 1 and Dec 15 excluded → [Dec 8, Dec 22]
     expect(result).toHaveLength(2);
-    expect(result.some(d => d.getUTCDate() === 8)).toBe(true);
-    expect(result.some(d => d.getUTCDate() === 22)).toBe(true);
-    expect(result.some(d => d.getUTCDate() === 1)).toBe(false);
-    expect(result.some(d => d.getUTCDate() === 15)).toBe(false);
+    expect(result.some(d => d.getDate() === 8)).toBe(true);
+    expect(result.some(d => d.getDate() === 22)).toBe(true);
+    expect(result.some(d => d.getDate() === 1)).toBe(false);
+    expect(result.some(d => d.getDate() === 15)).toBe(false);
   });
 });

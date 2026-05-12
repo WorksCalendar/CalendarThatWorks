@@ -220,10 +220,10 @@ describe('WorksCalendar schedule model integration', () => {
       const savedShiftWithCoverage = onEventSave.mock.calls
         .map(([payload]) => payload)
         .find(
-          (payload) => String(payload?.id ?? '') === 'shift-1'
-            && String(payload?.meta?.coveredBy ?? '') === 'emp-2'
-            && String(payload?.meta?.shiftStatus ?? '') === 'pto'
-            && String(payload?.meta?.openShiftId ?? '') !== '',
+          (payload: Record<string, any>) => String(payload['id'] ?? '') === 'shift-1'
+            && String(payload['meta']?.['coveredBy'] ?? '') === 'emp-2'
+            && String(payload['meta']?.['shiftStatus'] ?? '') === 'pto'
+            && String(payload['meta']?.['openShiftId'] ?? '') !== '',
         );
       expect(savedShiftWithCoverage).toBeTruthy();
     });
