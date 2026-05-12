@@ -72,6 +72,44 @@ describe('createInitialState — init.filter branch', () => {
   });
 });
 
+// ─── createInitialState / setEvents — malformed event ids ────────────────────
+
+describe('CalendarEngine — ingestion drops events with bad ids instead of corrupting the map', () => {
+  it('createInitialState skips events whose id is missing / not a string', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const state = createInitialState({
+      events: [
+        ev('ok-1'),
+        { id: undefined } as unknown as EngineEvent,
+        { id: null } as unknown as EngineEvent,
+        { id: '' } as unknown as EngineEvent,
+        { id: 42 } as unknown as EngineEvent,
+        ev('ok-2'),
+      ],
+    });
+    expect([...state.events.keys()].sort()).toEqual(['ok-1', 'ok-2']);
+    expect(state.events.has('undefined')).toBe(false);
+    expect(state.events.has('')).toBe(false);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('does not throw when constructed with malformed events', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(() => new CalendarEngine({ events: [{ id: undefined } as unknown as EngineEvent, ev('ok')] })).not.toThrow();
+    warn.mockRestore();
+  });
+
+  it('setEvents applies the same id guard', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const engine = new CalendarEngine();
+    engine.setEvents([ev('keep'), { id: '' } as unknown as EngineEvent, { id: undefined } as unknown as EngineEvent]);
+    expect([...engine.state.events.keys()]).toEqual(['keep']);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
 // ─── dispatch — no-change branch ─────────────────────────────────────────────
 
 describe('CalendarEngine.dispatch — same-state no-notify', () => {

@@ -68,9 +68,28 @@ import type { ApprovalStage } from '../../types/assets';
 
 // ─── Initial state ────────────────────────────────────────────────────────────
 
+/**
+ * Index events by `id`, dropping (and warning about) any without a usable
+ * string id. Events reach the engine via `normalizeEvents`, which assigns ids,
+ * so a bad id here means the host fed in something malformed (or skipped
+ * normalization). Indexing it would corrupt the map with an `undefined`/empty
+ * key and surface as ghost events everywhere; better to drop it loudly.
+ */
+function indexEventsById(events: ReadonlyArray<EngineEvent>): Map<string, EngineEvent> {
+  const map = new Map<string, EngineEvent>();
+  for (const ev of events) {
+    const id = (ev as { id?: unknown } | null | undefined)?.id;
+    if (typeof id === 'string' && id !== '') {
+      map.set(id, ev);
+    } else if (typeof console !== 'undefined') {
+      console.warn('[WorksCalendar] CalendarEngine: ignoring an event with a missing/invalid id:', ev);
+    }
+  }
+  return map;
+}
+
 export function createInitialState(init: CalendarEngineInit = {}): CalendarState {
-  const eventMap = new Map<string, EngineEvent>();
-  for (const ev of init.events ?? []) eventMap.set(ev.id, ev);
+  const eventMap = indexEventsById(init.events ?? []);
 
   const assignMap = new Map<string, Assignment>();
   for (const a of init.assignments ?? []) assignMap.set(a.id, a);
@@ -271,8 +290,7 @@ export class CalendarEngine {
    * Notifies subscribers once.
    */
   setEvents(events: ReadonlyArray<EngineEvent>): void {
-    const map = new Map<string, EngineEvent>(events.map(ev => [ev.id, ev]));
-    this._state = { ...this._state, events: map };
+    this._state = { ...this._state, events: indexEventsById(events) };
     this._notify();
   }
 

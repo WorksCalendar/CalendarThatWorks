@@ -126,4 +126,20 @@ describe('useRealtimeEvents', () => {
     );
     errorSpy.mockRestore();
   });
+
+  it('degrades to status="error" (no throw) when the Supabase client lacks channel()/from()', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // A future SDK that moved/removed these methods.
+    const brokenClient = {} as unknown as Parameters<typeof useRealtimeEvents>[0]['supabaseClient'];
+
+    let result: { current: ReturnType<typeof useRealtimeEvents> } | undefined;
+    expect(() => {
+      ({ result } = renderHook(() => useRealtimeEvents({ supabaseClient: brokenClient, table: 'events' })));
+    }).not.toThrow();
+
+    expect(result!.current.status).toBe('error');
+    expect(result!.current.events).toEqual([]);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
 });

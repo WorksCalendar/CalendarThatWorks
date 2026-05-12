@@ -109,12 +109,22 @@ export function useCalendarEngine({
   const poolsSequenceRef = useRef(0);
 
   if (engineRef.current === null) {
-    const initState = rawPools && rawPools.length > 0 ? { pools: rawPools } : {};
-    engineRef.current = new CalendarEngine(
-      initialView ? { ...initState, view: initialView as AnyValue } : (rawPools && rawPools.length > 0 ? initState : undefined),
-    );
-    undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
-    lastPoolsRef.current = engineRef.current.state.pools;
+    try {
+      const initState = rawPools && rawPools.length > 0 ? { pools: rawPools } : {};
+      engineRef.current = new CalendarEngine(
+        initialView ? { ...initState, view: initialView as AnyValue } : (rawPools && rawPools.length > 0 ? initState : undefined),
+      );
+      undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
+      lastPoolsRef.current = engineRef.current.state.pools;
+    } catch (err) {
+      // Surface the underlying cause with context instead of a blank crash —
+      // a throw here usually means a malformed `events`/`pools` prop.
+      if (err instanceof Error) {
+        err.message = `WorksCalendar: the calendar engine failed to initialize (check the events/pools passed in) — ${err.message}`;
+        throw err;
+      }
+      throw new Error(`WorksCalendar: the calendar engine failed to initialize (check the events/pools passed in) — ${String(err)}`);
+    }
   }
 
   const engine      = engineRef.current;
