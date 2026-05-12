@@ -54,19 +54,19 @@ export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMo
   const isOwner = role === 'admin' || devMode;
 
   const updateConfig = useCallback((updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => {
-    setConfig(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      saveConfig(calendarId, next);
-      pendingNotifyRef.current = true;
-      return next;
-    });
-  }, [calendarId]);
+    // Keep the state updater pure — persistence + the host callback run from the
+    // commit effect below. (A state updater can be invoked more than once / for
+    // a render that is later discarded; localStorage writes don't belong there.)
+    pendingNotifyRef.current = true;
+    setConfig(prev => (typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }));
+  }, []);
 
   useEffect(() => {
     if (!pendingNotifyRef.current) return;
     pendingNotifyRef.current = false;
+    saveConfig(calendarId, config);
     onConfigSave?.(config);
-  }, [config, onConfigSave]);
+  }, [config, calendarId, onConfigSave]);
 
   const closeConfig = useCallback(() => {
     setConfigOpen(false);

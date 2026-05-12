@@ -6,9 +6,9 @@
  * stayed pinned to the calendar mounted with.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { renderHook, cleanup } from '@testing-library/react';
+import { renderHook, act, cleanup } from '@testing-library/react';
 import { useOwnerConfig } from '../useOwnerConfig';
-import { saveConfig } from '../../core/configSchema';
+import { saveConfig, loadConfig } from '../../core/configSchema';
 
 afterEach(() => {
   cleanup();
@@ -52,5 +52,24 @@ describe('useOwnerConfig', () => {
     );
     rerender({ id: B });
     expect(calls).toEqual([]);
+  });
+
+  it('updateConfig persists to storage and notifies onConfigSave (from the commit effect, not the updater)', () => {
+    const saved: Array<Record<string, unknown>> = [];
+    const { result } = renderHook(() => useOwnerConfig({ calendarId: A, onConfigSave: (c) => saved.push(c as Record<string, unknown>) }));
+
+    act(() => result.current.updateConfig({ title: 'Edited' }));
+
+    expect(result.current.config['title']).toBe('Edited');
+    expect(loadConfig(A)['title']).toBe('Edited'); // persisted
+    expect(saved).toHaveLength(1);
+    expect(saved[0]!['title']).toBe('Edited');
+  });
+
+  it('updateConfig accepts a functional updater', () => {
+    const { result } = renderHook(() => useOwnerConfig({ calendarId: A }));
+    act(() => result.current.updateConfig({ count: 1 }));
+    act(() => result.current.updateConfig((prev) => ({ ...prev, count: (prev['count'] as number) + 1 })));
+    expect(result.current.config['count']).toBe(2);
   });
 });
