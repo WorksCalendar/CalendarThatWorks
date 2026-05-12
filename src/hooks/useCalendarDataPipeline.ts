@@ -112,6 +112,9 @@ export function useCalendarDataPipeline({
   const [supabaseClient, setSupabaseClient] = useState<SupabaseRealtimeClientLike | null>(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
+    if (!supabaseUrl.includes('localhost')) {
+      console.warn('[WorksCalendar] Supabase anon key is public. Ensure Row-Level Security (RLS) is enabled on ALL tables accessed by this calendar.');
+    }
     import('@supabase/supabase-js')
       .then(({ createClient }) => setSupabaseClient(createClient(supabaseUrl, supabaseKey) as unknown as SupabaseRealtimeClientLike))
       .catch(() => console.warn('[WorksCalendar] @supabase/supabase-js not installed.'));

@@ -17,14 +17,18 @@ interface ExcelJSModule {
   Workbook: new () => ExcelJSWorkbook;
 }
 
+function sanitizeCell(v: string): string {
+  return /^[=+\-@]/.test(v) ? `\t${v}` : v;
+}
+
 function eventsToRows(events: NormalizedEvent[]): Row[] {
   return events.map(ev => ({
-    Title:    ev.title,
+    Title:    sanitizeCell(ev.title),
     Start:    format(ev.start, 'yyyy-MM-dd HH:mm'),
     End:      format(ev.end,   'yyyy-MM-dd HH:mm'),
     AllDay:   ev.allDay ? 'Yes' : 'No',
-    Category: ev.category || '',
-    Resource: ev.resource || '',
+    Category: sanitizeCell(ev.category || ''),
+    Resource: sanitizeCell(ev.resource || ''),
     ...ev.meta,
   }));
 }

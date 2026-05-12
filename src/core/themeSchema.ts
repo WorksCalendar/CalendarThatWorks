@@ -49,6 +49,22 @@ export function normalizeCustomTheme(theme: ThemeObject | null | undefined): The
   return mergeTheme(DEFAULT_CUSTOM_THEME as ThemeObject, theme || {});
 }
 
+const SAFE_COLOR = /^(#[0-9a-fA-F]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|transparent|currentColor|inherit|initial)$/;
+
+function safeColor(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  const v = value.trim();
+  if (SAFE_COLOR.test(v) || v.startsWith('rgb(') || v.startsWith('rgba(') || v.startsWith('hsl(') || v.startsWith('hsla(')) return v;
+  return fallback;
+}
+
+function safeFontFamily(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  // Strip anything that could be a CSS injection: semicolons, braces, url(), expression()
+  const stripped = value.replace(/[{}]|url\s*\(|expression\s*\(/gi, '').replace(/;/g, '');
+  return stripped.trim() || fallback;
+}
+
 export function customThemeToCssVars(themeInput: ThemeObject | null | undefined): Record<string, string | number> | undefined {
   if (!themeInput || (typeof themeInput === 'object' && Object.keys(themeInput).length === 0)) return undefined;
   const theme = normalizeCustomTheme(themeInput) as {
@@ -60,27 +76,28 @@ export function customThemeToCssVars(themeInput: ThemeObject | null | undefined)
   };
   const e = Math.max(0, Number(theme.shadows.elevation) || 0);
   const density = Math.max(0.8, Math.min(1.2, Number(theme.spacing.density) || 1));
+  const c = theme.colors;
 
   return {
-    '--wc-accent': theme.colors['accent'] ?? '',
-    '--wc-accent-dim': theme.colors['accentDim'] ?? '',
-    '--wc-bg': theme.colors['bg'] ?? '',
-    '--wc-surface': theme.colors['surface'] ?? '',
-    '--wc-surface-2': theme.colors['surface2'] ?? '',
-    '--wc-border': theme.colors['border'] ?? '',
-    '--wc-border-dark': theme.colors['borderDark'] ?? '',
-    '--wc-text': theme.colors['text'] ?? '',
-    '--wc-text-muted': theme.colors['textMuted'] ?? '',
-    '--wc-font': theme.typography.fontFamily,
-    '--wc-font-heading': theme.typography.headingFontFamily || theme.typography.fontFamily,
-    '--wc-font-mono': theme.typography.monoFontFamily || "ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace",
-    '--wc-radius': `${theme.borders.radius}px`,
-    '--wc-radius-sm': `${theme.borders.radiusSm}px`,
+    '--wc-accent':       safeColor(c['accent'],     '#3b82f6'),
+    '--wc-accent-dim':   safeColor(c['accentDim'],  '#eff6ff'),
+    '--wc-bg':           safeColor(c['bg'],          '#ffffff'),
+    '--wc-surface':      safeColor(c['surface'],     '#f8fafc'),
+    '--wc-surface-2':    safeColor(c['surface2'],    '#f1f5f9'),
+    '--wc-border':       safeColor(c['border'],      '#e2e8f0'),
+    '--wc-border-dark':  safeColor(c['borderDark'],  '#cbd5e1'),
+    '--wc-text':         safeColor(c['text'],         '#0f172a'),
+    '--wc-text-muted':   safeColor(c['textMuted'],   '#64748b'),
+    '--wc-font':         safeFontFamily(theme.typography.fontFamily, "'Inter', system-ui, sans-serif"),
+    '--wc-font-heading': safeFontFamily(theme.typography.headingFontFamily || theme.typography.fontFamily, "'Inter', system-ui, sans-serif"),
+    '--wc-font-mono':    safeFontFamily(theme.typography.monoFontFamily, "ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace"),
+    '--wc-radius':       `${theme.borders.radius}px`,
+    '--wc-radius-sm':    `${theme.borders.radiusSm}px`,
     '--wc-border-width': `${theme.borders.borderWidth}px`,
-    '--wc-shadow': `0 4px ${12 + Math.round(e)}px rgba(0,0,0,${(0.08 + e / 200).toFixed(2)})`,
-    '--wc-shadow-sm': `0 1px ${3 + Math.round(e / 3)}px rgba(0,0,0,${(0.05 + e / 250).toFixed(2)})`,
+    '--wc-shadow':       `0 4px ${12 + Math.round(e)}px rgba(0,0,0,${(0.08 + e / 200).toFixed(2)})`,
+    '--wc-shadow-sm':    `0 1px ${3 + Math.round(e / 3)}px rgba(0,0,0,${(0.05 + e / 250).toFixed(2)})`,
     '--wc-base-font-size': `${theme.typography.baseSize}px`,
-    '--wc-font-scale': (theme.typography.baseSize / 14).toFixed(4),
-    '--wc-density': density,
+    '--wc-font-scale':   (theme.typography.baseSize / 14).toFixed(4),
+    '--wc-density':      density,
   };
 }
