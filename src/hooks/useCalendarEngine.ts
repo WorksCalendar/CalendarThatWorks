@@ -135,6 +135,11 @@ export function useCalendarEngine({
 
   // Counts how many onEventSave-triggered prop updates to suppress clear() for.
   const engineMutationPendingRef = useRef(0);
+  // One-shot flag: consumed by the first allNormalized update that arrives after
+  // the counter reaches zero. Handles the race where a fetchEvents poll arrives
+  // between a mutation commit and its onEventSave-triggered prop re-render,
+  // decrementing the counter to zero before the expected update lands.
+  const gracePendingRef = useRef(false);
 
   // ── engineVer: monotonic counter, increments on each engine state change ──
   const [engineVer, tickEngine] = useReducer((n: number) => n + 1, 0);
@@ -161,6 +166,11 @@ export function useCalendarEngine({
     engine.setEvents(fromLegacyEvents(allNormalized as AnyValue));
     if (engineMutationPendingRef.current > 0) {
       engineMutationPendingRef.current -= 1;
+    } else if (gracePendingRef.current) {
+      // One-shot: a poll consumed the counter before onEventSave re-rendered.
+      // Absorb this single update without clearing undo, then disarm the flag
+      // so subsequent external updates clear as normal.
+      gracePendingRef.current = false;
     } else {
       undoManager.clear();
     }
@@ -225,6 +235,7 @@ export function useCalendarEngine({
       if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
         undoManager.record(preSnap, op.type);
         announcerRef.current?.announce(opAnnouncement(op));
+        gracePendingRef.current = true;
         engineMutationPendingRef.current = Math.max(1, result.changes.length);
         onAccepted?.(result);
 
@@ -237,6 +248,7 @@ export function useCalendarEngine({
             if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
               undoManager.record(preSnap, op.type);
               announcerRef.current?.announce(opAnnouncement(op));
+              gracePendingRef.current = true;
               engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
               onAccepted?.(confirmed);
             }
