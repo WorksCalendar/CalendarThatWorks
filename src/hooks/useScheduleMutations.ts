@@ -18,6 +18,7 @@ import type {
   AvailabilitySavePayload,
   OwnerConfig,
 } from '../WorksCalendar.types';
+import type { AvailabilityModalState, ScheduleEditorModalState } from './useModalState';
 import type { EngineOpInput, EngineOpRunner, EmitEventSave, GetSavedEventPayload, MutationEventInput } from '../types/engineOps';
 
 type UseScheduleMutationsParams = {
@@ -31,8 +32,8 @@ type UseScheduleMutationsParams = {
   onScheduleSave?: ((payload: WorksCalendarEvent) => void) | undefined;
   onEmployeeAction?: ((employeeId: EmployeeId, action: EmployeeActionInput) => void) | undefined;
   ownerConfig: OwnerConfig;
-  setAvailabilityState: (state: Record<string, unknown> | null) => void;
-  setScheduleEditorState: (state: Record<string, unknown> | null) => void;
+  setAvailabilityState: (state: AvailabilityModalState | null) => void;
+  setScheduleEditorState: (state: ScheduleEditorModalState | null) => void;
 };
 
 export function useScheduleMutations({
@@ -202,7 +203,7 @@ export function useScheduleMutations({
     const sourceShift = actionPayload['sourceShift'] as { start?: unknown; end?: unknown; allDay?: unknown; meta?: Record<string, unknown> } | null | undefined;
     const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
     if (AVAILABILITY_ACTIONS.has(action)) {
-      const initialEvent = action === 'availability'
+      const initialEvent: NormalizedEvent | null = action === 'availability'
         ? expandedEvents
           .filter((ev) => {
             const e: { kind?: unknown; category?: unknown; resource?: unknown; resourceId?: unknown; employeeId?: unknown; meta?: Record<string, unknown> } = ev;
@@ -218,13 +219,14 @@ export function useScheduleMutations({
           })
           .map((ev) => ({ ...ev, id: ev._eventId ?? ev.id }))[0] ?? null
         : sourceShift
-          ? {
+          // Seed object for the AvailabilityForm — not a full NormalizedEvent.
+          ? ({
             title: action === 'pto' ? 'PTO' : 'Unavailable',
             start: sourceShift.start,
             end: sourceShift.end,
             allDay: sourceShift.allDay ?? true,
             meta: sourceShift.meta ?? {},
-          }
+          } as unknown as NormalizedEvent)
           : null;
       const initialStart = sourceShift?.start
         ? new Date(sourceShift.start as string | number | Date)

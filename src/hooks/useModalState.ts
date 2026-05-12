@@ -39,7 +39,8 @@ export interface AvailabilityModalState {
 export interface ScheduleEditorModalState {
   emp: EmployeeRecord;
   start: Date;
-  end: Date;
+  /** Omitted when launched from the employee "schedule" action (the form picks an end). */
+  end?: Date | undefined;
 }
 
 export interface UseModalStateReturn {

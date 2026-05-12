@@ -7,6 +7,7 @@ import type { CalendarEngine } from '../core/engine/CalendarEngine';
 import { createId } from '../core/createId';
 import type { WorksCalendarEvent, NormalizedEvent } from '../types/events';
 import type { OwnerConfig } from '../WorksCalendar.types';
+import type { FormEventDraft, InlineEditTarget } from './useModalState';
 import { isCreatedChange } from '../types/engineOps';
 import type {
   EngineOpInput,
@@ -43,9 +44,9 @@ type UseEventMutationsParams = {
   onEventDelete?: ((eventId: string) => void) | undefined;
   onEventGroupChange?: ((event: WorksCalendarEvent, patch: Record<string, unknown>) => void) | undefined;
   ownerConfig: OwnerConfig;
-  inlineEditTarget: { event: MutationEventInput; x: number; y: number } | null;
-  setFormEvent: (ev: MutationEventInput | null) => void;
-  setInlineEditTarget: (target: { event: MutationEventInput; x: number; y: number } | null) => void;
+  inlineEditTarget: InlineEditTarget | null;
+  setFormEvent: (ev: FormEventDraft | null) => void;
+  setInlineEditTarget: (target: InlineEditTarget | null) => void;
 };
 
 export function useEventMutations({
