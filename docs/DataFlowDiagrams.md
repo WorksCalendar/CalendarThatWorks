@@ -61,6 +61,9 @@ Seven major subsystems inside the library and the data flows between them.
 | 5 | View Layer | `visibleEvents[]`, cursor, view type | Rendered calendar; user event callbacks |
 | 6 | Workflow & Approvals | Transition actions, workflow DSL | Updated `ApprovalStage`, audit trail, channel emits |
 | 7 | Config & Persistence | `config.json`, localStorage | Parsed config, themes, pools, profile |
+| 8 | Source Aggregation | ICS feeds, CSV sources, `useSourceStore` | Colour-tagged `NormalizedEvent[]`, `CalendarLegend` data |
+| 9 | Notifications | `visibleEvents[].reminders`, `onReminder` prop | Browser `Notification`, host callback |
+| 10 | Network Status | `navigator.onLine`, browser events | `isOnline` / `isInitializing` state, `OfflineIndicator` |
 
 ---
 
@@ -178,7 +181,42 @@ Detailed decomposition of the highest-complexity processes within Level 2 subsys
 
 ---
 
-## Sprint Implementation Status
+### 3h — Reminders: Scheduling and Delivery
+
+Data flow from `ReminderDef` on an event through `normalizeEvent`, `useReminders`, and out to the browser Notifications API or the host `onReminder` callback.
+
+![3h — Reminders: Scheduling and Delivery](diagrams/level3h.png)
+
+**Key invariants**
+- Reminders with `delay < 1 s` at schedule time are skipped — avoids notification spam on page load for events that already started.
+- `Notification.requestPermission()` is called once (guarded by a `useRef`) the first time a `'browser'` reminder is registered, not on every mount.
+- All `setTimeout` handles are cleared in the effect cleanup, so navigating away or changing `visibleEvents` never leaves stale timers.
+
+---
+
+### 3i — Multi-Calendar Source Colors and Legend
+
+Data flow from `useSourceStore` (localStorage) through `useSourceAggregator` (colour tagging) to rendered events and the `CalendarLegend` sidebar panel.
+
+![3i — Multi-Calendar Source Colors and Legend](diagrams/level3i.png)
+
+**Key invariants**
+- Source colours are keyed by `label` for ICS feeds (since ICS events only carry the feed label, not an internal ID) and by direct `source.color` for CSV sources.
+- Toggling a source (`toggleSource`) flips `enabled` in the store; the next `useSourceAggregator` memo pass omits its events, which propagates through `useCalendarDataPipeline` to `visibleEvents` in a single render cycle.
+- Changing a colour (`updateSource`) persists to `localStorage` immediately; the legend updates on the same render that triggers re-aggregation.
+
+---
+
+### 3j — Offline Detection and Indicator
+
+Data flow from the browser's `navigator.onLine` / `online` / `offline` events through `useNetworkStatus` to the `OfflineIndicator` banner.
+
+![3j — Offline Detection and Indicator](diagrams/level3j.png)
+
+**Key invariants**
+- `isInitializing = true` is the SSR-safe default; the component renders nothing until after the first client-side effect fires, preventing a hydration mismatch.
+- The banner is purely presentational — no write operations are blocked or queued by this component. It relies on the host's data adapter to handle retry transparently.
+- Event listeners are removed on unmount so subscriptions don't accumulate across React strict-mode double-mounts.
 
 All six audit issues resolved across three sprints. See `CHANGELOG [0.7.0]` for details.
 
