@@ -136,8 +136,6 @@ export type { CalendarLegendProps, LegendSource } from './ui/CalendarLegend';
 export { default as OfflineIndicator } from './ui/OfflineIndicator';
 export { useNetworkStatus } from './hooks/useNetworkStatus';
 export { useReminders } from './hooks/useReminders';
-export { openIdbQueueStore } from './api/v1/sync/idbQueueStore';
-export type { IdbQueueStore } from './api/v1/sync/idbQueueStore';
 export { createLocalStorageDataAdapter } from './external/localStorageDataAdapter';
 export { parseICS, fetchAndParseICS }     from './core/icalParser';
 export { useDrag }                        from './hooks/useDrag';
