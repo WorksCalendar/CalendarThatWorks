@@ -26,7 +26,12 @@ export function safeRemoveLocalStorage(key: string): boolean {
 
 export function safeLocalStorageKeys(): string[] {
   try {
-    return Object.keys(localStorage).filter(k => k.startsWith('wc-'));
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k !== null) keys.push(k);
+    }
+    return keys;
   } catch {
     return [];
   }
