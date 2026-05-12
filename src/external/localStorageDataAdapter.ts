@@ -18,13 +18,19 @@ export function createLocalStorageDataAdapter({ key = 'works-calendar:external-e
   };
 }
 
-function readEvents(key: string) {
+function readEvents(key: string): Record<string, unknown>[] {
   try {
     const raw = safeGetLocalStorage(key);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as Record<string, unknown>[];
+  } catch (err) {
+    // Warn so developers notice localStorage corruption. Returning [] here is
+    // intentionally conservative — we do NOT write over the corrupted entry
+    // just because we couldn't parse it; the next submitEvent call will still
+    // attempt to write (which is correct), but at least the loss is surfaced.
+    console.warn('[works-calendar] localStorageDataAdapter: could not parse stored events; treating as empty.', err);
     return [];
   }
 }

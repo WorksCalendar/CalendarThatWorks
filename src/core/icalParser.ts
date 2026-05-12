@@ -30,17 +30,18 @@ function unfold(text: string): string {
   return text.replace(/\r?\n[ \t]/g, '');
 }
 
-/** Parse an ICS date/datetime string → Date (local). */
+/** Parse an ICS date/datetime string → Date (UTC midnight for date-only, UTC or local for datetime). */
 function parseICSDate(str: string | null | undefined): Date | null {
   if (!str) return null;
   const s = str.trim();
   if (s.length === 8) {
-    // DATE: YYYYMMDD — treat as local midnight
-    return new Date(
+    // DATE: YYYYMMDD — treat as UTC midnight so dayKey() comparisons are
+    // timezone-consistent whether the counterpart is a local or UTC datetime.
+    return new Date(Date.UTC(
       parseInt(s.slice(0, 4), 10),
       parseInt(s.slice(4, 6), 10) - 1,
       parseInt(s.slice(6, 8), 10),
-    );
+    ));
   }
   // DATETIME: YYYYMMDDTHHmmss[Z]
   const y  = parseInt(s.slice(0, 4), 10);
@@ -77,9 +78,16 @@ function parseRRule(str: string): Record<string, string> {
   return rule;
 }
 
-/** Convert a Date to a simple day-key for deduplication. */
+/**
+ * UTC-based day-key for EXDATE deduplication.
+ *
+ * Using UTC methods ensures an EXDATE stored as "20241201T000000Z" and a
+ * DTSTART stored as "20241201" (now parsed as UTC midnight) both produce the
+ * same key. Local-time methods would produce a one-day mismatch in negative-
+ * UTC-offset timezones, causing excluded occurrences to silently reappear.
+ */
 function dayKey(dt: Date): string {
-  return `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+  return `${dt.getUTCFullYear()}-${dt.getUTCMonth() + 1}-${dt.getUTCDate()}`;
 }
 
 // ─── RRULE expansion ───────────────────────────────────────────────────────

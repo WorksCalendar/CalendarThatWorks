@@ -78,8 +78,14 @@ function _matchDateRange(item: FilterItem, range: { start?: Date; end?: Date } |
   if (!start && !end) return true;
   const rangeStart = start ? startOfDay(start) : new Date(0);
   const rangeEnd   = end   ? endOfDay(end)     : new Date(8640000000000000);
-  const evStart    = item['start'];
-  const evEnd      = item['end'] ?? item['start'];
+  // Guard: evStart/evEnd must be valid Dates before passing to isWithinInterval.
+  // Unnormalized events may have ISO strings or undefined; coerce to Date and
+  // validate to prevent isWithinInterval from throwing or silently returning false.
+  const rawStart = item['start'];
+  const rawEnd   = item['end'] ?? item['start'];
+  const evStart  = rawStart instanceof Date ? rawStart : new Date(rawStart);
+  const evEnd    = rawEnd   instanceof Date ? rawEnd   : new Date(rawEnd);
+  if (isNaN(evStart.getTime()) || isNaN(evEnd.getTime())) return false;
   return (
     isWithinInterval(evStart, { start: rangeStart, end: rangeEnd }) ||
     isWithinInterval(evEnd,   { start: rangeStart, end: rangeEnd }) ||
@@ -93,8 +99,12 @@ function _matchSearch(item: FilterItem, query: string | null | undefined): boole
   if (item['title']?.toLowerCase().includes(q))    return true;
   if (item['resource']?.toLowerCase().includes(q)) return true;
   if (item['category']?.toLowerCase().includes(q)) return true;
-  if (item['meta']) {
-    return Object.values(item['meta']).some(v => String(v).toLowerCase().includes(q));
+  // Guard: meta must be a plain object; a truthy primitive (string, number)
+  // would cause Object.values() to iterate characters / return empty, silently
+  // excluding events that actually match the search query via their meta.
+  if (item['meta'] !== null && item['meta'] !== undefined && typeof item['meta'] === 'object') {
+    return Object.values(item['meta'] as Record<string, unknown>)
+      .some(v => v !== null && v !== undefined && String(v).toLowerCase().includes(q));
   }
   return false;
 }

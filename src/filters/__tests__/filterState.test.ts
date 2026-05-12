@@ -2,7 +2,7 @@
  * filterState unit tests — isEmptyFilterValue, clearFilterValue,
  * createInitialFilters, buildActiveFilterPills.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   isEmptyFilterValue,
   clearFilterValue,
@@ -225,6 +225,58 @@ describe('buildActiveFilterPills', () => {
   it('select with null value produces no pill', () => {
     const schema = [{ key: 'priority', label: 'Priority', type: 'select' }];
     expect(buildActiveFilterPills({ priority: null }, schema)).toHaveLength(0);
+  });
+});
+
+// ── P2 hardening: pillLabel uncaught exception (Fix 16) ───────────────────────
+
+describe('buildActiveFilterPills — pillLabel throws (Fix 16)', () => {
+  it('falls back to String(value) and emits console.warn when pillLabel throws', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const schema = [{
+      key: 'status', label: 'Status', type: 'multi-select',
+      pillLabel: (_v: unknown) => { throw new Error('label exploded'); },
+    }];
+    const pills = buildActiveFilterPills({ status: new Set(['open']) }, schema);
+
+    expect(pills).toHaveLength(1);
+    expect(pills[0]!.displayValue).toBe('open'); // String(rawValue) fallback
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0]![0]).toContain('[works-calendar]');
+
+    warnSpy.mockRestore();
+  });
+
+  it('does not crash when pillLabel is an async function that throws synchronously', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const schema = [{
+      key: 'tag', label: 'Tag', type: 'select',
+      pillLabel: (_v: unknown) => { throw new TypeError('sync-throw'); },
+    }];
+    expect(() => buildActiveFilterPills({ tag: 'urgent' }, schema)).not.toThrow();
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+});
+
+describe('buildFilterSummary — pillLabel throws (Fix 16)', () => {
+  it('falls back to String(value) when pillLabel throws inside buildFilterSummary', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const schema = [{
+      key: 'categories', label: 'Category', type: 'multi-select',
+      pillLabel: (_v: unknown) => { throw new Error('boom'); },
+    }];
+    const result = buildFilterSummary({ categories: ['Meeting'] }, schema);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.displayValues).toEqual(['Meeting']); // String fallback
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
   });
 });
 
