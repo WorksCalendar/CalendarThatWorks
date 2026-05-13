@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 import type { NormalizedEvent } from './events';
 import type { EventStatus, EventLifecycleState } from './events';
 import type { EventVisualPriority } from './view';
+import type { FilterField } from '../filters/filterSchema';
+import type { WorksCalendarConfig } from '../WorksCalendar.types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- transitional shared shape: consumers (ConfigPanel, CalendarModals) index untyped nested config fields; tightening this requires a deeper refactor of those consumers' config-shape inference.
-export type AnyRecord = Record<string, any>;
+export type { WorksCalendarConfig };
 
 /**
  * Loose callback prop type used by ConfigPanelProps for handler props that
@@ -54,7 +55,9 @@ export type CalendarContextValue = {
   displayTimezone?: string | undefined;
 };
 
-export type UpdateConfig = (updater: (current: AnyRecord) => AnyRecord) => void;
+export type UpdateConfig = (
+  updater: (current: WorksCalendarConfig) => WorksCalendarConfig,
+) => void;
 
 export type SavedViewFilters = Record<string, unknown>;
 
@@ -121,11 +124,11 @@ export type ConfigPanelTabId =
   | 'requestForm';
 
 export interface ConfigPanelProps {
-  config: AnyRecord;
+  config: WorksCalendarConfig;
   categories: string[];
   resources: string[];
-  schema: AnyRecord;
-  items: AnyRecord[];
+  schema: readonly FilterField[];
+  items: NormalizedEvent[];
   onUpdate: UpdateConfig;
   onClose: () => void;
   onSaveView?: SaveViewHandler | undefined;
