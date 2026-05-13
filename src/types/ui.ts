@@ -4,19 +4,9 @@ import type { EventStatus, EventLifecycleState } from './events';
 import type { EventVisualPriority } from './view';
 import type { FilterField } from '../filters/filterSchema';
 import type { WorksCalendarConfig } from '../WorksCalendar.types';
+import type { EmployeeId, EmployeeRecord } from '../WorksCalendar.types';
 
 export type { WorksCalendarConfig };
-
-/**
- * Loose callback prop type used by ConfigPanelProps for handler props that
- * concrete callers may pass with a variety of concrete signatures
- * (e.g. (member: EmployeeRecord) => void, (id: string) => void). The
- * variance-tolerant signature avoids forcing every host to match a single
- * shape; the targeted disable is the smallest cost to keep the public prop
- * surface backward-compatible.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional permissive callable for transitional public prop surface
-export type LooseHandler = (...args: any[]) => void;
 
 // ─── Permissions ──────────────────────────────────────────────────────────────
 
@@ -92,12 +82,11 @@ export type SavedViewUpdateHandler = (
 ) => void;
 
 export type SourceDraft = {
-  id?: string | undefined;
+  id?: string;
   label?: string | undefined;
   enabled?: boolean | undefined;
-  type?: string | undefined;
+  type?: string;
   url?: string | undefined;
-  [k: string]: unknown;
 };
 
 export type ScheduleTemplateDraft = {
@@ -140,16 +129,16 @@ export interface ConfigPanelProps {
   /** True while iCal feeds are fetching; surfaced in SourcePanel as a
    *  small "Syncing…" affordance next to the iCal Feeds heading. */
   isFetchingFeeds?: boolean | undefined;
-  onAddSource?: LooseHandler | undefined;
-  onRemoveSource?: LooseHandler | undefined;
-  onToggleSource?: LooseHandler | undefined;
-  onUpdateSource?: LooseHandler | undefined;
+  onAddSource?: ((source: SourceDraft) => void) | undefined;
+  onRemoveSource?: ((id: string) => void) | undefined;
+  onToggleSource?: ((id: string) => void) | undefined;
+  onUpdateSource?: ((id: string, patch: SourceDraft) => void) | undefined;
   scheduleTemplates?: ScheduleTemplateDraft[] | undefined;
-  onCreateScheduleTemplate?: LooseHandler | undefined;
-  onDeleteScheduleTemplate?: LooseHandler | undefined;
+  onCreateScheduleTemplate?: ((template: ScheduleTemplateDraft) => void | Promise<void>) | undefined;
+  onDeleteScheduleTemplate?: ((templateId: string) => void | Promise<void>) | undefined;
   scheduleTemplateError?: string | null | undefined;
-  onEmployeeAdd?: LooseHandler | undefined;
-  onEmployeeDelete?: LooseHandler | undefined;
+  onEmployeeAdd?: ((member: EmployeeRecord) => void) | undefined;
+  onEmployeeDelete?: ((employeeId: EmployeeId) => void) | undefined;
   initialTab?: string | undefined;
   initialSmartViewEditId?: string | null | undefined;
   calendarId?: string | undefined;
