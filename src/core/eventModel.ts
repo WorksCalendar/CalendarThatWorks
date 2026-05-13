@@ -41,10 +41,19 @@ function hashCategory(s: string): number {
   return h >>> 0;
 }
 
+// Bucket count is much wider than the curated palette so a small set of
+// distinct categories almost never collides on the same palette color. The
+// remainder spills into a golden-angle hue, giving ~360 visually distinct
+// fallback colors without sharing state.
+const PALETTE_BUCKETS = 64;
+
 function categoryColor(cat: string | null | undefined): string {
   if (!cat) return CATEGORY_COLORS[0]!;
   const h = hashCategory(cat);
-  return CATEGORY_COLORS[h % CATEGORY_COLORS.length]!;
+  const bucket = h % PALETTE_BUCKETS;
+  if (bucket < CATEGORY_COLORS.length) return CATEGORY_COLORS[bucket]!;
+  const hue = Math.round((h * 137.508) % 360);
+  return `hsl(${hue}, 62%, 45%)`;
 }
 
 /**

@@ -105,6 +105,20 @@ describe('normalizeEvent', () => {
     expect(b1).toBe(b2);
   });
 
+  it('does not collapse all categories into the 8-color palette', () => {
+    // Issue #652 follow-up: bucket count is wider than the palette so most
+    // categories fall through to an HSL hue. If a regression narrowed the
+    // bucket back to the palette size, every color would start with "#".
+    const samples = Array.from({ length: 200 }, (_, i) => `bucket-test-${i}`);
+    const colors = samples.map(c => normalizeEvent(raw({ category: c })).color);
+    const paletteHits = colors.filter(c => c.startsWith('#')).length;
+    const hslHits = colors.filter(c => c.startsWith('hsl')).length;
+    expect(paletteHits).toBeLessThan(samples.length / 2);
+    expect(hslHits).toBeGreaterThan(samples.length / 2);
+    // And the HSL bucket should itself produce many distinct hues.
+    expect(new Set(colors.filter(c => c.startsWith('hsl'))).size).toBeGreaterThan(20);
+  });
+
   it('defaults status to "confirmed"', () => {
     expect(normalizeEvent(raw()).status).toBe('confirmed');
   });
