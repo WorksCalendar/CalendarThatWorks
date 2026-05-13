@@ -7,8 +7,14 @@ import { isLifecycleState } from '../types/events';
 import { lifecycleFromApprovalStage } from './approvals/lifecycleFromApprovalStage';
 import type { ApprovalStage } from '../types/assets';
 
-let _idCounter = 0;
-function uid() { return `wc-${++_idCounter}`; }
+function uid(): string {
+  const g = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (g?.randomUUID) return `wc-${g.randomUUID()}`;
+  // Fallback for environments without crypto.randomUUID (very old browsers,
+  // Node < 14.17). Not cryptographically strong, but collision-resistant enough
+  // for client-generated event IDs.
+  return `wc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 /** Parse anything into a Date (or null). */
 function toDate(val: unknown): Date | null {

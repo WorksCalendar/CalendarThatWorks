@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * filterEngine.js — schema-driven, chainable event filter.
  *
@@ -12,6 +11,7 @@
  */
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DEFAULT_FILTER_SCHEMA } from './filterSchema';
+import type { FilterField, FilterFieldType } from './filterSchema';
 import { isEmptyFilterValue }    from './filterState';
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -24,16 +24,17 @@ import { isEmptyFilterValue }    from './filterState';
  * @param [schema]
  * @returns {object[]}
  */
-type FilterItem = Record<string, any>;
-type FilterState = Record<string, any>;
+type FilterItem = Record<string, unknown>;
+type FilterState = Record<string, unknown>;
 
-export function applyFilters<T extends FilterItem = FilterItem>(
+export function applyFilters<T extends object>(
   items: T[],
   filters: FilterState = {},
-  schema: any[] = DEFAULT_FILTER_SCHEMA,
+  schema: readonly FilterField[] = DEFAULT_FILTER_SCHEMA,
 ): T[] {
-  return items.filter((item: T) =>
-    schema.every(field => {
+  return items.filter((item: T) => {
+    const itemRecord = item as Record<string, unknown>;
+    return schema.every(field => {
       const value = filters[field.key];
       if (isEmptyFilterValue(value)) return true;
 
@@ -42,22 +43,24 @@ export function applyFilters<T extends FilterItem = FilterItem>(
 
       // Built-in type dispatch
       if (field.type === 'text' || field.key === 'search') {
-        return _matchSearch(item, value);
+        return _matchSearch(itemRecord, typeof value === 'string' ? value : value == null ? null : String(value));
       }
       if (field.type === 'date-range' || field.key === 'dateRange') {
-        return _matchDateRange(item, value);
+        return _matchDateRange(itemRecord, value as { start?: Date; end?: Date } | null | undefined);
       }
-      return _defaultMatch(item[field.key], value, field.type);
-    }),
-  );
+      return _defaultMatch(itemRecord[field.key], value, field.type);
+    });
+  });
 }
 
 // ── Built-in matching helpers ─────────────────────────────────────────────────
 
-function _defaultMatch(itemValue: unknown, filterValue: unknown, fieldType: string): boolean {
+function _defaultMatch(itemValue: unknown, filterValue: unknown, fieldType: FilterFieldType): boolean {
   switch (fieldType) {
     case 'multi-select': {
-      const set = filterValue instanceof Set ? filterValue : new Set((filterValue as Iterable<unknown>) ?? []);
+      const set = filterValue instanceof Set
+        ? (filterValue as Set<unknown>)
+        : new Set<unknown>(isIterable(filterValue) ? filterValue : []);
       return set.has(itemValue);
     }
     case 'select':
@@ -72,6 +75,12 @@ function _defaultMatch(itemValue: unknown, filterValue: unknown, fieldType: stri
   }
 }
 
+function isIterable(value: unknown): value is Iterable<unknown> {
+  return value != null
+    && typeof value === 'object'
+    && Symbol.iterator in (value as object);
+}
+
 function _matchDateRange(item: FilterItem, range: { start?: Date; end?: Date } | null | undefined): boolean {
   if (!range) return true;
   const { start, end } = range;
@@ -84,8 +93,8 @@ function _matchDateRange(item: FilterItem, range: { start?: Date; end?: Date } |
   // cause null-dated events to incorrectly match any filter ending after 1970-01-01).
   const rawStart = item['start'];
   const rawEnd   = item['end'] ?? item['start'];
-  const evStart  = rawStart instanceof Date ? rawStart : rawStart != null ? new Date(rawStart) : new Date(NaN);
-  const evEnd    = rawEnd   instanceof Date ? rawEnd   : rawEnd   != null ? new Date(rawEnd)   : new Date(NaN);
+  const evStart  = toDateOrNaN(rawStart);
+  const evEnd    = toDateOrNaN(rawEnd);
   if (isNaN(evStart.getTime()) || isNaN(evEnd.getTime())) return false;
   return (
     isWithinInterval(evStart, { start: rangeStart, end: rangeEnd }) ||
@@ -94,17 +103,28 @@ function _matchDateRange(item: FilterItem, range: { start?: Date; end?: Date } |
   );
 }
 
+function toDateOrNaN(value: unknown): Date {
+  if (value instanceof Date) return value;
+  if (value == null) return new Date(NaN);
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+  return new Date(NaN);
+}
+
 function _matchSearch(item: FilterItem, query: string | null | undefined): boolean {
   if (!query || !query.trim()) return true;
   const q = query.toLowerCase();
-  if (item['title']?.toLowerCase().includes(q))    return true;
-  if (item['resource']?.toLowerCase().includes(q)) return true;
-  if (item['category']?.toLowerCase().includes(q)) return true;
+  const title    = item['title'];
+  const resource = item['resource'];
+  const category = item['category'];
+  if (typeof title    === 'string' && title.toLowerCase().includes(q))    return true;
+  if (typeof resource === 'string' && resource.toLowerCase().includes(q)) return true;
+  if (typeof category === 'string' && category.toLowerCase().includes(q)) return true;
   // Guard: meta must be a plain object; a truthy primitive (string, number)
   // would cause Object.values() to iterate characters / return empty, silently
   // excluding events that actually match the search query via their meta.
-  if (item['meta'] !== null && item['meta'] !== undefined && typeof item['meta'] === 'object') {
-    return Object.values(item['meta'] as Record<string, unknown>)
+  const meta = item['meta'];
+  if (meta !== null && meta !== undefined && typeof meta === 'object') {
+    return Object.values(meta as Record<string, unknown>)
       .some(v => v !== null && v !== undefined && String(v).toLowerCase().includes(q));
   }
   return false;
@@ -113,25 +133,34 @@ function _matchSearch(item: FilterItem, query: string | null | undefined): boole
 // ── Option extractors ─────────────────────────────────────────────────────────
 
 /** Extract unique sorted categories from an event list. */
-export function getCategories(events: FilterItem[]): string[] {
+export function getCategories(events: readonly object[]): string[] {
   const set = new Set<string>();
-  events.forEach((e: FilterItem) => { if (e['category']) set.add(e['category']); });
+  events.forEach(e => {
+    const cat = (e as Record<string, unknown>)['category'];
+    if (typeof cat === 'string' && cat) set.add(cat);
+  });
   return [...set].sort();
 }
 
 /** Extract unique sorted resources from an event list. */
-export function getResources(events: FilterItem[]): string[] {
+export function getResources(events: readonly object[]): string[] {
   const set = new Set<string>();
-  events.forEach((e: FilterItem) => { if (e['resource']) set.add(e['resource']); });
+  events.forEach(e => {
+    const res = (e as Record<string, unknown>)['resource'];
+    if (typeof res === 'string' && res) set.add(res);
+  });
   return [...set].sort();
 }
 
 /** Extract unique { id, label } source pairs from an event list. */
-export function getSources(events: FilterItem[]): Array<{ id: string; label: string }> {
+export function getSources(events: readonly object[]): Array<{ id: string; label: string }> {
   const map = new Map<string, { id: string; label: string }>();
-  events.forEach((e: FilterItem) => {
-    if (e['_sourceId'] && !map.has(e['_sourceId'])) {
-      map.set(e['_sourceId'], { id: e['_sourceId'], label: e['_sourceLabel'] ?? e['_sourceId'] });
+  events.forEach(e => {
+    const rec = e as Record<string, unknown>;
+    const id = rec['_sourceId'];
+    if (typeof id === 'string' && id && !map.has(id)) {
+      const label = rec['_sourceLabel'];
+      map.set(id, { id, label: typeof label === 'string' ? label : id });
     }
   });
   return [...map.values()];
