@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useSavedViews — per-calendar saved filter views with localStorage persistence.
  *
@@ -16,7 +15,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createId } from '../core/createId';
 import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
-type GroupByInput = any;
+type GroupByConfig = { field: string; label?: string; showEmpty?: boolean };
+type GroupByInput = string | string[] | GroupByConfig[] | null | undefined | unknown;
 export type SavedView = {
   id: string;
   name: string;
@@ -66,37 +66,41 @@ function isValidDate(value: unknown): boolean {
  * stripping any non-serialisable fields (e.g. getKey/getLabel functions) so
  * the value survives JSON.stringify/parse.
  */
-function sanitizeGroupBy(value: any): any {
+function sanitizeGroupBy(value: unknown): string | string[] | GroupByConfig[] | null {
   if (typeof value === 'string' && value) return value;
   if (!Array.isArray(value) || value.length === 0) return null;
 
   if (value.every(item => typeof item === 'string' && item)) {
-    return value.slice();
+    return (value as string[]).slice();
   }
 
-  const objects = value
-    .filter((item: any) => !!item && typeof item === 'object' && typeof item.field === 'string' && !!item.field)
-    .map(item => {
-      const out: { field: string; label?: string; showEmpty?: boolean } = { field: item.field };
-      if (typeof item.label === 'string') out.label = item.label;
-      if (typeof item.showEmpty === 'boolean') out.showEmpty = item.showEmpty;
-      return out;
-    });
+  const objects: GroupByConfig[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const rec = item as Record<string, unknown>;
+    const field = rec['field'];
+    if (typeof field !== 'string' || !field) continue;
+    const out: GroupByConfig = { field };
+    if (typeof rec['label'] === 'string') out.label = rec['label'];
+    if (typeof rec['showEmpty'] === 'boolean') out.showEmpty = rec['showEmpty'];
+    objects.push(out);
+  }
   return objects.length > 0 ? objects : null;
 }
 
 /** Accept SortConfig[] with serialisable fields only. */
 function sanitizeSort(value: unknown): Array<{ field: string; direction: 'asc' | 'desc' }> | null {
   if (!Array.isArray(value) || value.length === 0) return null;
-  const entries = value
-    .filter(item =>
-      item
-      && typeof item === 'object'
-      && typeof item.field === 'string'
-      && item.field
-      && (item.direction === 'asc' || item.direction === 'desc'),
-    )
-    .map(item => ({ field: item.field, direction: item.direction }));
+  const entries: Array<{ field: string; direction: 'asc' | 'desc' }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const rec = item as Record<string, unknown>;
+    const field = rec['field'];
+    const direction = rec['direction'];
+    if (typeof field !== 'string' || !field) continue;
+    if (direction !== 'asc' && direction !== 'desc') continue;
+    entries.push({ field, direction });
+  }
   return entries.length > 0 ? entries : null;
 }
 
@@ -133,7 +137,7 @@ function normalizeSavedView(view: unknown): SavedView | null {
     color:           (v['color'] as string | null | undefined) ?? null,
     view:            (v['view'] as string | null | undefined) ?? null,
     conditions:      Array.isArray(v['conditions']) ? v['conditions'] : null,
-    groupBy:         sanitizeGroupBy((v['groupBy'] as GroupByInput | undefined) ?? null),
+    groupBy:         sanitizeGroupBy(v['groupBy'] ?? null),
     sort:            sanitizeSort(v['sort']),
     sortBy:          sanitizeSort(v['sortBy']),
     zoomLevel:       sanitizeZoomLevel(v['zoomLevel']),
@@ -227,13 +231,13 @@ function persistViews(calendarId: string, views: SavedView[]): void {
  * @param {object} filters — live filter state (may contain Sets)
  * @returns {object} JSON-safe serialized filters
  */
-export function serializeFilters<T extends Record<string, unknown>>(filters: T): Record<string, any> {
+export function serializeFilters<T extends Record<string, unknown>>(filters: T): Record<string, unknown> {
   return JSON.parse(
     JSON.stringify(filters, (_key, value) => {
       if (value instanceof Set) return [...value];
       return value;
     }),
-  );
+  ) as Record<string, unknown>;
 }
 
 /**
@@ -245,10 +249,13 @@ export function serializeFilters<T extends Record<string, unknown>>(filters: T):
  * @param {import('../filters/filterSchema.js').FilterField[]} [schema]
  * @returns {object} live filter state
  */
-export function deserializeFilters(saved: Record<string, any> | null | undefined, schema?: Array<{ type: string; key: string }>): Record<string, any> {
+export function deserializeFilters(
+  saved: Record<string, unknown> | null | undefined,
+  schema?: Array<{ type: string; key: string }>,
+): Record<string, unknown> {
   if (!saved) return {};
 
-  const result: Record<string, any> = { ...saved };
+  const result: Record<string, unknown> = { ...saved };
 
   // Determine which keys should be restored as Sets
   let setKeys: string[];
@@ -260,23 +267,25 @@ export function deserializeFilters(saved: Record<string, any> | null | undefined
   }
 
   for (const key of setKeys) {
-    if (Array.isArray(result[key])) {
-      result[key] = new Set(result[key]);
+    const value = result[key];
+    if (Array.isArray(value)) {
+      result[key] = new Set(value);
     }
   }
 
   // Restore dateRange Date objects
-  if (
-    result['dateRange'] &&
-    typeof result['dateRange'] === 'object' &&
-    isValidDate(result['dateRange'].start) &&
-    isValidDate(result['dateRange'].end)
-  ) {
-    result['dateRange'] = {
-      start: new Date(result['dateRange'].start),
-      end:   new Date(result['dateRange'].end),
-    };
-  } else if (result['dateRange']) {
+  const dateRange = result['dateRange'];
+  if (dateRange && typeof dateRange === 'object' && !Array.isArray(dateRange)) {
+    const dr = dateRange as Record<string, unknown>;
+    if (isValidDate(dr['start']) && isValidDate(dr['end'])) {
+      result['dateRange'] = {
+        start: new Date(dr['start'] as string | number | Date),
+        end:   new Date(dr['end']   as string | number | Date),
+      };
+    } else {
+      result['dateRange'] = null;
+    }
+  } else if (dateRange) {
     result['dateRange'] = null;
   }
 
