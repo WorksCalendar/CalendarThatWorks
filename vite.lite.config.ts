@@ -45,10 +45,16 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       entryRoot: 'src',
-      include: ['src/index.lite.ts'],
+      include: [
+        'src/index.lite.ts',
+        // Ambient-only declarations (CSS module shims, `--*` CSSProperties,
+        // virtual: PWA register). Pure ambient — no concrete exports, so
+        // they don't duplicate anything from `dist/index.d.ts`.
+        'src/types/**/*.d.ts',
+        'src/vite-env.d.ts',
+      ],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*', 'src/test-setup.ts'],
       outDir: 'dist',
-      skipDiagnostics: true,
     }),
     rewriteLiteImportsPlugin(),
   ],
