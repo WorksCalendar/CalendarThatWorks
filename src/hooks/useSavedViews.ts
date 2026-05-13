@@ -15,8 +15,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createId } from '../core/createId';
 import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
-type GroupByConfig = { field: string; label?: string; showEmpty?: boolean };
-type GroupByInput = string | string[] | GroupByConfig[] | null | undefined | unknown;
+import type { GroupByInput } from './useNormalizedConfig';
+
+/** Serialised shape persisted on disk — function fields from GroupConfig are stripped. */
+type SerializedGroupConfig = { field: string; label?: string; showEmpty?: boolean };
+export type SortEntry = { field: string; direction: 'asc' | 'desc' };
+export type SortInput = SortEntry[] | null | undefined;
+export type CollapsedGroupsInput = Set<string> | string[] | null | undefined;
+export type ZoomLevelInput = string | null | undefined;
+export type BaseIdsInput = string[] | null | undefined;
+export type ShowAllGroupsInput = boolean | null | undefined;
 export type SavedView = {
   id: string;
   name: string;
@@ -24,9 +32,9 @@ export type SavedView = {
   color: string | null;
   view: string | null;
   conditions: unknown[] | null;
-  groupBy: string | string[] | Array<{ field: string; label?: string; showEmpty?: boolean }> | null;
-  sort: unknown[] | null;
-  sortBy: unknown[] | null;
+  groupBy: string | string[] | SerializedGroupConfig[] | null;
+  sort: SortEntry[] | null;
+  sortBy: SortEntry[] | null;
   zoomLevel: string | null;
   collapsedGroups: string[] | null;
   showAllGroups: boolean | null;
@@ -34,17 +42,17 @@ export type SavedView = {
   hiddenFromStrip: boolean;
   filters: Record<string, unknown>;
 };
-type SaveViewOptions = {
+export type SaveViewOptions = {
   color?: string | null | undefined;
   view?: string | null | undefined;
   conditions?: unknown[] | null | undefined;
-  groupBy?: unknown;
-  sort?: unknown;
-  sortBy?: unknown;
-  zoomLevel?: unknown;
-  collapsedGroups?: unknown;
-  showAllGroups?: unknown;
-  selectedBaseIds?: unknown;
+  groupBy?: GroupByInput;
+  sort?: SortInput;
+  sortBy?: SortInput;
+  zoomLevel?: ZoomLevelInput;
+  collapsedGroups?: CollapsedGroupsInput;
+  showAllGroups?: ShowAllGroupsInput;
+  selectedBaseIds?: BaseIdsInput;
 };
 
 function viewsKey(calendarId: string): string { return `wc-saved-views-${calendarId}`; }
@@ -62,28 +70,47 @@ function isValidDate(value: unknown): boolean {
 }
 
 /**
- * Accept the three GroupByInput shapes (string | string[] | GroupConfig[]),
- * stripping any non-serialisable fields (e.g. getKey/getLabel functions) so
- * the value survives JSON.stringify/parse.
+ * Accept every `GroupByInput` shape that `useNormalizedConfig` consumes:
+ *   string | GroupConfig | Array<string | GroupConfig>
+ * and reduce it to one of the three persisted forms (`string`, `string[]`,
+ * `SerializedGroupConfig[]`), stripping non-serialisable fields (e.g.
+ * `getKey`/`getLabel`) so the value survives JSON.stringify/parse. A lone
+ * `GroupConfig` is promoted to a single-element array; mixed arrays promote
+ * bare strings to `{ field }` form so no grouping levels are silently dropped.
  */
-function sanitizeGroupBy(value: unknown): string | string[] | GroupByConfig[] | null {
+function sanitizeGroupBy(value: unknown): string | string[] | SerializedGroupConfig[] | null {
   if (typeof value === 'string' && value) return value;
+
+  const toConfig = (item: unknown): SerializedGroupConfig | null => {
+    if (!item || typeof item !== 'object') return null;
+    const rec = item as Record<string, unknown>;
+    const field = rec['field'];
+    if (typeof field !== 'string' || !field) return null;
+    const out: SerializedGroupConfig = { field };
+    if (typeof rec['label'] === 'string') out.label = rec['label'];
+    if (typeof rec['showEmpty'] === 'boolean') out.showEmpty = rec['showEmpty'];
+    return out;
+  };
+
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const config = toConfig(value);
+    return config ? [config] : null;
+  }
+
   if (!Array.isArray(value) || value.length === 0) return null;
 
   if (value.every(item => typeof item === 'string' && item)) {
     return (value as string[]).slice();
   }
 
-  const objects: GroupByConfig[] = [];
+  const objects: SerializedGroupConfig[] = [];
   for (const item of value) {
-    if (!item || typeof item !== 'object') continue;
-    const rec = item as Record<string, unknown>;
-    const field = rec['field'];
-    if (typeof field !== 'string' || !field) continue;
-    const out: GroupByConfig = { field };
-    if (typeof rec['label'] === 'string') out.label = rec['label'];
-    if (typeof rec['showEmpty'] === 'boolean') out.showEmpty = rec['showEmpty'];
-    objects.push(out);
+    if (typeof item === 'string' && item) {
+      objects.push({ field: item });
+      continue;
+    }
+    const config = toConfig(item);
+    if (config) objects.push(config);
   }
   return objects.length > 0 ? objects : null;
 }
@@ -307,12 +334,12 @@ export function useSavedViews(calendarId: string): {
     viewName?: string | null,
     groupBy?: GroupByInput,
     opts?: {
-      sort?: unknown;
-      showAllGroups?: unknown;
-      sortBy?: unknown;
-      zoomLevel?: unknown;
-      collapsedGroups?: unknown;
-      selectedBaseIds?: unknown;
+      sort?: SortInput;
+      showAllGroups?: ShowAllGroupsInput;
+      sortBy?: SortInput;
+      zoomLevel?: ZoomLevelInput;
+      collapsedGroups?: CollapsedGroupsInput;
+      selectedBaseIds?: BaseIdsInput;
     },
   ) => void;
   deleteView: (id: string) => void;
@@ -368,12 +395,12 @@ export function useSavedViews(calendarId: string): {
   }, []);
 
   const resaveView = useCallback((id: string, filters: Record<string, unknown>, viewName?: string | null, groupBy?: GroupByInput, opts: {
-    sort?: unknown
-    showAllGroups?: unknown
-    sortBy?: unknown
-    zoomLevel?: unknown
-    collapsedGroups?: unknown
-    selectedBaseIds?: unknown
+    sort?: SortInput
+    showAllGroups?: ShowAllGroupsInput
+    sortBy?: SortInput
+    zoomLevel?: ZoomLevelInput
+    collapsedGroups?: CollapsedGroupsInput
+    selectedBaseIds?: BaseIdsInput
   } = {}) => {
     const { sort, showAllGroups, sortBy, zoomLevel, collapsedGroups, selectedBaseIds } = opts || {};
     setViews(prev => prev.map(v =>
