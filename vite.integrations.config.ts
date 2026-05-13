@@ -59,10 +59,18 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       entryRoot: 'src',
-      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx', 'src/api/**/*.ts'],
+      include: [
+        'src/integrations/**/*.ts',
+        'src/integrations/**/*.tsx',
+        'src/api/**/*.ts',
+        // Ambient-only declarations (CSS module shims, `--*` CSSProperties,
+        // virtual: PWA register). Pure ambient — no concrete exports, so
+        // they don't duplicate anything from `dist/index.d.ts`.
+        'src/types/**/*.d.ts',
+        'src/vite-env.d.ts',
+      ],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*'],
       outDir: 'dist',
-      skipDiagnostics: true,
       // No rollupTypes here — the subpath module imports types from
       // the main library (`../core/pools/locationAdapters`), and
       // rolling them up duplicates declarations already shipped in
