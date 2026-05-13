@@ -94,8 +94,8 @@ interface LegendSource {
 `CalendarLegend` is exported as a named component for use outside the built-in sidebar:
 
 ```ts
-import { CalendarLegend } from 'calendarthatworks';
-import type { LegendSource } from 'calendarthatworks';
+import { CalendarLegend } from 'works-calendar';
+import type { LegendSource } from 'works-calendar';
 ```
 
 ### Props
@@ -113,7 +113,7 @@ import type { LegendSource } from 'calendarthatworks';
 ### Using `showCalendarLegend` (simplest)
 
 ```tsx
-import { WorksCalendar } from 'calendarthatworks';
+import { WorksCalendar } from 'works-calendar';
 
 export default function App() {
   return (
@@ -134,8 +134,8 @@ export default function App() {
 
 ```tsx
 import { useState } from 'react';
-import { WorksCalendar, CalendarLegend } from 'calendarthatworks';
-import type { LegendSource } from 'calendarthatworks';
+import { WorksCalendar, CalendarLegend } from 'works-calendar';
+import type { LegendSource } from 'works-calendar';
 
 const initialSources: LegendSource[] = [
   { id: 'work',     label: 'Work',     color: '#3b82f6', enabled: true },

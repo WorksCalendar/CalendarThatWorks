@@ -76,8 +76,8 @@ All-day events have no meaningful fire time, so their reminders are never schedu
 ## Working example
 
 ```tsx
-import { WorksCalendar } from 'calendarthatworks';
-import type { WorksCalendarEvent, ReminderDef } from 'calendarthatworks';
+import { WorksCalendar } from 'works-calendar';
+import type { WorksCalendarEvent, ReminderDef } from 'works-calendar';
 
 const events: WorksCalendarEvent[] = [
   {
@@ -112,7 +112,7 @@ export default function App() {
 `useReminders` is exported for cases where you manage your own event list outside `<WorksCalendar>`:
 
 ```ts
-import { useReminders } from 'calendarthatworks/hooks';
+import { useReminders } from 'works-calendar';
 
 useReminders(normalizedEvents, onReminder);
 ```
