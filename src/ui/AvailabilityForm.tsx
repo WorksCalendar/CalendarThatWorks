@@ -123,8 +123,11 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const toDate = (v: Date | string | null | undefined): Date | null => {
     if (v instanceof Date) return v;
     if (typeof v === 'string') {
-      const d = new Date(v);
-      return Number.isNaN(d.getTime()) ? null : d;
+      // parseISO preserves local calendar date for date-only strings
+      // ('2026-05-01'); `new Date(v)` would treat them as UTC midnight and
+      // render as the previous day in negative offsets.
+      const d = parseISO(v);
+      return isValid(d) ? d : null;
     }
     return null;
   };
