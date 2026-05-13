@@ -18,7 +18,7 @@ Set `showOfflineIndicator={true}` to enable a slide-in banner that appears when 
 `useNetworkStatus` is exported as a standalone hook for use anywhere in your application:
 
 ```ts
-import { useNetworkStatus } from 'calendarthatworks/hooks';
+import { useNetworkStatus } from 'works-calendar';
 
 const { isOnline, isInitializing } = useNetworkStatus();
 ```
@@ -56,7 +56,7 @@ return null;
 `OfflineIndicator` is exported as a named component for use outside `<WorksCalendar>`:
 
 ```ts
-import { OfflineIndicator } from 'calendarthatworks';
+import { OfflineIndicator } from 'works-calendar';
 ```
 
 It calls `useNetworkStatus` internally and renders a `role="status"` / `aria-live="polite"` banner when offline. No props are required.
@@ -102,7 +102,7 @@ The calendar's offline indicator and your sync layer react to the same browser e
 ## Working example
 
 ```tsx
-import { WorksCalendar, OfflineIndicator, useNetworkStatus } from 'calendarthatworks';
+import { WorksCalendar, OfflineIndicator, useNetworkStatus } from 'works-calendar';
 
 // Option A: built-in indicator inside the calendar
 export function SimpleExample() {
