@@ -17,6 +17,11 @@ import { readFileSync, writeFileSync } from 'fs';
  * that aren't shipped per-file from this build. Rewrite each relative
  * import in `dist/index.lite.d.ts` to the package root so TypeScript
  * resolves the types via the main entry's rolled-up declarations.
+ *
+ * The rolled-up `dist/index.d.ts` has no `default` export — every
+ * symbol that the source re-exports via `export { default as Foo }`
+ * surfaces as a named export there. Strip the `default as` aliasing
+ * during the rewrite so the lite re-exports resolve to those names.
  */
 const rewriteLiteImportsPlugin = (): Plugin => ({
   name: 'rewrite-lite-types',
@@ -24,8 +29,11 @@ const rewriteLiteImportsPlugin = (): Plugin => ({
     const file = 'dist/index.lite.d.ts';
     const before = readFileSync(file, 'utf8');
     const after = before.replace(
-      /(from\s+|import\s*\(\s*)(['"])(\.\/?[^'"]+)\2/g,
-      (_match, prefix, quote) => `${prefix}${quote}works-calendar${quote}`,
+      /(export|import)(\s+type)?\s*\{([^}]*)\}\s*from\s*(['"])(\.[^'"]*)\4/g,
+      (_match, kind, typeMod, names, quote) => {
+        const cleaned = names.replace(/\bdefault\s+as\s+/g, '');
+        return `${kind}${typeMod ?? ''} {${cleaned}} from ${quote}works-calendar${quote}`;
+      },
     );
     if (after !== before) writeFileSync(file, after, 'utf8');
   },
