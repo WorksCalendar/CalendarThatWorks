@@ -219,6 +219,62 @@ Data flow from the browser's `navigator.onLine` / `online` / `offline` events th
 - The banner is purely presentational — no write operations are blocked or queued by this component. It relies on the host's data adapter to handle retry transparently.
 - Event listeners are removed on unmount so subscriptions don't accumulate across React strict-mode double-mounts.
 
+### 3k — EventBus: Booking Lifecycle Pub-Sub
+
+Data flow from a `CalendarEngine` approval-stage mutation through `channelForApprovalTransition`, `EventBus.emit`, and out to host subscribers (Slack, webhooks, email).
+
+![3k — EventBus: Booking Lifecycle Pub-Sub](diagrams/level3k.png)
+
+**Key invariants**
+- `channelForApprovalTransition` returns `null` for same-stage transitions and non-lifecycle tiers (e.g. `pending_higher`); the engine emits at most one channel per `applyMutation` call.
+- Handlers are dispatched via `queueMicrotask` — emission never re-enters the caller's call stack, satisfying the async-by-default contract expected by Slack/webhook integrations.
+- The handler set is snapshotted at emit time: mid-dispatch unsubscribes do not skip siblings, and mid-dispatch subscribes do not receive the current emission.
+- Errors in one handler are caught individually and routed to `onError`; sibling handlers always run.
+
+---
+
+### 3l — Booking Holds: Acquire / Conflict Check / Release Cycle
+
+Data flow from `useBookingHold` (React hook) through `HoldRegistry.acquire`, conflict detection, and eventual `release` on unmount or submit.
+
+![3l — Booking Holds: Acquire / Conflict Check / Release Cycle](diagrams/level3l.png)
+
+**Key invariants**
+- Holds are in-memory only (`byId` Map inside `createHoldRegistry`); they are not persisted to engine state or localStorage.
+- Expiry is lazy: a hold past `expiresAt` is silently excluded on every read without mutating the Map. Call `prune()` to free memory.
+- Re-acquisition by the **same** holder on an overlapping window replaces the existing entry (TTL refresh + window swap) rather than returning a conflict error.
+- `findBlockingHold` is the integration point for the conflict engine's `hold-conflict` rule — it receives a snapshot of active holds and returns the first other-holder overlap.
+
+---
+
+### 3m — Saved Views: Serialization and Restore
+
+Data flow from live filter state (with `Set` values) through `serializeFilters`, localStorage persistence, migration, and `deserializeFilters` back to live state.
+
+![3m — Saved Views: Serialization and Restore](diagrams/level3m.png)
+
+**Key invariants**
+- `serializeFilters` uses a `JSON.stringify` replacer to convert every `Set` to `[...value]`; this makes the output safe for `localStorage` without requiring a schema.
+- `deserializeFilters` restores `Set` for multi-select fields. When a `filterSchema` is provided the set of field keys comes from schema entries with `type === 'multi-select'`; otherwise it falls back to the hardcoded list `['categories', 'resources', 'sources']`.
+- Storage is versioned (current: `v4`). `normalizeSavedView` fills missing fields added in later versions so older payloads load without errors.
+- On first load with no `wc-saved-views-*` key, `migrateProfiles` automatically imports any legacy `wc-profiles-*` entries in a one-time migration.
+
+---
+
+### 3n — FocusChips: Chip Definition → Active State → visibleEvents Narrowing
+
+Data flow from `FocusChipDef` array through the `FocusChips` component, atomic category-set toggling, and downstream filter narrowing in `useCalendarDataPipeline`.
+
+![3n — FocusChips: Chip Definition → Active State → visibleEvents Narrowing](diagrams/level3n.png)
+
+**Key invariants**
+- A chip is "active" only when **every** category in its `categories` array is present in `activeCategories` (all-or-nothing, not partial).
+- Toggling treats the chip as an **atomic unit**: clicking an inactive or partially-active chip adds all of its categories; clicking a fully-active chip removes all of them.
+- When no chips are active (`activeCategories` is empty or undefined), all events pass the filter — normal calendar behavior is preserved.
+- FocusChips operate exclusively on the `categories` filter key. They are composable with other active filters (date range, search, resource) because `applyFilters` evaluates all filter keys independently.
+
+---
+
 All six audit issues resolved across three sprints. See `CHANGELOG [0.7.0]` for details.
 
 | # | Issue | Sprint | Status |
