@@ -79,6 +79,7 @@
     "type-check:watch": "tsc --noEmit --project tsconfig.build.json --watch",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "package:check": "attw --pack .",
     "ci": "npm run type-check && npm run lint && npm run test",
     "prepare": "husky",
     "prepublishOnly": "npm run ci && npm run build"
@@ -111,6 +112,7 @@
     "fuse.js": "^7.3.0"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
