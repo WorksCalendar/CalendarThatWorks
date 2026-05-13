@@ -8,6 +8,7 @@ import {
   exportToExcel,
   useSavedViews,
   useBookingHold,
+  createHoldRegistry,
 } from '../src/index';
 import type {
   WorksCalendarEvent,
@@ -78,27 +79,23 @@ const INITIAL_POOLS: ResourcePool[] = [
 
 // ── Booking holds demo ─────────────────────────────────────────────────────
 
+const holdRegistry = createHoldRegistry();
+
 function HoldDemo() {
-  const { acquireHold, releaseHold, heldSlot } = useBookingHold({ holdDurationMs: 30_000 });
+  const [active, setActive] = React.useState(false);
+  const holdState = useBookingHold(holdRegistry, {
+    resourceId: 'alice',
+    start: new Date(2026, 4, 20, 10),
+    end:   new Date(2026, 4, 20, 11),
+    holderId: 'demo-user',
+    enabled: active,
+  });
   return (
     <div style={{ padding: '8px 16px', background: '#f0f9ff', borderRadius: 8, marginBottom: 16 }}>
       <strong>Booking hold:</strong>{' '}
-      {heldSlot
-        ? `Holding ${heldSlot.start.toLocaleTimeString()} – ${heldSlot.end.toLocaleTimeString()} `
-        : 'No active hold. '}
-      <button
-        onClick={() =>
-          acquireHold({
-            start: new Date(2026, 4, 20, 10),
-            end:   new Date(2026, 4, 20, 11),
-            resourceId: 'alice',
-          })
-        }
-        disabled={!!heldSlot}
-      >
-        Acquire hold
-      </button>{' '}
-      <button onClick={releaseHold} disabled={!heldSlot}>
+      {holdState.status === 'held' ? 'Hold active on Alice 10–11 AM. ' : 'No active hold. '}
+      <button onClick={() => setActive(true)} disabled={active}>Acquire hold</button>{' '}
+      <button onClick={() => { holdState.release?.(); setActive(false); }} disabled={!active}>
         Release
       </button>
     </div>
@@ -108,20 +105,20 @@ function HoldDemo() {
 // ── Saved-views demo ───────────────────────────────────────────────────────
 
 function SavedViewsBar() {
-  const { savedViews, saveView, applyView, deleteView } = useSavedViews('demo-calendar');
+  const { views, saveView, deleteView } = useSavedViews('demo-calendar');
   return (
     <div style={{ padding: '8px 16px', background: '#fefce8', borderRadius: 8, marginBottom: 16 }}>
       <strong>Saved views:</strong>{' '}
-      {savedViews.length === 0 && <span>None saved yet.</span>}
-      {savedViews.map(v => (
+      {views.length === 0 && <span>None saved yet. </span>}
+      {views.map(v => (
         <span key={v.id} style={{ marginRight: 8 }}>
-          <button onClick={() => applyView(v.id)}>{v.name}</button>
+          <button>{v.name}</button>
           <button onClick={() => deleteView(v.id)} style={{ marginLeft: 2 }}>✕</button>
         </span>
       ))}
       <button
         style={{ marginLeft: 8 }}
-        onClick={() => saveView({ name: `View ${savedViews.length + 1}` })}
+        onClick={() => saveView(`View ${views.length + 1}`, {})}
       >
         Save current view
       </button>
