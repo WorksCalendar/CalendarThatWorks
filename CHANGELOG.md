@@ -7,32 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-05-13
+
+The "packaging + type-safety hardening" release. Tightens the published surface
+(ESM-only, attw-clean), purges `any` from the codebase, and lands several
+small but visible fixes (deterministic category colors, lossless saved-view
+sanitization, all-day-date timezone fix).
+
 ### Added
 
+- **`WorksCalendarConfig`** type exported from the public entries. Replaces
+  the internal `AnyRecord` alias used by `ConfigPanel` and `CalendarModals`;
+  the legacy `OwnerConfig` name is kept as a deprecated alias.
+- **`SavedViewRecord`** type re-exported from `useSavedViewsManager` so
+  `useCalendarWorkspace`'s declaration emit names it cleanly (fixes TS4058
+  in downstream type-checks).
+- **Structured `useSavedViews` input types** — `SaveViewOptions` now uses
+  named `GroupByInput` / `SortInput` / `CollapsedGroupsInput` /
+  `ZoomLevelInput` / `BaseIdsInput` / `ShowAllGroupsInput` aliases. Callers
+  get compile-time signal for the shapes the sanitizers accept; the
+  sanitizers themselves stay `unknown`-tolerant at the storage boundary.
 - `npm run package:check` script using `@arethetypeswrong/cli` to verify the
   `exports` map and catch type-resolution regressions before publish. The
   check now runs in CI and as part of `prepublishOnly`.
 - `engines.node` set to `>=18` to document the supported runtime range.
+- CI: unit tests (vitest) and Playwright e2e now run on every PR. The
+  previous pipeline only ran type-check and lint despite 4 300+ tests
+  existing in the repo.
 
 ### Changed
 
-- **ESM-only distribution.** The package now ships only ES modules. The
-  `require` condition and UMD bundles (`works-calendar.umd.js`,
+- **BREAKING — ESM-only distribution.** The package now ships only ES
+  modules. The `require` condition and UMD bundles (`works-calendar.umd.js`,
   `works-calendar-lite.umd.js`) have been removed from `package.json#exports`
   and the Vite build configs. CommonJS consumers should switch to dynamic
   `import()`. Node 18+ has supported ESM natively for several releases; the
   README already advertised the library as ESM-only.
+- **BREAKING — `ConfigPanelProps` handler signatures tightened.** Every
+  callback previously typed as `LooseHandler` (`(...args: any[]) => void`)
+  now carries a precise signature: source handlers take `SourceDraft` /
+  `(id, patch)`, schedule-template handlers take `ScheduleTemplateDraft`
+  and return `void | Promise<void>`, employee handlers take `EmployeeRecord`
+  / `EmployeeId`. Hosts whose handlers were already shaped correctly need
+  no change; mis-shaped handlers will now fail at the type boundary.
 - Subpath type declarations (`./integrations/*`, `./api/v1/server`, `./lite`)
   now rewrite cross-tree imports to the package root and add explicit `.js`
   extensions to relative specifiers so they resolve cleanly under `node16`
-  and bundler module-resolution modes.
+  and bundler module-resolution modes. The lite entry's `default as` re-
+  exports are also rewritten so consumers don't hit TS2305 on `ScheduleView`,
+  `EventStatusBadge`, `CalendarErrorBoundary`, `CalendarExternalForm`, and
+  `FocusChips`.
 - CSS-only entrypoints (`./styles`, `./styles/family/*`, etc.) now use the
   `{ "default": "./dist/<file>.css" }` form for clarity. They are excluded
   from `attw` since they intentionally resolve to `.css` rather than JS.
+- **`any` purged across `src/`.** Replaced with `unknown`, real domain types,
+  or `Record<string, unknown>`; removed every file-level
+  `eslint-disable @typescript-eslint/no-explicit-any` banner. Three narrow
+  `eslint-disable-next-line` disables remain, each documented inline.
+  Includes typing the filter / saved-view layer (`filterEngine`,
+  `filterSchema`, `filterState`, `conditionEngine`, `useSavedViews`)
+  end-to-end.
+- **`ScheduleView` rows are a discriminated union.** `FlatRow = TimelineRow
+  | GroupHeaderRow` keyed on `kind`; replaces the `_type: 'groupHeader'` /
+  `as any` cast pattern. Render and keyboard-navigation paths now narrow
+  safely without runtime casts.
+
+### Fixed
+
+- **Deterministic category colors.** `eventModel` now derives the palette
+  index from a pure FNV-1a hash of the category name, with the hash spread
+  across 64 buckets (first 8 hit the curated palette, the rest spill into a
+  golden-angle HSL hue). Two calendar instances on the same page render the
+  same color for the same category regardless of mount order; colors are
+  stable across reloads. Removes the cross-instance leak and test pollution
+  caused by the previous module-scoped counter, and reduces palette
+  collisions on small datasets.
+- **`useSavedViews.sanitizeGroupBy` is lossless for every `GroupByInput`
+  shape.** A single `GroupConfig` no longer collapses to `null`; bare strings
+  inside mixed `Array<string | GroupConfig>` are promoted to `{ field }` form
+  instead of being dropped. Saved views with mixed grouping shapes now
+  round-trip without losing levels.
+- **`AvailabilityForm` uses `parseISO` for date-only strings.** `new
+  Date('2026-05-01')` parsed as UTC midnight and rendered as the previous
+  day in negative offsets (US timezones); the modal would pre-fill and save
+  the wrong date for all-day availability entries. `parseISO` preserves the
+  local calendar date.
+- **Event IDs use `crypto.randomUUID()`** instead of a module-scoped counter.
+  Eliminates collisions across calendar instances on the same page and
+  removes shared module state from `eventModel`.
+- `WorksCalendar.tsx` and the entire mutation/engine hook stack now type
+  their callbacks against the public domain types — `OperationResult`,
+  `EngineOperation`, `NormalizedEvent`, `WorksCalendarConfig` — rather than
+  `any`.
+
+### Removed
+
+- **UMD bundles** (`dist/works-calendar.umd.js`,
+  `dist/works-calendar-lite.umd.js`) and the `require` export conditions.
+  The README already documented the library as ESM-only.
+- **`AnyRecord`** and **`LooseHandler`** internal type aliases.
+  `AnyRecord` is replaced by `WorksCalendarConfig` (with concrete
+  `FilterField[]` / `NormalizedEvent[]` types for `schema` / `items`);
+  `LooseHandler` is replaced by the precise handler signatures listed under
+  *Changed*. Neither alias was ever part of the public surface.
 
 ### Verified
 
-- MapLibre carve-out: `maplibre-gl` and `react-map-gl` are optional peer
+- **MapLibre carve-out**: `maplibre-gl` and `react-map-gl` are optional peer
   dependencies; `MapView` resolves them via dynamic `import()` so they stay
   out of the core ESM bundle and core type declarations. Consumers that
   don't render the map view pay zero bundle cost for the map runtime.
