@@ -1,3 +1,10 @@
+import {
+  evaluateConflicts,
+  type ConflictEvent,
+  type EngineResource,
+  type CapacityOverflowRule,
+} from "works-calendar-engine";
+
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export interface Facility {
@@ -248,39 +255,103 @@ for (const truck of TRUCKS) {
   }
 }
 
-// ── Conflicts ───────────────────────────────────────────────────────────────
+// ── Engine wire: dock occupancy as capacity-overflow ────────────────────────
+//
+// Each arrival occupies a dock for 2 hours after the truck pulls in. The
+// engine's `capacity-overflow` rule fires when more events overlap on the
+// same resource than capacity allows.
+//
+// The demo models each facility as a SINGLE shared dock (capacity = 1) so any
+// two simultaneous arrivals surface as a conflict — that's the tight visual
+// the dashboard was designed around. Facility.docks is kept for display
+// (the sidebar shows "N docks" per facility).
+
+const DOCK_HOLD_MS = 2 * 3600000;
+
+const ENGINE_RESOURCES: ReadonlyMap<string, EngineResource> = new Map(
+  Object.values(FACILITIES).map((f) => [
+    f.code,
+    { id: f.code, name: f.name, capacity: 1 } satisfies EngineResource,
+  ]),
+);
+
+const CAPACITY_RULE: CapacityOverflowRule = {
+  id: "facility-capacity",
+  type: "capacity-overflow",
+  severity: "hard",
+};
+
+interface ArrivalEvent extends ConflictEvent {
+  readonly truckId: string;
+}
+
+const ARRIVAL_EVENTS: ArrivalEvent[] = ALL_STOPS
+  .filter((s) => s.type === "arrival")
+  .map((s, i) => {
+    const start = new Date(s.time);
+    const end = new Date(start.getTime() + DOCK_HOLD_MS);
+    return {
+      id: `arr-${i}`,
+      start,
+      end,
+      resource: s.facility,
+      truckId: s.truckId,
+    };
+  });
 
 export function findConflicts(date: Date): DockConflict[] {
-  const conflicts: DockConflict[] = [];
   const dayStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const dayEnd = new Date(dayStart.getTime() + 86400000);
 
-  const byFacility: Record<string, MapStop[]> = {};
-  for (const stop of ALL_STOPS) {
-    if (stop.type !== "arrival") continue;
-    const t = new Date(stop.time);
-    if (t >= dayStart && t < dayEnd) {
-      if (!byFacility[stop.facility]) byFacility[stop.facility] = [];
-      byFacility[stop.facility].push(stop);
-    }
-  }
+  // Limit the events sent to the engine to a window that brackets the day —
+  // any arrival outside [dayStart - 2h, dayEnd] can't overlap anything inside.
+  const windowStart = new Date(dayStart.getTime() - DOCK_HOLD_MS);
+  const arrivalsInWindow = ARRIVAL_EVENTS.filter((e) => {
+    const t = (e.start as Date).getTime();
+    return t >= windowStart.getTime() && t < dayEnd.getTime();
+  });
 
-  for (const [fac, arrivals] of Object.entries(byFacility)) {
-    arrivals.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-    for (let i = 0; i < arrivals.length; i++) {
-      for (let j = i + 1; j < arrivals.length; j++) {
-        const dt = (new Date(arrivals[j].time).getTime() - new Date(arrivals[i].time).getTime()) / 3600000;
-        if (dt < 2) {
-          conflicts.push({
-            facility: fac,
-            truckA: arrivals[i].truckId,
-            truckB: arrivals[j].truckId,
-            timeA: arrivals[i].time,
-            timeB: arrivals[j].time,
-            hoursApart: Math.round(dt * 100) / 100,
-          });
-        }
-      }
+  const todayArrivals = arrivalsInWindow.filter((e) => {
+    const t = (e.start as Date).getTime();
+    return t >= dayStart.getTime() && t < dayEnd.getTime();
+  });
+
+  const seen = new Set<string>();
+  const conflicts: DockConflict[] = [];
+
+  for (const proposed of todayArrivals) {
+    const result = evaluateConflicts({
+      proposed,
+      events: arrivalsInWindow,
+      rules: [CAPACITY_RULE],
+      resources: ENGINE_RESOURCES,
+    });
+    if (result.violations.length === 0) continue;
+    // capacity-overflow doesn't name the partner, so derive it locally —
+    // the partners are the other arrivals on the same resource whose dock
+    // hold window overlaps the proposed event.
+    const ps = (proposed.start as Date).getTime();
+    const pe = (proposed.end as Date).getTime();
+    const partners = arrivalsInWindow.filter((e) => {
+      if (e.id === proposed.id || e.resource !== proposed.resource) return false;
+      const es = (e.start as Date).getTime();
+      const ee = (e.end as Date).getTime();
+      return es < pe && ee > ps;
+    });
+    for (const other of partners) {
+      const pairKey = [proposed.id, other.id].sort().join("|");
+      if (seen.has(pairKey)) continue;
+      seen.add(pairKey);
+      const tA = (proposed.start as Date).getTime();
+      const tB = (other.start as Date).getTime();
+      conflicts.push({
+        facility: proposed.resource as string,
+        truckA: proposed.truckId,
+        truckB: other.truckId,
+        timeA: (proposed.start as Date).toISOString(),
+        timeB: (other.start as Date).toISOString(),
+        hoursApart: Math.round((Math.abs(tA - tB) / 3600000) * 100) / 100,
+      });
     }
   }
   return conflicts;

@@ -28,7 +28,7 @@
     "node": ">=18"
   },
   "peerDependencies": {
-    "date-fns": "^3.6.0"
+    "date-fns": "^3.6.0 || ^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.39",
