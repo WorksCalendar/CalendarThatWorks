@@ -2,6 +2,9 @@
  * WorksCalendar — public npm exports
  */
 
+// Default theme CSS — auto-bundled by Vite into dist/style.css
+import './styles/corporate.css';
+
 // ── Versioned public schema (engine types + serialization helpers) ───────────
 export * from './api/v1/index';
 
@@ -61,8 +64,6 @@ export type {
 
 export { WorksCalendar }                  from './WorksCalendar.tsx';
 export { default as ScheduleView }        from './views/ScheduleView';
-export { default as MapView }             from './views/MapView';
-export type { MapViewProps }              from './views/MapView';
 
 export { default as MissionHoverCard, allRequirementsMet, meetsAircraftReqs } from './ui/MissionHoverCard';
 export type {
