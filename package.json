@@ -11,14 +11,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/works-calendar.es.js"
     },
-    "./integrations/asset-tracker": {
-      "types": "./dist/integrations/asset-tracker.d.ts",
-      "import": "./dist/integrations/asset-tracker.es.js"
-    },
-    "./api/v1/server": {
-      "types": "./dist/api/v1/server/index.d.ts",
-      "import": "./dist/api/v1/server/index.es.js"
-    },
     "./styles": {
       "import": "./dist/style.css",
       "default": "./dist/style.css"
