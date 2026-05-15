@@ -2,6 +2,9 @@
  * WorksCalendar — public npm exports
  */
 
+// Default theme CSS — auto-bundled by Vite into dist/style.css
+import './styles/corporate.css';
+
 // ── Versioned public schema (engine types + serialization helpers) ───────────
 export * from './api/v1/index';
 

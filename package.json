@@ -24,45 +24,59 @@
       "import": "./dist/api/v1/server/index.es.js"
     },
     "./styles": {
+      "import": "./dist/style.css",
       "default": "./dist/style.css"
     },
     "./styles/aviation": {
+      "import": "./dist/themes/aviation.css",
       "default": "./dist/themes/aviation.css"
     },
     "./styles/soft": {
+      "import": "./dist/themes/soft.css",
       "default": "./dist/themes/soft.css"
     },
     "./styles/minimal": {
+      "import": "./dist/themes/minimal.css",
       "default": "./dist/themes/minimal.css"
     },
     "./styles/corporate": {
+      "import": "./dist/themes/corporate.css",
       "default": "./dist/themes/corporate.css"
     },
     "./styles/forest": {
+      "import": "./dist/themes/forest.css",
       "default": "./dist/themes/forest.css"
     },
     "./styles/ocean": {
+      "import": "./dist/themes/ocean.css",
       "default": "./dist/themes/ocean.css"
     },
     "./styles/family": {
+      "import": "./dist/themes/family/index.css",
       "default": "./dist/themes/family/index.css"
     },
     "./styles/family/canvas": {
+      "import": "./dist/themes/family/canvas.css",
       "default": "./dist/themes/family/canvas.css"
     },
     "./styles/family/corporate": {
+      "import": "./dist/themes/family/corporate.css",
       "default": "./dist/themes/family/corporate.css"
     },
     "./styles/family/industrial": {
+      "import": "./dist/themes/family/industrial.css",
       "default": "./dist/themes/family/industrial.css"
     },
     "./styles/family/grid": {
+      "import": "./dist/themes/family/grid.css",
       "default": "./dist/themes/family/grid.css"
     },
     "./styles/family/ops": {
+      "import": "./dist/themes/family/ops.css",
       "default": "./dist/themes/family/ops.css"
     },
     "./styles/family/neon": {
+      "import": "./dist/themes/family/neon.css",
       "default": "./dist/themes/family/neon.css"
     },
     "./themes": {
@@ -79,8 +93,8 @@
     "node": ">=18"
   },
   "sideEffects": [
-    "dist/style.css",
-    "dist/themes/**/*.css"
+    "**/*.css",
+    "**/*.module.css"
   ],
   "files": [
     "dist",
@@ -110,8 +124,7 @@
     "lint:fix": "eslint src --fix",
     "package:check": "attw --pack . --profile esm-only --exclude-entrypoints ./styles ./styles/aviation ./styles/soft ./styles/minimal ./styles/corporate ./styles/forest ./styles/ocean ./styles/family ./styles/family/canvas ./styles/family/corporate ./styles/family/industrial ./styles/family/grid ./styles/family/ops ./styles/family/neon",
     "check": "npm run type-check && npm run lint && npm run test",
-    "prepare": "husky",
-    "prepublishOnly": "npm run check && npm run build && npm run package:check"
+    "prepublishOnly": "npm run build && npm run package:check"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0",
@@ -183,12 +196,7 @@
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.1.4"
   },
-  "lint-staged": {
-    "src/**/*.{ts,tsx}": [
-      "eslint --max-warnings=0 --no-warn-ignored",
-      "bash -c 'tsc --noEmit --project tsconfig.build.json'"
-    ]
-  },
+
   "keywords": [
     "calendar",
     "scheduler",

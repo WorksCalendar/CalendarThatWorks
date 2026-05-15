@@ -13,7 +13,7 @@ function copyCssRecursive(src: string, dest: string) {
     const destPath = join(dest, entry);
     if (statSync(srcPath).isDirectory()) {
       copyCssRecursive(srcPath, destPath);
-    } else if (entry.endsWith('.css')) {
+    } else if (entry.endsWith('.css') && !entry.endsWith('.module.css')) {
       copyFileSync(srcPath, destPath);
     }
   }
