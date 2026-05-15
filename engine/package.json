@@ -18,10 +18,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "test": "cross-env TZ=UTC vitest run",
     "test:watch": "cross-env TZ=UTC vitest",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc -p tsconfig.json",
     "check": "npm run type-check && npm test"
   },
   "engines": {
