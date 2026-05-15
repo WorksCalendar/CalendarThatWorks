@@ -6,8 +6,8 @@
  * rely on stable lookup + mutation semantics.
  */
 import { describe, it, expect } from 'vitest';
-import { CalendarEngine } from '../CalendarEngine';
-import type { ResourcePool } from '../../pools/resourcePoolSchema';
+import { CalendarEngine } from '../CalendarEngine.js';
+import type { ResourcePool } from '../../pools/resourcePoolSchema.js';
 
 function pool(id: string, patch: Partial<ResourcePool> = {}): ResourcePool {
   return {

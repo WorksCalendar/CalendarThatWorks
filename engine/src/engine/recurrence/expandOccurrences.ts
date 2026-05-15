@@ -11,10 +11,10 @@
  */
 
 import { addDays } from 'date-fns';
-import { expandRRule } from './expandRRule';
-import type { EngineEvent } from '../schema/eventSchema';
-import type { EngineOccurrence } from '../schema/occurrenceSchema';
-import { buildOccurrenceId, eventDurationMs } from './recurrenceMath';
+import { expandRRule } from './expandRRule.js';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
+import { buildOccurrenceId, eventDurationMs } from './recurrenceMath.js';
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 

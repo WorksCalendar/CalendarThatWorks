@@ -3,8 +3,8 @@ import {
   satisfiesConstraint,
   constraintSeverity,
   describeConstraint,
-} from '../constraintSchema';
-import type { EventConstraint } from '../constraintSchema';
+} from '../constraintSchema.js';
+import type { EventConstraint } from '../constraintSchema.js';
 
 const date = new Date(2026, 0, 10, 9, 0, 0); // Jan 10, 09:00
 const before = new Date(2026, 0, 9, 9, 0, 0);  // Jan 9

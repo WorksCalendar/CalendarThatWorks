@@ -6,12 +6,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { safeMutate } from '../safeMutate';
-import { makeEvent } from '../../schema/eventSchema';
-import type { EngineEvent } from '../../schema/eventSchema';
-import type { OperationResult, EventChange } from '../operationResult';
-import type { EngineOperation } from '../../schema/operationSchema';
-import type { ValidationResult } from '../../validation/validationTypes';
+import { safeMutate } from '../safeMutate.js';
+import { makeEvent } from '../../schema/eventSchema.js';
+import type { EngineEvent } from '../../schema/eventSchema.js';
+import type { OperationResult, EventChange } from '../operationResult.js';
+import type { EngineOperation } from '../../schema/operationSchema.js';
+import type { ValidationResult } from '../../validation/validationTypes.js';
 
 // ─── Shared fixtures ──────────────────────────────────────────────────────────
 

@@ -8,20 +8,20 @@
  * The engine uses this; the legacy function stays in place for backward compat.
  */
 
-import type { EngineOperation } from '../schema/operationSchema';
-import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOperation } from '../schema/operationSchema.js';
+import type { EngineEvent } from '../schema/eventSchema.js';
 import type {
   Violation,
   ValidationResult,
   OperationContext,
   ChangeShape,
-} from './validationTypes';
-import { VALID_RESULT } from './validationTypes';
-import { validateDuration, validateBlockedWindow } from './validateConstraints';
-import { validateOverlap }          from './validateOverlap';
-import { validateWorkingHours }     from './validateWorkingHours';
-import { validateDependencies }     from './validateDependencies';
-import { validateEventConstraints } from './validateEventConstraints';
+} from './validationTypes.js';
+import { VALID_RESULT } from './validationTypes.js';
+import { validateDuration, validateBlockedWindow } from './validateConstraints.js';
+import { validateOverlap }          from './validateOverlap.js';
+import { validateWorkingHours }     from './validateWorkingHours.js';
+import { validateDependencies }     from './validateDependencies.js';
+import { validateEventConstraints } from './validateEventConstraints.js';
 
 // ─── Rule registry ────────────────────────────────────────────────────────────
 //

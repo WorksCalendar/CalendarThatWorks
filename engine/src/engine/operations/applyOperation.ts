@@ -13,22 +13,22 @@
  * Callers: CalendarEngine.dispatch() wraps this with state management.
  */
 
-import type { EngineEvent } from '../schema/eventSchema';
-import { makeEvent } from '../schema/eventSchema';
-import type { EngineOperation } from '../schema/operationSchema';
-import type { OperationContext } from '../validation/validationTypes';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import { makeEvent } from '../schema/eventSchema.js';
+import type { EngineOperation } from '../schema/operationSchema.js';
+import type { OperationContext } from '../validation/validationTypes.js';
 import type {
   OperationResult,
   EventChange,
-} from './operationResult';
+} from './operationResult.js';
 import {
   makeRejectedResult,
   makePendingResult,
-} from './operationResult';
-import { validateOperation } from '../validation/validateOperation';
-import { resolveOperationScope } from './resolveOperationScope';
-import { resolveRecurringDelete } from '../recurrence/resolveRecurringEdit';
-import { nextEngineId } from '../adapters/normalizeInputEvent';
+} from './operationResult.js';
+import { validateOperation } from '../validation/validateOperation.js';
+import { resolveOperationScope } from './resolveOperationScope.js';
+import { resolveRecurringDelete } from '../recurrence/resolveRecurringEdit.js';
+import { nextEngineId } from '../adapters/normalizeInputEvent.js';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { operationChangesTime } from '../operationSchema';
-import type { EngineOperation } from '../operationSchema';
+import { operationChangesTime } from '../operationSchema.js';
+import type { EngineOperation } from '../operationSchema.js';
 
 const base = { id: 'ev1' };
 const time = { newStart: new Date(2026, 0, 5, 9), newEnd: new Date(2026, 0, 5, 10) };

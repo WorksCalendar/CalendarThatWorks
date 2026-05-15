@@ -9,8 +9,8 @@
  *   - EngineOccurrence = 1 record per rendered instance (ephemeral, per range)
  */
 
-import type { EventStatus } from './eventSchema';
-import type { EventConstraint } from './constraintSchema';
+import type { EventStatus } from './eventSchema.js';
+import type { EventConstraint } from './constraintSchema.js';
 
 export interface EngineOccurrence {
   // ── Identity ────────────────────────────────────────────────────────────

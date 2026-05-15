@@ -8,8 +8,8 @@ import { describe, it, expect } from 'vitest';
 import {
   parseHours,
   defaultWorkingCalendar,
-} from '../calendarSchema';
-import type { WorkingCalendar } from '../calendarSchema';
+} from '../calendarSchema.js';
+import type { WorkingCalendar } from '../calendarSchema.js';
 
 // ─── parseHours ───────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
-import type { AssetTrackerPosition, ResourceTrackingMeta } from './geoTypes'
-import { isValidPosition } from './positionGuards'
+import type { AssetTrackerPosition, ResourceTrackingMeta } from './geoTypes.js'
+import { isValidPosition } from './positionGuards.js'
 
 export function positionToResourceTrackingMeta(
   pos: AssetTrackerPosition,

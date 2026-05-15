@@ -16,9 +16,9 @@
  * resource's IANA timezone (defaulting to UTC). Blackouts are
  * absolute-time ranges, zone-independent.
  */
-import { parseHoursString } from '../engine/time/dateMath'
-import { partsInTimezone, wallClockToUtc } from '../engine/time/timezone'
-import type { AvailabilityRule, BlackoutRule, WeeklyOpenRule } from './availabilityRule'
+import { parseHoursString } from '../engine/time/dateMath.js'
+import { partsInTimezone, wallClockToUtc } from '../engine/time/timezone.js'
+import type { AvailabilityRule, BlackoutRule, WeeklyOpenRule } from './availabilityRule.js'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 

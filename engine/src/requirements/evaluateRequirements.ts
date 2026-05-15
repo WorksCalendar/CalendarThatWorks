@@ -24,15 +24,15 @@
  * event needs a driver and a truck"; an Alice tagged as both is
  * still one body filling both.
  */
-import type { EngineEvent } from '../engine/schema/eventSchema'
-import type { EngineResource } from '../engine/schema/resourceSchema'
-import type { Assignment } from '../engine/schema/assignmentSchema'
-import type { ResourcePool } from '../pools/resourcePoolSchema'
-import type { LatLon } from '../pools/geo'
+import type { EngineEvent } from '../engine/schema/eventSchema.js'
+import type { EngineResource } from '../engine/schema/resourceSchema.js'
+import type { Assignment } from '../engine/schema/assignmentSchema.js'
+import type { ResourcePool } from '../pools/resourcePoolSchema.js'
+import type { LatLon } from '../pools/geo.js'
 import type {
   ConfigRequirement, ConfigRequirementSlot, ConfigRequirementSeverity,
-} from './requirementTypes'
-import { evaluateQuery } from '../pools/evaluateQuery'
+} from './requirementTypes.js'
+import { evaluateQuery } from '../pools/evaluateQuery.js'
 
 export interface EvaluateRequirementsInput {
   /**

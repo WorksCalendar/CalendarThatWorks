@@ -6,7 +6,7 @@
  */
 
 import { startOfDay, endOfDay } from 'date-fns';
-import type { CalendarState, EngineEvent } from './types';
+import type { CalendarState, EngineEvent } from './types.js';
 
 // ─── Basic event accessors ────────────────────────────────────────────────────
 

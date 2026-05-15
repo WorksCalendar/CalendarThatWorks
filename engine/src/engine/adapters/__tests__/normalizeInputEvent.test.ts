@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeInputEvent, normalizeInputEvents, nextEngineId } from '../normalizeInputEvent';
+import { normalizeInputEvent, normalizeInputEvents, nextEngineId } from '../normalizeInputEvent.js';
 
 // ─── nextEngineId ─────────────────────────────────────────────────────────────
 

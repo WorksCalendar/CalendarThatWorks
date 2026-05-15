@@ -15,7 +15,7 @@ import {
   removeExdate,
   buildOccurrenceId,
   buildOccurrenceDateKey,
-} from '../recurrenceMath';
+} from '../recurrenceMath.js';
 
 // ─── parseRRule ────────────────────────────────────────────────────────────────
 

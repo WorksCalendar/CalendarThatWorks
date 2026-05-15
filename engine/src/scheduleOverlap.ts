@@ -4,8 +4,8 @@ import {
   isOpenShiftEvent,
   isShiftOrOnCallEvent,
   SCHEDULE_KINDS,
-} from './scheduleModel';
-import { createId } from './createId';
+} from './scheduleModel.js';
+import { createId } from './createId.js';
 
 /**
  * scheduleOverlap.js — utilities for detecting shift / on-call conflicts

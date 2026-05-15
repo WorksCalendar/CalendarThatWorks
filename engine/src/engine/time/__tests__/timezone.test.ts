@@ -7,7 +7,7 @@ import {
   wallClockToUtc,
   hoursInTimezone,
   convertEventToDisplayZone,
-} from '../timezone';
+} from '../timezone.js';
 
 // ─── localTimezone ────────────────────────────────────────────────────────────
 

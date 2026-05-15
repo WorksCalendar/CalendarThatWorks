@@ -2,7 +2,7 @@
  * sha256 — known-answer tests (FIPS 180-4 / RFC 6234 vectors).
  */
 import { describe, it, expect } from 'vitest'
-import { sha256Hex } from '../sha256'
+import { sha256Hex } from '../sha256.js'
 
 describe('sha256Hex', () => {
   it('matches the empty-string vector', () => {

@@ -6,8 +6,8 @@
  * skipped before the chain starts; gaps after it are failures).
  */
 import { describe, it, expect } from 'vitest'
-import { appendAuditEntry, verifyAuditChain, isAuditChainValid } from '../auditChain'
-import type { ApprovalHistoryEntry } from '../../types/assets'
+import { appendAuditEntry, verifyAuditChain, isAuditChainValid } from '../auditChain.js'
+import type { ApprovalHistoryEntry } from '../../types/assets.js'
 
 const submit = (at: string, actor = 'alice'): Omit<ApprovalHistoryEntry, 'hash' | 'prevHash'> => ({
   action: 'submit', at, actor,

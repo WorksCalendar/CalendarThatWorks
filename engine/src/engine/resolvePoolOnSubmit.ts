@@ -18,15 +18,15 @@
  * This module stays pure: no state mutation. The caller (engine) is
  * responsible for persisting any returned pool-cursor advance.
  */
-import type { EngineOperation } from './schema/operationSchema';
-import type { EngineResource } from './schema/resourceSchema';
-import type { Assignment } from './schema/assignmentSchema';
-import { assignmentsForEvent } from './schema/assignmentSchema';
-import type { ResourcePool } from '../pools/resourcePoolSchema';
-import type { ConflictEvent, ConflictRule } from '../conflictEngine';
-import type { Violation } from './validation/validationTypes';
-import type { OperationResult } from './operations/operationResult';
-import { resolvePool } from '../pools/resolvePool';
+import type { EngineOperation } from './schema/operationSchema.js';
+import type { EngineResource } from './schema/resourceSchema.js';
+import type { Assignment } from './schema/assignmentSchema.js';
+import { assignmentsForEvent } from './schema/assignmentSchema.js';
+import type { ResourcePool } from '../pools/resourcePoolSchema.js';
+import type { ConflictEvent, ConflictRule } from '../conflictEngine.js';
+import type { Violation } from './validation/validationTypes.js';
+import type { OperationResult } from './operations/operationResult.js';
+import { resolvePool } from '../pools/resolvePool.js';
 
 // ─── Default rule set ────────────────────────────────────────────────────────
 
@@ -44,7 +44,7 @@ const DEFAULT_HARD_OVERLAP: ConflictRule = {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface PoolResolveContext {
-  readonly events: ReadonlyMap<string, import('./schema/eventSchema').EngineEvent>;
+  readonly events: ReadonlyMap<string, import('./schema/eventSchema.js').EngineEvent>;
   readonly pools: ReadonlyMap<string, ResourcePool>;
   readonly assignments?: ReadonlyMap<string, Assignment>;
   readonly resources?: ReadonlyMap<string, EngineResource>;

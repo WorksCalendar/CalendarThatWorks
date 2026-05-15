@@ -6,7 +6,7 @@ import {
   mergeRuntimeConfig,
   DEFAULT_RUNTIME_CONFIG,
   DEFAULT_FEATURE_FLAGS,
-} from '../engineConfig';
+} from '../engineConfig.js';
 
 describe('mergeRuntimeConfig', () => {
   it('returns defaults when called with no arguments', () => {

@@ -1,4 +1,4 @@
-import { isCoveringEvent, isOpenShiftEvent } from './scheduleModel';
+import { isCoveringEvent, isOpenShiftEvent } from './scheduleModel.js';
 
 type MutableMeta = Record<string, unknown>;
 

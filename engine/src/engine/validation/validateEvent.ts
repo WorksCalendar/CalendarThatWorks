@@ -1,7 +1,7 @@
-import type { EngineEvent } from '../schema/eventSchema';
-import type { OnError } from '../errors/onError';
-import { toStructuredError } from '../errors/onError';
-import { isValidTimezone } from '../time/timezone';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { OnError } from '../errors/onError.js';
+import { toStructuredError } from '../errors/onError.js';
+import { isValidTimezone } from '../time/timezone.js';
 
 export type ValidationMode = 'strict' | 'prod';
 

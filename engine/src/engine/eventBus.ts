@@ -24,8 +24,8 @@
  *   const engine = new CalendarEngine({ bus });
  */
 
-import type { EngineEvent } from './schema/eventSchema';
-import type { Assignment } from './schema/assignmentSchema';
+import type { EngineEvent } from './schema/eventSchema.js';
+import type { Assignment } from './schema/assignmentSchema.js';
 
 // ─── Channels + payloads ──────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import type { GeoPoint } from './geoTypes'
+import type { GeoPoint } from './geoTypes.js'
 
 const EARTH_RADIUS_KM = 6371
 

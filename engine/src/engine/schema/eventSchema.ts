@@ -6,7 +6,7 @@
  * via expandOccurrences().
  */
 
-import type { EventConstraint } from './constraintSchema';
+import type { EventConstraint } from './constraintSchema.js';
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 
@@ -145,4 +145,4 @@ export function makeEvent(
 }
 
 // Re-export constraint type so callers can import from one place.
-export type { EventConstraint } from './constraintSchema';
+export type { EventConstraint } from './constraintSchema.js';

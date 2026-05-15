@@ -5,11 +5,11 @@
  * the bus for their own pipelines have a stable API guarantee.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { EventBus, channelForApprovalTransition } from '../eventBus'
+import { EventBus, channelForApprovalTransition } from '../eventBus.js'
 import type {
   BookingLifecyclePayload,
   AssignmentLifecyclePayload,
-} from '../eventBus'
+} from '../eventBus.js'
 
 const makeBooking = (over: Partial<BookingLifecyclePayload> = {}): BookingLifecyclePayload => ({
   eventId: 'ev-1',

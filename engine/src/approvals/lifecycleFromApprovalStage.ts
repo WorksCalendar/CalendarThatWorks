@@ -16,8 +16,8 @@
  * `null` is returned when the stage is unknown so callers leave the
  * existing lifecycle untouched.
  */
-import type { ApprovalStageId } from '../types/assets';
-import type { EventLifecycleState } from '../types/events';
+import type { ApprovalStageId } from '../types/assets.js';
+import type { EventLifecycleState } from '../types/events.js';
 
 export function lifecycleFromApprovalStage(
   stage: ApprovalStageId | null | undefined,

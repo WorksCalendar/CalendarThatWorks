@@ -14,14 +14,14 @@
  *   - _emitBooking when bus is null
  */
 import { describe, it, expect, vi } from 'vitest';
-import { CalendarEngine, createInitialState } from '../CalendarEngine';
-import { makeEvent }        from '../schema/eventSchema';
-import { makeAssignment }   from '../schema/assignmentSchema';
-import { makeDependency }   from '../schema/dependencySchema';
-import { makeResourceCalendar } from '../schema/resourceCalendarSchema';
-import { EventBus }         from '../eventBus';
-import type { EngineEvent } from '../schema/eventSchema';
-import type { ApprovalStage } from '../../types/assets';
+import { CalendarEngine, createInitialState } from '../CalendarEngine.js';
+import { makeEvent }        from '../schema/eventSchema.js';
+import { makeAssignment }   from '../schema/assignmentSchema.js';
+import { makeDependency }   from '../schema/dependencySchema.js';
+import { makeResourceCalendar } from '../schema/resourceCalendarSchema.js';
+import { EventBus }         from '../eventBus.js';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { ApprovalStage } from '../../types/assets.js';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 

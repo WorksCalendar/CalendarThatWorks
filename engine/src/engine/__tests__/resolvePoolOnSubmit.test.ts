@@ -12,12 +12,12 @@
  *     mutate state.
  */
 import { describe, it, expect } from 'vitest';
-import { CalendarEngine } from '../CalendarEngine';
-import { UndoRedoManager } from '../UndoRedoManager';
-import type { ResourcePool } from '../../pools/resourcePoolSchema';
-import type { EngineOperation } from '../schema/operationSchema';
-import { makeEvent } from '../schema/eventSchema';
-import { makeAssignment } from '../schema/assignmentSchema';
+import { CalendarEngine } from '../CalendarEngine.js';
+import { UndoRedoManager } from '../UndoRedoManager.js';
+import type { ResourcePool } from '../../pools/resourcePoolSchema.js';
+import type { EngineOperation } from '../schema/operationSchema.js';
+import { makeEvent } from '../schema/eventSchema.js';
+import { makeAssignment } from '../schema/assignmentSchema.js';
 
 const START = new Date('2026-04-20T09:00:00Z');
 const END   = new Date('2026-04-20T10:00:00Z');

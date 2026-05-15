@@ -4,7 +4,7 @@
  * Defaults live here.  Consumers override via CalendarEngineInit.config.
  */
 
-import type { CalendarView } from './types';
+import type { CalendarView } from './types.js';
 
 // ─── Feature flags ────────────────────────────────────────────────────────────
 

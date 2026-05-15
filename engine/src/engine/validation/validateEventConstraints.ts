@@ -10,12 +10,12 @@
  *   asap / alap                 → not validated here (scheduler hints only)
  */
 
-import type { Violation, OperationContext, ChangeShape } from './validationTypes';
+import type { Violation, OperationContext, ChangeShape } from './validationTypes.js';
 import {
   satisfiesConstraint,
   constraintSeverity,
   describeConstraint,
-} from '../schema/constraintSchema';
+} from '../schema/constraintSchema.js';
 
 export function validateEventConstraints(
   change: ChangeShape,

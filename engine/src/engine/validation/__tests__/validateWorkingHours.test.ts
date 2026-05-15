@@ -5,9 +5,9 @@
  * a soft Violation or null, with no side effects.
  */
 import { describe, it, expect } from 'vitest';
-import { validateWorkingHours } from '../validateWorkingHours';
-import type { ChangeShape, OperationContext } from '../validationTypes';
-import { makeEvent } from '../../schema/eventSchema';
+import { validateWorkingHours } from '../validateWorkingHours.js';
+import type { ChangeShape, OperationContext } from '../validationTypes.js';
+import { makeEvent } from '../../schema/eventSchema.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

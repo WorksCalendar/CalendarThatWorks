@@ -11,7 +11,7 @@ import {
   isVisibleToTenant,
   assertSameTenant,
   inheritTenantId,
-} from '../tenantScope'
+} from '../tenantScope.js'
 
 describe('filterByTenant', () => {
   const items = [

@@ -6,37 +6,37 @@
  */
 
 // State machine
-export { CalendarEngine, createInitialState } from './engine/CalendarEngine';
-export { EventBus, channelForApprovalTransition } from './engine/eventBus';
-export { UndoRedoManager } from './engine/UndoRedoManager';
+export { CalendarEngine, createInitialState } from './engine/CalendarEngine.js';
+export { EventBus, channelForApprovalTransition } from './engine/eventBus.js';
+export { UndoRedoManager } from './engine/UndoRedoManager.js';
 
 // Operations
-import * as buildOperation from './engine/operations/buildOperation';
+import * as buildOperation from './engine/operations/buildOperation.js';
 export { buildOperation };
-export type { OperationResult } from './engine/operations/operationResult';
-export type { EngineOperation } from './engine/schema/operationSchema';
+export type { OperationResult } from './engine/operations/operationResult.js';
+export type { EngineOperation } from './engine/schema/operationSchema.js';
 
 // Schema types
-export type { EngineEvent } from './engine/schema/eventSchema';
-export type { EngineOccurrence } from './engine/schema/occurrenceSchema';
-export type { EngineResource } from './engine/schema/resourceSchema';
-export type { Assignment } from './engine/schema/assignmentSchema';
-export type { Dependency } from './engine/schema/dependencySchema';
-export type { EventConstraint } from './engine/schema/constraintSchema';
-export type { ResourcePool, PoolStrategy } from './engine/schema/resourcePoolSchema';
+export type { EngineEvent } from './engine/schema/eventSchema.js';
+export type { EngineOccurrence } from './engine/schema/occurrenceSchema.js';
+export type { EngineResource } from './engine/schema/resourceSchema.js';
+export type { Assignment } from './engine/schema/assignmentSchema.js';
+export type { Dependency } from './engine/schema/dependencySchema.js';
+export type { EventConstraint } from './engine/schema/constraintSchema.js';
+export type { ResourcePool, PoolStrategy } from './engine/schema/resourcePoolSchema.js';
 
 // Engine domain types
 export type {
   CalendarView,
   CalendarState,
   FilterState,
-} from './engine/types';
+} from './engine/types.js';
 
 // Conflict detection
 export {
   evaluateConflicts,
   CONFLICT_RULE_TYPES,
-} from './conflictEngine';
+} from './conflictEngine.js';
 export type {
   ConflictEvent,
   ConflictRule,
@@ -48,34 +48,34 @@ export type {
   AvailabilityViolationRule,
   HoldConflictRule,
   PolicyViolationRule,
-} from './conflictEngine';
+} from './conflictEngine.js';
 
 // Availability / requirements / holds / pools
-export { evaluateAvailability } from './availability/evaluateAvailability';
+export { evaluateAvailability } from './availability/evaluateAvailability.js';
 export type {
   AvailabilityWindow,
   AvailabilityResult,
   AvailabilityFailure,
   AvailabilitySuccess,
   AvailabilityReasonCode,
-} from './availability/evaluateAvailability';
+} from './availability/evaluateAvailability.js';
 
-export { evaluateRequirements } from './requirements/evaluateRequirements';
+export { evaluateRequirements } from './requirements/evaluateRequirements.js';
 export type {
   RequirementShortfall,
   RequirementsEvaluation,
-} from './requirements/evaluateRequirements';
+} from './requirements/evaluateRequirements.js';
 
-export { createHoldRegistry, findBlockingHold } from './holds/holdRegistry';
-export type { Hold, HoldWindow } from './holds/holdRegistry';
+export { createHoldRegistry, findBlockingHold } from './holds/holdRegistry.js';
+export type { Hold, HoldWindow } from './holds/holdRegistry.js';
 
-export { resolvePool } from './pools/resolvePool';
+export { resolvePool } from './pools/resolvePool.js';
 export type {
   ResolvePoolResult,
   ResolvePoolSuccess,
   ResolvePoolError,
   ResolvePoolErrorCode,
-} from './pools/resolvePool';
+} from './pools/resolvePool.js';
 
 // Schedule kinds + overlap math
 export {
@@ -87,34 +87,34 @@ export {
   isCoveredShift,
   isScheduleWorkflowEvent,
   SCHEDULE_WORKFLOW_CATEGORIES,
-} from './scheduleModel';
+} from './scheduleModel.js';
 
 export {
   intervalsOverlap,
   detectShiftConflicts,
   buildOpenShiftEvent,
-} from './scheduleOverlap';
+} from './scheduleOverlap.js';
 
 // Recurrence
-export { expandOccurrences } from './engine/recurrence/expandOccurrences';
-export { expandRRule } from './engine/recurrence/expandRRule';
+export { expandOccurrences } from './engine/recurrence/expandOccurrences.js';
+export { expandRRule } from './engine/recurrence/expandRRule.js';
 
 // Approval state machine (lightweight — no workflow DSL)
 export {
   transitionApproval,
   legalActionsFrom,
   LEGAL_TRANSITIONS,
-} from './approvals/transitions';
+} from './approvals/transitions.js';
 export {
   appendAuditEntry,
   verifyAuditChain,
   isAuditChainValid,
-} from './approvals/auditChain';
-export { lifecycleFromApprovalStage } from './approvals/lifecycleFromApprovalStage';
+} from './approvals/auditChain.js';
+export { lifecycleFromApprovalStage } from './approvals/lifecycleFromApprovalStage.js';
 
 // Boundary helpers
-export { normalizeEvent, normalizeEvents } from './eventModel';
-export { createId } from './createId';
+export { normalizeEvent, normalizeEvents } from './eventModel.js';
+export { createId } from './createId.js';
 
 // Host-facing types (consumers need these to talk to the engine)
 export type {
@@ -125,8 +125,8 @@ export type {
   WorksCalendarEvent,
   NormalizedEvent,
   EventVisualPriority,
-} from './types/events';
-export { isLifecycleState, EVENT_LIFECYCLE_STATES, isVisualPriority } from './types/events';
+} from './types/events.js';
+export { isLifecycleState, EVENT_LIFECYCLE_STATES, isVisualPriority } from './types/events.js';
 export type {
   ApprovalStage,
   ApprovalStageId,
@@ -135,4 +135,4 @@ export type {
   ApprovalHistoryEntry,
   CategoryDef,
   BookingPolicy,
-} from './types/assets';
+} from './types/assets.js';

@@ -9,8 +9,8 @@
  * changing the host-app's data model.
  */
 
-import type { EngineEvent, EventStatus } from '../schema/eventSchema';
-import { isVisualPriority } from '../../types/view';
+import type { EngineEvent, EventStatus } from '../schema/eventSchema.js';
+import { isVisualPriority } from '../../types/view.js';
 
 // ─── Legacy shape (from normalizeEvent output) ────────────────────────────────
 

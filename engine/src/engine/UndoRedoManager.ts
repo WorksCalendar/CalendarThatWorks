@@ -18,12 +18,12 @@
  *   manager.redo();
  */
 
-import type { CalendarEngine } from './CalendarEngine';
-import type { EngineEvent }    from './schema/eventSchema';
-import type { Assignment }     from './schema/assignmentSchema';
-import type { Dependency }     from './schema/dependencySchema';
-import type { ResourceCalendar } from './schema/resourceCalendarSchema';
-import type { ResourcePool }   from '../pools/resourcePoolSchema';
+import type { CalendarEngine } from './CalendarEngine.js';
+import type { EngineEvent }    from './schema/eventSchema.js';
+import type { Assignment }     from './schema/assignmentSchema.js';
+import type { Dependency }     from './schema/dependencySchema.js';
+import type { ResourceCalendar } from './schema/resourceCalendarSchema.js';
+import type { ResourcePool }   from '../pools/resourcePoolSchema.js';
 
 // ─── Snapshot type ────────────────────────────────────────────────────────────
 

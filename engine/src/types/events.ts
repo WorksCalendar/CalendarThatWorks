@@ -6,8 +6,8 @@
  * `normalizeEvent` (in ../eventModel.ts) bridges the two.
  */
 
-import type { EventVisualPriority } from './view';
-import { isVisualPriority } from './view';
+import type { EventVisualPriority } from './view.js';
+import { isVisualPriority } from './view.js';
 
 export type { EventVisualPriority };
 export { isVisualPriority };

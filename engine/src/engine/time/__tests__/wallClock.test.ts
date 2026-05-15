@@ -4,7 +4,7 @@ import {
   applyWallClockAnchor,
   computeOccurrenceEnd,
   eventStartHour,
-} from '../wallClock';
+} from '../wallClock.js';
 
 // ─── extractWallClockAnchor ───────────────────────────────────────────────────
 

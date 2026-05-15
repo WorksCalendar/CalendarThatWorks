@@ -6,12 +6,12 @@
  * (#219) depends on this being deterministic + side-effect-free.
  */
 import { describe, it, expect } from 'vitest'
-import type { ApprovalStage } from '../../types/assets'
+import type { ApprovalStage } from '../../types/assets.js'
 import {
   LEGAL_TRANSITIONS,
   legalActionsFrom,
   transitionApproval,
-} from '../transitions'
+} from '../transitions.js'
 
 const AT = '2026-04-20T09:00:00.000Z'
 

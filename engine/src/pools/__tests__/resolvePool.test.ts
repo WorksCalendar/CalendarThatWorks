@@ -6,10 +6,10 @@
  * is pinned here so the submit-flow can rely on deterministic choices.
  */
 import { describe, it, expect } from 'vitest'
-import { resolvePool } from '../resolvePool'
-import type { ResourcePool } from '../resourcePoolSchema'
-import type { ConflictEvent, ConflictRule } from '../../conflictEngine'
-import { makeAssignment } from '../../engine/schema/assignmentSchema'
+import { resolvePool } from '../resolvePool.js'
+import type { ResourcePool } from '../resourcePoolSchema.js'
+import type { ConflictEvent, ConflictRule } from '../../conflictEngine.js'
+import { makeAssignment } from '../../engine/schema/assignmentSchema.js'
 
 const winStart = new Date(Date.UTC(2026, 3, 20, 9, 0))
 const winEnd   = new Date(Date.UTC(2026, 3, 20, 11, 0))
@@ -288,8 +288,8 @@ describe('resolvePool — strictMembers filters unknown ids', () => {
   // Build a minimal EngineResource map. Keys are what the resolver
   // checks; the value shape is irrelevant for the filter path.
   const knownResources = new Map([
-    ['r1', { id: 'r1', label: 'R1' } as unknown as import('../../engine/schema/resourceSchema').EngineResource],
-    ['r3', { id: 'r3', label: 'R3' } as unknown as import('../../engine/schema/resourceSchema').EngineResource],
+    ['r1', { id: 'r1', label: 'R1' } as unknown as import('../../engine/schema/resourceSchema.js').EngineResource],
+    ['r3', { id: 'r3', label: 'R3' } as unknown as import('../../engine/schema/resourceSchema.js').EngineResource],
   ])
 
   it('drops typo\'d / removed ids before strategy runs', () => {
@@ -369,7 +369,7 @@ describe('resolvePool — strictMembers filters unknown ids', () => {
 describe('resolvePool — v2 query pools (#386)', () => {
   // Build a registry where capabilities + capacity vary per resource
   // so query filters have something meaningful to chew on.
-  type R = import('../../engine/schema/resourceSchema').EngineResource
+  type R = import('../../engine/schema/resourceSchema.js').EngineResource
   const reefer80 = { id: 't1', name: 'T1', meta: { type: 'vehicle', capabilities: { refrigerated: true,  capacity_lbs: 80000 } } } as unknown as R
   const reefer60 = { id: 't2', name: 'T2', meta: { type: 'vehicle', capabilities: { refrigerated: true,  capacity_lbs: 60000 } } } as unknown as R
   const dry80    = { id: 't3', name: 'T3', meta: { type: 'vehicle', capabilities: { refrigerated: false, capacity_lbs: 80000 } } } as unknown as R
@@ -499,7 +499,7 @@ describe('resolvePool — v2 query pools (#386)', () => {
 })
 
 describe('resolvePool — closest strategy (#386 v2 distance)', () => {
-  type R = import('../../engine/schema/resourceSchema').EngineResource
+  type R = import('../../engine/schema/resourceSchema.js').EngineResource
   const SLC = { lat: 40.7608, lon: -111.8910 }
   const slc1 = { id: 'slc-1', name: 'SLC1', meta: { location: SLC                        } } as unknown as R
   const den1 = { id: 'den-1', name: 'DEN1', meta: { location: { lat: 39.7392, lon: -104.9903 } } } as unknown as R
@@ -593,7 +593,7 @@ describe('resolvePool — closest strategy (#386 v2 distance)', () => {
   })
 
   it('honors locationPath override for non-default coordinate fields', () => {
-    type R2 = import('../../engine/schema/resourceSchema').EngineResource
+    type R2 = import('../../engine/schema/resourceSchema.js').EngineResource
     const depotA = { id: 'a', name: 'A', meta: { depot: SLC } } as unknown as R2
     const depotB = { id: 'b', name: 'B', meta: { depot: { lat: 39.7392, lon: -104.9903 } } } as unknown as R2
     const reg = new Map([depotA, depotB].map(r => [r.id, r]))
@@ -634,7 +634,7 @@ describe('resolvePool — closest strategy (#386 v2 distance)', () => {
     // is a string, not a LatLon, so isLatLon returns false and every
     // member gets Infinity distance.  The strategy still picks the
     // first non-conflicting member in memberIds order.
-    type R = import('../../engine/schema/resourceSchema').EngineResource
+    type R = import('../../engine/schema/resourceSchema.js').EngineResource
     const rA = { id: 'a', name: 'A', meta: {} } as unknown as R
     const rB = { id: 'b', name: 'B', meta: {} } as unknown as R
     const reg = new Map([rA, rB].map(r => [r.id, r]))

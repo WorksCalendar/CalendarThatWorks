@@ -1,4 +1,4 @@
-import type { AssetTrackerPosition } from './geoTypes'
+import type { AssetTrackerPosition } from './geoTypes.js'
 
 export function isValidPosition(pos: AssetTrackerPosition): boolean {
   return (

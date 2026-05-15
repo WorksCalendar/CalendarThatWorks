@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { validateOverlap } from '../validateOverlap';
-import type { ChangeShape, OperationContext } from '../validationTypes';
-import type { EngineEvent } from '../../schema/eventSchema';
-import type { Assignment } from '../../schema/assignmentSchema';
+import { validateOverlap } from '../validateOverlap.js';
+import type { ChangeShape, OperationContext } from '../validationTypes.js';
+import type { EngineEvent } from '../../schema/eventSchema.js';
+import type { Assignment } from '../../schema/assignmentSchema.js';
 
 const t = (h: number) => new Date(2026, 0, 5, h, 0, 0);
 

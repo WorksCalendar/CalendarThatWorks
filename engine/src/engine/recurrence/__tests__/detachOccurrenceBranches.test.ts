@@ -8,8 +8,8 @@
  *      (detached occurrences are allowed to be re-detached by this guard)
  */
 import { describe, it, expect } from 'vitest';
-import { detachOccurrence } from '../detachOccurrence';
-import { makeEvent } from '../../schema/eventSchema';
+import { detachOccurrence } from '../detachOccurrence.js';
+import { makeEvent } from '../../schema/eventSchema.js';
 
 describe('detachOccurrence — throw branch', () => {
   it('throws when master is a plain (non-recurring) event with no seriesId', () => {

@@ -7,8 +7,8 @@
  * fall-back (a wall-clock hour repeats).
  */
 import { describe, it, expect } from 'vitest';
-import { computeOccurrenceEnd } from '../time/wallClock';
-import { partsInTimezone } from '../time/timezone';
+import { computeOccurrenceEnd } from '../time/wallClock.js';
+import { partsInTimezone } from '../time/timezone.js';
 
 const NY = 'America/New_York';
 const UTC = 'UTC';

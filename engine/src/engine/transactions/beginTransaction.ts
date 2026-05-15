@@ -11,8 +11,8 @@
  *   - Multi-step wizards (accumulate changes before finalizing)
  */
 
-import type { EngineEvent } from '../schema/eventSchema';
-import type { ResourcePool } from '../../pools/resourcePoolSchema';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { ResourcePool } from '../../pools/resourcePoolSchema.js';
 
 // ─── Transaction handle ───────────────────────────────────────────────────────
 

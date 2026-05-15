@@ -6,11 +6,11 @@
  * to booking.approved / denied / completed.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { CalendarEngine } from '../CalendarEngine'
-import { EventBus } from '../eventBus'
-import { makeEvent } from '../schema/eventSchema'
-import type { EngineEvent } from '../schema/eventSchema'
-import type { ApprovalStage } from '../../types/assets'
+import { CalendarEngine } from '../CalendarEngine.js'
+import { EventBus } from '../eventBus.js'
+import { makeEvent } from '../schema/eventSchema.js'
+import type { EngineEvent } from '../schema/eventSchema.js'
+import type { ApprovalStage } from '../../types/assets.js'
 
 const AT = new Date(2026, 3, 20, 10, 0)
 

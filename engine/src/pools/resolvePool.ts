@@ -18,13 +18,13 @@
  * never resolves to a resource that would reject the booking anyway.
  * Soft conflicts (holds, min-rest warnings) do not disqualify.
  */
-import type { Assignment } from '../engine/schema/assignmentSchema'
-import type { ConflictEvent, ConflictRule } from '../conflictEngine'
-import { evaluateConflicts } from '../conflictEngine'
-import type { EngineResource } from '../engine/schema/resourceSchema'
-import type { ResourcePool } from './resourcePoolSchema'
-import { evaluateQuery, type QueryExclusion } from './evaluateQuery'
-import { haversineKm, isLatLon, type LatLon } from './geo'
+import type { Assignment } from '../engine/schema/assignmentSchema.js'
+import type { ConflictEvent, ConflictRule } from '../conflictEngine.js'
+import { evaluateConflicts } from '../conflictEngine.js'
+import type { EngineResource } from '../engine/schema/resourceSchema.js'
+import type { ResourcePool } from './resourcePoolSchema.js'
+import { evaluateQuery, type QueryExclusion } from './evaluateQuery.js'
+import { haversineKm, isLatLon, type LatLon } from './geo.js'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 

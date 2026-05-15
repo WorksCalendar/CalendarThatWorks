@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { validateEventConstraints } from '../validateEventConstraints';
-import type { ChangeShape, OperationContext } from '../validationTypes';
-import type { EngineEvent } from '../../schema/eventSchema';
-import type { EventConstraint } from '../../schema/constraintSchema';
+import { validateEventConstraints } from '../validateEventConstraints.js';
+import type { ChangeShape, OperationContext } from '../validationTypes.js';
+import type { EngineEvent } from '../../schema/eventSchema.js';
+import type { EventConstraint } from '../../schema/constraintSchema.js';
 
 const start = new Date(2026, 0, 10, 9, 0, 0);
 const end   = new Date(2026, 0, 10, 10, 0, 0);

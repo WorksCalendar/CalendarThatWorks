@@ -8,9 +8,9 @@
  * rollbackTransaction to restore the snapshot.
  */
 
-import type { EngineEvent } from '../schema/eventSchema';
-import type { EventChange } from '../operations/operationResult';
-import type { TransactionHandle } from './beginTransaction';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { EventChange } from '../operations/operationResult.js';
+import type { TransactionHandle } from './beginTransaction.js';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 

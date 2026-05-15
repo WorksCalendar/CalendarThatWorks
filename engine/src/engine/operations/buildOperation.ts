@@ -5,8 +5,8 @@
  * objects, so the shape stays consistent and source tagging is automatic.
  */
 
-import type { EngineOperation, RecurringEditScope } from '../schema/operationSchema';
-import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOperation, RecurringEditScope } from '../schema/operationSchema.js';
+import type { EngineEvent } from '../schema/eventSchema.js';
 
 // ─── Drag / resize / create ───────────────────────────────────────────────────
 

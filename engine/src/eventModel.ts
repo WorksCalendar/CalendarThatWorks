@@ -2,10 +2,10 @@
  * eventModel.js — Normalize any incoming event shape into a consistent internal format.
  */
 import { parseISO, isValid, addHours } from 'date-fns';
-import type { NormalizedEvent, WorksCalendarEvent } from './types/events';
-import { isLifecycleState } from './types/events';
-import { lifecycleFromApprovalStage } from './approvals/lifecycleFromApprovalStage';
-import type { ApprovalStage } from './types/assets';
+import type { NormalizedEvent, WorksCalendarEvent } from './types/events.js';
+import { isLifecycleState } from './types/events.js';
+import { lifecycleFromApprovalStage } from './approvals/lifecycleFromApprovalStage.js';
+import type { ApprovalStage } from './types/assets.js';
 
 function uid(): string {
   const g = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;

@@ -2,7 +2,7 @@
  * CalendarEngine — fast event lookup helpers.
  */
 
-import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineEvent } from '../schema/eventSchema.js';
 
 /**
  * Build an id → EngineEvent lookup map.

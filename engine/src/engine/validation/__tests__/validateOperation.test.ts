@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { validateOperation, isOperationAllowed } from '../validateOperation';
-import type { OperationContext } from '../validationTypes';
-import type { EngineEvent } from '../../schema/eventSchema';
-import type { EngineOperation } from '../../schema/operationSchema';
+import { validateOperation, isOperationAllowed } from '../validateOperation.js';
+import type { OperationContext } from '../validationTypes.js';
+import type { EngineEvent } from '../../schema/eventSchema.js';
+import type { EngineOperation } from '../../schema/operationSchema.js';
 
 const t = (h: number) => new Date(2026, 0, 5, h, 0, 0);
 

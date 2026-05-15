@@ -7,8 +7,8 @@ import {
   createStaticLocationAdapter,
   createMetaPathLocationAdapter,
   type ResourceLocationAdapter,
-} from '../locationAdapters'
-import type { EngineResource } from '../../engine/schema/resourceSchema'
+} from '../locationAdapters.js'
+import type { EngineResource } from '../../engine/schema/resourceSchema.js'
 
 const r = (id: string, meta: Record<string, unknown> = {}): EngineResource => ({
   id, name: id.toUpperCase(), meta,
@@ -82,7 +82,7 @@ describe('createStaticLocationAdapter', () => {
 
 describe('attachLocations — resource with no meta property', () => {
   it('attaches location when resource.meta is undefined', () => {
-    const bare = { id: 'x', name: 'X' } as unknown as import('../../engine/schema/resourceSchema').EngineResource
+    const bare = { id: 'x', name: 'X' } as unknown as import('../../engine/schema/resourceSchema.js').EngineResource
     const adapter: ResourceLocationAdapter = { id: 'static', resolve: () => ({ lat: 10, lon: 20 }) }
     const result = attachLocations([bare], [adapter])
     expect((result[0]!.meta as Record<string, unknown>).location).toEqual({ lat: 10, lon: 20 })

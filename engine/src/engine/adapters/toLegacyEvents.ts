@@ -6,9 +6,9 @@
  * migrated to the engine API yet.
  */
 
-import type { EngineEvent } from '../schema/eventSchema';
-import type { EngineOccurrence } from '../schema/occurrenceSchema';
-import { isVisualPriority } from '../../types/view';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
+import { isVisualPriority } from '../../types/view.js';
 
 // ─── Legacy shape ─────────────────────────────────────────────────────────────
 

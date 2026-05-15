@@ -6,8 +6,8 @@
  * occurrences (seriesId set, rrule null).
  */
 import { describe, it, expect } from 'vitest'
-import { expandOccurrences } from '../expandOccurrences'
-import { makeEvent } from '../../schema/eventSchema'
+import { expandOccurrences } from '../expandOccurrences.js'
+import { makeEvent } from '../../schema/eventSchema.js'
 
 const rangeStart = new Date('2026-06-10T00:00:00Z')
 const rangeEnd   = new Date('2026-06-11T00:00:00Z')

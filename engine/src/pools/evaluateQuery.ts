@@ -19,10 +19,10 @@
  * only clause that surfaces presence; everything else is "value
  * matches".
  */
-import type { EngineResource } from '../engine/schema/resourceSchema'
-import type { ResourceQuery, ResourceQueryValue } from './poolQuerySchema'
-import type { LatLon } from './geo'
-import { haversineKm, haversineMiles, isLatLon } from './geo'
+import type { EngineResource } from '../engine/schema/resourceSchema.js'
+import type { ResourceQuery, ResourceQueryValue } from './poolQuerySchema.js'
+import type { LatLon } from './geo.js'
+import { haversineKm, haversineMiles, isLatLon } from './geo.js'
 
 const TOP_LEVEL_KEYS: ReadonlySet<string> = new Set([
   'id', 'name', 'tenantId', 'capacity', 'color', 'timezone',

@@ -5,7 +5,7 @@
  * a room, a person, a piece of equipment, etc.
  */
 
-import type { AvailabilityRule } from '../../availability/availabilityRule';
+import type { AvailabilityRule } from '../../availability/availabilityRule.js';
 
 // ─── Resource ─────────────────────────────────────────────────────────────────
 

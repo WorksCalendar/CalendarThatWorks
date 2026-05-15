@@ -8,4 +8,4 @@
  * the resolver into the schema tree.
  */
 
-export type { PoolStrategy, ResourcePool } from '../../pools/resourcePoolSchema';
+export type { PoolStrategy, ResourcePool } from '../../pools/resourcePoolSchema.js';

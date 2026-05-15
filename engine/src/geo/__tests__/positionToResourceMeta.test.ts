@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { positionToResourceTrackingMeta } from '../positionToResourceMeta';
-import type { AssetTrackerPosition } from '../geoTypes';
+import { positionToResourceTrackingMeta } from '../positionToResourceMeta.js';
+import type { AssetTrackerPosition } from '../geoTypes.js';
 
 function makePos(patch: Partial<AssetTrackerPosition> = {}): AssetTrackerPosition {
   return {

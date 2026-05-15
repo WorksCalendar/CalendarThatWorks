@@ -16,8 +16,8 @@ import type {
   ApprovalStage,
   ApprovalStageId,
   ApprovalHistoryEntry,
-} from '../types/assets'
-import { appendAuditEntry } from './auditChain'
+} from '../types/assets.js'
+import { appendAuditEntry } from './auditChain.js'
 
 // ─── Errors ───────────────────────────────────────────────────────────────
 

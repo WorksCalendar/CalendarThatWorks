@@ -6,8 +6,8 @@
  * lookup helpers match the semantics of the O(n) fallback scans.
  */
 import { describe, it, expect } from 'vitest'
-import { CalendarEngine } from '../CalendarEngine'
-import { makeAssignment, type Assignment } from '../schema/assignmentSchema'
+import { CalendarEngine } from '../CalendarEngine.js'
+import { makeAssignment, type Assignment } from '../schema/assignmentSchema.js'
 
 function a(id: string, eventId: string, resourceId: string, units = 100): Assignment {
   return makeAssignment(id, { eventId, resourceId, units })

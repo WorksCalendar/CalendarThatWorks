@@ -2,7 +2,7 @@
  * CalendarEngine — series grouping selectors.
  */
 
-import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineEvent } from '../schema/eventSchema.js';
 
 /**
  * Group events by their seriesId.

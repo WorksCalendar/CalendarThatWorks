@@ -11,7 +11,7 @@
  * engine can always recover the correct UTC instant for any given date.
  */
 
-import { wallClockToUtc, hoursInTimezone, partsInTimezone, utcOffsetMinutes } from './timezone';
+import { wallClockToUtc, hoursInTimezone, partsInTimezone, utcOffsetMinutes } from './timezone.js';
 
 // ─── Wall-clock anchor ────────────────────────────────────────────────────────
 

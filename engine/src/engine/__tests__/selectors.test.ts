@@ -11,9 +11,9 @@ import {
   selectFilteredEvents,
   selectFilteredEventsInRange,
   selectVisibleRange,
-} from '../selectors';
-import { makeEvent } from '../schema/eventSchema';
-import type { CalendarState } from '../types';
+} from '../selectors.js';
+import { makeEvent } from '../schema/eventSchema.js';
+import type { CalendarState } from '../types.js';
 
 const d = (y: number, mo: number, day: number, h = 0) => new Date(y, mo - 1, day, h, 0, 0);
 

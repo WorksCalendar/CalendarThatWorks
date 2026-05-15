@@ -6,9 +6,9 @@
  * Pure function — returns fresh copies of the snapshotted maps.
  */
 
-import type { EngineEvent } from '../schema/eventSchema';
-import type { ResourcePool } from '../../pools/resourcePoolSchema';
-import type { TransactionHandle } from './beginTransaction';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { ResourcePool } from '../../pools/resourcePoolSchema.js';
+import type { TransactionHandle } from './beginTransaction.js';
 
 export interface RollbackResult {
   readonly events: ReadonlyMap<string, EngineEvent>;

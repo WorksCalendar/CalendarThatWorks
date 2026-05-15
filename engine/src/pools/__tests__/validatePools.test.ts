@@ -6,9 +6,9 @@
  * commits a typo'd id as the winning resource.
  */
 import { describe, it, expect } from 'vitest'
-import { validatePools } from '../validatePools'
-import type { ResourcePool } from '../resourcePoolSchema'
-import type { EngineResource } from '../../engine/schema/resourceSchema'
+import { validatePools } from '../validatePools.js'
+import type { ResourcePool } from '../resourcePoolSchema.js'
+import type { EngineResource } from '../../engine/schema/resourceSchema.js'
 
 const knownArr: EngineResource[] = [
   { id: 'r1', label: 'R1' } as unknown as EngineResource,

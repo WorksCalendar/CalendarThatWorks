@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { beginTransaction } from '../beginTransaction'
-import type { EngineEvent } from '../../schema/eventSchema'
+import { beginTransaction } from '../beginTransaction.js'
+import type { EngineEvent } from '../../schema/eventSchema.js'
 
 const emptyMap = new Map<string, EngineEvent>()
 

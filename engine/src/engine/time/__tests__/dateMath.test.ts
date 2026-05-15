@@ -23,7 +23,7 @@ import {
   isAfterDay,
   hoursDecimal,
   parseHoursString,
-} from '../dateMath';
+} from '../dateMath.js';
 
 // ─── clampDate ────────────────────────────────────────────────────────────────
 

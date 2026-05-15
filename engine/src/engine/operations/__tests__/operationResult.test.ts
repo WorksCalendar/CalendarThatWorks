@@ -3,9 +3,9 @@ import {
   isAccepted,
   makeRejectedResult,
   makePendingResult,
-} from '../operationResult';
-import type { OperationResult } from '../operationResult';
-import { VALID_RESULT } from '../../validation/validationTypes';
+} from '../operationResult.js';
+import type { OperationResult } from '../operationResult.js';
+import { VALID_RESULT } from '../../validation/validationTypes.js';
 
 const op = { type: 'delete' as const, id: 'ev1' };
 

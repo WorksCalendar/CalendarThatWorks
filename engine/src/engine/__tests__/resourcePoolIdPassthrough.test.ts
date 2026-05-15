@@ -5,11 +5,11 @@
  * or a pool-backed booking silently loses its pool reference.
  */
 import { describe, it, expect } from 'vitest';
-import { fromLegacyEvent } from '../adapters/fromLegacyEvents';
-import { normalizeInputEvent } from '../adapters/normalizeInputEvent';
-import { detachOccurrence } from '../recurrence/detachOccurrence';
-import { resolveRecurringEdit } from '../recurrence/resolveRecurringEdit';
-import { makeEvent } from '../schema/eventSchema';
+import { fromLegacyEvent } from '../adapters/fromLegacyEvents.js';
+import { normalizeInputEvent } from '../adapters/normalizeInputEvent.js';
+import { detachOccurrence } from '../recurrence/detachOccurrence.js';
+import { resolveRecurringEdit } from '../recurrence/resolveRecurringEdit.js';
+import { makeEvent } from '../schema/eventSchema.js';
 
 function makeMaster(pool: string | null): ReturnType<typeof makeEvent> {
   return makeEvent('master', {

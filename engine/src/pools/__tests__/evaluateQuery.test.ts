@@ -2,9 +2,9 @@
  * evaluateQuery — v2 pool query DSL specs (issue #386).
  */
 import { describe, it, expect } from 'vitest'
-import { evaluateQuery } from '../evaluateQuery'
-import type { ResourceQuery } from '../poolQuerySchema'
-import type { EngineResource } from '../../engine/schema/resourceSchema'
+import { evaluateQuery } from '../evaluateQuery.js'
+import type { ResourceQuery } from '../poolQuerySchema.js'
+import type { EngineResource } from '../../engine/schema/resourceSchema.js'
 
 const r = (id: string, meta: Record<string, unknown>, extras: Partial<EngineResource> = {}): EngineResource => ({
   id, name: id.toUpperCase(), meta, ...extras,

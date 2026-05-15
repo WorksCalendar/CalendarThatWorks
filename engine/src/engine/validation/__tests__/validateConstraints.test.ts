@@ -8,9 +8,9 @@ import { describe, it, expect } from 'vitest';
 import {
   validateDuration,
   validateBlockedWindow,
-} from '../validateConstraints';
-import type { ChangeShape, OperationContext } from '../validationTypes';
-import { makeEvent } from '../../schema/eventSchema';
+} from '../validateConstraints.js';
+import type { ChangeShape, OperationContext } from '../validationTypes.js';
+import { makeEvent } from '../../schema/eventSchema.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

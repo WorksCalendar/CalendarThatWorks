@@ -15,8 +15,8 @@
  *
  * Pure / sync. No side effects, no I/O, no engine dependency.
  */
-import type { GeoPoint } from '../geo/geoTypes'
-import { haversineDistanceKm } from '../geo/haversine'
+import type { GeoPoint } from '../geo/geoTypes.js'
+import { haversineDistanceKm } from '../geo/haversine.js'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

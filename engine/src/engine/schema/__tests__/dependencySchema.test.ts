@@ -14,8 +14,8 @@ import {
   predecessorsOf,
   hasCycle,
   wouldCreateCycle,
-} from '../dependencySchema';
-import type { Dependency, DependencyType } from '../dependencySchema';
+} from '../dependencySchema.js';
+import type { Dependency, DependencyType } from '../dependencySchema.js';
 
 // ─── Shared fixture helpers ───────────────────────────────────────────────────
 

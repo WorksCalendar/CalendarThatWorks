@@ -8,10 +8,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { applyOperation } from '../operations/applyOperation';
-import { makeEvent } from '../schema/eventSchema';
-import type { EngineEvent } from '../schema/eventSchema';
-import type { GroupChangeRule } from '../validation/validationTypes';
+import { applyOperation } from '../operations/applyOperation.js';
+import { makeEvent } from '../schema/eventSchema.js';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { GroupChangeRule } from '../validation/validationTypes.js';
 
 function d(y: number, mo: number, day: number, h = 9): Date {
   return new Date(y, mo - 1, day, h, 0, 0, 0);

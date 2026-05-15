@@ -21,34 +21,34 @@
  *   unsub();
  */
 
-import { applyOperation as applyStateOp } from './operations';
+import { applyOperation as applyStateOp } from './operations.js';
 import {
   applyOperation as applyMutationOp,
   type ApplyOptions,
-} from './operations/applyOperation';
-import type { Assignment }       from './schema/assignmentSchema';
-import type { Dependency }       from './schema/dependencySchema';
-import type { ResourceCalendar } from './schema/resourceCalendarSchema';
-import type { ResourcePool }     from '../pools/resourcePoolSchema';
+} from './operations/applyOperation.js';
+import type { Assignment }       from './schema/assignmentSchema.js';
+import type { Dependency }       from './schema/dependencySchema.js';
+import type { ResourceCalendar } from './schema/resourceCalendarSchema.js';
+import type { ResourcePool }     from '../pools/resourcePoolSchema.js';
 import {
   getOccurrencesInRange,
   type GetOccurrencesOptions,
-} from './selectors/getOccurrencesInRange';
+} from './selectors/getOccurrencesInRange.js';
 import {
   beginTransaction,
-} from './transactions/beginTransaction';
+} from './transactions/beginTransaction.js';
 import {
   commitTransaction,
-} from './transactions/commitTransaction';
+} from './transactions/commitTransaction.js';
 import {
   rollbackTransaction,
-} from './transactions/rollbackTransaction';
-import type { TransactionHandle } from './transactions/beginTransaction';
-import type { OperationResult, EventChange } from './operations/operationResult';
-import type { EngineOperation } from './schema/operationSchema';
-import type { EngineOccurrence } from './schema/occurrenceSchema';
-import type { OperationContext } from './validation/validationTypes';
-import { resolvePoolForOp } from './resolvePoolOnSubmit';
+} from './transactions/rollbackTransaction.js';
+import type { TransactionHandle } from './transactions/beginTransaction.js';
+import type { OperationResult, EventChange } from './operations/operationResult.js';
+import type { EngineOperation } from './schema/operationSchema.js';
+import type { EngineOccurrence } from './schema/occurrenceSchema.js';
+import type { OperationContext } from './validation/validationTypes.js';
+import { resolvePoolForOp } from './resolvePoolOnSubmit.js';
 import type {
   CalendarState,
   CalendarEngineInit,
@@ -56,16 +56,16 @@ import type {
   Operation,
   StateListener,
   Unsubscribe,
-} from './types';
-import type { EngineEvent } from './schema/eventSchema';
-import { makeEvent } from './schema/eventSchema';
+} from './types.js';
+import type { EngineEvent } from './schema/eventSchema.js';
+import { makeEvent } from './schema/eventSchema.js';
 import {
   channelForApprovalTransition,
   type EventBus,
   type BookingChannel,
   type BookingLifecyclePayload,
-} from './eventBus';
-import type { ApprovalStage } from '../types/assets';
+} from './eventBus.js';
+import type { ApprovalStage } from '../types/assets.js';
 
 // ─── Initial state ────────────────────────────────────────────────────────────
 

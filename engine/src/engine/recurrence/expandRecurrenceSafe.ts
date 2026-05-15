@@ -1,8 +1,8 @@
-import { expandOccurrences, type ExpandOptions } from './expandOccurrences';
-import type { EngineEvent } from '../schema/eventSchema';
-import type { EngineOccurrence } from '../schema/occurrenceSchema';
-import type { OnError, StructuredCalendarError } from '../errors/onError';
-import { toStructuredError } from '../errors/onError';
+import { expandOccurrences, type ExpandOptions } from './expandOccurrences.js';
+import type { EngineEvent } from '../schema/eventSchema.js';
+import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
+import type { OnError, StructuredCalendarError } from '../errors/onError.js';
+import { toStructuredError } from '../errors/onError.js';
 
 const DEFAULT_MAX_TOTAL = 10_000;
 const DEFAULT_MAX_PER_SERIES = 500;

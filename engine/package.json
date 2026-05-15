@@ -21,7 +21,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "cross-env TZ=UTC vitest run",
     "test:watch": "cross-env TZ=UTC vitest",
-    "type-check": "tsc -p tsconfig.json",
+    "type-check": "tsc --noEmit -p tsconfig.build.json",
     "check": "npm run type-check && npm test"
   },
   "engines": {

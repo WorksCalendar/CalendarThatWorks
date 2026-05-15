@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { resolveOperationScope } from '../resolveOperationScope';
-import { makeEvent } from '../../schema/eventSchema';
-import type { EngineOperation } from '../../schema/operationSchema';
+import { resolveOperationScope } from '../resolveOperationScope.js';
+import { makeEvent } from '../../schema/eventSchema.js';
+import type { EngineOperation } from '../../schema/operationSchema.js';
 
 const t = (h: number) => new Date(2026, 0, 5, h, 0, 0);
 

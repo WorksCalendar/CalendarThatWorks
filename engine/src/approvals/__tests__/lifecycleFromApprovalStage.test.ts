@@ -8,7 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 
-import { lifecycleFromApprovalStage } from '../lifecycleFromApprovalStage';
+import { lifecycleFromApprovalStage } from '../lifecycleFromApprovalStage.js';
 
 describe('lifecycleFromApprovalStage', () => {
   it('maps requested + pending_higher to pending', () => {

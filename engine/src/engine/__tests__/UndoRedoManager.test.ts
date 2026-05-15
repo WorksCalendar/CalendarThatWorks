@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { UndoRedoManager } from '../UndoRedoManager';
-import type { CalendarEngine } from '../CalendarEngine';
-import type { EngineSnapshot } from '../UndoRedoManager';
+import { UndoRedoManager } from '../UndoRedoManager.js';
+import type { CalendarEngine } from '../CalendarEngine.js';
+import type { EngineSnapshot } from '../UndoRedoManager.js';
 
 // ─── Minimal CalendarEngine mock ──────────────────────────────────────────────
 

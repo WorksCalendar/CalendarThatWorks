@@ -11,7 +11,7 @@ import {
   calendarForResource,
   isNonWorkingTime,
   overlapsNonWorking,
-} from '../resourceCalendarSchema';
+} from '../resourceCalendarSchema.js';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 

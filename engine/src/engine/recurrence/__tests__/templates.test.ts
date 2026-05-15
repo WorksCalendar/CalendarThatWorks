@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getEventTemplateById,
   BUILT_IN_EVENT_TEMPLATES,
-} from '../templates';
+} from '../templates.js';
 
 describe('getEventTemplateById', () => {
   it('returns the matching template when the id exists', () => {

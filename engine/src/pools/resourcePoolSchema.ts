@@ -20,7 +20,7 @@
  * evaluator lives in `evaluateQuery.ts`.
  */
 
-import type { ResourceQuery } from './poolQuerySchema'
+import type { ResourceQuery } from './poolQuerySchema.js'
 
 export type PoolStrategy =
   | 'first-available'

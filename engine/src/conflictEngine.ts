@@ -14,14 +14,14 @@
  * `Violation | null`; the engine aggregates violations and computes an
  * overall severity.
  */
-import type { Violation } from './engine/validation/validationTypes'
-import type { EngineResource } from './engine/schema/resourceSchema'
-import type { Assignment } from './engine/schema/assignmentSchema'
-import type { CategoryDef } from './types/assets'
-import { findBlockingHold, type Hold } from './holds/holdRegistry'
-import { evaluateAvailability } from './availability/evaluateAvailability'
-import { parseHoursString } from './engine/time/dateMath'
-import { partsInTimezone } from './engine/time/timezone'
+import type { Violation } from './engine/validation/validationTypes.js'
+import type { EngineResource } from './engine/schema/resourceSchema.js'
+import type { Assignment } from './engine/schema/assignmentSchema.js'
+import type { CategoryDef } from './types/assets.js'
+import { findBlockingHold, type Hold } from './holds/holdRegistry.js'
+import { evaluateAvailability } from './availability/evaluateAvailability.js'
+import { parseHoursString } from './engine/time/dateMath.js'
+import { partsInTimezone } from './engine/time/timezone.js'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

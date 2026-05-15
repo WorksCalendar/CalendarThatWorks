@@ -16,8 +16,8 @@
  * `resource.meta.location`. The convention preserves Map_Idea's flat
  * schema so a one-line bridge works both ways.
  */
-import type { EngineResource } from '../engine/schema/resourceSchema'
-import type { LatLon } from './geo'
+import type { EngineResource } from '../engine/schema/resourceSchema.js'
+import type { LatLon } from './geo.js'
 
 /**
  * The shape `attachLocations` writes into `resource.meta.location`.

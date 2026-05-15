@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { applyOperation } from '../operations';
-import type { CalendarState, CalendarView, FilterState } from '../types';
-import { makeEvent } from '../schema/eventSchema';
+import { applyOperation } from '../operations.js';
+import type { CalendarState, CalendarView, FilterState } from '../types.js';
+import { makeEvent } from '../schema/eventSchema.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { fromLegacyEvent, fromLegacyEvents } from '../fromLegacyEvents';
-import { toLegacyEvent, toLegacyEvents, occurrenceToLegacy } from '../toLegacyEvents';
-import { makeEvent } from '../../schema/eventSchema';
-import type { EngineOccurrence } from '../../schema/occurrenceSchema';
+import { fromLegacyEvent, fromLegacyEvents } from '../fromLegacyEvents.js';
+import { toLegacyEvent, toLegacyEvents, occurrenceToLegacy } from '../toLegacyEvents.js';
+import { makeEvent } from '../../schema/eventSchema.js';
+import type { EngineOccurrence } from '../../schema/occurrenceSchema.js';
 
 const d = (h: number) => new Date(2026, 0, 10, h, 0, 0);
 

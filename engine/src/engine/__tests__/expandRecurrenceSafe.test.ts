@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { makeEvent } from '../schema/eventSchema';
+import { makeEvent } from '../schema/eventSchema.js';
 import {
   expandRecurrenceSafe,
   type SeriesDiagnostic,
-} from '../recurrence/expandRecurrenceSafe';
+} from '../recurrence/expandRecurrenceSafe.js';
 
 describe('expandRecurrenceSafe — invalid range', () => {
   it('returns empty result and emits onError for invalid ranges', () => {

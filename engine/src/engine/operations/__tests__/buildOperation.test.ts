@@ -7,8 +7,8 @@ import {
   fromFormDelete,
   fromImport,
   fromImportBatch,
-} from '../buildOperation';
-import { makeEvent } from '../../schema/eventSchema';
+} from '../buildOperation.js';
+import { makeEvent } from '../../schema/eventSchema.js';
 
 const d = (h: number) => new Date(2026, 0, 10, h, 0, 0);
 

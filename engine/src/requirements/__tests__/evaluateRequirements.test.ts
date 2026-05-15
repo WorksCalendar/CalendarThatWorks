@@ -3,12 +3,12 @@
  * `CalendarConfig.requirements` templates (#386).
  */
 import { describe, it, expect } from 'vitest'
-import { evaluateRequirements } from '../evaluateRequirements'
-import type { ConfigRequirement } from '../requirementTypes'
-import type { Assignment } from '../../engine/schema/assignmentSchema'
-import type { EngineEvent } from '../../engine/schema/eventSchema'
-import type { EngineResource } from '../../engine/schema/resourceSchema'
-import type { ResourcePool } from '../../pools/resourcePoolSchema'
+import { evaluateRequirements } from '../evaluateRequirements.js'
+import type { ConfigRequirement } from '../requirementTypes.js'
+import type { Assignment } from '../../engine/schema/assignmentSchema.js'
+import type { EngineEvent } from '../../engine/schema/eventSchema.js'
+import type { EngineResource } from '../../engine/schema/resourceSchema.js'
+import type { ResourcePool } from '../../pools/resourcePoolSchema.js'
 
 const r = (id: string, meta: Record<string, unknown> = {}): EngineResource =>
   ({ id, name: id.toUpperCase(), meta } as EngineResource)

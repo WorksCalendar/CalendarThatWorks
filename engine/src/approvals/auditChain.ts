@@ -18,8 +18,8 @@
  * environment. For true tamper-evidence, persist chain hashes server-side
  * and cross-check them on load.
  */
-import type { ApprovalHistoryEntry } from '../types/assets'
-import { sha256Hex } from './sha256'
+import type { ApprovalHistoryEntry } from '../types/assets.js'
+import { sha256Hex } from './sha256.js'
 
 // ─── Canonicalization ─────────────────────────────────────────────────────
 

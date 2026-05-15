@@ -2,9 +2,9 @@
  * `validateEvent` — schema-driven event validator (#259).
  */
 import { describe, it, expect, vi } from 'vitest';
-import { validateEvent } from '../validateEvent';
-import { makeEvent } from '../../schema/eventSchema';
-import type { OnError } from '../../errors/onError';
+import { validateEvent } from '../validateEvent.js';
+import { makeEvent } from '../../schema/eventSchema.js';
+import type { OnError } from '../../errors/onError.js';
 
 const baseEvent = () => makeEvent('e1', {
   title: 'Title',

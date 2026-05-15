@@ -16,12 +16,12 @@
  *
  * Pure / sync. Doesn't mutate the engine state.
  */
-import type { ValidationResult, Violation } from '../engine/validation/validationTypes'
+import type { ValidationResult, Violation } from '../engine/validation/validationTypes.js'
 import {
   evaluateRequirements,
   type EvaluateRequirementsInput,
   type RequirementShortfall,
-} from './evaluateRequirements'
+} from './evaluateRequirements.js'
 
 export type GateEventRequirementsInput = EvaluateRequirementsInput
 

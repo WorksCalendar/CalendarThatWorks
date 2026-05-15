@@ -10,7 +10,7 @@ import {
   createHoldRegistry,
   findBlockingHold,
   type Hold,
-} from '../holdRegistry'
+} from '../holdRegistry.js'
 
 const T0 = new Date('2026-04-20T09:00:00.000Z')
 const ms = (iso: string) => new Date(iso).getTime()

@@ -9,8 +9,8 @@
  *   - when no businessHours config is provided
  */
 
-import type { Violation, OperationContext, ChangeShape } from './validationTypes';
-import { hoursDecimal, parseHoursString } from '../time/dateMath';
+import type { Violation, OperationContext, ChangeShape } from './validationTypes.js';
+import { hoursDecimal, parseHoursString } from '../time/dateMath.js';
 
 export function validateWorkingHours(
   change: ChangeShape,

@@ -15,7 +15,7 @@ import {
   rangeDurationMs,
   filterOverlapping,
   type DateRange,
-} from '../rangeMath';
+} from '../rangeMath.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

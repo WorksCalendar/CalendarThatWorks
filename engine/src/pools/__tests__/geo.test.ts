@@ -6,7 +6,7 @@
  * Tolerance is 0.5% — well under any realistic dispatch threshold.
  */
 import { describe, it, expect } from 'vitest'
-import { haversineKm, haversineMiles, isLatLon } from '../geo'
+import { haversineKm, haversineMiles, isLatLon } from '../geo.js'
 
 const SLC = { lat: 40.7608, lon: -111.8910 }
 const DEN = { lat: 39.7392, lon: -104.9903 }

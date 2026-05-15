@@ -4,7 +4,7 @@
  * support stays in the monolith.
  */
 
-import type { NormalizedEvent } from './events';
+import type { NormalizedEvent } from './events.js';
 
 export type SortDirection = 'asc' | 'desc';
 

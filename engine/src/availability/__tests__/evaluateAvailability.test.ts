@@ -13,8 +13,8 @@ import {
   evaluateAvailability,
   findBlockingBlackout,
   type AvailabilityWindow,
-} from '../evaluateAvailability'
-import type { AvailabilityRule } from '../availabilityRule'
+} from '../evaluateAvailability.js'
+import type { AvailabilityRule } from '../availabilityRule.js'
 
 const win = (s: string, e: string): AvailabilityWindow => ({ start: s, end: e })
 

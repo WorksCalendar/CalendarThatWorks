@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { getOccurrencesInRange } from '../getOccurrencesInRange';
-import type { EngineEvent } from '../../schema/eventSchema';
-import type { Assignment } from '../../schema/assignmentSchema';
+import { getOccurrencesInRange } from '../getOccurrencesInRange.js';
+import type { EngineEvent } from '../../schema/eventSchema.js';
+import type { Assignment } from '../../schema/assignmentSchema.js';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

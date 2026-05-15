@@ -12,8 +12,8 @@
  * accepts a `strictMembers` flag for the runtime variant — see
  * `resolvePool.ts`.
  */
-import type { EngineResource } from '../engine/schema/resourceSchema'
-import type { ResourcePool } from './resourcePoolSchema'
+import type { EngineResource } from '../engine/schema/resourceSchema.js'
+import type { ResourcePool } from './resourcePoolSchema.js'
 
 export interface PoolIntegrityIssue {
   /** Pool the issue is rooted in. */

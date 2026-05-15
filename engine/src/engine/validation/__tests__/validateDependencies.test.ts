@@ -9,10 +9,10 @@ import { describe, it, expect } from 'vitest';
 import {
   validateDependencies,
   validateNoCycle,
-} from '../validateDependencies';
-import type { ChangeShape, OperationContext } from '../validationTypes';
-import type { Dependency, DependencyType } from '../../schema/dependencySchema';
-import type { EngineEvent } from '../../schema/eventSchema';
+} from '../validateDependencies.js';
+import type { ChangeShape, OperationContext } from '../validationTypes.js';
+import type { Dependency, DependencyType } from '../../schema/dependencySchema.js';
+import type { EngineEvent } from '../../schema/eventSchema.js';
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
