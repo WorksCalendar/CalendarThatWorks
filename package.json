@@ -1,6 +1,6 @@
 {
   "name": "works-calendar",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "description": "Drop-in embeddable React calendar with filtering, scheduling workflows, themes, and external-form support.",
   "license": "MIT",
   "type": "module",
@@ -172,7 +172,11 @@
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.1.4"
   },
-
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --max-warnings=0 --no-warn-ignored"
+    ]
+  },
   "keywords": [
     "calendar",
     "scheduler",
