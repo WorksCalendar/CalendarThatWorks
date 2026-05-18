@@ -30,8 +30,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "cross-env TZ=UTC vitest run",
-    "test:watch": "cross-env TZ=UTC vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "type-check": "tsc --noEmit -p tsconfig.build.json",
     "check": "npm run type-check && npm test"
   },
@@ -43,7 +43,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.39",
-    "cross-env": "^10.1.0",
     "date-fns": "^3.6.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.4"
