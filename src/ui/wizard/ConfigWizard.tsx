@@ -718,6 +718,36 @@ function ReviewStep({
         </label>
       </fieldset>
 
+      <fieldset className={styles['fieldset']}>
+        <legend className={styles['legend']}>Layout &amp; chrome</legend>
+        <p className={styles['hint']}>
+          Choose which layout regions the calendar renders. Everything is on by
+          default; turn a region off to slim the calendar down (e.g. when the
+          host app supplies its own toolbar or navigation).
+        </p>
+        {([
+          { key: 'toolbar',      label: 'Top toolbar / header bar' },
+          { key: 'viewSwitcher', label: 'View tabs (Month / Week / Day …)' },
+          { key: 'leftRail',     label: 'Left icon rail' },
+          { key: 'rightPanel',   label: 'Right panel (map + crew on shift)' },
+        ] as const).map(c => {
+          const chrome = settings.chrome ?? {}
+          return (
+            <label key={c.key} className={styles['settingRow']}>
+              <span className={styles['settingLabel']}>{c.label}</span>
+              <input
+                type="checkbox"
+                checked={chrome[c.key] !== false}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setSettings({
+                  ...settings,
+                  chrome: { ...chrome, [c.key]: e.target.checked },
+                })}
+              />
+            </label>
+          )
+        })}
+      </fieldset>
+
       <fieldset className={styles['fieldset']} data-testid="wizard-validation">
         <legend className={styles['legend']}>
           Validation {validation.ok ? <span className={styles['okPill']}>OK</span> : <span className={styles['errPill']}>{validation.issues.length} issue{validation.issues.length === 1 ? '' : 's'}</span>}

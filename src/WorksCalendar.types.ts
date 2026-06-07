@@ -54,6 +54,17 @@ export type WorksCalendarConfig = {
     dayEnd?: number;
     showWeekNumbers?: boolean;
     enlargeMonthRowOnHover?: boolean;
+    /**
+     * Which top-level chrome regions render. Each flag defaults to `true`
+     * when omitted (full chrome). The matching `show*` props on
+     * `WorksCalendar` override these per-render when provided.
+     */
+    chrome?: {
+      leftRail?: boolean;
+      rightPanel?: boolean;
+      toolbar?: boolean;
+      viewSwitcher?: boolean;
+    };
     [key: string]: unknown;
   };
   /** Filter UI label overrides (group labels for Categories/People/Sources/More). */
@@ -279,6 +290,23 @@ export type WorksCalendarProps = {
   showCalendarLegend?: boolean;
   /** Show a banner when the browser reports no network connectivity. */
   showOfflineIndicator?: boolean;
+  /**
+   * Chrome visibility overrides. Each defaults to the persisted
+   * `display.chrome.*` setting (editable via the setup wizard / ConfigPanel),
+   * then to `true` (full chrome). Pass `false` to force a region off
+   * regardless of the saved config — e.g. embedding the calendar inside a
+   * host that already provides its own toolbar or side navigation.
+   *
+   * Note: a view that "owns its chrome" (e.g. Dispatch) still suppresses the
+   * host toolbar/rails on its own; these props only widen what's hidden.
+   */
+  showToolbar?: boolean;
+  /** Show the left icon rail (Add / Saved views / Focus / Settings). */
+  showLeftRail?: boolean;
+  /** Show the right panel (region map + crew on shift). */
+  showRightPanel?: boolean;
+  /** Show the Month / Week / Day / … view-switcher tabs. */
+  showViewSwitcher?: boolean;
   /**
    * Host-defined quick-create event templates surfaced in the toolbar "New from template" dropdown.
    * Each template pre-fills the EventForm via api.addEvent(defaults).

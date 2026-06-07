@@ -245,7 +245,7 @@ export type {
   CalendarConfig, ConfigLabels, ConfigResourceType, ConfigRole,
   ConfigResource, ConfigRequirement, ConfigRequirementSlot,
   ConfigRequirementSeverity,
-  ConfigSeedEvent, ConfigSettings,
+  ConfigSeedEvent, ConfigSettings, ChromeSettings,
 } from './core/config/calendarConfig';
 export { validateConfig } from './core/config/validateConfig';
 export type {

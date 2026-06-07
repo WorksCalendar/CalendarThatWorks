@@ -273,6 +273,23 @@ describe('ConfigWizard — Review step', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     expect(onComplete).toHaveBeenCalledWith({ profile: 'scheduling' })
   })
+
+  it('Layout toggles write settings.chrome into the completed config', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{ profile: 'custom' }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    // Chrome flags default to checked (shown); turn two off.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Left icon rail' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Right panel (map + crew on shift)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    expect(onComplete).toHaveBeenCalledWith({
+      profile: 'custom',
+      settings: { chrome: { leftRail: false, rightPanel: false } },
+    })
+  })
 })
 
 describe('ConfigWizard — Finish gating (#460)', () => {

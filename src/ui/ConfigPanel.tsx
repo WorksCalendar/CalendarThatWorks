@@ -107,6 +107,7 @@ const SEARCH_INDEX: Array<{ label: string; keywords?: string; tabId: string }> =
   { label: 'Day view end hour',             tabId: 'display',    keywords: 'business hours range' },
   { label: 'Show week numbers',             tabId: 'display' },
   { label: 'Enlarge month row on hover',    tabId: 'display' },
+  { label: 'Panels & chrome',               tabId: 'display',    keywords: 'toolbar header left rail right panel view tabs hide show layout chrome' },
   { label: 'Filter group labels',           tabId: 'display',    keywords: 'rename categories people sources more' },
   { label: 'Location label (Base / Region)', tabId: 'team',      keywords: 'rename base station region' },
   { label: 'Asset label (Aircraft / Vehicle / Equipment)', tabId: 'team', keywords: 'rename asset aircraft vehicle equipment fleet' },
@@ -2110,6 +2111,12 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
     set('enabledViews', next);
   };
 
+  // Chrome (panels & bars) — every flag defaults to "shown" (true) when
+  // absent, so an untouched calendar keeps its full layout.
+  const chrome = (d.chrome ?? {}) as Record<string, unknown>;
+  const setChrome = (key: string, on: boolean) =>
+    set('chrome', { ...chrome, [key]: on });
+
   return (
     <div className={styles['section']}>
       <div className={styles['formRow']}>
@@ -2200,6 +2207,26 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
         />
         <span className={styles['toggleTrack']} />
       </label>
+
+      {/* ── Panels & chrome ── */}
+      <p className={styles['fieldGroupLabel']} style={{ marginTop: 12 }}>Panels &amp; chrome</p>
+      <p className={styles['sectionDesc']}>Turn off layout regions you don&apos;t need — handy when embedding the calendar inside a host that already provides its own toolbar or navigation. (The host app can also override these per-page via the <code>show*</code> props.)</p>
+      {[
+        { key: 'toolbar',      label: 'Top toolbar / header bar' },
+        { key: 'viewSwitcher', label: 'View tabs (Month / Week / Day …)' },
+        { key: 'leftRail',     label: 'Left icon rail' },
+        { key: 'rightPanel',   label: 'Right panel (map + crew on shift)' },
+      ].map(c => (
+        <label key={c.key} className={styles['toggle']}>
+          <span>{c.label}</span>
+          <input
+            type="checkbox"
+            checked={chrome[c.key] !== false}
+            onChange={e => setChrome(c.key, e.target.checked)}
+          />
+          <span className={styles['toggleTrack']} />
+        </label>
+      ))}
 
       <div className={styles['section']} style={{ paddingTop: 12 }}>
         <p className={styles['sectionDesc']}>Rename the grouped filter dropdown buttons shown to users.</p>

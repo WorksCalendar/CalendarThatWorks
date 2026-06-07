@@ -68,6 +68,8 @@ export interface CalendarToolbarProps {
   hideEventTemplates?: boolean;
   eventTemplates?: EventTemplateV1[];
   showSearch?: boolean;
+  /** Render the view-switcher tabs in the toolbar. Defaults to `true`. */
+  showViewSwitcher?: boolean;
   showTimezonePicker?: boolean;
   displayTimezone?: string;
   onTimezoneChange?: (tz: string) => void;
@@ -102,6 +104,7 @@ export default function CalendarToolbar({
   VIEWS, setSidebarOpen, setSidebarInitialTab,
   schema, filterBarSchema, scopedEvents, locationLabel, assetsLabel, weekStartDay,
   showSearch,
+  showViewSwitcher = true,
   showTimezonePicker, displayTimezone, onTimezoneChange,
 }: CalendarToolbarProps) {
   // Voiding refs to unused props so TypeScript doesn't complain about the
@@ -132,11 +135,13 @@ export default function CalendarToolbar({
                 aria-hidden={!logoAlt ? 'true' : undefined}
               />
             )}
-            <ViewSwitcher
-              views={VIEWS}
-              currentView={cal.view}
-              onViewChange={(id) => cal.setView(id as typeof cal.view)}
-            />
+            {showViewSwitcher && (
+              <ViewSwitcher
+                views={VIEWS}
+                currentView={cal.view}
+                onViewChange={(id) => cal.setView(id as typeof cal.view)}
+              />
+            )}
           </div>
         }
         centerSlot={

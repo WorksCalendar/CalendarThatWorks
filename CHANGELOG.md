@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Loosened mandatory chrome — toolbar, view tabs, left rail, and right
+  panel are now optional.** Each region can be hidden via a new `show*` prop
+  (`showToolbar`, `showViewSwitcher`, `showLeftRail`, `showRightPanel`) or
+  persisted in config under `display.chrome.*`. The setup wizard's Review
+  step and ConfigPanel → *Layout & Labels* → *Panels & chrome* both expose
+  the toggles, and `CalendarConfig.settings.chrome` round-trips through
+  `parseConfig` / `serializeConfig`. Resolution order is prop > saved config
+  > `true`, so existing calendars keep their full layout unchanged. See
+  `docs/CalendarConfig.md`.
 - **Travel-mode "time to arrive" for the resource scheduler.** The engine's
   single-speed `geo-travel-feasibility` model is cloned into three modes —
   `car`, `walking`, and a phase-based `aircraft` performance profile (taxi →

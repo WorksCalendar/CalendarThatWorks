@@ -145,6 +145,10 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     showMiniCalendar        = false,
     showCalendarLegend      = false,
     showOfflineIndicator    = false,
+    showToolbar,
+    showLeftRail,
+    showRightPanel,
+    showViewSwitcher,
     hideEventTemplates       = false,
     eventTemplates,
     eventResourceSuggestions,
@@ -386,12 +390,21 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
           // ViewSwitcher node to slot into its own header.
           const currentViewDef = VIEWS.find((v) => v.id === cal.view);
           const viewOwnsChrome = currentViewDef?.ownsChrome === true;
-          const viewSwitcherForView = viewOwnsChrome ? (
+          // Chrome visibility: explicit show* prop wins, else the persisted
+          // display.chrome setting, else true (full chrome — historical default).
+          const chromeCfg = (ownerCfg.config?.['display'] as { chrome?: Record<string, unknown> } | undefined)?.chrome;
+          const resolveChrome = (prop: boolean | undefined, key: string): boolean =>
+            prop ?? (typeof chromeCfg?.[key] === 'boolean' ? (chromeCfg[key] as boolean) : true);
+          const chromeLeftRail     = resolveChrome(showLeftRail, 'leftRail');
+          const chromeRightPanel   = resolveChrome(showRightPanel, 'rightPanel');
+          const chromeToolbar      = resolveChrome(showToolbar, 'toolbar');
+          const chromeViewSwitcher = resolveChrome(showViewSwitcher, 'viewSwitcher');
+          const viewSwitcherForView = viewOwnsChrome && chromeViewSwitcher ? (
             <ViewSwitcher views={VIEWS} currentView={cal.view} onViewChange={(id) => cal.setView(id as typeof cal.view)} />
           ) : null;
           return (
           <AppShell
-            {...(viewOwnsChrome ? {} : { leftRail: <CalendarLeftRail
+            {...(viewOwnsChrome || !chromeLeftRail ? {} : { leftRail: <CalendarLeftRail
               ownerCfg={ownerCfg}
               leftRailExtras={leftRailExtras}
               setSidebarInitialTab={setSidebarInitialTab}
@@ -413,9 +426,10 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
               editMode={editMode}
               onToggleEditMode={() => { setEditMode((v) => !v); setInlineEditTarget(null); }}
             /> })}
-            {...(viewOwnsChrome || !hasRightPanelContent(configuredEmployees, rightPanelExtras) ? {} : { rightPanel: <CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} /> })}
-            header={viewOwnsChrome ? <></> :
+            {...(viewOwnsChrome || !chromeRightPanel || !hasRightPanelContent(configuredEmployees, rightPanelExtras) ? {} : { rightPanel: <CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} /> })}
+            header={viewOwnsChrome || !chromeToolbar ? <></> :
               <CalendarToolbar cal={cal} ownerCfg={ownerCfg} api={api}
+                showViewSwitcher={chromeViewSwitcher}
                 renderToolbar={renderToolbar} renderSavedViewsBar={renderSavedViewsBar} renderFilterBar={renderFilterBar}
                 focusChips={focusChips} logoSrc={logoSrc} logoAlt={logoAlt}
                 devMode={devMode} calendarTitle={calendarTitle} fetchLoading={fetchLoading}
