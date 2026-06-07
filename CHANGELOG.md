@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Travel-mode "time to arrive" for the resource scheduler.** The engine's
+  single-speed `geo-travel-feasibility` model is cloned into three modes —
+  `car`, `walking`, and a phase-based `aircraft` performance profile (taxi →
+  climb → cruise → descent → taxi). New public API: `estimateTravelMinutes`,
+  `effectiveSpeedKph`, `resolveTravelProfile`, the `CAR_PROFILE` /
+  `WALKING_PROFILE` / aircraft presets (`LIGHT_PISTON`, `TURBOPROP`,
+  `BUSINESS_JET`, `AIRLINER`, `AIRCRAFT_PROFILES`), and the mode-aware
+  feasibility evaluator `evaluateTravelFeasibility` / `travelFeasibilityRule`.
+  The dispatch view now annotates each leg with a modeled estimate (resolved
+  from `event.meta.travelMode` / `asset.meta.travelMode`, default `car`) and
+  surfaces it next to the scheduled clock time. See `docs/TravelModes.md`.
+
 ## [2.0.0] — 2026-05-20
 
 The "embeddable for real" release. The headline is a breaking change to how

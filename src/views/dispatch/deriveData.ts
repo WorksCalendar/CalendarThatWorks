@@ -13,11 +13,13 @@
  * for their domain (planes, crews, drones).
  */
 import type { NormalizedEvent } from 'works-calendar-engine';
+import { estimateTravelMinutes, resolveTravelProfile } from '../../core/travel';
 import type {
   DispatchAsset,
   DispatchFacility,
   DispatchSegment,
   DispatchStop,
+  TravelEstimate,
 } from './types';
 
 /** Stable color fallback when an asset doesn't supply meta.color. */
@@ -66,14 +68,49 @@ export interface DerivedDispatchData {
   readonly segmentsByAsset: ReadonlyMap<string, DispatchSegment[]>;
 }
 
+/**
+ * Resolve a leg's travel mode: the departing stop's `event.meta.travelMode`
+ * wins (per-leg override), otherwise the asset-level default supplied by the
+ * caller. Lets a mixed fleet (trucks + a courier plane) model each leg with
+ * the right profile.
+ */
+function legTravelMode(
+  from: DispatchStop,
+  assetModes: ReadonlyMap<string, string>,
+  defaultMode: string,
+): string {
+  const perEvent = from.event.meta?.['travelMode'];
+  if (typeof perEvent === 'string' && perEvent) return perEvent;
+  return assetModes.get(from.assetId) ?? defaultMode;
+}
+
+function computeEstimate(
+  from: DispatchStop,
+  to: DispatchStop,
+  mode: string,
+): TravelEstimate | undefined {
+  const profile = resolveTravelProfile(mode);
+  const minutes = estimateTravelMinutes(
+    { lat: from.lat, lon: from.lng },
+    { lat: to.lat, lon: to.lng },
+    profile,
+  );
+  if (!Number.isFinite(minutes)) return undefined;
+  return { mode: profile.mode, profileLabel: profile.label, minutes };
+}
+
 export function deriveDispatchData(
   events: readonly NormalizedEvent[],
   assets: readonly RawAssetEntry[] = [],
+  defaultTravelMode = 'car',
 ): DerivedDispatchData {
   // ── Assets ── union of declared assets and event.resource ids ──
   const assetIndex = new Map<string, DispatchAsset>();
+  const assetModes = new Map<string, string>();
   assets.forEach((a, i) => {
     const drv = a.meta?.['driverName'];
+    const mode = a.meta?.['travelMode'];
+    if (typeof mode === 'string' && mode) assetModes.set(a.id, mode);
     assetIndex.set(a.id, {
       id: a.id,
       name: a.label,
@@ -139,7 +176,8 @@ export function deriveDispatchData(
       const b = stops[i + 1]!;
       if (a.facilityCode === b.facilityCode) continue;
       if (a.kind !== 'departure') continue;
-      segs.push({ assetId, from: a, to: b });
+      const estimate = computeEstimate(a, b, legTravelMode(a, assetModes, defaultTravelMode));
+      segs.push({ assetId, from: a, to: b, ...(estimate ? { estimate } : {}) });
     }
     segmentsByAsset.set(assetId, segs);
   }

@@ -293,6 +293,14 @@ interface GeoConflictViolation {
 
 > **Note:** `evaluateGeoConflicts` is not called by `validateOperation` inside the engine. Call it independently after each engine commit, or in a pre-save check, and attach locations to events via `attachLocations` or a location adapter.
 
+### Multi-mode travel ("time to arrive" by car / walking / aircraft)
+
+`geo-travel-feasibility` uses a single `maxSpeedKph`. When you need
+mode-aware "time to arrive" — driving vs. walking vs. a phase-based aircraft
+performance profile — use `evaluateTravelFeasibility` and the travel-mode
+estimator. Same `GeoEventInput` shape, same semantics, per-mode profiles.
+See [TravelModes.md](./TravelModes.md).
+
 ---
 
 ## Requirements engine

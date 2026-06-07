@@ -9,6 +9,7 @@
  */
 
 import type { NormalizedEvent } from 'works-calendar-engine';
+import type { TravelMode } from '../../core/travel';
 
 // ── Layer projection ────────────────────────────────────────────────────────
 
@@ -58,11 +59,25 @@ export interface DispatchStop {
   readonly kind: 'departure' | 'arrival';
 }
 
+/**
+ * A modeled "time to arrive" for a leg, computed from the leg's distance
+ * and the asset's travel profile (car / walking / aircraft). Independent of
+ * the scheduled clock gap — comparing the two tells a dispatcher whether a
+ * leg is padded or physically infeasible.
+ */
+export interface TravelEstimate {
+  readonly mode: TravelMode;
+  readonly profileLabel: string;
+  readonly minutes: number;
+}
+
 /** One leg between two consecutive stops on the same asset. */
 export interface DispatchSegment {
   readonly assetId: string;
   readonly from: DispatchStop;
   readonly to: DispatchStop;
+  /** Modeled travel time for the leg; omitted when it can't be computed. */
+  readonly estimate?: TravelEstimate;
 }
 
 /** A pairwise conflict at a facility — produced by the engine, rendered here. */
