@@ -15,7 +15,8 @@ import { viewScopedSchema } from '../filters/filterSchema';
 import { resolveLabels } from '../core/config/resolveLabels';
 import { SCHEDULE_WORKFLOW_CATEGORIES } from 'works-calendar-engine';
 import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
-import type { CalendarView, WorksCalendarProps } from '../WorksCalendar.types';
+import type { CalendarView as EngineView } from 'works-calendar-engine';
+import type { WorksCalendarProps } from '../WorksCalendar.types';
 import type { WorksCalendarEvent } from '../types/events';
 import type { FilterField } from '../filters/filterSchema';
 import type { SortConfig } from '../types/grouping.ts';
@@ -158,7 +159,10 @@ export function useCalendarDataPipeline({
   });
 
   useEffect(() => {
-    engineResult.engine.dispatch({ type: 'SET_VIEW', view: cal.view as CalendarView });
+    // `planner` is a self-contained UI view the engine has no scope for, so
+    // map it to a neutral engine view — the engine never drives that surface.
+    const engineView = (cal.view === 'planner' ? 'month' : cal.view) as EngineView;
+    engineResult.engine.dispatch({ type: 'SET_VIEW', view: engineView });
   }, [engineResult.engine, cal.view]);
 
   useEffect(() => {

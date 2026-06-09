@@ -46,6 +46,7 @@ export const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side', group: 'calendar' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false,                                                                            group: 'operations' },
   { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?',      group: 'operations', ownsChrome: true },
+  { id: 'planner',  label: 'Planner',  alwaysOn: false, hint: 'Allocate resources to a job and check conflicts before committing', group: 'operations', ownsChrome: true },
   { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests',    group: 'operations' },
 ];
 

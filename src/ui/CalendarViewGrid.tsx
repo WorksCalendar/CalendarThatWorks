@@ -10,6 +10,7 @@ const AgendaView      = lazy(() => import('../views/AgendaView'));
 const AssetsView      = lazy(() => import('../views/AssetsView'));
 const BaseGanttView   = lazy(() => import('../views/BaseGanttView'));
 const DispatchView    = lazy(() => import('../views/DispatchView'));
+const PlannerView     = lazy(() => import('../views/PlannerView'));
 const RequestQueueView = lazy(() => import('../views/RequestQueueView'));
 import styles from '../WorksCalendar.module.css';
 import type { CalObject } from '../hooks/useCalendarSetup';
@@ -291,6 +292,9 @@ export default function CalendarViewGrid({
                   onAsOfChange: cal.setCurrentDate,
                   viewSwitcher,
                 } as unknown as ComponentProps<typeof DispatchView>)} />
+              )}
+              {cal.view === 'planner' && (
+                <PlannerView viewSwitcher={viewSwitcher} />
               )}
               {cal.view === 'requests' && (
                 <RequestQueueView

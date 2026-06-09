@@ -2142,6 +2142,7 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
         { id: 'base',     label: `${config['team']?.locationLabel ?? 'Base'} (location-first)` },
         { id: 'assets',   label: `${config['team']?.assetsLabel ?? 'Asset'}s` },
         { id: 'dispatch', label: 'Dispatch (readiness board)' },
+        { id: 'planner',  label: 'Planner (resource allocation)' },
       ].map(v => (
         <label key={v.id} className={styles['toggle']}>
           <span>{v.label}</span>
