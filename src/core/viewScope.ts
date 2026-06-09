@@ -8,7 +8,7 @@
  */
 import { isScheduleWorkflowEvent, SCHEDULE_TAB_CATEGORY_SEEDS } from 'works-calendar-engine';
 
-export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch' | 'requests' | 'map';
+export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch' | 'requests' | 'planner' | 'map';
 
 export type ViewScopeContext = {
   employees: Array<{ id: string; base?: string | null }>;
@@ -111,6 +111,9 @@ export const VIEW_SCOPES: Record<ViewId, ViewScope> = Object.freeze({
   // is independent of the calendar's currentDate filter; the view itself
   // applies the stage filter strip on top of the loaded set.
   requests: { id: 'requests', includes: () => true },
+  // Planner is a self-contained allocation surface (its own data + chrome);
+  // it doesn't scope the shared event pool, so accept everything.
+  planner:  { id: 'planner',  includes: () => true },
   map:      { id: 'map',      includes: () => true },
 });
 

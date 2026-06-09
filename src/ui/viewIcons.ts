@@ -13,7 +13,7 @@
 import type { ComponentType, SVGProps } from 'react';
 import {
   CalendarDays, Calendar, Columns3, List, CalendarRange,
-  Boxes, MapPin, Radio, Map as MapIcon,
+  Boxes, MapPin, Radio, Map as MapIcon, ClipboardList,
 } from 'lucide-react';
 
 export type ViewIconEntry = {
@@ -30,5 +30,6 @@ export const VIEW_ICON_MAP: Record<string, ViewIconEntry> = {
   base:     { Icon: MapPin,        label: 'Base view' },
   assets:   { Icon: Boxes,         label: 'Assets view' },
   dispatch: { Icon: Radio,         label: 'Dispatch view' },
+  planner:  { Icon: ClipboardList, label: 'Planner view' },
   map:      { Icon: MapIcon,       label: 'Map view' },
 };
