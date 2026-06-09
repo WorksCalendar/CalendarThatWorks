@@ -4,22 +4,31 @@
  * A clean two-column scheduler surface adapted from an "ops planner" layout:
  *   - LEFT  — what the job needs + the resource pool to draw from
  *             (parameters, segments, capability requirements, resource list
- *             with availability / time-until-maintenance / booking status).
+ *             with availability / time-until-service / booking status).
  *   - RIGHT — the resulting allocation + whether it's legal
  *             (operator rotation, crew + duty-day check, conflicts, actions).
  *
+ * Engine-driven, not faked: each resource's availability and the conflicts
+ * panel come from the shared conflict engine (`evaluateConflicts`) run
+ * against the existing bookings, honoring the owner's configured rule set —
+ * the same source of truth the rest of the calendar gates writes on. The
+ * duty-day check is a host-side calc because hours-of-service is carried as
+ * event metadata, not an engine concept (matching the dispatch board).
+ * **Allocate** picks the first resource with no hard conflict — the engine's
+ * own `first-available` contract.
+ *
  * Deliberately domain-agnostic: every noun is a label, not a hard-coded
- * aviation/medical term. The component carries demo data so it renders
- * standalone; hosts override via props. This is the presentational scaffold —
- * a later pass wires it to the real pool / requirement / conflict-engine /
- * duty-time plumbing.
+ * aviation/medical term. Carries demo data so it renders standalone; the
+ * `PlannerView` adapter feeds real events / resources / rules from context.
  *
  * Owns its chrome (like the dispatch board): the host hands over the full
  * pane and passes a `viewSwitcher` node to slot into the header. No demo
- * banner, no brand gradient — themed with the calendar's neutral surface.
+ * banner, no brand gradient — themed on the calendar's neutral surface.
  */
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { evaluateConflicts } from 'works-calendar-engine';
+import type { ConflictEvent, ConflictRule } from 'works-calendar-engine';
 import {
   Boxes, Plus, TriangleAlert, Clock, CircleCheck, ChevronDown, Send, FileText,
 } from 'lucide-react';
@@ -35,12 +44,15 @@ export interface PlannerResource {
   readonly name: string;
   /** Secondary qualifier (class, region, restriction). */
   readonly group?: string;
-  readonly status: PlannerResourceStatus;
+  /** Hard-down for service — renders MX and can't be selected. (Maintenance
+   *  is an asset-health state, not a booking conflict, so it's a flag here
+   *  rather than something the conflict engine derives.) */
+  readonly maintenance?: boolean;
   /** Service life remaining before the next required maintenance, in hours.
    *  `null` when not tracked. Drives the green/amber countdown. */
   readonly hoursUntilService?: number | null;
-  /** Why a `booked` resource is unavailable — shown as a hover tooltip. */
-  readonly bookedReason?: string;
+  /** Capability tags this resource carries. */
+  readonly capabilities?: readonly string[];
 }
 
 /** Per-segment duty state for an operator. */
@@ -86,19 +98,49 @@ export interface PlannerViewProps {
   readonly segments?: readonly PlannerSegment[];
   readonly capabilities?: readonly string[];
   readonly labels?: Partial<PlannerLabels>;
+  /**
+   * Existing bookings the engine checks each candidate allocation against
+   * for double-booking. Mapped to the engine's minimal `ConflictEvent`
+   * shape by the adapter.
+   */
+  readonly existingBookings?: readonly ConflictEvent[];
+  /** Owner-configured conflict rules. Defaults to a single hard
+   *  resource-overlap rule when omitted. */
+  readonly rules?: readonly ConflictRule[];
+  /** Master switch mirrored from `config.conflicts.enabled`. */
+  readonly conflictsEnabled?: boolean;
+  /** Called when the user commits an allocation for `resourceId`. */
+  readonly onAllocate?: (resourceId: string) => void;
+  /** Initial start date (YYYY-MM-DD) for the job window. */
+  readonly initialStartDate?: string;
 }
 
 // ─── Demo fallback data (agnostic) ──────────────────────────────────────────
 
+const DEMO_START_DATE = '2026-05-18';
+
 const DEMO_RESOURCES: PlannerResource[] = [
-  { id: 'UNIT-12', name: 'Class A', group: 'Unrestricted', status: 'available',   hoursUntilService: 312 },
-  { id: 'UNIT-07', name: 'Class B', group: 'Regional',     status: 'booked',      hoursUntilService: 188, bookedReason: 'In use — Job #4821 · Region North (today)' },
-  { id: 'UNIT-21', name: 'Class B', group: 'Regional',     status: 'available',   hoursUntilService: 245 },
-  { id: 'UNIT-04', name: 'Class C', group: 'Local',        status: 'booked',      hoursUntilService: 96,  bookedReason: 'In use — Job #4799 · Region South (today)' },
-  { id: 'UNIT-31', name: 'Class C', group: 'Local',        status: 'available',   hoursUntilService: 67 },
-  { id: 'UNIT-18', name: 'Class C', group: 'Local',        status: 'available',   hoursUntilService: 203 },
-  { id: 'UNIT-09', name: 'Class C', group: 'Local',        status: 'maintenance', hoursUntilService: null },
-  { id: 'UNIT-26', name: 'Class D', group: 'Local',        status: 'available',   hoursUntilService: 112 },
+  { id: 'UNIT-12', name: 'Class A', group: 'Unrestricted', hoursUntilService: 312 },
+  { id: 'UNIT-07', name: 'Class B', group: 'Regional',     hoursUntilService: 188 },
+  { id: 'UNIT-21', name: 'Class B', group: 'Regional',     hoursUntilService: 245 },
+  { id: 'UNIT-04', name: 'Class C', group: 'Local',        hoursUntilService: 96 },
+  { id: 'UNIT-31', name: 'Class C', group: 'Local',        hoursUntilService: 67 },
+  { id: 'UNIT-18', name: 'Class C', group: 'Local',        hoursUntilService: 203 },
+  { id: 'UNIT-09', name: 'Class C', group: 'Local',        maintenance: true, hoursUntilService: null },
+  { id: 'UNIT-26', name: 'Class D', group: 'Local',        hoursUntilService: 112 },
+];
+
+// Two demo bookings overlapping the default 07:00 window so the engine
+// flags UNIT-07 / UNIT-04 as booked — proving the status comes from
+// `evaluateConflicts`, not a hard-coded flag.
+const demoBooking = (id: string, resource: string): ConflictEvent => ({
+  id, resource,
+  start: new Date(`${DEMO_START_DATE}T08:00:00`),
+  end:   new Date(`${DEMO_START_DATE}T10:00:00`),
+});
+const DEMO_BOOKINGS: ConflictEvent[] = [
+  demoBooking('job-4821', 'UNIT-07'),
+  demoBooking('job-4799', 'UNIT-04'),
 ];
 
 const DEMO_OPERATORS: PlannerOperator[] = [
@@ -109,8 +151,8 @@ const DEMO_OPERATORS: PlannerOperator[] = [
 ];
 
 const DEMO_CREW: PlannerCrewMember[] = [
-  { id: 'c1', name: 'Y. Liljenquist', role: 'Lead',     source: 'Team A' },
-  { id: 'c2', name: 'H. Van',         role: 'Support',  source: 'Team A' },
+  { id: 'c1', name: 'Y. Liljenquist', role: 'Lead',    source: 'Team A' },
+  { id: 'c2', name: 'H. Van',         role: 'Support', source: 'Team A' },
 ];
 
 const DEMO_SEGMENTS: PlannerSegment[] = [
@@ -130,6 +172,12 @@ const DEFAULT_LABELS: PlannerLabels = {
   crewLabel: 'Crew',
   dutyLimitHours: 10,
 };
+
+// Default rule set — a single hard resource-overlap check. Owners override
+// via `config.conflicts.rules`, threaded through the adapter.
+const DEFAULT_RULES: ConflictRule[] = [
+  { id: 'planner-overlap', type: 'resource-overlap', severity: 'hard' },
+];
 
 // ─── Small presentational helpers ───────────────────────────────────────────
 
@@ -181,32 +229,76 @@ export default function PlannerView({
   segments: segmentsProp = DEMO_SEGMENTS,
   capabilities = DEMO_CAPABILITIES,
   labels: labelsProp,
+  existingBookings = DEMO_BOOKINGS,
+  rules = DEFAULT_RULES,
+  conflictsEnabled = true,
+  onAllocate,
+  initialStartDate = DEMO_START_DATE,
 }: PlannerViewProps) {
   const labels = { ...DEFAULT_LABELS, ...labelsProp };
 
   const [scope, setScope] = useState('Local');
   const [priority, setPriority] = useState('Routine');
+  const [startDate, setStartDate] = useState(initialStartDate);
   const [segments, setSegments] = useState<PlannerSegment[]>(() => [...segmentsProp]);
   const [selectedCaps, setSelectedCaps] = useState<Set<string>>(new Set());
   const [selectedResource, setSelectedResource] = useState<string | null>(null);
   const [benched, setBenched] = useState<Set<string>>(new Set());
 
   const totalHours = useMemo(() => segments.reduce((s, seg) => s + seg.hours, 0), [segments]);
-  // Estimated duty = flight/work hours + fixed turnaround per segment.
+  // Estimated duty = work hours + fixed turnaround per segment.
   const dutyHours = useMemo(() => totalHours + segments.length * 0.7, [totalHours, segments.length]);
   const overDuty = dutyHours > labels.dutyLimitHours;
 
-  // Live conflicts — the heart of the layout: warnings appear the moment the
-  // plan becomes illegal (nothing allocated, or duty day blown).
+  // The candidate job window — start of the duty day through start + duty.
+  const jobWindow = useMemo(() => {
+    const start = new Date(`${startDate}T07:00:00`);
+    const end = new Date(start.getTime() + dutyHours * 3_600_000);
+    return { start, end };
+  }, [startDate, dutyHours]);
+
+  // Engine-derived availability: run the shared conflict engine for a
+  // candidate booking of each resource over the job window. Hard violation ⇒
+  // booked; maintenance flag ⇒ down; otherwise free. This is the same
+  // `evaluateConflicts` the rest of the calendar gates writes on.
+  const resourceStatus = useMemo(() => {
+    const map = new Map<string, { status: PlannerResourceStatus; reason?: string }>();
+    for (const r of resources) {
+      if (r.maintenance) { map.set(r.id, { status: 'maintenance' }); continue; }
+      const result = evaluateConflicts({
+        proposed: { id: '__planner_candidate__', start: jobWindow.start, end: jobWindow.end, resource: r.id },
+        events: existingBookings,
+        rules,
+        enabled: conflictsEnabled,
+      });
+      if (result.severity === 'hard') {
+        const v = result.violations[0];
+        map.set(r.id, { status: 'booked', reason: v?.message ?? 'Already booked for this window.' });
+      } else {
+        map.set(r.id, { status: 'available' });
+      }
+    }
+    return map;
+  }, [resources, existingBookings, rules, conflictsEnabled, jobWindow]);
+
+  // Live conflicts — warnings appear the moment the plan becomes illegal:
+  // nothing allocated, the chosen resource is double-booked (engine), or the
+  // duty day is blown (host-side HOS calc).
   const conflicts = useMemo(() => {
     const out: { kind: 'warn' | 'error'; text: string }[] = [];
-    if (!selectedResource) out.push({ kind: 'warn', text: 'No resource selected.' });
+    if (!selectedResource) {
+      out.push({ kind: 'warn', text: 'No resource selected.' });
+    } else {
+      const st = resourceStatus.get(selectedResource);
+      if (st?.status === 'booked') out.push({ kind: 'error', text: st.reason ?? 'Double-booked for this window.' });
+      if (st?.status === 'maintenance') out.push({ kind: 'error', text: 'Selected resource is down for maintenance.' });
+    }
     if (overDuty) out.push({
       kind: 'error',
       text: `Duty day ${dutyHours.toFixed(1)} hrs exceeds the ${labels.dutyLimitHours} hr limit.`,
     });
     return out;
-  }, [selectedResource, overDuty, dutyHours, labels.dutyLimitHours]);
+  }, [selectedResource, resourceStatus, overDuty, dutyHours, labels.dutyLimitHours]);
 
   const hasError = conflicts.some(c => c.kind === 'error');
   const canAllocate = selectedResource != null && !hasError;
@@ -226,6 +318,15 @@ export default function PlannerView({
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+
+  // Engine `first-available` contract: pick the first resource with no hard
+  // conflict on the window, then commit it.
+  const allocate = () => {
+    const pick = selectedResource && resourceStatus.get(selectedResource)?.status === 'available'
+      ? selectedResource
+      : resources.find(r => resourceStatus.get(r.id)?.status === 'available')?.id ?? null;
+    if (pick) { setSelectedResource(pick); onAllocate?.(pick); }
+  };
 
   const dutyStartLabel = '07:00';
   const dutyEnd = useMemo(() => {
@@ -271,7 +372,8 @@ export default function PlannerView({
                     <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">Start Date</div>
                     <input
                       type="date"
-                      defaultValue="2026-05-18"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
                       className="w-full bg-neutral-800 border border-neutral-700 rounded-md px-3 py-1.5 text-[12px] text-neutral-200 outline-none focus:border-sky-500/50"
                     />
                   </div>
@@ -334,19 +436,20 @@ export default function PlannerView({
               <Card title={labels.resourcesLabel} right={<span className="text-[10px] text-neutral-500">Select for this job</span>}>
                 <div className="space-y-1.5">
                   {resources.map(r => {
-                    const disabled = r.status !== 'available';
+                    const st = resourceStatus.get(r.id) ?? { status: 'available' as PlannerResourceStatus };
+                    const disabled = st.status !== 'available';
                     const selected = selectedResource === r.id;
                     const badge =
-                      r.status === 'maintenance'
+                      st.status === 'maintenance'
                         ? { text: 'MX', cls: 'bg-neutral-700/30 border-neutral-600/30 text-neutral-500' }
-                        : r.status === 'booked'
+                        : st.status === 'booked'
                         ? { text: 'BOOKED', cls: 'bg-amber-500/15 border-amber-500/25 text-amber-300' }
                         : { text: 'OK', cls: 'bg-green-500/10 border-green-500/20 text-green-400' };
                     return (
                       <button
                         key={r.id}
                         disabled={disabled}
-                        title={r.bookedReason}
+                        title={st.reason}
                         onClick={() => setSelectedResource(selected ? null : r.id)}
                         className={[
                           'w-full flex items-center gap-3 px-3 py-2 rounded-md border text-left transition-colors',
@@ -361,7 +464,7 @@ export default function PlannerView({
                         <span className="text-[12px] text-neutral-200 flex-1 truncate">{r.name}</span>
                         <span className="text-[10px] text-neutral-500 w-20 shrink-0 text-right truncate">{r.group}</span>
                         <span className={['text-[11px] font-semibold w-20 shrink-0 text-right', serviceColor(r.hoursUntilService)].join(' ')}>
-                          {r.status === 'maintenance' ? 'MX' : r.status === 'booked' ? 'IN USE' : `${r.hoursUntilService} hrs`}
+                          {st.status === 'maintenance' ? 'MX' : st.status === 'booked' ? 'IN USE' : `${r.hoursUntilService ?? '—'} hrs`}
                         </span>
                         <span className={['mono text-[9px] px-1.5 py-0.5 rounded border', badge.cls].join(' ')}>{badge.text}</span>
                       </button>
@@ -463,6 +566,7 @@ export default function PlannerView({
 
               <div className="flex gap-2 pt-1">
                 <button
+                  onClick={allocate}
                   disabled={!canAllocate}
                   className={[
                     'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-[12px] font-semibold transition-colors border',

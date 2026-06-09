@@ -13,6 +13,8 @@ const DispatchView    = lazy(() => import('../views/DispatchView'));
 const PlannerView     = lazy(() => import('../views/PlannerView'));
 const RequestQueueView = lazy(() => import('../views/RequestQueueView'));
 import styles from '../WorksCalendar.module.css';
+import type { ConflictEvent, ConflictRule } from 'works-calendar-engine';
+import type { PlannerResource } from '../views/PlannerView';
 import type { CalObject } from '../hooks/useCalendarSetup';
 import type { OwnerCfgHandle } from '../hooks/useOwnerConfig';
 import type { PermissionCaps } from '../types/ui';
@@ -39,6 +41,41 @@ import type {
 } from '../types/assets';
 import type { ResourcePool } from 'works-calendar-engine';
 import type { FormEventDraft } from '../hooks/useModalState';
+
+// ── Planner adapter mappers ──────────────────────────────────────────────────
+// Translate the calendar's events + asset roster into the engine-typed shapes
+// PlannerView feeds to `evaluateConflicts`. Kept loose-but-guarded because the
+// asset roster carries free-form `meta`.
+
+type PlannerEventLike = { id: string; start: Date; end: Date; resource?: string | null; category?: string | null; meta?: Record<string, unknown> | null };
+type PlannerAssetLike = { id: string; label?: string; group?: string; meta?: Record<string, unknown> | null };
+
+function eventsToBookings(events: readonly PlannerEventLike[]): ConflictEvent[] {
+  return events
+    .filter(e => e.resource)
+    .map(e => ({
+      id: e.id, start: e.start, end: e.end,
+      resource: e.resource ?? null,
+      ...(e.category ? { category: e.category } : {}),
+      ...(e.meta ? { meta: e.meta } : {}),
+    }));
+}
+
+function assetsToPlannerResources(assets: readonly PlannerAssetLike[]): PlannerResource[] {
+  return assets.map(a => {
+    const meta = (a.meta ?? {}) as Record<string, unknown>;
+    const svc = typeof meta['hoursUntilService'] === 'number' ? meta['hoursUntilService']
+      : typeof meta['serviceHours'] === 'number' ? meta['serviceHours'] : null;
+    const health = meta['health'] ?? meta['status'];
+    return {
+      id: a.id,
+      name: a.label ?? a.id,
+      ...(a.group ? { group: a.group } : {}),
+      maintenance: health === 'maintenance' || health === 'down',
+      hoursUntilService: svc,
+    };
+  });
+}
 
 interface SharedViewProps {
   currentDate: Date;
@@ -293,9 +330,25 @@ export default function CalendarViewGrid({
                   viewSwitcher,
                 } as unknown as ComponentProps<typeof DispatchView>)} />
               )}
-              {cal.view === 'planner' && (
-                <PlannerView viewSwitcher={viewSwitcher} />
-              )}
+              {cal.view === 'planner' && (() => {
+                // Owner conflict config drives the engine checks — same blob
+                // EventForm gates writes on. Empty rule set ⇒ PlannerView's
+                // default hard resource-overlap rule applies.
+                const conflictsCfg = ownerCfg.config?.['conflicts'] as { rules?: unknown[]; enabled?: boolean } | undefined;
+                const plannerRules = (conflictsCfg?.rules ?? []) as ConflictRule[];
+                const hasAssets = (effectiveAssets?.length ?? 0) > 0;
+                return (
+                  <PlannerView
+                    viewSwitcher={viewSwitcher}
+                    conflictsEnabled={conflictsCfg?.enabled !== false}
+                    {...(plannerRules.length ? { rules: plannerRules } : {})}
+                    {...(hasAssets ? {
+                      resources: assetsToPlannerResources(effectiveAssets as unknown as PlannerAssetLike[]),
+                      existingBookings: eventsToBookings(expandedEvents as unknown as PlannerEventLike[]),
+                    } : {})}
+                  />
+                );
+              })()}
               {cal.view === 'requests' && (
                 <RequestQueueView
                   events={approvalRequestEvents as unknown as ComponentProps<typeof RequestQueueView>['events']}
