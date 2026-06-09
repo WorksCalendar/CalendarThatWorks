@@ -233,10 +233,13 @@ export function TimeSlider({
                   const drive = fmtDuration(
                     upcoming.to.time.getTime() - upcoming.from.time.getTime(),
                   );
+                  const est = upcoming.estimate
+                    ? ` · est ${fmtDuration(upcoming.estimate.minutes * 60_000)} by ${upcoming.estimate.profileLabel.toLowerCase()}`
+                    : '';
                   return (
                     <>
                       <span className="font-bold text-[#3d2b1f]">Next </span>
-                      {upcoming.from.facilityCode} → {upcoming.to.facilityCode} · departs {fmtTime(upcoming.from.time)} (in <span className="font-bold">{until}</span>) · {drive} drive
+                      {upcoming.from.facilityCode} → {upcoming.to.facilityCode} · departs {fmtTime(upcoming.from.time)} (in <span className="font-bold">{until}</span>) · {drive} drive{est}
                     </>
                   );
                 }
@@ -355,12 +358,23 @@ export function TimeSlider({
                   const driverPart = selectedAssetData.driverName
                     ? `\nDriver: ${selectedAssetData.driverName}`
                     : '';
+                  const estPart = seg.estimate
+                    ? `\nEst: ${
+                        seg.estimate.minutes >= 60
+                          ? `${Math.floor(seg.estimate.minutes / 60)}h ${Math.round(
+                              seg.estimate.minutes % 60,
+                            )
+                              .toString()
+                              .padStart(2, '0')}m`
+                          : `${Math.round(seg.estimate.minutes)}m`
+                      } by ${seg.estimate.profileLabel.toLowerCase()}`
+                    : '';
                   return [
                     <button
                       key={i}
                       type="button"
                       onClick={() => onDateChange(new Date(seg.from.time))}
-                      title={`${seg.from.facilityCode} → ${seg.to.facilityCode}\n${fmt(seg.from.time)} – ${fmt(seg.to.time)} (${durLabel})${driverPart}`}
+                      title={`${seg.from.facilityCode} → ${seg.to.facilityCode}\n${fmt(seg.from.time)} – ${fmt(seg.to.time)} (${durLabel})${estPart}${driverPart}`}
                       className="absolute rounded-sm text-[10px] font-semibold text-white overflow-hidden whitespace-nowrap px-1.5 border border-black/15 hover:ring-2 hover:ring-[#3d2b1f] hover:z-10 focus:outline-none focus:ring-2 focus:ring-[#3d2b1f] focus:z-10"
                       style={{
                         left: `${leftPct}%`,

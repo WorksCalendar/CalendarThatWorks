@@ -199,4 +199,22 @@ describe('serializeConfig + parseConfig — round-trip', () => {
     expect(round.config).toEqual({})
     expect(round.errors).toEqual([])
   })
+
+  it('round-trips settings.chrome flags losslessly', () => {
+    const config: CalendarConfig = {
+      settings: {
+        chrome: { leftRail: false, rightPanel: false, toolbar: true, viewSwitcher: false },
+      },
+    }
+    const round = parseConfig(JSON.parse(JSON.stringify(serializeConfig(config))))
+    expect(round.errors).toEqual([])
+    expect(round.config).toEqual(config)
+  })
+
+  it('drops non-boolean chrome flags rather than carrying garbage through', () => {
+    const round = parseConfig({
+      settings: { chrome: { leftRail: false, rightPanel: 'nope', bogus: 1 } },
+    })
+    expect(round.config.settings?.chrome).toEqual({ leftRail: false })
+  })
 })

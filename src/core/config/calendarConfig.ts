@@ -130,6 +130,27 @@ export interface ConfigSettings {
   readonly conflictMode?: 'block' | 'soft' | 'off'
   /** IANA timezone identifier (e.g. "America/Denver"). */
   readonly timezone?: string
+  /** Which top-level UI chrome regions render. See `ChromeSettings`. */
+  readonly chrome?: ChromeSettings
+}
+
+/**
+ * Which top-level UI chrome regions render. Every flag defaults to `true`
+ * (full chrome) when omitted, so an absent `chrome` block — or an absent
+ * individual flag — means "show it", preserving the calendar's historical
+ * always-on layout. Hosts loosen the layout by setting flags to `false`,
+ * either through the setup wizard / ConfigPanel or the matching
+ * `show*` props on `WorksCalendar`.
+ */
+export interface ChromeSettings {
+  /** The left icon rail (Add / Saved views / Focus / Settings). */
+  readonly leftRail?: boolean
+  /** The right panel (region map + crew on shift). */
+  readonly rightPanel?: boolean
+  /** The top toolbar/header band (title, nav, search, filters, view controls). */
+  readonly toolbar?: boolean
+  /** The Month / Week / Day / … view-switcher tabs. */
+  readonly viewSwitcher?: boolean
 }
 
 /**

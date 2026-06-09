@@ -96,5 +96,6 @@ function serializeSettings(s: ConfigSettings): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   if (s.conflictMode !== undefined) out['conflictMode'] = s.conflictMode
   if (s.timezone     !== undefined) out['timezone']     = s.timezone
+  if (s.chrome       !== undefined) out['chrome']       = { ...s.chrome }
   return out
 }

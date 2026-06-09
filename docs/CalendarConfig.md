@@ -144,7 +144,33 @@ returns `{ config, errors: [], dropped: 0 }` for any valid
 | `pools`          | `ResourcePool[]`                            | Same shape as the runtime pool definitions. Manual / query / hybrid types all round-trip. |
 | `requirements`   | `{ eventType, requires: ({role,count}\|{pool,count})[] }[]` | Templates declaring what each event type needs. **Not yet consumed by the runtime engine** — the type lives here so the wizard's output round-trips losslessly. |
 | `events`         | `{ id, title, start, end, eventType?, resourceId?, resourcePoolId?, meta? }[]` | Seed events for demos / config-driven setup. ISO 8601 strings on the wire; the runtime parses them when loading. |
-| `settings`       | `{ conflictMode?, timezone? }`              | `conflictMode` is whitelisted to `block` / `soft` / `off`. Not yet enforced at runtime. |
+| `settings`       | `{ conflictMode?, timezone?, chrome? }`     | `conflictMode` is whitelisted to `block` / `soft` / `off`. `chrome` toggles layout regions (see below). Not yet enforced at runtime. |
+
+### `settings.chrome` — layout regions
+
+`chrome` controls which top-level UI regions render. Each flag defaults to
+`true` (shown) when omitted, so a calendar with no `chrome` block keeps the
+full layout.
+
+| Flag           | Region |
+|----------------|--------|
+| `toolbar`      | The top toolbar / header bar (title, navigation, search, filters, view controls). |
+| `viewSwitcher` | The Month / Week / Day / … view tabs. |
+| `leftRail`     | The left icon rail (Add / Saved views / Focus / Settings). |
+| `rightPanel`   | The right panel (region map + crew on shift). |
+
+```json
+{ "settings": { "chrome": { "leftRail": false, "rightPanel": false } } }
+```
+
+At runtime these map onto `display.chrome.*` in the persisted owner config
+(editable from the setup wizard's Review step and ConfigPanel → *Layout &
+Labels* → *Panels & chrome*). The host can also override any region
+per-render with the matching `show*` prop on `WorksCalendar`
+(`showToolbar`, `showViewSwitcher`, `showLeftRail`, `showRightPanel`).
+Resolution order is **prop > persisted config > `true`**. A view that owns
+its own chrome (e.g. Dispatch) still suppresses the host toolbar/rails on
+its own regardless of these flags.
 
 ## Industry profile presets
 

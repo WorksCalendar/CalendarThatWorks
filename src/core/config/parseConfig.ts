@@ -325,6 +325,14 @@ function parseSettings(raw: unknown, errors: string[]): ConfigSettings | null {
     }
   }
   if (typeof raw['timezone'] === 'string') out.timezone = raw['timezone']
+  if (isObject(raw['chrome'])) {
+    const c = raw['chrome']
+    const chrome: { -readonly [K in keyof NonNullable<ConfigSettings['chrome']>]: boolean } = {}
+    for (const key of ['leftRail', 'rightPanel', 'toolbar', 'viewSwitcher'] as const) {
+      if (typeof c[key] === 'boolean') chrome[key] = c[key]
+    }
+    out.chrome = chrome
+  }
   return out
 }
 

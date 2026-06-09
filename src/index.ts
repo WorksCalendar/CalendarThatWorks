@@ -245,7 +245,7 @@ export type {
   CalendarConfig, ConfigLabels, ConfigResourceType, ConfigRole,
   ConfigResource, ConfigRequirement, ConfigRequirementSlot,
   ConfigRequirementSeverity,
-  ConfigSeedEvent, ConfigSettings,
+  ConfigSeedEvent, ConfigSettings, ChromeSettings,
 } from './core/config/calendarConfig';
 export { validateConfig } from './core/config/validateConfig';
 export type {
@@ -281,6 +281,33 @@ export type {
   GeoConflictRule, GeoTravelFeasibilityRule,
   GeoEventInput, GeoConflictViolation,
 } from 'works-calendar-engine';
+
+// ── Travel-mode "time to arrive" — car / walking / aircraft profiles ────────
+export {
+  estimateTravelMinutes,
+  effectiveSpeedKph,
+  resolveTravelProfile,
+  CAR_PROFILE,
+  WALKING_PROFILE,
+  LIGHT_PISTON,
+  TURBOPROP,
+  BUSINESS_JET,
+  AIRLINER,
+  AIRCRAFT_PROFILES,
+  DEFAULT_AIRCRAFT_PROFILE,
+  TRAVEL_PROFILE_BY_MODE,
+  evaluateTravelFeasibility,
+  travelFeasibilityRule,
+} from './core/travel';
+export type {
+  TravelMode,
+  TravelProfile,
+  SurfaceTravelProfile,
+  AircraftPerformanceProfile,
+  AircraftProfileId,
+  TravelFeasibilityRule,
+  TravelFeasibilityViolation,
+} from './core/travel';
 
 export { evaluateConflicts, CONFLICT_RULE_TYPES } from 'works-calendar-engine';
 export type {
