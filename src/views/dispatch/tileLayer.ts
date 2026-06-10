@@ -6,9 +6,13 @@
  * corners so the caller can project them into SVG coordinates and
  * lay the tile as an <image> element.
  *
- * No dependencies. Tiles are served by OpenStreetMap's standard CDN
- * — fine for demo / light embedded use; production hosts should swap
- * in their own tile URL via the `tileUrl` template.
+ * No dependencies. The default basemap is CARTO's "Positron" (light_all)
+ * style — OpenStreetMap data, rendered by CARTO and served CORS-enabled
+ * with a permissive policy for third-party embedding. We deliberately do
+ * NOT default to `tile.openstreetmap.org`: the OSMF tile policy forbids
+ * app/embedded usage and serves a "blocked" placeholder, which is why the
+ * map looked blank. Production hosts can still swap in any `{z}/{x}/{y}`
+ * (optionally `{s}`) tile template via the `tileUrl` prop.
  */
 
 import type { LayerBounds, MapLayer } from './types';
@@ -34,7 +38,12 @@ export const DEFAULT_LAYER_ZOOM: Record<MapLayer, number> = {
   '1k': 12,
 };
 
-const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+/** CARTO Positron (light) — OSM-based, CORS-enabled, embedding-friendly. */
+const DEFAULT_TILE_URL =
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+
+/** Subdomains to spread tile requests across (CARTO serves a–d). */
+const TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'] as const;
 
 function lng2tileX(lng: number, z: number): number {
   return ((lng + 180) / 360) * 2 ** z;
@@ -71,8 +80,10 @@ export function tilesForBounds(
     for (let y = yMin; y <= yMax; y++) {
       const wrappedX = ((x % max) + max) % max;
       if (y < 0 || y >= max) continue;
+      const sub = TILE_SUBDOMAINS[(wrappedX + y) % TILE_SUBDOMAINS.length]!;
       tiles.push({
         url: tileUrl
+          .replace('{s}', sub)
           .replace('{z}', String(zoom))
           .replace('{x}', String(wrappedX))
           .replace('{y}', String(y)),

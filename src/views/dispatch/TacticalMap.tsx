@@ -166,8 +166,9 @@ export function TacticalMap({
               );
             })}
           </g>
-          {/* Faint parchment wash to tie the OSM palette to the theme. */}
-          <rect width={VW} height={VH} fill="#e8dcc8" opacity={0.22} />
+          {/* Faint parchment wash to tie the basemap palette to the theme —
+              kept light so streets and labels stay legible underneath. */}
+          <rect width={VW} height={VH} fill="#e8dcc8" opacity={0.12} />
         </>
       )}
 
