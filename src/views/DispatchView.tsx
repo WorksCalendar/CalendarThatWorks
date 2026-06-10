@@ -48,6 +48,14 @@ interface DispatchViewLooseProps {
    *  the dispatch map draws a polyline through those points; otherwise the
    *  arch / straight-line fallback is used. */
   readonly getRouteWaypoints?: (fromCode: string, toCode: string) => readonly { lat: number; lng: number }[] | null;
+  /** Bring-your-own basemap: a `{z}/{x}/{y}` (optional `{s}`) raster tile
+   *  template. Forwarded to the dispatch map so hosts can point at their own
+   *  tile server, a satellite/terrain style, or a branded basemap instead of
+   *  the bundled default. */
+  readonly tileUrl?: string;
+  /** Toggle the raster basemap. Default true; set false to drop tiles
+   *  entirely and render routes over the plain parchment background. */
+  readonly showTiles?: boolean;
   // Legacy props (employees, bases, missions, evaluateForMission, onAssign, …)
   // are accepted to keep CalendarViewGrid's existing wiring stable but ignored
   // by the new board. The dispatch view derives everything it renders from
@@ -67,6 +75,8 @@ export default function DispatchView(props: DispatchViewLooseProps) {
       {...(props.onCurrentDateChange ? { onCurrentDateChange: props.onCurrentDateChange } : {})}
       {...(props.viewSwitcher ? { viewSwitcher: props.viewSwitcher } : {})}
       {...(props.getRouteWaypoints ? { getRouteWaypoints: props.getRouteWaypoints } : {})}
+      {...(typeof props.tileUrl === 'string' ? { tileUrl: props.tileUrl } : {})}
+      {...(typeof props.showTiles === 'boolean' ? { showTiles: props.showTiles } : {})}
     />
   );
 }

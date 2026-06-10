@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Bring-your-own basemap for the dispatch map.** The `tileUrl` (slippy-map
+  `{z}/{x}/{y}` template, optional `{s}` subdomain) and `showTiles` props are
+  now plumbed through `DispatchView` and `DispatchBoard` to the tactical map —
+  previously they dead-ended at the internal `TacticalMap` and hosts had no way
+  to reach them. Hosts can now point at their own tile server, a
+  satellite/terrain style, or a branded basemap, or set `showTiles={false}` to
+  render routes over the plain parchment background. Defaults to the bundled
+  CARTO Positron style, so existing embeds are unchanged.
 - **Routing engine — dispatch routes now follow real geometry and the marker
   rides it.** New self-contained, network-free engine (`src/core/routing/`)
   resolves a `RouteGeometry` per leg that both the drawn breadcrumb and the

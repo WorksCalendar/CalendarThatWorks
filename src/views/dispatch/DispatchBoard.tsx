@@ -47,6 +47,15 @@ export interface DispatchBoardProps {
    *  lookup returns a non-empty list for a leg's `from`/`to` facility
    *  codes, the breadcrumb traces those waypoints as a polyline. */
   readonly getRouteWaypoints?: (fromCode: string, toCode: string) => readonly { lat: number; lng: number }[] | null;
+  /** Bring-your-own basemap: a slippy-map raster tile template with
+   *  `{z}/{x}/{y}` (and optional `{s}` subdomain) placeholders. Hosts that
+   *  run their own tile server — or want satellite / terrain / a branded
+   *  style — pass it here and the tactical map renders those tiles instead
+   *  of the bundled CARTO Positron default. */
+  readonly tileUrl?: string;
+  /** Render the raster basemap underneath the routes. Default true. Set
+   *  false for a clean parchment background with no third-party tiles. */
+  readonly showTiles?: boolean;
 }
 
 const LAYERS: { id: MapLayer; label: string }[] = [
@@ -58,7 +67,7 @@ const LAYERS: { id: MapLayer; label: string }[] = [
 
 export function DispatchBoard({
   events, assets = [], initialDate, currentDate, onCurrentDateChange, viewSwitcher,
-  getRouteWaypoints,
+  getRouteWaypoints, tileUrl, showTiles,
 }: DispatchBoardProps) {
   const [uncontrolledDate, setUncontrolledDate] = useState<Date>(() => {
     if (currentDate) return currentDate;
@@ -233,6 +242,8 @@ export function DispatchBoard({
             selectedAsset={selectedAsset}
             onSelectAsset={setSelectedAsset}
             layer={layer}
+            {...(tileUrl !== undefined ? { tileUrl } : {})}
+            {...(showTiles !== undefined ? { showTiles } : {})}
           />
 
           {/* Layer switcher */}
