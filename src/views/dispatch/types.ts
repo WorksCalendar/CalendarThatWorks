@@ -10,6 +10,7 @@
 
 import type { NormalizedEvent } from 'works-calendar-engine';
 import type { TravelMode } from '../../core/travel';
+import type { AssetDomain, RouteGeometry } from '../../core/routing';
 
 // ── Layer projection ────────────────────────────────────────────────────────
 
@@ -37,6 +38,10 @@ export interface DispatchAsset {
    *  Surfaced in the dispatch Gantt header so dispatchers can answer
    *  "who's behind the wheel" at a glance. */
   readonly driverName?: string;
+  /** Physical travel medium (ground / air / sea), resolved from the asset's
+   *  travel mode. Drives the map glyph and route-geometry strategy. Defaults
+   *  to `ground`. */
+  readonly domain: AssetDomain;
 }
 
 export interface DispatchFacility {
@@ -78,6 +83,9 @@ export interface DispatchSegment {
   readonly to: DispatchStop;
   /** Modeled travel time for the leg; omitted when it can't be computed. */
   readonly estimate?: TravelEstimate;
+  /** Resolved route geometry for the leg — the polyline the map draws and
+   *  the marker rides along. Omitted only when the leg is degenerate. */
+  readonly route?: RouteGeometry;
 }
 
 /** A pairwise conflict at a facility — produced by the engine, rendered here. */

@@ -309,6 +309,28 @@ export type {
   TravelFeasibilityViolation,
 } from './core/travel';
 
+// ── Routing engine (dispatch map route geometry) ─────────────────────────────
+export {
+  basicRouteEngine,
+  resolveAssetDomain,
+  segmentKm,
+  bearingDeg,
+  cumulativeKm,
+  buildGeometry,
+  catmullRom,
+  sampleRoute,
+  splitRoute,
+} from './core/routing';
+export type {
+  AssetDomain,
+  RoutePoint,
+  RouteRequest,
+  RouteSource,
+  RouteGeometry,
+  RouteProvider,
+  RouteSample,
+} from './core/routing';
+
 export { evaluateConflicts, CONFLICT_RULE_TYPES } from 'works-calendar-engine';
 export type {
   ConflictRule,

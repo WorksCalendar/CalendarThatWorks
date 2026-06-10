@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Routing engine — dispatch routes now follow real geometry and the marker
+  rides it.** New self-contained, network-free engine (`src/core/routing/`)
+  resolves a `RouteGeometry` per leg that both the drawn breadcrumb and the
+  moving asset marker share, so the dot tracks the line instead of cutting a
+  straight chord. Ground (truck) legs trace and smooth host-supplied corridor
+  waypoints (`getRouteWaypoints`) into a road-following polyline via a
+  centripetal Catmull-Rom spline, or synthesize a believable curved path when
+  no anchors exist. Assets are classified into an `AssetDomain` (`ground` /
+  `air` / `sea`) that drives a heading-rotated map glyph, and the focused
+  asset's in-progress leg gets a "command center" treatment — a glowing
+  traveled trail behind the marker and a marching-ants path ahead, tied to the
+  time slider. New public API: `basicRouteEngine`, `resolveAssetDomain`,
+  `sampleRoute`, `splitRoute`, `buildGeometry`, `catmullRom`, `bearingDeg`,
+  `segmentKm`, `cumulativeKm`, and the `RouteProvider` / `RouteGeometry` /
+  `RoutePoint` / `RouteRequest` / `RouteSample` / `AssetDomain` types — the
+  provider interface is `async`-capable so a real directions API can drop in
+  later. Air arcs (with planning-time conditions) and automatic ocean/lake
+  routing for sea assets build on these primitives in follow-up phases. See
+  `docs/RoutingEngine.md`.
 - **Loosened mandatory chrome — toolbar, view tabs, left rail, and right
   panel are now optional.** Each region can be hidden via a new `show*` prop
   (`showToolbar`, `showViewSwitcher`, `showLeftRail`, `showRightPanel`) or

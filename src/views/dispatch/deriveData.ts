@@ -14,6 +14,14 @@
  */
 import type { NormalizedEvent } from 'works-calendar-engine';
 import { estimateTravelMinutes, resolveTravelProfile } from '../../core/travel';
+import {
+  basicRouteEngine,
+  bearingDeg,
+  resolveAssetDomain,
+  sampleRoute,
+  type RouteGeometry,
+  type RouteProvider,
+} from '../../core/routing';
 import type {
   DispatchAsset,
   DispatchFacility,
@@ -21,6 +29,25 @@ import type {
   DispatchStop,
   TravelEstimate,
 } from './types';
+
+/** Host hook: ordered real-world waypoints a leg passes through, or null. */
+export type RouteWaypointLookup = (
+  fromCode: string,
+  toCode: string,
+) => readonly { lat: number; lng: number }[] | null;
+
+/** Optional knobs for {@link deriveDispatchData}. */
+export interface DeriveDispatchOptions {
+  /** Asset-level fallback travel mode when none is declared. Default `car`. */
+  readonly defaultTravelMode?: string;
+  /** Host-supplied corridor waypoints — fed to the route engine as anchors
+   *  so ground legs trace real roads. */
+  readonly getRouteWaypoints?: RouteWaypointLookup;
+  /** Route source. Defaults to the built-in, network-free engine. A provider
+   *  that resolves asynchronously is ignored here (routes stay undefined);
+   *  async resolution is a higher layer's job. */
+  readonly routeProvider?: RouteProvider;
+}
 
 /** Stable color fallback when an asset doesn't supply meta.color. */
 const FALLBACK_PALETTE = [
@@ -99,11 +126,43 @@ function computeEstimate(
   return { mode: profile.mode, profileLabel: profile.label, minutes };
 }
 
+/**
+ * Resolve a leg's route geometry. Feeds any host-supplied corridor waypoints
+ * into the provider as anchors (so ground legs trace real roads) and tags the
+ * request with the leg's domain (ground / air / sea). Only synchronous
+ * providers are honored here; an async provider yields no geometry and the
+ * map falls back to its arch/straight rendering.
+ */
+function resolveLegRoute(
+  from: DispatchStop,
+  to: DispatchStop,
+  mode: string,
+  getRouteWaypoints: RouteWaypointLookup | undefined,
+  provider: RouteProvider,
+): RouteGeometry | undefined {
+  const domain = resolveAssetDomain(mode);
+  const anchors = getRouteWaypoints?.(from.facilityCode, to.facilityCode) ?? undefined;
+  const result = provider.resolveRoute({
+    from: { lat: from.lat, lng: from.lng },
+    to: { lat: to.lat, lng: to.lng },
+    domain,
+    ...(anchors && anchors.length > 0 ? { anchors } : {}),
+  });
+  if (result instanceof Promise) return undefined;
+  return result;
+}
+
 export function deriveDispatchData(
   events: readonly NormalizedEvent[],
   assets: readonly RawAssetEntry[] = [],
-  defaultTravelMode = 'car',
+  options: DeriveDispatchOptions = {},
 ): DerivedDispatchData {
+  const {
+    defaultTravelMode = 'car',
+    getRouteWaypoints,
+    routeProvider = basicRouteEngine,
+  } = options;
+
   // ── Assets ── union of declared assets and event.resource ids ──
   const assetIndex = new Map<string, DispatchAsset>();
   const assetModes = new Map<string, string>();
@@ -115,13 +174,19 @@ export function deriveDispatchData(
       id: a.id,
       name: a.label,
       color: pickColor(a.meta, i),
+      domain: resolveAssetDomain(typeof mode === 'string' ? mode : defaultTravelMode),
       ...(typeof drv === 'string' && drv ? { driverName: drv } : {}),
     });
   });
   events.forEach((ev) => {
     const id = ev.resource;
     if (!id || assetIndex.has(id)) return;
-    assetIndex.set(id, { id, name: id, color: pickColor(undefined, assetIndex.size) });
+    assetIndex.set(id, {
+      id,
+      name: id,
+      color: pickColor(undefined, assetIndex.size),
+      domain: resolveAssetDomain(defaultTravelMode),
+    });
   });
 
   // ── Facilities ── unique by code, location pulled from the first event mentioning them
@@ -176,8 +241,16 @@ export function deriveDispatchData(
       const b = stops[i + 1]!;
       if (a.facilityCode === b.facilityCode) continue;
       if (a.kind !== 'departure') continue;
-      const estimate = computeEstimate(a, b, legTravelMode(a, assetModes, defaultTravelMode));
-      segs.push({ assetId, from: a, to: b, ...(estimate ? { estimate } : {}) });
+      const mode = legTravelMode(a, assetModes, defaultTravelMode);
+      const estimate = computeEstimate(a, b, mode);
+      const route = resolveLegRoute(a, b, mode, getRouteWaypoints, routeProvider);
+      segs.push({
+        assetId,
+        from: a,
+        to: b,
+        ...(estimate ? { estimate } : {}),
+        ...(route ? { route } : {}),
+      });
     }
     segmentsByAsset.set(assetId, segs);
   }
@@ -221,4 +294,82 @@ export function positionAt(
     };
   }
   return null;
+}
+
+/** Position + heading sampled at time `t`, walking the resolved route. */
+export interface AssetSample {
+  readonly lat: number;
+  readonly lng: number;
+  /** Travel heading in degrees (0=N, 90=E); 0 when parked. */
+  readonly headingDeg: number;
+  readonly moving: boolean;
+  /** Fraction of the active leg covered, [0,1]; 0 when parked. */
+  readonly legFraction: number;
+  readonly facilityCode?: string;
+  /** The leg currently being traveled, if any. */
+  readonly activeSegment?: DispatchSegment;
+}
+
+/**
+ * Route-aware position sampler. While an asset is mid-leg it rides the
+ * segment's resolved {@link RouteGeometry} — distance-parameterized, so the
+ * marker tracks the drawn polyline instead of cutting a straight chord — and
+ * reports its heading so the map can face the glyph down the road. Falls back
+ * to straight-line interpolation when a leg has no geometry, and to the
+ * nearest stop while parked / dwelling.
+ *
+ * `segments` must be the asset's own leg list (sorted by departure time, as
+ * {@link deriveDispatchData} produces); `stops` is the same asset's full stop
+ * list, used for the parked/clamped cases the segments don't cover.
+ */
+export function assetPositionAt(
+  stops: readonly DispatchStop[] | undefined,
+  segments: readonly DispatchSegment[] | undefined,
+  t: Date,
+): AssetSample | null {
+  if (!stops || stops.length === 0) return null;
+  const tMs = t.getTime();
+
+  // Mid-leg? Ride the route geometry.
+  for (const seg of segments ?? []) {
+    const start = seg.from.time.getTime();
+    const end = seg.to.time.getTime();
+    if (tMs < start || tMs >= end) continue;
+    const span = end - start;
+    const frac = span <= 0 ? 0 : (tMs - start) / span;
+    if (seg.route) {
+      const s = sampleRoute(seg.route, frac);
+      return {
+        lat: s.lat,
+        lng: s.lng,
+        headingDeg: s.headingDeg,
+        moving: true,
+        legFraction: frac,
+        activeSegment: seg,
+      };
+    }
+    return {
+      lat: seg.from.lat + (seg.to.lat - seg.from.lat) * frac,
+      lng: seg.from.lng + (seg.to.lng - seg.from.lng) * frac,
+      headingDeg: bearingDeg(seg.from, seg.to),
+      moving: true,
+      legFraction: frac,
+      activeSegment: seg,
+    };
+  }
+
+  // Parked: clamp to the latest stop at or before `t` (first stop if before all).
+  let cur = stops[0]!;
+  for (const s of stops) {
+    if (s.time.getTime() <= tMs) cur = s;
+    else break;
+  }
+  return {
+    lat: cur.lat,
+    lng: cur.lng,
+    headingDeg: 0,
+    moving: false,
+    legFraction: 0,
+    facilityCode: cur.facilityCode,
+  };
 }

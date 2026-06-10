@@ -95,7 +95,13 @@ export function DispatchBoard({
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [layer, setLayer] = useState<MapLayer>('region');
 
-  const derived = useMemo(() => deriveDispatchData(events, assets), [events, assets]);
+  const derived = useMemo(
+    () =>
+      deriveDispatchData(events, assets, {
+        ...(getRouteWaypoints ? { getRouteWaypoints } : {}),
+      }),
+    [events, assets, getRouteWaypoints],
+  );
   const conflicts = useMemo(
     () => deriveConflicts(derived.facilities, derived.stopsByAsset),
     [derived.facilities, derived.stopsByAsset],
@@ -227,7 +233,6 @@ export function DispatchBoard({
             selectedAsset={selectedAsset}
             onSelectAsset={setSelectedAsset}
             layer={layer}
-            {...(getRouteWaypoints ? { getRouteWaypoints } : {})}
           />
 
           {/* Layer switcher */}
